@@ -119,6 +119,30 @@ private val popularCities = listOf(
     City("Singapore", "Asia/Singapore"), City("Sydney", "Australia/Sydney"), City("Los Angeles", "America/Los_Angeles")
 )
 
+@Composable private fun HomeScreen(now:java.time.ZonedDateTime,jalali:JalaliDate,showJalali:Boolean,formatter:DateTimeFormatter,engine:ClockEngine,performance:Boolean,scale:Float,glow:Float,material:String,seconds:Boolean,nextAlarm:Pair<AlarmEntity,java.time.ZonedDateTime>?,cities:List<com.mesad.time.data.local.WorldCityEntity>,onOpen:(Screen)->Unit,onTools:()->Unit){
+    val context=LocalContext.current;var view:MesadClockView? by remember{mutableStateOf(null)}
+    LazyColumn(verticalArrangement=Arrangement.spacedBy(12.dp),contentPadding=androidx.compose.foundation.layout.PaddingValues(bottom=18.dp)){
+        item { Column(horizontalAlignment=Alignment.CenterHorizontally,modifier=Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(Color(0xFF101821)).padding(14.dp)){
+            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text("${engine.name}  ·  LIVE",fontSize=9.sp,letterSpacing=1.4.sp,color=ElectricCyan);Text("LOCAL TIME",fontSize=9.sp,letterSpacing=1.sp,color=Titanium)}
+            if(performance) MesadClock(engine,StudioPreset(engine=engine,scale=scale,glowIntensity=glow,materialFinish=runCatching{com.mesad.time.domain.model.MaterialFinish.valueOf(material)}.getOrDefault(com.mesad.time.domain.model.MaterialFinish.BRUSHED_TITANIUM)),Modifier.size(250.dp),showSeconds=seconds)
+            else AndroidView(factory={MesadClockView(context).also{view=it;it.setEngine(engine.name);it.setScale(scale);it.setGlow(glow);it.setMaterial(material)}},modifier=Modifier.size(250.dp),update={it.setEngine(engine.name);it.setScale(scale);it.setGlow(glow);it.setMaterial(material)})
+            Text(now.format(formatter),fontSize=38.sp,fontFamily=FontFamily.Monospace,fontWeight=FontWeight.Light,letterSpacing=(-2).sp,color=Color(0xFFE8EDF5))
+            Text(now.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL)),fontSize=12.sp,color=Titanium)
+            if(showJalali) Text("${jalali.day} · ${JalaliDate.monthName(jalali.month)} ${jalali.year} SH",fontSize=10.sp,color=Champagne,modifier=Modifier.padding(top=4.dp))
+        } }
+        item { Card(colors=CardDefaults.cardColors(containerColor=Graphite)){Column(Modifier.fillMaxWidth().clickable{onOpen(Screen.ALARM)}.padding(16.dp)){Text("NEXT ALARM",fontSize=9.sp,letterSpacing=1.4.sp,color=Champagne);Spacer(Modifier.height(6.dp));Text(nextAlarm?.first?.let{String.format("%02d:%02d  ·  %s",it.hour,it.minute,it.label.ifBlank{"Alarm"})}?:"No upcoming alarms",fontSize=20.sp,color=TitaniumHi);Text("Manage alarms  →",fontSize=10.sp,color=ElectricCyan)}} }
+        item { Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){OutlinedButton(onClick={onOpen(Screen.WORLD)},modifier=Modifier.weight(1f)){androidx.compose.material3.Icon(Icons.Outlined.Public,null);Text("World clock")};OutlinedButton(onClick=onTools,modifier=Modifier.weight(1f)){androidx.compose.material3.Icon(Icons.Outlined.CalendarMonth,null);Text("Temporal tools")}} }
+        items(cities.take(3)){city->Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(Graphite).padding(14.dp),horizontalArrangement=Arrangement.SpaceBetween){Text(city.name,color=Titanium);Text(Instant.now().atZone(ZoneId.of(city.zoneId)).format(DateTimeFormatter.ofPattern("HH:mm")),fontFamily=FontFamily.Monospace,color=TitaniumHi)}}
+    }
+}
+
+@Composable private fun WorldClockScreen(cities:List<com.mesad.time.data.local.WorldCityEntity>,query:String,onQuery:(String)->Unit,onAdd:()->Unit,onCityAdd:(City)->Unit,onDelete:(Long)->Unit,now:java.time.ZonedDateTime){
+    Column(Modifier.fillMaxSize()) { Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)){OutlinedTextField(query,onQuery,label={Text("Search cities")},modifier=Modifier.weight(1f));Button(onClick=onAdd){Text("Add")}}
+        LazyColumn(verticalArrangement=Arrangement.spacedBy(8.dp),modifier=Modifier.padding(top=12.dp)){items(cities){c->val local=Instant.now().atZone(ZoneId.of(c.zoneId));Card(colors=CardDefaults.cardColors(containerColor=Graphite)){Row(Modifier.fillMaxWidth().padding(14.dp),verticalAlignment=Alignment.CenterVertically){Column(Modifier.weight(1f)){Text(c.name,color=TitaniumHi);Text(c.zoneId,fontSize=9.sp,color=Titanium);Text(local.format(DateTimeFormatter.ofPattern("EEEE, MMM d · z")),fontSize=10.sp,color=Champagne)};Text(local.format(DateTimeFormatter.ofPattern("HH:mm")),fontSize=22.sp,fontFamily=FontFamily.Monospace);TextButton(onClick={onDelete(c.id)}){androidx.compose.material3.Icon(Icons.Outlined.Delete,null)}}}}}
+    }
+}
+
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -249,29 +273,6 @@ private fun MesadApplicationUi(db: MesadDatabase) {
         OutlinedTextField(reminderText,{reminderText=it},label={Text("New reminder")},modifier=Modifier.fillMaxWidth());Button(onClick={if(reminderText.isNotBlank()){reminders=listOf(reminderText)+reminders;preferences.edit().putStringSet("reminders",reminders.toSet()).apply();reminderText=""}}){Text("Add reminder")}
         reminders.forEach{rem->Text("• $rem",Modifier.fillMaxWidth().clickable{reminders=reminders-rem;preferences.edit().putStringSet("reminders",reminders.toSet()).apply()}.padding(4.dp),fontSize=11.sp)}
     }},confirmButton={TextButton(onClick={toolsDialog=false}){Text("Done")}})
-}
-
-@Composable private fun HomeScreen(now:java.time.ZonedDateTime,jalali:JalaliDate,showJalali:Boolean,formatter:DateTimeFormatter,engine:ClockEngine,performance:Boolean,scale:Float,glow:Float,material:String,seconds:Boolean,nextAlarm:Pair<AlarmEntity,java.time.ZonedDateTime>?,cities:List<com.mesad.time.data.local.WorldCityEntity>,onOpen:(Screen)->Unit,onTools:()->Unit){
-    val context=LocalContext.current;var view:MesadClockView? by remember{mutableStateOf(null)}
-    LazyColumn(verticalArrangement=Arrangement.spacedBy(12.dp),contentPadding=androidx.compose.foundation.layout.PaddingValues(bottom=18.dp)){
-        item { Column(horizontalAlignment=Alignment.CenterHorizontally,modifier=Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(Color(0xFF101821)).padding(14.dp)){
-            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text("${engine.name}  ·  LIVE",fontSize=9.sp,letterSpacing=1.4.sp,color=ElectricCyan);Text("LOCAL TIME",fontSize=9.sp,letterSpacing=1.sp,color=Titanium)}
-            if(performance) MesadClock(engine,StudioPreset(engine=engine,scale=scale,glowIntensity=glow,materialFinish=runCatching{com.mesad.time.domain.model.MaterialFinish.valueOf(material)}.getOrDefault(com.mesad.time.domain.model.MaterialFinish.BRUSHED_TITANIUM)),Modifier.size(250.dp),showSeconds=seconds)
-            else AndroidView(factory={MesadClockView(context).also{view=it;it.setEngine(engine.name);it.setScale(scale);it.setGlow(glow);it.setMaterial(material)}},modifier=Modifier.size(250.dp),update={it.setEngine(engine.name);it.setScale(scale);it.setGlow(glow);it.setMaterial(material)})
-            Text(now.format(formatter),fontSize=38.sp,fontFamily=FontFamily.Monospace,fontWeight=FontWeight.Light,letterSpacing=(-2).sp,color=Color(0xFFE8EDF5))
-            Text(now.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL)),fontSize=12.sp,color=Titanium)
-            if(showJalali) Text("${jalali.day} · ${JalaliDate.monthName(jalali.month)} ${jalali.year} SH",fontSize=10.sp,color=Champagne,modifier=Modifier.padding(top=4.dp))
-        } }
-        item { Card(colors=CardDefaults.cardColors(containerColor=Graphite)){Column(Modifier.fillMaxWidth().clickable{onOpen(Screen.ALARM)}.padding(16.dp)){Text("NEXT ALARM",fontSize=9.sp,letterSpacing=1.4.sp,color=Champagne);Spacer(Modifier.height(6.dp));Text(nextAlarm?.first?.let{String.format("%02d:%02d  ·  %s",it.hour,it.minute,it.label.ifBlank{"Alarm"})}?:"No upcoming alarms",fontSize=20.sp,color=TitaniumHi);Text("Manage alarms  →",fontSize=10.sp,color=ElectricCyan)}} }
-        item { Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){OutlinedButton(onClick={onOpen(Screen.WORLD)},modifier=Modifier.weight(1f)){androidx.compose.material3.Icon(Icons.Outlined.Public,null);Text("World clock")};OutlinedButton(onClick=onTools,modifier=Modifier.weight(1f)){androidx.compose.material3.Icon(Icons.Outlined.CalendarMonth,null);Text("Temporal tools")}} }
-        items(cities.take(3)){city->Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(Graphite).padding(14.dp),horizontalArrangement=Arrangement.SpaceBetween){Text(city.name,color=Titanium);Text(Instant.now().atZone(ZoneId.of(city.zoneId)).format(DateTimeFormatter.ofPattern("HH:mm")),fontFamily=FontFamily.Monospace,color=TitaniumHi)}}
-    }
-}
-
-@Composable private fun WorldClockScreen(cities:List<com.mesad.time.data.local.WorldCityEntity>,query:String,onQuery:(String)->Unit,onAdd:()->Unit,onCityAdd:(City)->Unit,onDelete:(Long)->Unit,now:java.time.ZonedDateTime){
-    Column(Modifier.fillMaxSize()) { Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)){OutlinedTextField(query,onQuery,label={Text("Search cities")},modifier=Modifier.weight(1f));Button(onClick=onAdd){Text("Add")}}
-        LazyColumn(verticalArrangement=Arrangement.spacedBy(8.dp),modifier=Modifier.padding(top=12.dp)){items(cities){c->val local=Instant.now().atZone(ZoneId.of(c.zoneId));Card(colors=CardDefaults.cardColors(containerColor=Graphite)){Row(Modifier.fillMaxWidth().padding(14.dp),verticalAlignment=Alignment.CenterVertically){Column(Modifier.weight(1f)){Text(c.name,color=TitaniumHi);Text(c.zoneId,fontSize=9.sp,color=Titanium);Text(local.format(DateTimeFormatter.ofPattern("EEEE, MMM d · z")),fontSize=10.sp,color=Champagne)};Text(local.format(DateTimeFormatter.ofPattern("HH:mm")),fontSize=22.sp,fontFamily=FontFamily.Monospace);TextButton(onClick={onDelete(c.id)}){androidx.compose.material3.Icon(Icons.Outlined.Delete,null)}}}}}
-    }
 }
 
 @Composable private fun AlarmScreen(alarms:List<AlarmEntity>,onAdd:()->Unit,onToggle:(AlarmEntity,Boolean)->Unit,onDelete:(AlarmEntity)->Unit){Column(Modifier.fillMaxSize()){Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically){Text("Reliable, repeatable, yours.",fontSize=12.sp,color=Titanium);Button(onClick=onAdd){Text("+ Alarm")}};LazyColumn(verticalArrangement=Arrangement.spacedBy(8.dp),modifier=Modifier.padding(top=12.dp)){items(alarms){a->Card(colors=CardDefaults.cardColors(containerColor=Graphite)){Row(Modifier.fillMaxWidth().padding(14.dp),verticalAlignment=Alignment.CenterVertically){Column(Modifier.weight(1f)){Text(String.format("%02d:%02d",a.hour,a.minute),fontSize=28.sp,fontFamily=FontFamily.Monospace,color=TitaniumHi);Text(a.label.ifBlank{"Alarm"},fontSize=12.sp,color=Titanium);Text(if(a.repeatDays.isBlank())"One time" else a.repeatDays.replace(","," · "),fontSize=9.sp,color=Champagne)};Switch(checked=a.enabled,onCheckedChange={onToggle(a,it)});TextButton(onClick={onDelete(a)}){androidx.compose.material3.Icon(Icons.Outlined.Delete,null)}}}}}}

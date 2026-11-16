@@ -1,0 +1,206 @@
+@import "tailwindcss";
+
+:root {
+  --bg-deep: #09090D;
+  --bg-charcoal: #15141B;
+  --bg-elevated: #1B1924;
+  --bg-dark-purple: #241936;
+  --accent-royal: #8052D6;
+  --accent-lavender: #B69AEF;
+  --text-primary: #F4F1F8;
+  --text-secondary: #A79EB9;
+  --text-muted: #6E6680;
+  --border-subtle: rgba(182, 154, 239, 0.09);
+  --border-active: rgba(182, 154, 239, 0.28);
+  --danger-rose: #D9778B;
+  --warm-amber: #C48B5C;
+
+  --font-persian: 'Vazirmatn', system-ui, -apple-system, sans-serif;
+  --font-num-display: 'Barlow Condensed', 'Space Grotesk', sans-serif;
+  --font-num-geo: 'Space Grotesk', 'Manrope', sans-serif;
+  --font-latin: 'Manrope', 'Space Grotesk', sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-deep);
+  color: var(--text-primary);
+  font-family: var(--font-persian);
+  min-height: 100dvh;
+  overflow-x: hidden;
+  text-rendering: optimizeLegibility;
+}
+
+/* Signature English Numeral System — Geometric Elegant + Bold Condensed Editorial */
+.num-display {
+  font-family: var(--font-num-display);
+  font-variant-numeric: tabular-nums lining-nums;
+  font-feature-settings: "tnum" 1, "lnum" 1;
+  letter-spacing: -0.02em;
+  direction: ltr;
+  unicode-bidi: isolate;
+  line-height: 1;
+}
+
+.num-geo {
+  font-family: var(--font-num-geo);
+  font-variant-numeric: tabular-nums lining-nums;
+  font-feature-settings: "tnum" 1, "lnum" 1;
+  letter-spacing: -0.015em;
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+.font-brand {
+  font-family: var(--font-num-geo);
+  letter-spacing: 0.22em;
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+/* Atmospheric Lighting — Subtle Luxury Purple Halo */
+.kairos-ambient-bg {
+  background-color: var(--bg-deep);
+  background-image:
+    radial-gradient(ellipse 80% 38% at 50% -8%, rgba(128, 82, 214, 0.16), transparent 70%),
+    radial-gradient(ellipse 45% 24% at 85% 18%, rgba(36, 25, 54, 0.45), transparent 72%);
+}
+
+/* Signature Layered Surface Cards */
+.luxury-card {
+  background: linear-gradient(180deg, rgba(26, 24, 34, 0.92) 0%, rgba(21, 20, 27, 0.98) 100%);
+  border: 1px solid var(--border-subtle);
+  border-radius: 20px;
+  box-shadow:
+    0 12px 32px -16px rgba(0, 0, 0, 0.72),
+    inset 0 1px 0 rgba(244, 241, 248, 0.04);
+}
+
+.luxury-card-hero {
+  background:
+    radial-gradient(ellipse 90% 80% at 18% 0%, rgba(128, 82, 214, 0.22), transparent 65%),
+    linear-gradient(165deg, #1E1630 0%, #15141B 58%, #121118 100%);
+  border: 1px solid rgba(182, 154, 239, 0.19);
+  border-radius: 24px;
+  box-shadow:
+    0 20px 48px -20px rgba(9, 9, 13, 0.9),
+    0 0 36px -18px rgba(128, 82, 214, 0.35),
+    inset 0 1px 0 rgba(244, 241, 248, 0.08);
+}
+
+.luxury-card-subtle {
+  background: rgba(21, 20, 27, 0.76);
+  border: 1px solid rgba(182, 154, 239, 0.07);
+  border-radius: 16px;
+}
+
+/* Selective Glassmorphism — ONLY for Navigation Dock, Modals & Focus Halo */
+.luxury-glass-dock {
+  background: rgba(17, 15, 24, 0.84);
+  backdrop-filter: blur(22px) saturate(140%);
+  -webkit-backdrop-filter: blur(22px) saturate(140%);
+  border: 1px solid rgba(182, 154, 239, 0.14);
+  box-shadow:
+    0 18px 42px -12px rgba(0, 0, 0, 0.85),
+    inset 0 1px 0 rgba(244, 241, 248, 0.07);
+}
+
+.luxury-glass-sheet {
+  background: linear-gradient(180deg, rgba(25, 22, 35, 0.97) 0%, rgba(15, 14, 20, 0.99) 100%);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-top: 1px solid rgba(182, 154, 239, 0.18);
+  box-shadow: 0 -24px 64px rgba(0, 0, 0, 0.82);
+}
+
+/* Primary Royal Purple Action Button */
+.btn-royal {
+  background: linear-gradient(180deg, #8B5EE0 0%, #7546CC 100%);
+  color: #F4F1F8;
+  border: 1px solid rgba(182, 154, 239, 0.34);
+  box-shadow:
+    0 8px 22px -6px rgba(128, 82, 214, 0.55),
+    inset 0 1px 0 rgba(244, 241, 248, 0.22);
+  transition: transform 0.14s ease, filter 0.16s ease, box-shadow 0.16s ease;
+}
+
+.btn-royal:hover {
+  filter: brightness(1.07);
+  box-shadow:
+    0 10px 26px -6px rgba(128, 82, 214, 0.68),
+    inset 0 1px 0 rgba(244, 241, 248, 0.28);
+}
+
+.btn-royal:active {
+  transform: scale(0.975);
+}
+
+.btn-ghost-luxury {
+  background: rgba(36, 25, 54, 0.55);
+  color: #F4F1F8;
+  border: 1px solid rgba(182, 154, 239, 0.14);
+  transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.12s ease;
+}
+
+.btn-ghost-luxury:hover {
+  background: rgba(36, 25, 54, 0.85);
+  border-color: rgba(182, 154, 239, 0.28);
+}
+
+.btn-ghost-luxury:active {
+  transform: scale(0.975);
+}
+
+/* Clean Obsidian Form Inputs */
+.luxury-input {
+  width: 100%;
+  background: #100F16;
+  color: #F4F1F8;
+  border: 1px solid rgba(182, 154, 239, 0.13);
+  border-radius: 14px;
+  padding: 0.72rem 0.92rem;
+  font-size: 0.9rem;
+  outline: none;
+  transition: border-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.luxury-input::placeholder {
+  color: #6E6680;
+}
+
+.luxury-input:focus {
+  border-color: rgba(182, 154, 239, 0.45);
+  box-shadow: 0 0 0 3px rgba(128, 82, 214, 0.16);
+}
+
+/* Hide scrollbars cleanly where horizontal touch-scrolling is used */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Refined thin scrollbar for heatmap & desktop */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(182, 154, 239, 0.16);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(182, 154, 239, 0.32);
+}

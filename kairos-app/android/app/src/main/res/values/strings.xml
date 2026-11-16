@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">KAIROS</string>
+    <string name="title_activity_main">KAIROS</string>
+    <string name="package_name">app.kairos.productivity</string>
+    <string name="custom_url_scheme">app.kairos.productivity</string>
+</resources>

@@ -1,0 +1,56 @@
+name: Build KAIROS Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'kairos-app/**'
+      - '.github/workflows/kairos-android-apk.yml'
+
+jobs:
+  build-android-apk:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Setup Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Setup Android SDK & accept licenses
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses || true
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Install dependencies, test, build web & sync Android
+        working-directory: kairos-app
+        run: |
+          npm ci || npm install --no-audit --no-fund
+          npm run typecheck
+          npm run lint
+          npm test
+          npm run build
+          npx cap sync android
+
+      - name: Assemble signed Android APK
+        working-directory: kairos-app/android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+          cp app/build/outputs/apk/debug/app-debug.apk app/build/outputs/apk/debug/KAIROS-v1.0.0.apk
+          ls -lh app/build/outputs/apk/debug/KAIROS-v1.0.0.apk
+
+      - name: Upload KAIROS Android APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: KAIROS-v1.0.0-APK
+          path: kairos-app/android/app/build/outputs/apk/debug/KAIROS-v1.0.0.apk
+          if-no-files-found: error

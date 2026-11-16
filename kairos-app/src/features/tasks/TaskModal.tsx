@@ -208,17 +208,17 @@ export function TaskModal() {
           <label className="mb-1.5 block text-xs font-medium text-[#A79EB9]">عنوان وظیفه</label>
           <input
             type="text"
+            dir="auto"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
+              if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
                 e.preventDefault();
                 void handleSave();
               }
             }}
             placeholder="چه کاری باید انجام شود؟"
             className="luxury-input font-medium"
-            autoFocus
           />
         </div>
 
@@ -227,6 +227,7 @@ export function TaskModal() {
           <label className="mb-1.5 block text-xs font-medium text-[#A79EB9]">توضیحات</label>
           <textarea
             rows={2}
+            dir="auto"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="جزئیات، نکات کلیدی یا لینک‌های مرتبط..."
@@ -434,10 +435,11 @@ export function TaskModal() {
             <div className="flex gap-2">
               <input
                 type="text"
+                dir="auto"
                 value={subtaskInput}
                 onChange={(e) => setSubtaskInput(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
+                  if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
                     e.preventDefault();
                     handleAddSubtask();
                   }
@@ -482,10 +484,11 @@ export function TaskModal() {
           <div className="flex gap-2">
             <input
               type="text"
+              dir="auto"
               value={tagInput}
               onChange={(e) => setTagInput(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === 'Enter') {
+                if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
                   e.preventDefault();
                   handleAddTag();
                 }

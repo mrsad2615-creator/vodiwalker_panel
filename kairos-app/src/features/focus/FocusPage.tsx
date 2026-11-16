@@ -16,6 +16,7 @@ import { formatDurationShort, formatTimerSeconds } from '@/lib/format';
 import { useApp } from '@/context/AppContext';
 import { LuxuryCard } from '@/components/ui/LuxuryCard';
 import { Numeric } from '@/components/ui/Numeric';
+import { NumericInput } from '@/components/ui/NumericInput';
 import { ProgressRing } from '@/components/charts/ProgressRing';
 
 const PRESET_DURATIONS = [15, 25, 45, 60] as const;
@@ -161,13 +162,12 @@ export function FocusPage() {
           <div className="grid grid-cols-3 gap-2.5">
             <div>
               <label className="mb-1 block text-[10.5px] text-[#A79EB9]">تمرکز (دقیقه)</label>
-              <input
-                type="number"
+              <NumericInput
                 min={1}
                 max={180}
+                fallback={25}
                 value={focus.focusMinutes}
-                onChange={(e) => {
-                  const v = Math.max(1, Math.min(180, Number(e.target.value) || 25));
+                onChange={(v) => {
                   setFocusDurations(v, focus.shortBreakMinutes, focus.longBreakMinutes);
                   void updateSettings({ pomodoroFocusMin: v });
                 }}
@@ -176,13 +176,12 @@ export function FocusPage() {
             </div>
             <div>
               <label className="mb-1 block text-[10.5px] text-[#A79EB9]">استراحت کوتاه</label>
-              <input
-                type="number"
+              <NumericInput
                 min={1}
                 max={45}
+                fallback={5}
                 value={focus.shortBreakMinutes}
-                onChange={(e) => {
-                  const v = Math.max(1, Math.min(45, Number(e.target.value) || 5));
+                onChange={(v) => {
                   setFocusDurations(focus.focusMinutes, v, focus.longBreakMinutes);
                   void updateSettings({ pomodoroShortBreakMin: v });
                 }}
@@ -191,13 +190,12 @@ export function FocusPage() {
             </div>
             <div>
               <label className="mb-1 block text-[10.5px] text-[#A79EB9]">استراحت بلند</label>
-              <input
-                type="number"
+              <NumericInput
                 min={5}
                 max={60}
+                fallback={15}
                 value={focus.longBreakMinutes}
-                onChange={(e) => {
-                  const v = Math.max(5, Math.min(60, Number(e.target.value) || 15));
+                onChange={(v) => {
                   setFocusDurations(focus.focusMinutes, focus.shortBreakMinutes, v);
                   void updateSettings({ pomodoroLongBreakMin: v });
                 }}

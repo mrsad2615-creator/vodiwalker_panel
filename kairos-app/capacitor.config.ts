@@ -8,7 +8,9 @@ const config: CapacitorConfig = {
   android: {
     backgroundColor: '#09090D',
     allowMixedContent: false,
-    captureInput: true,
+    // IMPORTANT: Keep captureInput false so Android soft keyboards (Gboard, Samsung, Persian IME)
+    // use native Chromium InputConnection without garbling text or breaking Backspace!
+    captureInput: false,
     webContentsDebuggingEnabled: false,
   },
   plugins: {
@@ -19,7 +21,7 @@ const config: CapacitorConfig = {
     },
     SplashScreen: {
       launchAutoHide: true,
-      launchShowDuration: 900,
+      launchShowDuration: 0,
       backgroundColor: '#09090D',
       showSpinner: false,
     },

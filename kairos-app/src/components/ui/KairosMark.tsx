@@ -48,13 +48,13 @@ export function KairosLogoMark({ size = 28 }: { size?: number }) {
         strokeDasharray="60 19"
       />
       <path
-        d="M16 13.5V26.5M16 20L24 13.5M19.3 17.5L24.5 26.5"
+        d="M13 26.5V15L20 22.5L27 15V26.5"
         stroke="#F4F1F8"
         strokeWidth="2.3"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
-      <circle cx="25.2" cy="13.5" r="1.6" fill="#B69AEF" />
+      <circle cx="20" cy="11.8" r="1.6" fill="#B69AEF" />
       <defs>
         <linearGradient id="kairosGrad" x1="8" y1="8" x2="32" y2="32" gradientUnits="userSpaceOnUse">
           <stop stopColor="#B69AEF" />

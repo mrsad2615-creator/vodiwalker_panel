@@ -30,6 +30,7 @@ import { isNativeAndroid, triggerHaptic } from '@/lib/native';
 import { useApp } from '@/context/AppContext';
 import { LuxuryCard } from '@/components/ui/LuxuryCard';
 import { Numeric } from '@/components/ui/Numeric';
+import { NumericInput } from '@/components/ui/NumericInput';
 import { KairosLogoMark } from '@/components/ui/KairosMark';
 import type { KairosBackupPayload } from '@/types/domain';
 
@@ -44,9 +45,15 @@ export function SettingsPage() {
 
   useEffect(() => {
     setDisplayName(settings.displayName);
+  }, [settings.displayName]);
+
+  useEffect(() => {
     setDailyFocusGoal(settings.dailyFocusGoalMinutes);
+  }, [settings.dailyFocusGoalMinutes]);
+
+  useEffect(() => {
     setDailyTaskGoal(settings.dailyTaskGoal);
-  }, [settings]);
+  }, [settings.dailyTaskGoal]);
 
   useEffect(() => {
     void getNotificationPermission().then(setPermState);
@@ -154,6 +161,7 @@ export function SettingsPage() {
           <label className="mb-1.5 block text-[11px] text-[#A79EB9]">نام نمایشی در داشبورد</label>
           <input
             type="text"
+            dir="auto"
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
             className="luxury-input text-xs"
@@ -163,23 +171,23 @@ export function SettingsPage() {
         <div className="grid grid-cols-2 gap-2.5">
           <div>
             <label className="mb-1.5 block text-[11px] text-[#A79EB9]">هدف تمرکز روزانه (دقیقه)</label>
-            <input
-              type="number"
+            <NumericInput
               min={15}
               max={720}
+              fallback={120}
               value={dailyFocusGoal}
-              onChange={(e) => setDailyFocusGoal(Number(e.target.value))}
+              onChange={setDailyFocusGoal}
               className="luxury-input num-geo text-center text-xs"
             />
           </div>
           <div>
             <label className="mb-1.5 block text-[11px] text-[#A79EB9]">هدف وظایف روزانه</label>
-            <input
-              type="number"
+            <NumericInput
               min={1}
               max={50}
+              fallback={6}
               value={dailyTaskGoal}
-              onChange={(e) => setDailyTaskGoal(Number(e.target.value))}
+              onChange={setDailyTaskGoal}
               className="luxury-input num-geo text-center text-xs"
             />
           </div>
@@ -419,7 +427,7 @@ export function SettingsPage() {
         <div className="flex items-center gap-3">
           <KairosLogoMark size={34} />
           <div>
-            <p className="font-brand text-xs font-bold text-[#F4F1F8]">KAIROS v1.0.0</p>
+            <p className="font-brand text-xs font-bold text-[#F4F1F8]">KAIROS v1.1.0 • MRSAD</p>
             <p className="mt-0.5 flex items-center gap-1 text-[10.5px] text-[#A79EB9]">
               <ShieldCheck className="h-3.5 w-3.5 text-[#8052D6]" />
               <span>

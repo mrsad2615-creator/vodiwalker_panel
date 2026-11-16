@@ -350,6 +350,7 @@ export function TasksPage() {
           <Search className="pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 text-[#6E6680]" />
           <input
             type="text"
+            dir="auto"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="جست‌وجوی عنوان، توضیحات یا برچسب..."

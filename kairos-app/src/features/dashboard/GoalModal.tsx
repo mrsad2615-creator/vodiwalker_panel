@@ -7,6 +7,7 @@ import { ModalSheet } from '@/components/ui/ModalSheet';
 import { JalaliDatePicker } from '@/components/ui/JalaliDatePicker';
 import { formatJalaaliFull } from '@/lib/date';
 import { Numeric } from '@/components/ui/Numeric';
+import { NumericInput } from '@/components/ui/NumericInput';
 import { useApp } from '@/context/AppContext';
 
 interface GoalModalProps {
@@ -122,11 +123,11 @@ export function GoalModal({ open, goal, onClose }: GoalModalProps) {
           <label className="mb-1.5 block text-xs font-medium text-[#A79EB9]">عنوان هدف</label>
           <input
             type="text"
+            dir="auto"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="مثلاً: مطالعه 12 کتاب تخصصی"
             className="luxury-input"
-            autoFocus
           />
         </div>
 
@@ -134,6 +135,7 @@ export function GoalModal({ open, goal, onClose }: GoalModalProps) {
           <label className="mb-1.5 block text-xs font-medium text-[#A79EB9]">توضیحات</label>
           <textarea
             rows={2}
+            dir="auto"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="انگیزه یا معیار تحقق هدف..."
@@ -144,21 +146,23 @@ export function GoalModal({ open, goal, onClose }: GoalModalProps) {
         <div className="grid grid-cols-3 gap-2.5">
           <div>
             <label className="mb-1.5 block text-[11px] font-medium text-[#A79EB9]">پیشرفت فعلی</label>
-            <input
-              type="number"
+            <NumericInput
               min={0}
+              max={99999}
+              fallback={0}
               value={currentValue}
-              onChange={(e) => setCurrentValue(Number(e.target.value))}
+              onChange={setCurrentValue}
               className="luxury-input num-geo text-center"
             />
           </div>
           <div>
             <label className="mb-1.5 block text-[11px] font-medium text-[#A79EB9]">مقدار هدف</label>
-            <input
-              type="number"
+            <NumericInput
               min={1}
+              max={99999}
+              fallback={10}
               value={targetValue}
-              onChange={(e) => setTargetValue(Number(e.target.value))}
+              onChange={setTargetValue}
               className="luxury-input num-geo text-center"
             />
           </div>
@@ -166,6 +170,7 @@ export function GoalModal({ open, goal, onClose }: GoalModalProps) {
             <label className="mb-1.5 block text-[11px] font-medium text-[#A79EB9]">واحد</label>
             <input
               type="text"
+              dir="auto"
               value={unit}
               onChange={(e) => setUnit(e.target.value)}
               placeholder="کتاب / ساعت"

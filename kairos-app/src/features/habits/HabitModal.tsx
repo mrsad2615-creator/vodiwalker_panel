@@ -14,6 +14,7 @@ import {
   HabitIcon,
 } from '@/components/ui/KairosMark';
 import { ModalSheet } from '@/components/ui/ModalSheet';
+import { NumericInput } from '@/components/ui/NumericInput';
 import { useApp } from '@/context/AppContext';
 
 interface HabitModalProps {
@@ -159,11 +160,11 @@ export function HabitModal({ open, habit, onClose, onDeleted }: HabitModalProps)
           <label className="mb-1.5 block text-xs font-medium text-[#A79EB9]">نام عادت</label>
           <input
             type="text"
+            dir="auto"
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="مثلاً: مطالعه روزانه، مدیتیشن، تمرین قدرتی"
             className="luxury-input"
-            autoFocus
           />
         </div>
 
@@ -171,6 +172,7 @@ export function HabitModal({ open, habit, onClose, onDeleted }: HabitModalProps)
           <label className="mb-1.5 block text-xs font-medium text-[#A79EB9]">توضیحات</label>
           <textarea
             rows={2}
+            dir="auto"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="معیار دقیق انجام عادت..."
@@ -270,14 +272,12 @@ export function HabitModal({ open, habit, onClose, onDeleted }: HabitModalProps)
           {scheduleType === 'weekly_target' && (
             <div className="mt-2.5 flex items-center justify-between rounded-xl border border-[#B69AEF]/12 bg-[#100F16] px-3.5 py-2.5 text-xs">
               <span className="text-[#A79EB9]">تعداد روز هدف در هفته:</span>
-              <input
-                type="number"
+              <NumericInput
                 min={1}
                 max={7}
+                fallback={5}
                 value={weeklyTarget}
-                onChange={(e) =>
-                  setWeeklyTarget(Math.max(1, Math.min(7, Number(e.target.value) || 1)))
-                }
+                onChange={setWeeklyTarget}
                 className="num-geo w-14 rounded-lg border border-[#B69AEF]/20 bg-[#15141B] py-1 text-center text-[#F4F1F8] outline-none"
               />
             </div>
@@ -316,11 +316,12 @@ export function HabitModal({ open, habit, onClose, onDeleted }: HabitModalProps)
             <div className="mt-2.5 grid grid-cols-2 gap-2.5">
               <div>
                 <label className="mb-1 block text-[11px] text-[#A79EB9]">هدف روزانه</label>
-                <input
-                  type="number"
+                <NumericInput
                   min={1}
+                  max={9999}
+                  fallback={30}
                   value={targetValue}
-                  onChange={(e) => setTargetValue(Number(e.target.value))}
+                  onChange={setTargetValue}
                   className="luxury-input num-geo text-center text-xs"
                 />
               </div>
@@ -328,6 +329,7 @@ export function HabitModal({ open, habit, onClose, onDeleted }: HabitModalProps)
                 <label className="mb-1 block text-[11px] text-[#A79EB9]">واحد اندازه‌گیری</label>
                 <input
                   type="text"
+                  dir="auto"
                   value={unit}
                   onChange={(e) => setUnit(e.target.value)}
                   placeholder="دقیقه / صفحه / لیوان"

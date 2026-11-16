@@ -148,7 +148,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawOrbitClock(
             center.y + sin(hourAngle).toFloat() * radius * 0.45f
         ),
         strokeWidth = radius * 0.055f,
-        strokeCap = androidx.compose.ui.graphics.StrokeCap.Round
+        cap = androidx.compose.ui.graphics.StrokeCap.Round
     )
     // Minute hand (titanium, medium)
     drawLine(
@@ -159,7 +159,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawOrbitClock(
             center.y + sin(minuteAngle).toFloat() * radius * 0.62f
         ),
         strokeWidth = radius * 0.04f,
-        strokeCap = androidx.compose.ui.graphics.StrokeCap.Round
+        cap = androidx.compose.ui.graphics.StrokeCap.Round
     )
     // Second hand (cyan, thin, continuous sweep)
     drawLine(
@@ -173,7 +173,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawOrbitClock(
             center.y + sin(secondAngle).toFloat() * radius * 0.68f
         ),
         strokeWidth = radius * 0.018f,
-        strokeCap = androidx.compose.ui.graphics.StrokeCap.Round
+        cap = androidx.compose.ui.graphics.StrokeCap.Round
     )
 
     // Center cap
@@ -278,7 +278,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawChronosClock(
             center.y + sin(hourAngle).toFloat() * radius * 0.48f
         ),
         strokeWidth = radius * 0.06f,
-        strokeCap = androidx.compose.ui.graphics.StrokeCap.Round
+        cap = androidx.compose.ui.graphics.StrokeCap.Round
     )
     drawLine(
         color = ring,
@@ -288,7 +288,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawChronosClock(
             center.y + sin(minuteAngle).toFloat() * radius * 0.68f
         ),
         strokeWidth = radius * 0.045f,
-        strokeCap = androidx.compose.ui.graphics.StrokeCap.Round
+        cap = androidx.compose.ui.graphics.StrokeCap.Round
     )
 
     // Center cap with champagne detail
@@ -359,7 +359,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawNexusClock(
             center.y + sin(hourAngle).toFloat() * radius * 0.42f
         ),
         strokeWidth = radius * 0.04f,
-        strokeCap = androidx.compose.ui.graphics.StrokeCap.Round
+        cap = androidx.compose.ui.graphics.StrokeCap.Round
     )
     drawLine(
         color = primary,
@@ -369,7 +369,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawNexusClock(
             center.y + sin(minuteAngle).toFloat() * radius * 0.58f
         ),
         strokeWidth = radius * 0.03f,
-        strokeCap = androidx.compose.ui.graphics.StrokeCap.Round
+        cap = androidx.compose.ui.graphics.StrokeCap.Round
     )
     drawLine(
         color = accent,
@@ -379,7 +379,7 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawNexusClock(
             center.y + sin(secondAngle).toFloat() * radius * 0.65f
         ),
         strokeWidth = radius * 0.015f,
-        strokeCap = androidx.compose.ui.graphics.StrokeCap.Round
+        cap = androidx.compose.ui.graphics.StrokeCap.Round
     )
 
     // Nexus core (bright center)

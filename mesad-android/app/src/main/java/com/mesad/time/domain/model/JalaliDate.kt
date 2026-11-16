@@ -112,40 +112,21 @@ data class JalaliDate(
         }
 
         private fun jalaaliToGregorian(jy: Int, jm: Int, jd: Int): Triple<Int, Int, Int> {
-            val jDaysInMonth = intArrayOf(31, 31, 31, 31, 31, 31, 30, 30, 30, 30, 30, 29)
-            val gDaysInMonth = intArrayOf(31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)
+            require(jy in 979..9378) { "Jalali year is outside the supported Gregorian range" }
+            require(jm in 1..12) { "Month must be 1-12" }
+            require(jd in 1..31) { "Day must be 1-31" }
 
-            val jy2 = jy - 979
-            val jm2 = jm - 1
-            val jd2 = jd - 1
-
-            var jDayNo = 365 * jy2 + (jy2 / 33) * 8 + (jy2 % 33 + 3) / 4
-            for (i in 0 until jm2) jDayNo += jDaysInMonth[i]
-            jDayNo += jd2
-
-            val gNp = jDayNo / 146097
-            jDayNo %= 146097
-
-            var gy = 1600 + 400 * gNp + jDayNo / 36524
-            jDayNo %= 36524
-
-            if (jDayNo >= 36524) {
-                gy += jDayNo / 1461
-                jDayNo %= 1461
-            } else {
-                if (jDayNo >= 365) {
-                    gy += (jDayNo - 1) / 365
-                    jDayNo = (jDayNo - 1) % 365
+            // Resolve through the forward converter to keep both directions consistent with the
+            // tested Jalaali conversion table. A Jalali year occupies at most 366 Gregorian days.
+            var date = LocalDate.of(jy + 621, 1, 1)
+            repeat(400) {
+                val converted = gregorianToJalaali(date.year, date.monthValue, date.dayOfMonth)
+                if (converted.first == jy && converted.second == jm && converted.third == jd) {
+                    return Triple(date.year, date.monthValue, date.dayOfMonth)
                 }
+                date = date.plusDays(1)
             }
-
-            var gm = 0
-            while (gm < 11 && jDayNo >= gDaysInMonth[gm]) {
-                jDayNo -= gDaysInMonth[gm]
-                gm++
-            }
-
-            return Triple(gy, gm + 1, jDayNo + 1)
+            throw IllegalArgumentException("Invalid Jalali date: $jy/$jm/$jd")
         }
 
         private fun isGregorianLeap(year: Int): Boolean {

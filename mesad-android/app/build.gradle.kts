@@ -81,11 +81,6 @@ dependencies {
     implementation("androidx.glance:glance-appwidget:1.2.0")
     implementation("androidx.glance:glance-material3:1.2.0")
 
-    // Filament 3D (PBR Rendering)
-    implementation("com.google.android.filament:filament-android:1.70.2")
-    implementation("com.google.android.filament:gltfio-android:1.70.2")
-    implementation("com.google.android.filament:utils-android:1.70.2")
-
     // Desugaring for java.time on API 26+
     implementation("com.android.tools:desugar_jdk_libs:2.1.4")
 

@@ -15,6 +15,6 @@ This sandbox does not include a JDK, Kotlin compiler, Gradle, Android SDK, or AD
 
 - Android exact alarms use `SCHEDULE_EXACT_ALARM` and a permission-aware inexact fallback; OS policy and permission dialogs must be validated on Android 12–16 hardware.
 - The brand icon's vector adaptive layers are authoritative; raster previews are design exports. Verify adaptive masks/monochrome on OEM launchers.
-- The native 3D view is procedural OpenGL ES geometry with a metallic lighting shader, while Filament dependencies are included for future renderer substitution. The standalone WebGL studio uses Three.js physical materials. The native renderer has not yet been profiled against 60fps/battery acceptance targets.
+- The native 3D view is procedural OpenGL ES geometry with a metallic lighting shader. Filament is not included in the Android build. The standalone WebGL studio uses Three.js physical materials. The native renderer has not yet been profiled against 60fps/battery acceptance targets.
 - Android UI currently stores alarm/city/timer records in Room and user preferences in SharedPreferences. The web studio uses browser localStorage. No account/network service is required.
 - Native reminders are local list items, not scheduled notification reminders; the web simulator provides local reminder management. Native reminder notification scheduling remains a follow-up product requirement.

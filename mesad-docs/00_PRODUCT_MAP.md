@@ -80,7 +80,7 @@ MESAD
 #### 3.2 3D Rendering Engine (Platform Layer)
 - **Native production path in this source:** OpenGL ES 3 context, procedural 3D meshes, depth-buffered real-time animation, and metallic multi-light shader; the separate explicit `Performance Mode` uses Compose Canvas 2D.
 - **Web studio:** Three.js WebGL2 meshes and PBR materials, verified in this sandbox.
-- **Filament:** Android artifacts are included in Gradle dependencies as a renderer integration option, but a Filament Scene/Renderer host is not yet wired; native renderer is currently direct GLES. Native shading and frame-time targets need CI/device validation.
+- **Filament:** Not included in the Android build; no Filament Scene/Renderer host is wired. The current native renderer is direct GLES. Native shading and frame-time targets still need device validation.
 - **Geometry:** Procedural — Torus (orbital ring), Icosahedron (sapphire core), Cone (zenith wedge), Cylinder (bezel). No external GLB assets.
 - **Lighting:** 3-point studio rig (Key: warm champagne, Fill: cool cyan, Rim: titanium white) + environment map.
 

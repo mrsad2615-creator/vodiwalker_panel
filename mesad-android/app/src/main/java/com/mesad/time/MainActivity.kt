@@ -143,6 +143,72 @@ private val popularCities = listOf(
 }
 
 
+@Composable private fun AlarmScreen(alarms:List<AlarmEntity>,onAdd:()->Unit,onToggle:(AlarmEntity,Boolean)->Unit,onDelete:(AlarmEntity)->Unit){Column(Modifier.fillMaxSize()){Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically){Text("Reliable, repeatable, yours.",fontSize=12.sp,color=Titanium);Button(onClick=onAdd){Text("+ Alarm")}};LazyColumn(verticalArrangement=Arrangement.spacedBy(8.dp),modifier=Modifier.padding(top=12.dp)){items(alarms){a->Card(colors=CardDefaults.cardColors(containerColor=Graphite)){Row(Modifier.fillMaxWidth().padding(14.dp),verticalAlignment=Alignment.CenterVertically){Column(Modifier.weight(1f)){Text(String.format("%02d:%02d",a.hour,a.minute),fontSize=28.sp,fontFamily=FontFamily.Monospace,color=TitaniumHi);Text(a.label.ifBlank{"Alarm"},fontSize=12.sp,color=Titanium);Text(if(a.repeatDays.isBlank())"One time" else a.repeatDays.replace(","," · "),fontSize=9.sp,color=Champagne)};Switch(checked=a.enabled,onCheckedChange={onToggle(a,it)});TextButton(onClick={onDelete(a)}){androidx.compose.material3.Icon(Icons.Outlined.Delete,null)}}}}}}
+
+@Composable private fun StopwatchScreen(
+    accumulated: Long,
+    running: Boolean,
+    startedAtElapsed: Long,
+    onRunning: (Boolean) -> Unit,
+    onLap: (Long) -> Unit,
+    onReset: () -> Unit,
+    laps: List<LapEntity>
+) {
+    var now by remember { mutableLongStateOf(SystemClock.elapsedRealtime()) }
+    var confirmReset by remember { mutableStateOf(false) }
+    LaunchedEffect(running) { while (running) { now = SystemClock.elapsedRealtime(); delay(25) } }
+    val elapsed = if (running) (now - startedAtElapsed).coerceAtLeast(0) else accumulated
+    Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
+        Text("MONOTONIC CHRONOGRAPH", fontSize=9.sp, letterSpacing=1.5.sp, color=Champagne)
+        Text(formatMs(elapsed), fontSize=44.sp, fontFamily=FontFamily.Monospace, color=TitaniumHi, modifier=Modifier.padding(top=28.dp))
+        Canvas(Modifier.size(230.dp).padding(10.dp)) {
+            drawCircle(Color(0xFF283341), style=Stroke(2.dp.toPx()))
+            drawArc(ElectricCyan, startAngle=-90f, sweepAngle=(elapsed%60000)/60000f*360f, useCenter=false, topLeft=androidx.compose.ui.geometry.Offset.Zero, size=androidx.compose.ui.geometry.Size(size.width,size.height), style=Stroke(2.dp.toPx(), cap=StrokeCap.Round))
+            drawCircle(Champagne, radius=4.dp.toPx())
+        }
+        Row(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
+            OutlinedButton(onClick={ if(running) onLap(elapsed) else confirmReset=true }) { Text(if(running) "Lap" else "Reset") }
+            Button(onClick={ onRunning(!running) }) {
+                androidx.compose.material3.Icon(if(running) Icons.Outlined.Pause else Icons.Outlined.PlayArrow,null)
+                Text(if(running) "Pause" else "Start")
+            }
+            OutlinedButton(onClick={confirmReset=true}) { Text("Reset") }
+        }
+        LazyColumn(Modifier.fillMaxWidth().padding(top=14.dp)) {
+            items(laps.reversed()) { lap ->
+                Row(Modifier.fillMaxWidth().padding(8.dp), horizontalArrangement=Arrangement.SpaceBetween) {
+                    Text("Lap ${lap.lapNumber}${if(lap.isBest) " · BEST" else if(lap.isWorst) " · SLOW" else ""}", color=if(lap.isBest) Color(0xFF53DABC) else if(lap.isWorst) Champagne else Titanium)
+                    Text(formatMs(lap.deltaMs), fontFamily=FontFamily.Monospace, color=if(lap.isBest) Color(0xFF53DABC) else if(lap.isWorst) Champagne else TitaniumHi)
+                    Text(formatMs(lap.totalElapsedMs), fontFamily=FontFamily.Monospace, color=Champagne)
+                }
+            }
+        }
+    }
+    if(confirmReset) AlertDialog(
+        onDismissRequest={confirmReset=false},
+        title={Text("Reset stopwatch?")},
+        text={Text("This will clear the elapsed time and all recorded laps.")},
+        confirmButton={TextButton(onClick={confirmReset=false;onReset()}){Text("Reset")}},
+        dismissButton={TextButton(onClick={confirmReset=false}){Text("Cancel")}}
+    )
+}
+
+@Composable private fun TimerScreen(timers:List<TimerEntity>,h:String,onH:(String)->Unit,m:String,onM:(String)->Unit,s:String,onS:(String)->Unit,label:String,onLabel:(String)->Unit,onCreate:()->Unit,onToggle:(TimerEntity)->Unit,onReset:(TimerEntity)->Unit,onDelete:(Long)->Unit){var tick by remember{mutableLongStateOf(SystemClock.elapsedRealtime())};LaunchedEffect(timers.any{it.state==TimerState.RUNNING.name}){while(timers.any{it.state==TimerState.RUNNING.name}){tick=SystemClock.elapsedRealtime();delay(100)}};Column(Modifier.fillMaxSize()){Card(colors=CardDefaults.cardColors(containerColor=Graphite)){Column(Modifier.padding(14.dp)){Row(horizontalArrangement=Arrangement.spacedBy(7.dp)){listOf("H" to h to onH,"M" to m to onM,"S" to s to onS).forEach{ item->val unit=item.first.first;val value=item.first.second;val setter=item.second;OutlinedTextField(value,setter,label={Text(unit)},modifier=Modifier.weight(1f))}};OutlinedTextField(label,onLabel,label={Text("Timer label")},modifier=Modifier.fillMaxWidth());Button(onClick=onCreate,modifier=Modifier.fillMaxWidth()){Text("Create timer")}}};LazyColumn(verticalArrangement=Arrangement.spacedBy(8.dp),modifier=Modifier.padding(top=12.dp)){items(timers){timer->val remaining=if(timer.state==TimerState.RUNNING.name)(timer.deadlineElapsedRealtime?:tick)-tick else timer.remainingMs;Card(colors=CardDefaults.cardColors(containerColor=Graphite)){Row(Modifier.fillMaxWidth().padding(12.dp),verticalAlignment=Alignment.CenterVertically){Column(Modifier.weight(1f)){Text(timer.label.ifBlank{"Timer"},color=Titanium);Text(formatMs(remaining.coerceAtLeast(0)),fontSize=25.sp,fontFamily=FontFamily.Monospace,color=if(remaining<=0)Champagne else TitaniumHi);Text(timer.state,fontSize=9.sp,color=Champagne)};Button(onClick={onToggle(timer)}){Text(if(timer.state==TimerState.RUNNING.name)"Pause" else "Start")};TextButton(onClick={onReset(timer)}){Text("Reset")};TextButton(onClick={onDelete(timer.id)}){Text("×")}}}}}}
+}
+
+@Composable private fun StudioScreen(engine:ClockEngine,onEngine:(ClockEngine)->Unit,material:String,onMaterial:(String)->Unit,performance:Boolean,onPerformance:(Boolean)->Unit,scale:Float,onScale:(Float)->Unit,glow:Float,onGlow:(Float)->Unit,saved:Boolean,onSave:()->Unit){val context= LocalContext.current;Column(Modifier.fillMaxSize(),horizontalAlignment=Alignment.CenterHorizontally){Text("CLOCK STUDIO",fontSize=9.sp,letterSpacing=1.5.sp,color=Champagne);if(performance)MesadClock(engine,StudioPreset(engine=engine,scale=scale,glowIntensity=glow,materialFinish=runCatching{com.mesad.time.domain.model.MaterialFinish.valueOf(material)}.getOrDefault(com.mesad.time.domain.model.MaterialFinish.BRUSHED_TITANIUM)),Modifier.size(250.dp)) else AndroidView(factory={MesadClockView(context).also{it.setEngine(engine.name);it.setMaterial(material)}},modifier=Modifier.size(250.dp),update={it.setEngine(engine.name);it.setScale(scale);it.setGlow(glow);it.setMaterial(material)});Row(horizontalArrangement=Arrangement.spacedBy(5.dp)){ClockEngine.entries.forEach{e->FilterChip(selected=e==engine,onClick={onEngine(e)},label={Text(e.name)})}};Text("Clock scale · ${"%.2f".format(scale)}",modifier=Modifier.fillMaxWidth(),color=Titanium);Slider(scale,onScale,valueRange=.7f..1.3f);Text("Light / emission · ${"%.2f".format(glow)}",modifier=Modifier.fillMaxWidth(),color=Titanium);Slider(glow,onGlow);Text("Material finish",Modifier.fillMaxWidth(),fontSize=12.sp,color=Titanium);Row(horizontalArrangement=Arrangement.spacedBy(4.dp)){com.mesad.time.domain.model.MaterialFinish.entries.forEach{finish->FilterChip(selected=material==finish.name,onClick={onMaterial(finish.name)},label={Text(finish.name.replace("_"," "),fontSize=9.sp)})}};Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){Text("Performance mode · 2D fallback",Modifier.weight(1f),fontSize=12.sp,color=Titanium);Switch(performance,onPerformance)};Button(onClick=onSave){Text(if(saved)"Preset saved" else "Save signature preset")}}
+}
+
+@Composable private fun ThemesScreen(dark:Boolean,onDark:(Boolean)->Unit){Column(verticalArrangement=Arrangement.spacedBy(10.dp)){Text("SURFACES SHAPED BY LIGHT",fontSize=9.sp,letterSpacing=1.3.sp,color=Champagne);listOf("Obsidian · Deep matte black","Midnight · Blue-hour precision","Champagne · Warm metal","Daylight · Soft titanium silver").forEach{label->Card(colors=CardDefaults.cardColors(containerColor=Graphite),modifier=Modifier.fillMaxWidth().clickable{onDark(label.startsWith("Obsidian")||label.startsWith("Midnight")||label.startsWith("Champagne"))}){Row(Modifier.padding(16.dp),verticalAlignment=Alignment.CenterVertically){Text(label,Modifier.weight(1f),color=TitaniumHi);if((dark&& !label.startsWith("Daylight"))||(!dark&&label.startsWith("Daylight")))androidx.compose.material3.Icon(Icons.Outlined.Check,null,tint=ElectricCyan)}}}}}
+
+@Composable private fun SettingsScreen(use24:Boolean,on24:(Boolean)->Unit,seconds:Boolean,onSeconds:(Boolean)->Unit,jalali:Boolean,onJalali:(Boolean)->Unit,performance:Boolean,onPerformance:(Boolean)->Unit,dark:Boolean,onDark:(Boolean)->Unit,onTools:()->Unit,onExact:()->Unit,onNotifications:()->Unit){Column(verticalArrangement=Arrangement.spacedBy(6.dp)){Text("TIME & DISPLAY",fontSize=9.sp,letterSpacing=1.4.sp,color=Champagne);Setting("24-hour time","Use a 00–23 hour cycle.",use24,on24);Setting("Show seconds","Show seconds in the hero clock.",seconds,onSeconds);Setting("Jalali date","Display Persian calendar alongside Gregorian.",jalali,onJalali);Setting("Performance mode","Use efficient Compose Canvas clock.",performance,onPerformance);Setting("Dark finish","Prefer obsidian surfaces.",dark,onDark);Spacer(Modifier.height(8.dp));Button(onClick=onExact,modifier=Modifier.fillMaxWidth()){androidx.compose.material3.Icon(Icons.Outlined.Alarm,null);Text("Review exact alarm access")};Button(onClick=onNotifications,modifier=Modifier.fillMaxWidth()){Text("Allow alarm notifications")};Button(onClick=onTools,modifier=Modifier.fillMaxWidth()){androidx.compose.material3.Icon(Icons.Outlined.CalendarMonth,null);Text("Calendar · Converter · Reminders")};Text("Alarm schedules are stored locally in Room. Exact alarm access is checked when an alarm is enabled.",fontSize=10.sp,color=Titanium,modifier=Modifier.padding(top=12.dp))}}
+@Composable private fun Setting(title:String,detail:String,value:Boolean,onChange:(Boolean)->Unit){Row(Modifier.fillMaxWidth().padding(vertical=10.dp),verticalAlignment=Alignment.CenterVertically){Column(Modifier.weight(1f)){Text(title,fontSize=12.sp,color=TitaniumHi);Text(detail,fontSize=9.sp,color=Titanium)};Switch(value,onChange)}}
+
+private fun formatMs(ms:Long):String{val s=(ms.coerceAtLeast(0)/1000);val h=s/3600;val m=s%3600/60;val sec=s%60;return if(h>0)String.format("%02d:%02d:%02d",h,m,sec) else String.format("%02d:%02d",m,sec)}
+private fun syncTimerService(context: android.content.Context) { context.startForegroundService(android.content.Intent(context, com.mesad.time.platform.timer.TimerForegroundService::class.java).setAction(com.mesad.time.platform.timer.TimerForegroundService.ACTION_SYNC)) }
+private fun AlarmEntity.toDomainAlarm() = com.mesad.time.domain.model.Alarm(id=id,hour=hour,minute=minute,label=label,repeatDays=repeatDays.split(",").filter{it.isNotBlank()}.mapNotNull{runCatching{DayOfWeek.valueOf(it)}.getOrNull()}.toSet(),ringtoneUri=ringtoneUri,vibrate=vibrate,enabled=enabled,snoozeMinutes=snoozeMinutes)
+
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -275,67 +341,3 @@ private fun MesadApplicationUi(db: MesadDatabase) {
     }},confirmButton={TextButton(onClick={toolsDialog=false}){Text("Done")}})
 }
 
-@Composable private fun AlarmScreen(alarms:List<AlarmEntity>,onAdd:()->Unit,onToggle:(AlarmEntity,Boolean)->Unit,onDelete:(AlarmEntity)->Unit){Column(Modifier.fillMaxSize()){Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically){Text("Reliable, repeatable, yours.",fontSize=12.sp,color=Titanium);Button(onClick=onAdd){Text("+ Alarm")}};LazyColumn(verticalArrangement=Arrangement.spacedBy(8.dp),modifier=Modifier.padding(top=12.dp)){items(alarms){a->Card(colors=CardDefaults.cardColors(containerColor=Graphite)){Row(Modifier.fillMaxWidth().padding(14.dp),verticalAlignment=Alignment.CenterVertically){Column(Modifier.weight(1f)){Text(String.format("%02d:%02d",a.hour,a.minute),fontSize=28.sp,fontFamily=FontFamily.Monospace,color=TitaniumHi);Text(a.label.ifBlank{"Alarm"},fontSize=12.sp,color=Titanium);Text(if(a.repeatDays.isBlank())"One time" else a.repeatDays.replace(","," · "),fontSize=9.sp,color=Champagne)};Switch(checked=a.enabled,onCheckedChange={onToggle(a,it)});TextButton(onClick={onDelete(a)}){androidx.compose.material3.Icon(Icons.Outlined.Delete,null)}}}}}}
-
-@Composable private fun StopwatchScreen(
-    accumulated: Long,
-    running: Boolean,
-    startedAtElapsed: Long,
-    onRunning: (Boolean) -> Unit,
-    onLap: (Long) -> Unit,
-    onReset: () -> Unit,
-    laps: List<LapEntity>
-) {
-    var now by remember { mutableLongStateOf(SystemClock.elapsedRealtime()) }
-    var confirmReset by remember { mutableStateOf(false) }
-    LaunchedEffect(running) { while (running) { now = SystemClock.elapsedRealtime(); delay(25) } }
-    val elapsed = if (running) (now - startedAtElapsed).coerceAtLeast(0) else accumulated
-    Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
-        Text("MONOTONIC CHRONOGRAPH", fontSize=9.sp, letterSpacing=1.5.sp, color=Champagne)
-        Text(formatMs(elapsed), fontSize=44.sp, fontFamily=FontFamily.Monospace, color=TitaniumHi, modifier=Modifier.padding(top=28.dp))
-        Canvas(Modifier.size(230.dp).padding(10.dp)) {
-            drawCircle(Color(0xFF283341), style=Stroke(2.dp.toPx()))
-            drawArc(ElectricCyan, startAngle=-90f, sweepAngle=(elapsed%60000)/60000f*360f, useCenter=false, topLeft=androidx.compose.ui.geometry.Offset.Zero, size=androidx.compose.ui.geometry.Size(size.width,size.height), style=Stroke(2.dp.toPx(), cap=StrokeCap.Round))
-            drawCircle(Champagne, radius=4.dp.toPx())
-        }
-        Row(horizontalArrangement=Arrangement.spacedBy(12.dp)) {
-            OutlinedButton(onClick={ if(running) onLap(elapsed) else confirmReset=true }) { Text(if(running) "Lap" else "Reset") }
-            Button(onClick={ onRunning(!running) }) {
-                androidx.compose.material3.Icon(if(running) Icons.Outlined.Pause else Icons.Outlined.PlayArrow,null)
-                Text(if(running) "Pause" else "Start")
-            }
-            OutlinedButton(onClick={confirmReset=true}) { Text("Reset") }
-        }
-        LazyColumn(Modifier.fillMaxWidth().padding(top=14.dp)) {
-            items(laps.reversed()) { lap ->
-                Row(Modifier.fillMaxWidth().padding(8.dp), horizontalArrangement=Arrangement.SpaceBetween) {
-                    Text("Lap ${lap.lapNumber}${if(lap.isBest) " · BEST" else if(lap.isWorst) " · SLOW" else ""}", color=if(lap.isBest) Color(0xFF53DABC) else if(lap.isWorst) Champagne else Titanium)
-                    Text(formatMs(lap.deltaMs), fontFamily=FontFamily.Monospace, color=if(lap.isBest) Color(0xFF53DABC) else if(lap.isWorst) Champagne else TitaniumHi)
-                    Text(formatMs(lap.totalElapsedMs), fontFamily=FontFamily.Monospace, color=Champagne)
-                }
-            }
-        }
-    }
-    if(confirmReset) AlertDialog(
-        onDismissRequest={confirmReset=false},
-        title={Text("Reset stopwatch?")},
-        text={Text("This will clear the elapsed time and all recorded laps.")},
-        confirmButton={TextButton(onClick={confirmReset=false;onReset()}){Text("Reset")}},
-        dismissButton={TextButton(onClick={confirmReset=false}){Text("Cancel")}}
-    )
-}
-
-@Composable private fun TimerScreen(timers:List<TimerEntity>,h:String,onH:(String)->Unit,m:String,onM:(String)->Unit,s:String,onS:(String)->Unit,label:String,onLabel:(String)->Unit,onCreate:()->Unit,onToggle:(TimerEntity)->Unit,onReset:(TimerEntity)->Unit,onDelete:(Long)->Unit){var tick by remember{mutableLongStateOf(SystemClock.elapsedRealtime())};LaunchedEffect(timers.any{it.state==TimerState.RUNNING.name}){while(timers.any{it.state==TimerState.RUNNING.name}){tick=SystemClock.elapsedRealtime();delay(100)}};Column(Modifier.fillMaxSize()){Card(colors=CardDefaults.cardColors(containerColor=Graphite)){Column(Modifier.padding(14.dp)){Row(horizontalArrangement=Arrangement.spacedBy(7.dp)){listOf("H" to h to onH,"M" to m to onM,"S" to s to onS).forEach{ item->val unit=item.first.first;val value=item.first.second;val setter=item.second;OutlinedTextField(value,setter,label={Text(unit)},modifier=Modifier.weight(1f))}};OutlinedTextField(label,onLabel,label={Text("Timer label")},modifier=Modifier.fillMaxWidth());Button(onClick=onCreate,modifier=Modifier.fillMaxWidth()){Text("Create timer")}}};LazyColumn(verticalArrangement=Arrangement.spacedBy(8.dp),modifier=Modifier.padding(top=12.dp)){items(timers){timer->val remaining=if(timer.state==TimerState.RUNNING.name)(timer.deadlineElapsedRealtime?:tick)-tick else timer.remainingMs;Card(colors=CardDefaults.cardColors(containerColor=Graphite)){Row(Modifier.fillMaxWidth().padding(12.dp),verticalAlignment=Alignment.CenterVertically){Column(Modifier.weight(1f)){Text(timer.label.ifBlank{"Timer"},color=Titanium);Text(formatMs(remaining.coerceAtLeast(0)),fontSize=25.sp,fontFamily=FontFamily.Monospace,color=if(remaining<=0)Champagne else TitaniumHi);Text(timer.state,fontSize=9.sp,color=Champagne)};Button(onClick={onToggle(timer)}){Text(if(timer.state==TimerState.RUNNING.name)"Pause" else "Start")};TextButton(onClick={onReset(timer)}){Text("Reset")};TextButton(onClick={onDelete(timer.id)}){Text("×")}}}}}}
-}
-
-@Composable private fun StudioScreen(engine:ClockEngine,onEngine:(ClockEngine)->Unit,material:String,onMaterial:(String)->Unit,performance:Boolean,onPerformance:(Boolean)->Unit,scale:Float,onScale:(Float)->Unit,glow:Float,onGlow:(Float)->Unit,saved:Boolean,onSave:()->Unit){val context= LocalContext.current;Column(Modifier.fillMaxSize(),horizontalAlignment=Alignment.CenterHorizontally){Text("CLOCK STUDIO",fontSize=9.sp,letterSpacing=1.5.sp,color=Champagne);if(performance)MesadClock(engine,StudioPreset(engine=engine,scale=scale,glowIntensity=glow,materialFinish=runCatching{com.mesad.time.domain.model.MaterialFinish.valueOf(material)}.getOrDefault(com.mesad.time.domain.model.MaterialFinish.BRUSHED_TITANIUM)),Modifier.size(250.dp)) else AndroidView(factory={MesadClockView(context).also{it.setEngine(engine.name);it.setMaterial(material)}},modifier=Modifier.size(250.dp),update={it.setEngine(engine.name);it.setScale(scale);it.setGlow(glow);it.setMaterial(material)});Row(horizontalArrangement=Arrangement.spacedBy(5.dp)){ClockEngine.entries.forEach{e->FilterChip(selected=e==engine,onClick={onEngine(e)},label={Text(e.name)})}};Text("Clock scale · ${"%.2f".format(scale)}",modifier=Modifier.fillMaxWidth(),color=Titanium);Slider(scale,onScale,valueRange=.7f..1.3f);Text("Light / emission · ${"%.2f".format(glow)}",modifier=Modifier.fillMaxWidth(),color=Titanium);Slider(glow,onGlow);Text("Material finish",Modifier.fillMaxWidth(),fontSize=12.sp,color=Titanium);Row(horizontalArrangement=Arrangement.spacedBy(4.dp)){com.mesad.time.domain.model.MaterialFinish.entries.forEach{finish->FilterChip(selected=material==finish.name,onClick={onMaterial(finish.name)},label={Text(finish.name.replace("_"," "),fontSize=9.sp)})}};Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically){Text("Performance mode · 2D fallback",Modifier.weight(1f),fontSize=12.sp,color=Titanium);Switch(performance,onPerformance)};Button(onClick=onSave){Text(if(saved)"Preset saved" else "Save signature preset")}}
-}
-
-@Composable private fun ThemesScreen(dark:Boolean,onDark:(Boolean)->Unit){Column(verticalArrangement=Arrangement.spacedBy(10.dp)){Text("SURFACES SHAPED BY LIGHT",fontSize=9.sp,letterSpacing=1.3.sp,color=Champagne);listOf("Obsidian · Deep matte black","Midnight · Blue-hour precision","Champagne · Warm metal","Daylight · Soft titanium silver").forEach{label->Card(colors=CardDefaults.cardColors(containerColor=Graphite),modifier=Modifier.fillMaxWidth().clickable{onDark(label.startsWith("Obsidian")||label.startsWith("Midnight")||label.startsWith("Champagne"))}){Row(Modifier.padding(16.dp),verticalAlignment=Alignment.CenterVertically){Text(label,Modifier.weight(1f),color=TitaniumHi);if((dark&& !label.startsWith("Daylight"))||(!dark&&label.startsWith("Daylight")))androidx.compose.material3.Icon(Icons.Outlined.Check,null,tint=ElectricCyan)}}}}}
-
-@Composable private fun SettingsScreen(use24:Boolean,on24:(Boolean)->Unit,seconds:Boolean,onSeconds:(Boolean)->Unit,jalali:Boolean,onJalali:(Boolean)->Unit,performance:Boolean,onPerformance:(Boolean)->Unit,dark:Boolean,onDark:(Boolean)->Unit,onTools:()->Unit,onExact:()->Unit,onNotifications:()->Unit){Column(verticalArrangement=Arrangement.spacedBy(6.dp)){Text("TIME & DISPLAY",fontSize=9.sp,letterSpacing=1.4.sp,color=Champagne);Setting("24-hour time","Use a 00–23 hour cycle.",use24,on24);Setting("Show seconds","Show seconds in the hero clock.",seconds,onSeconds);Setting("Jalali date","Display Persian calendar alongside Gregorian.",jalali,onJalali);Setting("Performance mode","Use efficient Compose Canvas clock.",performance,onPerformance);Setting("Dark finish","Prefer obsidian surfaces.",dark,onDark);Spacer(Modifier.height(8.dp));Button(onClick=onExact,modifier=Modifier.fillMaxWidth()){androidx.compose.material3.Icon(Icons.Outlined.Alarm,null);Text("Review exact alarm access")};Button(onClick=onNotifications,modifier=Modifier.fillMaxWidth()){Text("Allow alarm notifications")};Button(onClick=onTools,modifier=Modifier.fillMaxWidth()){androidx.compose.material3.Icon(Icons.Outlined.CalendarMonth,null);Text("Calendar · Converter · Reminders")};Text("Alarm schedules are stored locally in Room. Exact alarm access is checked when an alarm is enabled.",fontSize=10.sp,color=Titanium,modifier=Modifier.padding(top=12.dp))}}
-@Composable private fun Setting(title:String,detail:String,value:Boolean,onChange:(Boolean)->Unit){Row(Modifier.fillMaxWidth().padding(vertical=10.dp),verticalAlignment=Alignment.CenterVertically){Column(Modifier.weight(1f)){Text(title,fontSize=12.sp,color=TitaniumHi);Text(detail,fontSize=9.sp,color=Titanium)};Switch(value,onChange)}}
-
-private fun formatMs(ms:Long):String{val s=(ms.coerceAtLeast(0)/1000);val h=s/3600;val m=s%3600/60;val sec=s%60;return if(h>0)String.format("%02d:%02d:%02d",h,m,sec) else String.format("%02d:%02d",m,sec)}
-private fun syncTimerService(context: android.content.Context) { context.startForegroundService(android.content.Intent(context, com.mesad.time.platform.timer.TimerForegroundService::class.java).setAction(com.mesad.time.platform.timer.TimerForegroundService.ACTION_SYNC)) }
-private fun AlarmEntity.toDomainAlarm() = com.mesad.time.domain.model.Alarm(id=id,hour=hour,minute=minute,label=label,repeatDays=repeatDays.split(",").filter{it.isNotBlank()}.mapNotNull{runCatching{DayOfWeek.valueOf(it)}.getOrNull()}.toSet(),ringtoneUri=ringtoneUri,vibrate=vibrate,enabled=enabled,snoozeMinutes=snoozeMinutes)

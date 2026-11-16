@@ -142,7 +142,7 @@ private fun MesadApplicationUi(db: MesadDatabase) {
     var scale by remember { mutableStateOf(preferences.getFloat("scale", 1f)) }
     var glow by remember { mutableStateOf(preferences.getFloat("glow", .55f)) }
     var material by remember { mutableStateOf(preferences.getString("material", "BRUSHED_TITANIUM")!!) }
-    var currentTime by remember { mutableStateOf(ZonedDateTimeNow()) }
+    var currentTime by remember { mutableStateOf<java.time.ZonedDateTime>(ZonedDateTimeNow()) }
     var tick by remember { mutableLongStateOf(0L) }
     val alarms by db.alarmDao().observeAll().collectAsState(initial = emptyList())
     val cities by db.worldCityDao().observeAll().collectAsState(initial = emptyList())

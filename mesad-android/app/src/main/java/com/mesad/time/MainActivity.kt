@@ -136,14 +136,80 @@ private val popularCities = listOf(
     }
 }
 
-@Composable private fun WorldClockScreen(cities:List<com.mesad.time.data.local.WorldCityEntity>,query:String,onQuery:(String)->Unit,onAdd:()->Unit,onCityAdd:(City)->Unit,onDelete:(Long)->Unit,now:java.time.ZonedDateTime){
-    Column(Modifier.fillMaxSize()) { Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)){OutlinedTextField(query,onQuery,label={Text("Search cities")},modifier=Modifier.weight(1f));Button(onClick=onAdd){Text("Add")}}
-        LazyColumn(verticalArrangement=Arrangement.spacedBy(8.dp),modifier=Modifier.padding(top=12.dp)){items(cities){c->val local=Instant.now().atZone(ZoneId.of(c.zoneId));Card(colors=CardDefaults.cardColors(containerColor=Graphite)){Row(Modifier.fillMaxWidth().padding(14.dp),verticalAlignment=Alignment.CenterVertically){Column(Modifier.weight(1f)){Text(c.name,color=TitaniumHi);Text(c.zoneId,fontSize=9.sp,color=Titanium);Text(local.format(DateTimeFormatter.ofPattern("EEEE, MMM d · z")),fontSize=10.sp,color=Champagne)};Text(local.format(DateTimeFormatter.ofPattern("HH:mm")),fontSize=22.sp,fontFamily=FontFamily.Monospace);TextButton(onClick={onDelete(c.id)}){androidx.compose.material3.Icon(Icons.Outlined.Delete,null)}}}}}
+@Composable
+private fun WorldClockScreen(
+    cities: List<com.mesad.time.data.local.WorldCityEntity>,
+    query: String,
+    onQuery: (String) -> Unit,
+    onAdd: () -> Unit,
+    onCityAdd: (City) -> Unit,
+    onDelete: (Long) -> Unit,
+    now: java.time.ZonedDateTime
+) {
+    Column(Modifier.fillMaxSize()) {
+        Row(
+            Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            OutlinedTextField(query, onQuery, label = { Text("Search cities") }, modifier = Modifier.weight(1f))
+            Button(onClick = onAdd) { Text("Add") }
+        }
+        LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 12.dp)) {
+            items(cities) { city ->
+                val local = now.withZoneSameInstant(ZoneId.of(city.zoneId))
+                Card(colors = CardDefaults.cardColors(containerColor = Graphite)) {
+                    Row(
+                        Modifier.fillMaxWidth().padding(14.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(Modifier.weight(1f)) {
+                            Text(city.name, color = TitaniumHi)
+                            Text(city.zoneId, fontSize = 9.sp, color = Titanium)
+                            Text(local.format(DateTimeFormatter.ofPattern("EEEE, MMM d · z")), fontSize = 10.sp, color = Champagne)
+                        }
+                        Text(local.format(DateTimeFormatter.ofPattern("HH:mm")), fontSize = 22.sp, fontFamily = FontFamily.Monospace)
+                        TextButton(onClick = { onDelete(city.id) }) {
+                            androidx.compose.material3.Icon(Icons.Outlined.Delete, null)
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
-
-@Composable private fun AlarmScreen(alarms:List<AlarmEntity>,onAdd:()->Unit,onToggle:(AlarmEntity,Boolean)->Unit,onDelete:(AlarmEntity)->Unit){Column(Modifier.fillMaxSize()){Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically){Text("Reliable, repeatable, yours.",fontSize=12.sp,color=Titanium);Button(onClick=onAdd){Text("+ Alarm")}};LazyColumn(verticalArrangement=Arrangement.spacedBy(8.dp),modifier=Modifier.padding(top=12.dp)){items(alarms){a->Card(colors=CardDefaults.cardColors(containerColor=Graphite)){Row(Modifier.fillMaxWidth().padding(14.dp),verticalAlignment=Alignment.CenterVertically){Column(Modifier.weight(1f)){Text(String.format("%02d:%02d",a.hour,a.minute),fontSize=28.sp,fontFamily=FontFamily.Monospace,color=TitaniumHi);Text(a.label.ifBlank{"Alarm"},fontSize=12.sp,color=Titanium);Text(if(a.repeatDays.isBlank())"One time" else a.repeatDays.replace(","," · "),fontSize=9.sp,color=Champagne)};Switch(checked=a.enabled,onCheckedChange={onToggle(a,it)});TextButton(onClick={onDelete(a)}){androidx.compose.material3.Icon(Icons.Outlined.Delete,null)}}}}}}
+@Composable
+private fun AlarmScreen(
+    alarms: List<AlarmEntity>,
+    onAdd: () -> Unit,
+    onToggle: (AlarmEntity, Boolean) -> Unit,
+    onDelete: (AlarmEntity) -> Unit
+) {
+    Column(Modifier.fillMaxSize()) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            Text("Reliable, repeatable, yours.", fontSize = 12.sp, color = Titanium)
+            Button(onClick = onAdd) { Text("+ Alarm") }
+        }
+        LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 12.dp)) {
+            items(alarms) { alarm ->
+                Card(colors = CardDefaults.cardColors(containerColor = Graphite)) {
+                    Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text(String.format("%02d:%02d", alarm.hour, alarm.minute), fontSize = 28.sp, fontFamily = FontFamily.Monospace, color = TitaniumHi)
+                            Text(alarm.label.ifBlank { "Alarm" }, fontSize = 12.sp, color = Titanium)
+                            Text(if (alarm.repeatDays.isBlank()) "One time" else alarm.repeatDays.replace(",", " · "), fontSize = 9.sp, color = Champagne)
+                        }
+                        Switch(checked = alarm.enabled, onCheckedChange = { onToggle(alarm, it) })
+                        TextButton(onClick = { onDelete(alarm) }) {
+                            androidx.compose.material3.Icon(Icons.Outlined.Delete, null)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
 
 @Composable private fun StopwatchScreen(
     accumulated: Long,

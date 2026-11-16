@@ -384,11 +384,48 @@ private fun MesadApplicationUi(db: MesadDatabase) {
         }
     }
 
-    if (showAlarmDialog) AlertDialog(onDismissRequest={showAlarmDialog=false},title={Text("New alarm")},text={Column(verticalArrangement=Arrangement.spacedBy(8.dp)) {
-        Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){OutlinedTextField(alarmHour,{alarmHour=it.takeLast(2)},label={Text("Hour")},modifier=Modifier.weight(1f));OutlinedTextField(alarmMinute,{alarmMinute=it.takeLast(2)},label={Text("Minute")},modifier=Modifier.weight(1f))}
-        OutlinedTextField(alarmLabel,{alarmLabel=it},label={Text("Label")},modifier=Modifier.fillMaxWidth())
-        Text("Repeat days",fontSize=12.sp);Row(horizontalArrangement=Arrangement.spacedBy(2.dp)){listOf("S","M","T","W","T","F","S").forEachIndexed{index,label->FilterChip(selected=index in alarmDays,onClick={alarmDays=if(index in alarmDays)alarmDays-index else alarmDays+index},label={Text(label)},modifier=Modifier.weight(1f))}}
-    }},confirmButton={TextButton(onClick={scope.launch { val h=(alarmHour.toIntOrNull()?:7).coerceIn(0,23);val m=(alarmMinute.toIntOrNull()?:0).coerceIn(0,59);val days=alarmDays.map{if(it==0)DayOfWeek.SUNDAY.value else it}.joinToString(","){DayOfWeek.of(it).name};val id=db.alarmDao().insert(AlarmEntity(hour=h,minute=m,label=alarmLabel,repeatDays=days));val scheduler=AlarmManagerScheduler(context);if(!scheduler.canScheduleExactAlarms())scheduler.requestExactAlarmPermission();scheduler.schedule(com.mesad.time.domain.model.Alarm(id=id,hour=h,minute=m,label=alarmLabel,repeatDays=alarmDays.map{if(it==0)DayOfWeek.SUNDAY else DayOfWeek.of(it)}.toSet()));showAlarmDialog=false}){Text("Save alarm")}},dismissButton={TextButton(onClick={showAlarmDialog=false}){Text("Cancel")}})
+    if (showAlarmDialog) {
+        AlertDialog(
+            onDismissRequest = { showAlarmDialog = false },
+            title = { Text("New alarm") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedTextField(alarmHour, { alarmHour = it.takeLast(2) }, label = { Text("Hour") }, modifier = Modifier.weight(1f))
+                        OutlinedTextField(alarmMinute, { alarmMinute = it.takeLast(2) }, label = { Text("Minute") }, modifier = Modifier.weight(1f))
+                    }
+                    OutlinedTextField(alarmLabel, { alarmLabel = it }, label = { Text("Label") }, modifier = Modifier.fillMaxWidth())
+                    Text("Repeat days", fontSize = 12.sp)
+                    Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                        listOf("S", "M", "T", "W", "T", "F", "S").forEachIndexed { index, day ->
+                            FilterChip(
+                                selected = index in alarmDays,
+                                onClick = { alarmDays = if (index in alarmDays) alarmDays - index else alarmDays + index },
+                                label = { Text(day) },
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    scope.launch {
+                        val hour = (alarmHour.toIntOrNull() ?: 7).coerceIn(0, 23)
+                        val minute = (alarmMinute.toIntOrNull() ?: 0).coerceIn(0, 59)
+                        val repeatDays = alarmDays.map { index -> if (index == 0) DayOfWeek.SUNDAY else DayOfWeek.of(index) }.toSet()
+                        val storedDays = repeatDays.joinToString(",") { it.name }
+                        val id = db.alarmDao().insert(AlarmEntity(hour = hour, minute = minute, label = alarmLabel, repeatDays = storedDays))
+                        val scheduler = AlarmManagerScheduler(context)
+                        if (!scheduler.canScheduleExactAlarms()) scheduler.requestExactAlarmPermission()
+                        scheduler.schedule(com.mesad.time.domain.model.Alarm(id = id, hour = hour, minute = minute, label = alarmLabel, repeatDays = repeatDays))
+                        showAlarmDialog = false
+                    }
+                }) { Text("Save alarm") }
+            },
+            dismissButton = { TextButton(onClick = { showAlarmDialog = false }) { Text("Cancel") } }
+        )
+    }
 
     if(showCityDialog) AlertDialog(onDismissRequest={showCityDialog=false},title={Text("Add a city")},text={Column {
         OutlinedTextField(cityQuery,{cityQuery=it},label={Text("Search cities or IANA zone")})

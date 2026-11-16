@@ -22,15 +22,13 @@ cd mesad-android
 gradle testDebugUnitTest assembleDebug
 ```
 
-GitHub Actions builds the Android debug APK and runs domain tests, and separately executes the web verification suite/build. Latest verified build: commit `497b412` (workflow run [43939238578](https://github.com/mrsad2615-creator/vodiwalker_panel/actions/runs/43939238578)). Both Android unit tests and debug APK assembly/artifact upload passed, as did the WebGL studio tests and production build.
+GitHub Actions builds the Android debug APK and runs domain tests, and separately executes the web verification suite/build. Latest verified build: commit `497b412` (workflow run [43939238578](https://github.com/mrsad2615-creator/vodiwalker_panel/actions/runs/43939238578)). Both Android unit tests and debug APK assembly passed, as did the WebGL studio tests and production build. The release workflow can publish the APK as a public GitHub Release asset for direct download.
 
 ## Download and install
 
-1. Open the [MESAD verification run](https://github.com/mrsad2615-creator/vodiwalker_panel/actions/runs/43939238578) while signed in to GitHub.
-2. Under **Artifacts**, download `mesad-debug-apk` and unzip it to get `app-debug.apk`.
-3. Transfer the APK to an Android device and open it. If Android prompts you, allow your file/browser app to install unknown apps, then confirm installation. This is a debug-signed build; Android may show a standard warning for apps installed outside Google Play.
+Use the direct `app-debug.apk` download link in the latest MESAD release. Transfer the APK to an Android device and open it. If Android prompts you, allow your file/browser app to install unknown apps, then confirm installation. This is a debug-signed build; Android may show a standard warning for apps installed outside Google Play.
 
-The GitHub artifact is retained for 14 days from the run date. To build again locally, use an Android SDK-equipped host with JDK 17 and Gradle 8.11.1:
+To build again locally, use an Android SDK-equipped host with JDK 17 and Gradle 8.11.1:
 
 ```bash
 cd mesad-android

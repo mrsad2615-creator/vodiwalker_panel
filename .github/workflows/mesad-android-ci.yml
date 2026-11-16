@@ -53,7 +53,7 @@ jobs:
           gradle --no-daemon testDebugUnitTest assembleDebug --stacktrace 2>&1 | tee "$RUNNER_TEMP/mesad-gradle.log"
           result=${PIPESTATUS[0]}
           if (( result != 0 )); then
-            grep -E '^(e: |FAILURE:|Execution failed for task|Could not resolve|Could not find)' "$RUNNER_TEMP/mesad-gradle.log" | head -80 | while IFS= read -r line; do echo "::error::$line"; done
+            grep -Ei '^(e: |FAILURE:|Execution failed for task|Could not resolve|Could not find)|requires.*compile|compileSdk|compile SDK|AAR metadata|must compile' "$RUNNER_TEMP/mesad-gradle.log" | head -100 | while IFS= read -r line; do echo "::error::$line"; done
           fi
           exit "$result"
       - uses: actions/upload-artifact@v4

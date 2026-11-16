@@ -7,6 +7,9 @@ on:
       - 'kairos-app/**'
       - '.github/workflows/kairos-android-apk.yml'
 
+permissions:
+  contents: write
+
 jobs:
   build-android-apk:
     runs-on: ubuntu-latest
@@ -54,3 +57,18 @@ jobs:
           name: KAIROS-v1.0.0-APK
           path: kairos-app/android/app/build/outputs/apk/debug/KAIROS-v1.0.0.apk
           if-no-files-found: error
+
+      - name: Publish Direct Download Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="kairos-v1.0.0"
+          APK="kairos-app/android/app/build/outputs/apk/debug/KAIROS-v1.0.0.apk"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "$APK" --clobber
+          else
+            gh release create "$TAG" "$APK" \
+              --target "${{ github.sha }}" \
+              --title "KAIROS v1.0.0 — Android App" \
+              --notes "اپلیکیشن لوکس مدیریت کارها، زمان، عادت‌ها، تقویم شمسی، تمرکز و تحلیل عملکرد کایروس (KAIROS) برای اندروید — نصب مستقیم از طریق فایل APK"
+          fi

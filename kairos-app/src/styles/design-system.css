@@ -204,3 +204,239 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(182, 154, 239, 0.32);
 }
+
+/* =====================================================================
+   ULTRA-OPTIMIZED 120FPS COMPOSITOR-ONLY MRSAD MOTION-GRAPHIC KEYFRAMES
+   Zero SVG filters, zero animated CSS blur/drop-shadow -> zero mobile jank
+   ===================================================================== */
+@keyframes mrsad-aura-bloom {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 0, 0) scale3d(0.65, 0.65, 1);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale3d(1, 1, 1);
+  }
+}
+
+@keyframes mrsad-disc-in {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 0, 0) scale3d(0.84, 0.84, 1);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale3d(1, 1, 1);
+  }
+}
+
+@keyframes mrsad-ring-draw {
+  0% {
+    stroke-dashoffset: 380;
+    opacity: 0.25;
+  }
+  100% {
+    stroke-dashoffset: 72;
+    opacity: 1;
+  }
+}
+
+@keyframes mrsad-m-draw {
+  0% {
+    stroke-dashoffset: 170;
+    opacity: 0;
+  }
+  12% {
+    opacity: 1;
+  }
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+}
+
+@keyframes mrsad-dot-pop {
+  0% {
+    opacity: 0;
+    transform: scale3d(0.2, 0.2, 1);
+  }
+  70% {
+    opacity: 1;
+    transform: scale3d(1.22, 1.22, 1);
+  }
+  100% {
+    opacity: 1;
+    transform: scale3d(1, 1, 1);
+  }
+}
+
+@keyframes mrsad-sheen-sweep {
+  0% {
+    opacity: 0;
+    transform: translate3d(-110px, 0, 0) skewX(-16deg);
+  }
+  35% {
+    opacity: 0.55;
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(110px, 0, 0) skewX(-16deg);
+  }
+}
+
+@keyframes mrsad-letter-rise {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 26px, 0);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes mrsad-line-expand {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 0, 0) scaleX(0);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scaleX(1);
+  }
+}
+
+@keyframes mrsad-fade-up {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 8px, 0);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes mrsad-progress-fill {
+  0% {
+    transform: scaleX(0);
+  }
+  100% {
+    transform: scaleX(1);
+  }
+}
+
+.mrsad-splash-root {
+  contain: layout style paint;
+  will-change: opacity, transform;
+  transition: opacity 320ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 320ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.mrsad-splash-root.is-exiting {
+  opacity: 0;
+  transform: translate3d(0, 0, 0) scale3d(1.025, 1.025, 1);
+  pointer-events: none;
+}
+
+.mrsad-aura {
+  will-change: transform, opacity;
+  animation: mrsad-aura-bloom 850ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.mrsad-disc {
+  will-change: transform, opacity;
+  animation: mrsad-disc-in 520ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.mrsad-ring {
+  stroke-dasharray: 380;
+  stroke-dashoffset: 380;
+  animation: mrsad-ring-draw 780ms cubic-bezier(0.22, 1, 0.36, 1) 80ms forwards;
+}
+
+.mrsad-m-path {
+  stroke-dasharray: 170;
+  stroke-dashoffset: 170;
+  opacity: 0;
+  animation: mrsad-m-draw 720ms cubic-bezier(0.22, 1, 0.36, 1) 200ms forwards;
+}
+
+.mrsad-crown-dot {
+  transform-box: fill-box;
+  transform-origin: center;
+  opacity: 0;
+  animation: mrsad-dot-pop 380ms cubic-bezier(0.22, 1, 0.36, 1) 740ms forwards;
+}
+
+.mrsad-sheen {
+  will-change: transform, opacity;
+  opacity: 0;
+  animation: mrsad-sheen-sweep 700ms ease-in-out 660ms forwards;
+}
+
+.mrsad-letter {
+  display: inline-block;
+  will-change: transform, opacity;
+  opacity: 0;
+  animation: mrsad-letter-rise 420ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.mrsad-horizon {
+  will-change: transform, opacity;
+  opacity: 0;
+  animation: mrsad-line-expand 520ms cubic-bezier(0.22, 1, 0.36, 1) 820ms forwards;
+}
+
+.mrsad-subtitle {
+  will-change: transform, opacity;
+  opacity: 0;
+  animation: mrsad-fade-up 420ms ease-out 920ms forwards;
+}
+
+.mrsad-progress {
+  transform-origin: left center;
+  will-change: transform;
+  animation: mrsad-progress-fill 1480ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* =====================================================================
+   CINEMATIC FOCUS SANCTUARY AMBIENT BREATHING (Ultra-calm, GPU-only)
+   ===================================================================== */
+@keyframes focus-cinema-breathe {
+  0%, 100% {
+    opacity: 0.52;
+    transform: translate3d(0, 0, 0) scale3d(0.96, 0.96, 1);
+  }
+  50% {
+    opacity: 0.92;
+    transform: translate3d(0, 0, 0) scale3d(1.04, 1.04, 1);
+  }
+}
+
+@keyframes focus-dot-pulse {
+  0%, 100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.focus-cinema-halo {
+  will-change: transform, opacity;
+  animation: focus-cinema-breathe 6.5s ease-in-out infinite;
+}
+
+.focus-live-dot {
+  animation: focus-dot-pulse 2.2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .focus-cinema-halo,
+  .focus-live-dot {
+    animation: none;
+  }
+}
+

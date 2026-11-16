@@ -1,253 +1,210 @@
-import { useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { useEffect, useRef } from 'react';
 
 interface MrsadSplashIntroProps {
-  ready: boolean;
-  onFinish: () => void;
+  exiting: boolean;
+  onSkip: () => void;
 }
 
 const BRAND_LETTERS = ['m', 'r', 's', 'a', 'd'] as const;
 
-export function MrsadSplashIntro({ ready, onFinish }: MrsadSplashIntroProps) {
+/**
+ * 120fps Hardware-Composited Pure-CSS Motion Graphic for "mrsad"
+ * - Zero SVG <feGaussianBlur> filters (eliminates Android Skia CPU jank)
+ * - Zero animated CSS blur() / drop-shadow() filters
+ * - Zero Framer Motion JS frame loops on cold start
+ */
+export function MrsadSplashIntro({ exiting, onSkip }: MrsadSplashIntroProps) {
+  const skippedRef = useRef(false);
+
   useEffect(() => {
-    if (!ready) return;
-    const timer = window.setTimeout(() => {
-      onFinish();
-    }, 2450);
-    return () => window.clearTimeout(timer);
-  }, [ready, onFinish]);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' || e.key === ' ' || e.key === 'Enter') {
+        if (!skippedRef.current) {
+          skippedRef.current = true;
+          onSkip();
+        }
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onSkip]);
 
   return (
-    <motion.div
+    <div
       role="status"
       aria-label="در حال بارگذاری mrsad KAIROS"
       onClick={() => {
-        if (ready) onFinish();
+        if (!skippedRef.current) {
+          skippedRef.current = true;
+          onSkip();
+        }
       }}
-      initial={{ opacity: 1 }}
-      exit={{ opacity: 0, scale: 1.035 }}
-      transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-      className="fixed inset-0 z-[100] flex flex-col items-center justify-center overflow-hidden bg-[#09090D] select-none"
+      className={`mrsad-splash-root fixed inset-0 z-[100] flex flex-col items-center justify-center overflow-hidden bg-[#09090D] select-none ${
+        exiting ? 'is-exiting' : ''
+      }`}
     >
-      {/* Expanding Atmospheric Royal Purple Aura */}
-      <motion.div
+      {/* Pre-baked Soft Radial Stage Halo (Zero blur filter cost) */}
+      <div
         aria-hidden="true"
-        initial={{ scale: 0.35, opacity: 0 }}
-        animate={{ scale: [0.35, 1.15, 1], opacity: [0, 0.85, 0.55] }}
-        transition={{ duration: 1.8, ease: [0.16, 1, 0.3, 1] }}
-        className="pointer-events-none absolute h-[420px] w-[420px] rounded-full"
+        className="mrsad-aura pointer-events-none absolute h-[440px] w-[440px] rounded-full"
         style={{
           background:
-            'radial-gradient(circle, rgba(128, 82, 214, 0.34) 0%, rgba(36, 25, 54, 0.22) 45%, transparent 72%)',
-          filter: 'blur(18px)',
+            'radial-gradient(circle, rgba(128, 82, 214, 0.28) 0%, rgba(36, 25, 54, 0.22) 38%, rgba(9, 9, 13, 0) 70%)',
         }}
       />
 
-      {/* Subtle Expanding Pulse Ring */}
-      <motion.div
-        aria-hidden="true"
-        initial={{ scale: 0.5, opacity: 0 }}
-        animate={{ scale: [0.5, 1.45], opacity: [0.45, 0] }}
-        transition={{ duration: 1.7, delay: 0.25, ease: 'easeOut' }}
-        className="pointer-events-none absolute h-52 w-52 rounded-full border border-[#B69AEF]/35"
-      />
-
-      {/* Center Motion-Graphic Emblem + Typography Stack */}
+      {/* Center Vector Monogram + Editorial mrsad Stack */}
       <div className="relative z-10 flex flex-col items-center">
-        {/* Razor-Sharp 100% Vector Architectural Emblem */}
-        <div className="relative flex h-32 w-32 items-center justify-center">
-          {/* Slow Orbital Specular Ring */}
-          <motion.svg
+        <div className="mrsad-disc relative flex h-32 w-32 items-center justify-center overflow-hidden rounded-full">
+          <svg
             viewBox="0 0 140 140"
-            className="h-32 w-32 overflow-visible"
+            className="h-32 w-32"
             fill="none"
             xmlns="http://www.w3.org/2000/svg"
             aria-hidden="true"
           >
             <defs>
-              <linearGradient id="mrsadRingGrad" x1="12" y1="12" x2="128" y2="128" gradientUnits="userSpaceOnUse">
+              <linearGradient
+                id="mrsadOptRing"
+                x1="14"
+                y1="14"
+                x2="126"
+                y2="126"
+                gradientUnits="userSpaceOnUse"
+              >
                 <stop offset="0%" stopColor="#B69AEF" />
-                <stop offset="52%" stopColor="#8052D6" />
-                <stop offset="100%" stopColor="#3B2369" />
+                <stop offset="55%" stopColor="#8052D6" />
+                <stop offset="100%" stopColor="#3D226D" />
               </linearGradient>
-              <linearGradient id="mrsadMGrad" x1="34" y1="36" x2="106" y2="104" gradientUnits="userSpaceOnUse">
+              <linearGradient
+                id="mrsadOptM"
+                x1="40"
+                y1="44"
+                x2="100"
+                y2="96"
+                gradientUnits="userSpaceOnUse"
+              >
                 <stop offset="0%" stopColor="#F4F1F8" />
-                <stop offset="68%" stopColor="#E6DCF7" />
+                <stop offset="70%" stopColor="#E4D8F8" />
                 <stop offset="100%" stopColor="#B69AEF" />
               </linearGradient>
-              <filter id="mrsadGlow" x="-30%" y="-30%" width="160%" height="160%">
-                <feGaussianBlur stdDeviation="3.2" result="blur" />
-                <feMerge>
-                  <feMergeNode in="blur" />
-                  <feMergeNode in="SourceGraphic" />
-                </feMerge>
-              </filter>
+              <radialGradient id="mrsadInnerFill" cx="50%" cy="32%" r="68%">
+                <stop offset="0%" stopColor="#1F1633" />
+                <stop offset="100%" stopColor="#0E0D14" />
+              </radialGradient>
             </defs>
 
-            {/* Inner dark glass disc */}
-            <motion.circle
+            {/* Sculpted Dark Obsidian Disc */}
+            <circle
               cx="70"
               cy="70"
-              r="54"
-              fill="#12101A"
-              stroke="rgba(182, 154, 239, 0.14)"
+              r="55"
+              fill="url(#mrsadInnerFill)"
+              stroke="rgba(182, 154, 239, 0.16)"
               strokeWidth="1"
-              initial={{ scale: 0.72, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
             />
 
-            {/* Architectural Octagon/Diamond Accent Frame */}
-            <motion.rect
-              x="31"
-              y="31"
-              width="78"
-              height="78"
-              rx="18"
-              stroke="rgba(182, 154, 239, 0.2)"
-              strokeWidth="1"
-              initial={{ rotate: -25, scale: 0.8, opacity: 0 }}
-              animate={{ rotate: 45, scale: 1, opacity: 1 }}
-              transition={{ duration: 0.9, delay: 0.12, ease: [0.22, 1, 0.36, 1] }}
-              style={{ transformOrigin: '70px 70px' }}
-            />
-
-            {/* Primary Glowing Animated Arc */}
-            <motion.circle
+            {/* Subtle Static Ambient Ring Halo (zero filter!) */}
+            <circle
               cx="70"
               cy="70"
               r="60"
-              stroke="url(#mrsadRingGrad)"
-              strokeWidth="2.8"
-              strokeLinecap="round"
-              filter="url(#mrsadGlow)"
-              initial={{ pathLength: 0, rotate: -115, opacity: 0 }}
-              animate={{ pathLength: 0.82, rotate: -35, opacity: 1 }}
-              transition={{ duration: 1.05, delay: 0.08, ease: [0.22, 1, 0.36, 1] }}
-              style={{ transformOrigin: '70px 70px' }}
+              stroke="rgba(128, 82, 214, 0.14)"
+              strokeWidth="6"
             />
 
-            {/* Secondary Delicate Counter-Arc */}
-            <motion.circle
+            {/* Primary Razor-Sharp Animated Orbital Arc */}
+            <circle
               cx="70"
               cy="70"
-              r="65"
-              stroke="#B69AEF"
-              strokeOpacity="0.32"
-              strokeWidth="1"
+              r="60"
+              stroke="url(#mrsadOptRing)"
+              strokeWidth="2.8"
               strokeLinecap="round"
-              initial={{ pathLength: 0, rotate: 90, opacity: 0 }}
-              animate={{ pathLength: 0.28, rotate: 15, opacity: 1 }}
-              transition={{ duration: 1.15, delay: 0.22, ease: [0.22, 1, 0.36, 1] }}
-              style={{ transformOrigin: '70px 70px' }}
+              transform="rotate(-38 70 70)"
+              className="mrsad-ring"
             />
 
-            {/* Sculptural Vector Monogram "M" drawn smoothly in real time */}
-            <motion.path
-              d="M44 92 V49 L70 76 L96 49 V92"
-              stroke="url(#mrsadMGrad)"
+            {/* Sculptural Vector "M" Monogram */}
+            <path
+              d="M44 91 V49 L70 76 L96 49 V91"
+              stroke="url(#mrsadOptM)"
               strokeWidth="5.4"
               strokeLinecap="round"
               strokeLinejoin="round"
-              filter="url(#mrsadGlow)"
-              initial={{ pathLength: 0, opacity: 0 }}
-              animate={{ pathLength: 1, opacity: 1 }}
-              transition={{ duration: 0.95, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
+              className="mrsad-m-path"
             />
 
-            {/* Crown Accent Diamond Node above M */}
-            <motion.circle
+            {/* Lavender Crown Accent Node */}
+            <circle
               cx="70"
-              cy="43"
+              cy="42"
               r="3.6"
               fill="#B69AEF"
-              filter="url(#mrsadGlow)"
-              initial={{ scale: 0, opacity: 0 }}
-              animate={{ scale: [0, 1.35, 1], opacity: 1 }}
-              transition={{ duration: 0.45, delay: 0.95, ease: 'easeOut' }}
+              className="mrsad-crown-dot"
             />
-          </motion.svg>
+          </svg>
 
-          {/* Cinematic Light Flare Sweep across Emblem */}
-          <motion.div
+          {/* Zero-blur pure gradient specular sweep */}
+          <div
             aria-hidden="true"
-            initial={{ x: -90, opacity: 0 }}
-            animate={{ x: 90, opacity: [0, 0.7, 0] }}
-            transition={{ duration: 0.85, delay: 0.82, ease: 'easeInOut' }}
-            className="pointer-events-none absolute h-24 w-7 -skew-x-12 rounded-full bg-gradient-to-r from-transparent via-[#F4F1F8]/35 to-transparent blur-[4px]"
+            className="mrsad-sheen pointer-events-none absolute inset-y-2 w-10"
+            style={{
+              background:
+                'linear-gradient(90deg, rgba(244,241,248,0) 0%, rgba(244,241,248,0.22) 50%, rgba(244,241,248,0) 100%)',
+            }}
           />
         </div>
 
-        {/* Staggered Editorial Reveal of "mrsad" */}
+        {/* Staggered GPU-Composited "mrsad" Wordmark */}
         <div
           dir="ltr"
-          className="mt-6 flex items-baseline justify-center overflow-hidden px-4 py-1"
+          className="mt-5 flex items-baseline justify-center overflow-hidden px-4 py-1"
         >
           {BRAND_LETTERS.map((ch, idx) => (
-            <motion.span
+            <span
               key={ch + idx}
-              initial={{ y: 42, opacity: 0, scale: 0.9 }}
-              animate={{ y: 0, opacity: 1, scale: 1 }}
-              transition={{
-                duration: 0.52,
-                delay: 0.68 + idx * 0.085,
-                ease: [0.16, 1, 0.3, 1],
-              }}
-              className="num-geo inline-block text-[2.65rem] font-bold tracking-[0.14em]"
+              className="mrsad-letter num-geo text-[2.6rem] font-bold tracking-[0.14em]"
               style={{
+                animationDelay: `${450 + idx * 65}ms`,
                 background:
                   idx === 0 || idx === 4
                     ? 'linear-gradient(180deg, #F4F1F8 15%, #B69AEF 100%)'
                     : 'linear-gradient(180deg, #F4F1F8 30%, #D9CAF5 100%)',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
-                filter: 'drop-shadow(0 0 18px rgba(128, 82, 214, 0.38))',
               }}
             >
               {ch}
-            </motion.span>
+            </span>
           ))}
         </div>
 
-        {/* Expanding Luminous Royal Purple Horizon Line */}
-        <motion.div
+        {/* Expanding Royal Purple Horizon Hairline */}
+        <div
           aria-hidden="true"
-          initial={{ scaleX: 0, opacity: 0 }}
-          animate={{ scaleX: 1, opacity: 1 }}
-          transition={{ duration: 0.65, delay: 1.18, ease: [0.22, 1, 0.36, 1] }}
-          className="mt-2 h-[1.5px] w-40 rounded-full"
+          className="mrsad-horizon mt-2 h-[1.5px] w-40 rounded-full"
           style={{
             background:
               'linear-gradient(90deg, transparent 0%, #8052D6 35%, #B69AEF 50%, #8052D6 65%, transparent 100%)',
           }}
         />
 
-        {/* Subtitle Reveal */}
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 1.32, ease: 'easeOut' }}
-          className="mt-3.5 flex flex-col items-center gap-1 text-center"
-        >
+        {/* Subtitle */}
+        <div className="mrsad-subtitle mt-3 flex flex-col items-center gap-1 text-center">
           <span className="font-brand text-[10.5px] font-semibold text-[#B69AEF]/90">
             KAIROS STUDIO
           </span>
           <span className="text-[11px] font-medium text-[#A79EB9]">
             استودیوی نظم، عادت و تمرکز
           </span>
-        </motion.div>
+        </div>
       </div>
 
-      {/* Ultra-minimal animated bottom progress bar */}
+      {/* Ultra-slim GPU-composited progress indicator */}
       <div className="absolute bottom-10 h-[2px] w-28 overflow-hidden rounded-full bg-[#241936]">
-        <motion.div
-          initial={{ scaleX: 0 }}
-          animate={{ scaleX: 1 }}
-          transition={{ duration: 2.25, ease: [0.22, 1, 0.36, 1] }}
-          style={{ transformOrigin: 'left center' }}
-          className="h-full w-full bg-gradient-to-r from-[#8052D6] to-[#B69AEF]"
-        />
+        <div className="mrsad-progress h-full w-full bg-gradient-to-r from-[#8052D6] to-[#B69AEF]" />
       </div>
-    </motion.div>
+    </div>
   );
 }

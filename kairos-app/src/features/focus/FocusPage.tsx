@@ -1,28 +1,50 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Check,
   CheckCircle2,
+  CloudRain,
+  Maximize2,
+  Minimize2,
+  Minus,
   Pause,
   Play,
+  Plus,
+  Radio,
   RotateCcw,
   SkipForward,
   Sliders,
   Trash2,
+  Volume2,
+  VolumeX,
+  Waves,
 } from 'lucide-react';
 import { deleteFocusSession, setTaskStatus, updateSettings } from '@/lib/db';
 import { useFocusSessions, useTasks } from '@/lib/queries';
 import { formatJalaaliShort, getTodayKey } from '@/lib/date';
-import { formatDurationShort, formatTimerSeconds } from '@/lib/format';
+import { formatDurationShort } from '@/lib/format';
+import { ambientAudio, type AmbientSoundType } from '@/lib/ambientAudio';
 import { useApp } from '@/context/AppContext';
 import { LuxuryCard } from '@/components/ui/LuxuryCard';
 import { Numeric } from '@/components/ui/Numeric';
 import { NumericInput } from '@/components/ui/NumericInput';
-import { ProgressRing } from '@/components/charts/ProgressRing';
+import { CinematicFocusTimer } from '@/components/focus/CinematicFocusTimer';
 
-const PRESET_DURATIONS = [15, 25, 45, 60] as const;
+const PRESET_DURATIONS = [15, 25, 45, 60, 90] as const;
+
+const SOUNDSCAPES: {
+  id: AmbientSoundType;
+  label: string;
+  icon: typeof VolumeX;
+}[] = [
+  { id: 'off', label: 'سکوت', icon: VolumeX },
+  { id: 'rain', label: 'باران آرام', icon: CloudRain },
+  { id: 'brown', label: 'نویز عمیق', icon: Waves },
+  { id: 'drone', label: 'فضای سینمایی', icon: Radio },
+];
 
 export function FocusPage() {
   const {
+    settings,
     focus,
     setFocusMode,
     setFocusDurations,
@@ -36,10 +58,24 @@ export function FocusPage() {
   } = useApp();
 
   const [showCustomConfig, setShowCustomConfig] = useState(false);
+  const [cinemaMode, setCinemaMode] = useState(false);
+  const [soundType, setSoundType] = useState<AmbientSoundType>('off');
 
   const todayKey = getTodayKey();
   const tasks = useTasks();
   const sessions = useFocusSessions();
+
+  // Sync offline ambient soundscape with running timer & clean up on unmount
+  useEffect(() => {
+    if (focus.isRunning && soundType !== 'off') {
+      ambientAudio.start(soundType);
+    } else {
+      ambientAudio.stop();
+    }
+    return () => {
+      ambientAudio.stop();
+    };
+  }, [focus.isRunning, soundType]);
 
   const availableTasks = useMemo(
     () => tasks.filter((t) => !t.archived && t.status !== 'completed'),
@@ -70,6 +106,9 @@ export function FocusPage() {
     [sessions, todayKey]
   );
 
+  const dailyGoalMin = Math.max(15, settings.dailyFocusGoalMinutes || 120);
+  const dailyGoalPercent = Math.min(100, Math.round((todayTotalMin / dailyGoalMin) * 100));
+
   const totalPhaseSeconds =
     focus.phase === 'focus'
       ? focus.focusMinutes * 60
@@ -81,28 +120,175 @@ export function FocusPage() {
     focus.mode === 'pomodoro'
       ? Math.max(
           0,
-          Math.min(100, ((totalPhaseSeconds - focus.remainingSeconds) / Math.max(1, totalPhaseSeconds)) * 100)
+          Math.min(
+            100,
+            ((totalPhaseSeconds - focus.remainingSeconds) / Math.max(1, totalPhaseSeconds)) * 100
+          )
         )
-      : Math.min(100, (focus.elapsedSeconds / (60 * 60)) * 100);
+      : Math.min(100, ((focus.elapsedSeconds % 3600) / 3600) * 100);
 
-  const displayTime =
-    focus.mode === 'pomodoro'
-      ? formatTimerSeconds(focus.remainingSeconds)
-      : formatTimerSeconds(focus.elapsedSeconds);
+  const adjustFocusMinutes = (delta: number) => {
+    const next = Math.max(5, Math.min(180, focus.focusMinutes + delta));
+    setFocusDurations(next, focus.shortBreakMinutes, focus.longBreakMinutes);
+    void updateSettings({ pomodoroFocusMin: next });
+  };
 
-  const phaseLabel =
-    focus.mode === 'free'
-      ? 'تایمر آزاد عمیق'
-      : focus.phase === 'focus'
-      ? 'جلسه تمرکز'
-      : focus.phase === 'short_break'
-      ? 'استراحت کوتاه'
-      : 'استراحت بلند';
+  const handleSelectSound = (next: AmbientSoundType) => {
+    setSoundType(next);
+    if (next === 'off') {
+      ambientAudio.stop();
+    } else if (focus.isRunning) {
+      ambientAudio.start(next);
+    }
+  };
 
   return (
-    <div className="space-y-5">
-      {/* Serene Minimal Header */}
-      <div className="flex items-center justify-between">
+    <div className="space-y-4">
+      {/* FULL-SCREEN CINEMA FOCUS SANCTUARY OVERLAY */}
+      {cinemaMode && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="حالت سینمایی تمرکز"
+          className="fixed inset-0 z-[80] flex flex-col items-center justify-between overflow-y-auto bg-[#09090D] px-6 py-8"
+          style={{
+            backgroundImage:
+              'radial-gradient(ellipse 85% 45% at 50% 42%, rgba(128, 82, 214, 0.18), transparent 68%), radial-gradient(ellipse 60% 35% at 50% 100%, rgba(36, 25, 54, 0.42), transparent 70%)',
+          }}
+        >
+          {/* Cinema Top Bar */}
+          <div className="flex w-full max-w-[440px] items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="font-brand text-[10.5px] font-bold text-[#B69AEF]">
+                KAIROS CINEMA
+              </span>
+              <span className="text-[11px] text-[#6E6680]">•</span>
+              <span className="text-[11px] text-[#A79EB9]">
+                امروز{' '}
+                <Numeric
+                  value={formatDurationShort(todayTotalMin)}
+                  className="font-semibold text-[#F4F1F8]"
+                />
+              </span>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setCinemaMode(false)}
+              aria-label="خروج از نمای سینمایی"
+              className="flex items-center gap-1.5 rounded-xl border border-[#B69AEF]/18 bg-[#15141B]/90 px-3 py-1.5 text-[11px] font-medium text-[#F4F1F8]"
+            >
+              <Minimize2 className="h-3.5 w-3.5 text-[#B69AEF]" />
+              <span>خروج</span>
+            </button>
+          </div>
+
+          {/* Centerpiece Enlarged Chronometer */}
+          <div className="my-4 flex flex-col items-center">
+            <CinematicFocusTimer
+              mode={focus.mode}
+              phase={focus.phase}
+              isRunning={focus.isRunning}
+              remainingSeconds={focus.remainingSeconds}
+              elapsedSeconds={focus.elapsedSeconds}
+              progressPercent={progressPercent}
+              completedCycles={focus.completedCycles}
+              cyclesBeforeLong={settings.pomodoroCyclesBeforeLong}
+              linkedTaskTitle={linkedTask?.title ?? null}
+              cinemaMode
+            />
+
+            {/* Soundscape Selector inside Cinema Mode */}
+            <div className="mt-6 flex flex-wrap items-center justify-center gap-1.5">
+              {SOUNDSCAPES.map((sc) => {
+                const Icon = sc.icon;
+                const active = soundType === sc.id;
+                return (
+                  <button
+                    key={sc.id}
+                    type="button"
+                    onClick={() => handleSelectSound(sc.id)}
+                    className={`flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-[11px] font-medium transition ${
+                      active
+                        ? 'border-[#B69AEF]/45 bg-[#241936] text-[#F4F1F8]'
+                        : 'border-[#B69AEF]/12 bg-[#15141B]/80 text-[#A79EB9]'
+                    }`}
+                  >
+                    <Icon className="h-3.5 w-3.5 text-[#B69AEF]" />
+                    <span>{sc.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Cinema Primary Action Bar */}
+          <div className="flex w-full max-w-[380px] flex-col items-center gap-3 pb-2">
+            <div className="flex w-full items-center justify-center gap-3.5">
+              <button
+                type="button"
+                onClick={resetFocus}
+                aria-label="بازنشانی تایمر"
+                className="flex h-13 w-13 items-center justify-center rounded-2xl border border-[#B69AEF]/16 bg-[#15141B]/85 text-[#A79EB9] transition hover:text-[#F4F1F8]"
+              >
+                <RotateCcw className="h-5 w-5" />
+              </button>
+
+              <button
+                type="button"
+                onClick={focus.isRunning ? pauseFocus : startOrResumeFocus}
+                className="btn-royal flex h-14 min-w-[172px] items-center justify-center gap-2 rounded-2xl px-7 text-sm font-bold"
+              >
+                {focus.isRunning ? (
+                  <>
+                    <Pause className="h-5 w-5" />
+                    <span>توقف موقت</span>
+                  </>
+                ) : (
+                  <>
+                    <Play className="h-5 w-5" />
+                    <span>{focus.elapsedSeconds > 0 ? 'ادامه تمرکز' : 'شروع تمرکز'}</span>
+                  </>
+                )}
+              </button>
+
+              {focus.mode === 'pomodoro' ? (
+                <button
+                  type="button"
+                  onClick={skipPomodoroPhase}
+                  aria-label="مرحله بعد"
+                  className="flex h-13 w-13 items-center justify-center rounded-2xl border border-[#B69AEF]/16 bg-[#15141B]/85 text-[#A79EB9] transition hover:text-[#F4F1F8]"
+                >
+                  <SkipForward className="h-5 w-5" />
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => void finishAndSaveFocus()}
+                  aria-label="پایان و ثبت جلسه"
+                  className="flex h-13 w-13 items-center justify-center rounded-2xl border border-[#8052D6]/50 bg-[#241936] text-[#B69AEF]"
+                >
+                  <Check className="h-5 w-5" />
+                </button>
+              )}
+            </div>
+
+            {focus.elapsedSeconds >= 60 && focus.phase === 'focus' && (
+              <button
+                type="button"
+                onClick={() => void finishAndSaveFocus()}
+                className="text-xs font-medium text-[#B69AEF] underline-offset-4 hover:underline"
+              >
+                پایان و ثبت{' '}
+                <Numeric value={Math.max(1, Math.round(focus.elapsedSeconds / 60))} /> دقیقه تمرکز
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Header + Daily Focus Goal Bar */}
+      <div className="flex items-center justify-between gap-2">
         <div>
           <h1 className="text-lg font-bold text-[#F4F1F8]">محیط تمرکز</h1>
           <p className="mt-0.5 text-[11px] text-[#A79EB9]">
@@ -111,31 +297,64 @@ export function FocusPage() {
               value={formatDurationShort(todayTotalMin)}
               className="font-semibold text-[#B69AEF]"
             />{' '}
-            • چرخه‌های تکمیل‌شده:{' '}
-            <Numeric value={focus.completedCycles} className="text-[#F4F1F8]" />
+            از{' '}
+            <Numeric
+              value={formatDurationShort(dailyGoalMin)}
+              className="text-[#F4F1F8]"
+            />{' '}
+            •{' '}
+            <Numeric value={focus.completedCycles} className="text-[#F4F1F8]" /> چرخه
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={() => setShowCustomConfig((v) => !v)}
-          aria-label="تنظیم زمان‌های تمرکز"
-          className={`flex h-9 w-9 items-center justify-center rounded-xl border transition ${
-            showCustomConfig
-              ? 'border-[#8052D6] bg-[#241936] text-[#B69AEF]'
-              : 'border-[#B69AEF]/12 bg-[#15141B] text-[#A79EB9]'
-          }`}
-        >
-          <Sliders className="h-4 w-4" />
-        </button>
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => setCinemaMode(true)}
+            aria-label="ورود به حالت سینمایی تمام‌صفحه"
+            title="حالت سینمایی تمام‌صفحه"
+            className="flex h-9 items-center gap-1.5 rounded-xl border border-[#8052D6]/40 bg-[#241936]/80 px-2.5 text-[11px] font-semibold text-[#B69AEF] transition hover:bg-[#8052D6] hover:text-[#F4F1F8]"
+          >
+            <Maximize2 className="h-3.5 w-3.5" />
+            <span>سینمایی</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setShowCustomConfig((v) => !v)}
+            aria-label="تنظیم زمان‌های تمرکز"
+            className={`flex h-9 w-9 items-center justify-center rounded-xl border transition ${
+              showCustomConfig
+                ? 'border-[#8052D6] bg-[#241936] text-[#B69AEF]'
+                : 'border-[#B69AEF]/12 bg-[#15141B] text-[#A79EB9]'
+            }`}
+          >
+            <Sliders className="h-4 w-4" />
+          </button>
+        </div>
       </div>
 
-      {/* Mode Switcher (Pomodoro vs Free Timer) */}
+      {/* Subtle Daily Focus Goal Progress Rail */}
+      <div className="flex items-center gap-2.5 px-0.5">
+        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[#15141B]">
+          <div
+            className="h-full rounded-full bg-gradient-to-l from-[#B69AEF] to-[#8052D6] transition-all duration-300"
+            style={{ width: `${dailyGoalPercent}%` }}
+          />
+        </div>
+        <Numeric
+          value={dailyGoalPercent}
+          suffix="%"
+          className="text-[10.5px] font-semibold text-[#B69AEF]"
+        />
+      </div>
+
+      {/* Mode Switcher (Pomodoro vs Free Deep Timer) */}
       <div className="grid grid-cols-2 gap-1 rounded-2xl border border-[#B69AEF]/12 bg-[#15141B] p-1">
         <button
           type="button"
           onClick={() => setFocusMode('pomodoro')}
-          className={`rounded-xl py-2 text-xs font-medium transition ${
+          className={`rounded-xl py-2 text-xs font-semibold transition ${
             focus.mode === 'pomodoro'
               ? 'bg-[#241936] text-[#F4F1F8]'
               : 'text-[#A79EB9] hover:text-[#F4F1F8]'
@@ -146,7 +365,7 @@ export function FocusPage() {
         <button
           type="button"
           onClick={() => setFocusMode('free')}
-          className={`rounded-xl py-2 text-xs font-medium transition ${
+          className={`rounded-xl py-2 text-xs font-semibold transition ${
             focus.mode === 'free'
               ? 'bg-[#241936] text-[#F4F1F8]'
               : 'text-[#A79EB9] hover:text-[#F4F1F8]'
@@ -156,7 +375,7 @@ export function FocusPage() {
         </button>
       </div>
 
-      {/* Optional Duration Config Drawer */}
+      {/* Optional Custom Duration Drawer */}
       {showCustomConfig && focus.mode === 'pomodoro' && (
         <LuxuryCard variant="subtle" className="space-y-3 p-4">
           <div className="grid grid-cols-3 gap-2.5">
@@ -206,66 +425,86 @@ export function FocusPage() {
         </LuxuryCard>
       )}
 
-      {/* CINEMATIC CALM FOCUS SANCTUARY CARD (Zero distracting animations while running) */}
+      {/* CINEMATIC OBSIDIAN CHRONOMETER STAGE CARD */}
       <LuxuryCard
         variant="hero"
-        className="flex flex-col items-center px-5 py-7 text-center"
+        className="relative flex flex-col items-center overflow-hidden px-5 py-6 text-center"
       >
-        <span className="rounded-full border border-[#B69AEF]/22 bg-[#241936]/80 px-3 py-1 text-[11px] font-medium text-[#B69AEF]">
-          {phaseLabel}
-        </span>
+        {/* Subtle Architectural Top/Bottom Stage Hairlines */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute top-0 inset-x-10 h-px"
+          style={{
+            background:
+              'linear-gradient(90deg, transparent, rgba(182, 154, 239, 0.45), transparent)',
+          }}
+        />
 
-        {/* Architectural Ring + Massive Non-Jittering Tabular Timer */}
-        <div className="my-6">
-          <ProgressRing
-            percent={progressPercent}
-            size={238}
-            strokeWidth={7}
-            trackColor="rgba(182, 154, 239, 0.09)"
-          >
-            <Numeric
-              value={displayTime}
-              variant="display"
-              className="text-[4.1rem] font-extrabold tracking-tight text-[#F4F1F8]"
-            />
-            {linkedTask && (
-              <p className="mt-2 max-w-[170px] truncate text-[11px] text-[#A79EB9]">
-                {linkedTask.title}
-              </p>
-            )}
-          </ProgressRing>
+        {/* Sculptural Swiss Chronometer Dial */}
+        <div className="my-2">
+          <CinematicFocusTimer
+            mode={focus.mode}
+            phase={focus.phase}
+            isRunning={focus.isRunning}
+            remainingSeconds={focus.remainingSeconds}
+            elapsedSeconds={focus.elapsedSeconds}
+            progressPercent={progressPercent}
+            completedCycles={focus.completedCycles}
+            cyclesBeforeLong={settings.pomodoroCyclesBeforeLong}
+            linkedTaskTitle={linkedTask?.title ?? null}
+          />
         </div>
 
-        {/* Quick Pomodoro Presets (hidden cleanly while actively running for stillness) */}
+        {/* Fine-Tune (-5m / Presets / +5m) — Hidden gracefully while running for stillness */}
         {focus.mode === 'pomodoro' && !focus.isRunning && focus.phase === 'focus' && (
-          <div className="mb-5 flex items-center gap-2">
-            {PRESET_DURATIONS.map((mins) => (
+          <div className="mt-3 mb-4 w-full space-y-2.5">
+            <div className="flex items-center justify-center gap-1.5">
               <button
-                key={mins}
                 type="button"
-                onClick={() => {
-                  setFocusDurations(mins, focus.shortBreakMinutes, focus.longBreakMinutes);
-                  void updateSettings({ pomodoroFocusMin: mins });
-                }}
-                className={`num-geo rounded-xl border px-3 py-1.5 text-xs font-semibold transition ${
-                  focus.focusMinutes === mins
-                    ? 'border-[#B69AEF]/50 bg-[#241936] text-[#F4F1F8]'
-                    : 'border-[#B69AEF]/10 bg-[#09090D]/60 text-[#A79EB9] hover:text-[#F4F1F8]'
-                }`}
+                onClick={() => adjustFocusMinutes(-5)}
+                aria-label="کاهش ۵ دقیقه"
+                className="flex h-8 w-8 items-center justify-center rounded-xl border border-[#B69AEF]/14 bg-[#09090D]/70 text-[#A79EB9] transition hover:border-[#B69AEF]/40 hover:text-[#F4F1F8]"
               >
-                {mins}m
+                <Minus className="h-3.5 w-3.5" />
               </button>
-            ))}
+
+              {PRESET_DURATIONS.map((mins) => (
+                <button
+                  key={mins}
+                  type="button"
+                  onClick={() => {
+                    setFocusDurations(mins, focus.shortBreakMinutes, focus.longBreakMinutes);
+                    void updateSettings({ pomodoroFocusMin: mins });
+                  }}
+                  className={`num-geo rounded-xl border px-2.5 py-1.5 text-[11.5px] font-semibold transition ${
+                    focus.focusMinutes === mins
+                      ? 'border-[#B69AEF]/55 bg-[#241936] text-[#F4F1F8]'
+                      : 'border-[#B69AEF]/10 bg-[#09090D]/60 text-[#A79EB9] hover:text-[#F4F1F8]'
+                  }`}
+                >
+                  {mins}m
+                </button>
+              ))}
+
+              <button
+                type="button"
+                onClick={() => adjustFocusMinutes(5)}
+                aria-label="افزایش ۵ دقیقه"
+                className="flex h-8 w-8 items-center justify-center rounded-xl border border-[#B69AEF]/14 bg-[#09090D]/70 text-[#A79EB9] transition hover:border-[#B69AEF]/40 hover:text-[#F4F1F8]"
+              >
+                <Plus className="h-3.5 w-3.5" />
+              </button>
+            </div>
           </div>
         )}
 
-        {/* Calm Primary Controls */}
-        <div className="flex w-full items-center justify-center gap-3">
+        {/* Primary Luxury Control Bar */}
+        <div className="mt-2 flex w-full items-center justify-center gap-3">
           <button
             type="button"
             onClick={resetFocus}
             aria-label="بازنشانی تایمر"
-            className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[#B69AEF]/14 bg-[#09090D]/70 text-[#A79EB9] transition hover:border-[#B69AEF]/35 hover:text-[#F4F1F8]"
+            className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[#B69AEF]/14 bg-[#09090D]/75 text-[#A79EB9] transition hover:border-[#B69AEF]/35 hover:text-[#F4F1F8]"
           >
             <RotateCcw className="h-4.5 w-4.5" />
           </button>
@@ -273,7 +512,7 @@ export function FocusPage() {
           <button
             type="button"
             onClick={focus.isRunning ? pauseFocus : startOrResumeFocus}
-            className="btn-royal flex h-13 min-w-[152px] items-center justify-center gap-2 rounded-2xl px-6 text-sm font-bold"
+            className="btn-royal flex h-13 min-w-[162px] items-center justify-center gap-2 rounded-2xl px-6 text-sm font-bold"
           >
             {focus.isRunning ? (
               <>
@@ -294,7 +533,7 @@ export function FocusPage() {
               onClick={skipPomodoroPhase}
               aria-label="مرحله بعد"
               title="انتقال به مرحله بعد"
-              className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[#B69AEF]/14 bg-[#09090D]/70 text-[#A79EB9] transition hover:border-[#B69AEF]/35 hover:text-[#F4F1F8]"
+              className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[#B69AEF]/14 bg-[#09090D]/75 text-[#A79EB9] transition hover:border-[#B69AEF]/35 hover:text-[#F4F1F8]"
             >
               <SkipForward className="h-4.5 w-4.5" />
             </button>
@@ -322,6 +561,44 @@ export function FocusPage() {
             <Numeric value={Math.max(1, Math.round(focus.elapsedSeconds / 60))} /> دقیقه تمرکز
           </button>
         )}
+
+        {/* Offline Ambient Soundscape Bar */}
+        <div className="mt-5 w-full border-t border-[#B69AEF]/10 pt-4">
+          <div className="mb-2 flex items-center justify-between text-[10.5px] text-[#A79EB9]">
+            <span className="inline-flex items-center gap-1.5 font-medium text-[#F4F1F8]">
+              <Volume2 className="h-3.5 w-3.5 text-[#8052D6]" />
+              فضای صوتی تمرکز (آفلاین)
+            </span>
+            <span className="text-[10px] text-[#6E6680]">
+              {soundType === 'off'
+                ? 'خاموش'
+                : focus.isRunning
+                ? 'در حال پخش آرام'
+                : 'آماده هنگام شروع'}
+            </span>
+          </div>
+          <div className="grid grid-cols-4 gap-1.5">
+            {SOUNDSCAPES.map((sc) => {
+              const Icon = sc.icon;
+              const active = soundType === sc.id;
+              return (
+                <button
+                  key={sc.id}
+                  type="button"
+                  onClick={() => handleSelectSound(sc.id)}
+                  className={`flex flex-col items-center gap-1 rounded-xl border py-2 text-[10px] font-medium transition ${
+                    active
+                      ? 'border-[#B69AEF]/45 bg-[#241936] text-[#F4F1F8]'
+                      : 'border-[#B69AEF]/10 bg-[#09090D]/60 text-[#A79EB9] hover:text-[#F4F1F8]'
+                  }`}
+                >
+                  <Icon className="h-3.5 w-3.5 text-[#B69AEF]" />
+                  <span>{sc.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </LuxuryCard>
 
       {/* LINKED TASK SELECTOR */}
@@ -391,7 +668,8 @@ export function FocusPage() {
               >
                 <div className="min-w-0">
                   <p className="truncate text-xs font-medium text-[#F4F1F8]">
-                    {s.taskTitleSnapshot || (s.mode === 'pomodoro' ? 'جلسه پومودورو' : 'تمرکز آزاد')}
+                    {s.taskTitleSnapshot ||
+                      (s.mode === 'pomodoro' ? 'جلسه پومودورو' : 'تمرکز آزاد')}
                   </p>
                   <p className="mt-0.5 text-[10.5px] text-[#A79EB9]">
                     {formatJalaaliShort(s.dateKey)} •{' '}

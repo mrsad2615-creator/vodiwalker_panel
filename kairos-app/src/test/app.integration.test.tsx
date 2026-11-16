@@ -7,6 +7,7 @@ import { db } from '@/lib/db';
 
 describe('KAIROS Full Application End-to-End Flow', () => {
   beforeEach(async () => {
+    window.localStorage.clear();
     await db.transaction(
       'rw',
       [db.tasks, db.habits, db.habitLogs, db.focusSessions, db.goals, db.settings],
@@ -23,19 +24,19 @@ describe('KAIROS Full Application End-to-End Flow', () => {
     );
   });
 
-  it('shows the mrsad motion-graphic splash intro, transitions cleanly, and supports full typing/backspacing', async () => {
+  it('runs optimized mrsad splash, pro vertical/horizontal habits, and cinematic focus sanctuary cleanly', async () => {
     render(<App />);
 
-    // Motion-graphic mrsad splash intro renders immediately
+    // Optimized CSS compositor mrsad splash intro renders immediately
     const splash = screen.getByRole('status', { name: /mrsad/i });
     expect(splash).toBeInTheDocument();
     expect(screen.getByText('KAIROS STUDIO')).toBeInTheDocument();
 
-    // Wait for DB ready, then tap splash to skip straight into Dashboard
+    // Tap splash to skip directly into Dashboard
+    fireEvent.click(splash);
     await waitFor(() => {
       expect(screen.getByText('پیشرفت امروز')).toBeInTheDocument();
     });
-    fireEvent.click(splash);
 
     expect(screen.getByText('کارهای مهم امروز')).toBeInTheDocument();
     expect(screen.getByText('عادت‌های امروز')).toBeInTheDocument();
@@ -61,7 +62,6 @@ describe('KAIROS Full Application End-to-End Flow', () => {
     )) as HTMLInputElement;
     fireEvent.change(titleInput, { target: { value: 'متن اشتباه' } });
     expect(titleInput.value).toBe('متن اشتباه');
-    // Verify clearing / backspacing works cleanly
     fireEvent.change(titleInput, { target: { value: '' } });
     expect(titleInput.value).toBe('');
     fireEvent.change(titleInput, { target: { value: 'انتشار نسخه نهایی کایروس' } });
@@ -71,11 +71,23 @@ describe('KAIROS Full Application End-to-End Flow', () => {
       expect(screen.getByText('انتشار نسخه نهایی کایروس')).toBeInTheDocument();
     });
 
-    // Navigate to Habits & 365-Day Heatmap
+    // Navigate to Pro Habits -> test Vertical/Horizontal Heatmap & Compact/Grid views
     fireEvent.click(screen.getByRole('button', { name: 'عادت‌ها' }));
     await waitFor(() => {
-      expect(screen.getByText('تقویم حرارتی سالانه')).toBeInTheDocument();
+      expect(screen.getByText('مدیریت حرفه‌ای عادت‌ها')).toBeInTheDocument();
     });
+    expect(screen.getByText('تقویم حرارتی سالانه')).toBeInTheDocument();
+
+    // Switch heatmap between Horizontal & Vertical orientations
+    fireEvent.click(screen.getByRole('button', { name: 'نمای افقی تقویم' }));
+    expect(screen.getByText('نمای افقی سالانه (365 روز)')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'نمای عمودی تقویم' }));
+    expect(screen.getByText('نمای عمودی (خوانا و لمسی)')).toBeInTheDocument();
+
+    // Switch pro habit card layouts
+    fireEvent.click(screen.getByRole('button', { name: 'نمای فشرده' }));
+    fireEvent.click(screen.getByRole('button', { name: 'نمای کارتی' }));
+    fireEvent.click(screen.getByRole('button', { name: 'نمای عمودی حرفه‌ای' }));
 
     // Navigate to Calendar (Jalali Shamsi)
     fireEvent.click(screen.getByRole('button', { name: 'تقویم' }));
@@ -83,11 +95,17 @@ describe('KAIROS Full Application End-to-End Flow', () => {
       expect(screen.getByText('تقویم و برنامه‌ریزی')).toBeInTheDocument();
     });
 
-    // Navigate to Focus Mode
+    // Navigate to Focus Mode -> test Cinematic Timer & Full-Screen Cinema Mode
     fireEvent.click(screen.getByRole('button', { name: 'تمرکز' }));
     await waitFor(() => {
       expect(screen.getByText('محیط تمرکز')).toBeInTheDocument();
     });
+    expect(screen.getByText('فضای صوتی تمرکز (آفلاین)')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'ورود به حالت سینمایی تمام‌صفحه' }));
+    expect(screen.getByText('KAIROS CINEMA')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'خروج از نمای سینمایی' }));
+    expect(screen.queryByText('KAIROS CINEMA')).not.toBeInTheDocument();
 
     // Navigate to Analytics (Monthly Review + Annual Review)
     fireEvent.click(screen.getByRole('button', { name: 'تحلیل' }));
@@ -127,10 +145,8 @@ describe('KAIROS Full Application End-to-End Flow', () => {
     render(<Harness />);
     const input = screen.getByLabelText('focus-min') as HTMLInputElement;
     fireEvent.focus(input);
-    // Clearing entire value with Backspace must stay empty while editing (not snap back!)
     fireEvent.change(input, { target: { value: '' } });
     expect(input.value).toBe('');
-    // Typing Persian digits ۴۵ converts cleanly to 45
     fireEvent.change(input, { target: { value: '۴۵' } });
     expect(input.value).toBe('45');
     expect(latest).toBe(45);

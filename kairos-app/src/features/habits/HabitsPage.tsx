@@ -1,14 +1,28 @@
 import { useMemo, useState } from 'react';
 import {
+  Archive,
+  ArchiveRestore,
+  ArrowUpDown,
+  BarChart3,
+  CalendarDays,
   Check,
+  ChevronDown,
   ChevronLeft,
+  ChevronRight,
+  ChevronUp,
+  Clock,
+  Edit3,
   Flame,
+  LayoutGrid,
+  LayoutList,
+  ListChecks,
   Minus,
   Plus,
+  Trash2,
   X,
 } from 'lucide-react';
-import type { Habit } from '@/types/domain';
-import { clearHabitLog, upsertHabitLog } from '@/lib/db';
+import type { Habit, HabitLog } from '@/types/domain';
+import { clearHabitLog, deleteHabit, updateHabit, upsertHabitLog } from '@/lib/db';
 import { useFocusSessions, useHabitLogs, useHabits, useTasks } from '@/lib/queries';
 import {
   computeAnnualHeatmap,
@@ -16,19 +30,56 @@ import {
   isHabitScheduledOnDate,
   type HeatmapDayCell,
 } from '@/lib/analytics';
-import { dateKeyToJalaali, formatJalaaliFull, getTodayKey } from '@/lib/date';
+import {
+  addDays,
+  dateKeyToJalaali,
+  formatJalaaliFull,
+  getPersianWeekdayIndex,
+  getTodayKey,
+  PERSIAN_WEEKDAYS_SHORT,
+} from '@/lib/date';
 import { triggerHaptic } from '@/lib/native';
 import { useApp } from '@/context/AppContext';
 import { LuxuryCard } from '@/components/ui/LuxuryCard';
 import { Numeric } from '@/components/ui/Numeric';
 import { HabitIcon } from '@/components/ui/KairosMark';
-import { ActivityHeatmap } from '@/components/charts/ActivityHeatmap';
+import {
+  ActivityHeatmap,
+  type HeatmapOrientation,
+} from '@/components/charts/ActivityHeatmap';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { HabitModal } from './HabitModal';
 import { HabitDetailView } from './HabitDetailView';
 
+type HabitLayoutMode = 'vertical' | 'compact' | 'grid';
+type HabitFilterMode = 'all' | 'scheduled' | 'pending' | 'completed' | 'archived';
+type HabitSortMode = 'default' | 'streak' | 'adherence_desc' | 'needs_focus';
+
+function readStoredPref<T extends string>(key: string, fallback: T): T {
+  try {
+    const val = window.localStorage.getItem(key);
+    return (val as T) || fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function writeStoredPref(key: string, val: string): void {
+  try {
+    window.localStorage.setItem(key, val);
+  } catch {
+    // ignore private browsing quota errors
+  }
+}
+
+function getScheduleBadge(habit: Habit): string {
+  if (habit.scheduleType === 'daily') return 'روزانه';
+  if (habit.scheduleType === 'weekly_target') return `${habit.weeklyTarget} بار در هفته`;
+  return `${habit.scheduledDays.length} روز هفته`;
+}
+
 export function HabitsPage() {
-  const { settings } = useApp();
+  const { settings, pushToast } = useApp();
   const todayKey = getTodayKey();
   const currentJYear = dateKeyToJalaali(todayKey).jy;
 
@@ -39,16 +90,38 @@ export function HabitsPage() {
     open: false,
   });
 
+  // Pro Management Controls (persisted across sessions)
+  const [heatmapOrientation, setHeatmapOrientation] = useState<HeatmapOrientation>(() =>
+    readStoredPref<HeatmapOrientation>('kairos_heatmap_orient', 'vertical')
+  );
+  const [layoutMode, setLayoutMode] = useState<HabitLayoutMode>(() =>
+    readStoredPref<HabitLayoutMode>('kairos_habit_layout', 'vertical')
+  );
+  const [filterMode, setFilterMode] = useState<HabitFilterMode>('all');
+  const [sortMode, setSortMode] = useState<HabitSortMode>('default');
+  const [heatmapExpanded, setHeatmapExpanded] = useState(true);
+
   const habits = useHabits();
   const habitLogs = useHabitLogs();
   const tasks = useTasks();
   const focusSessions = useFocusSessions();
 
   const activeHabits = useMemo(() => habits.filter((h) => !h.archived), [habits]);
+  const archivedHabits = useMemo(() => habits.filter((h) => h.archived), [habits]);
+
   const detailHabit = useMemo(
-    () => activeHabits.find((h) => h.id === detailHabitId) ?? null,
-    [activeHabits, detailHabitId]
+    () => habits.find((h) => h.id === detailHabitId) ?? null,
+    [habits, detailHabitId]
   );
+
+  // Fast O(1) lookup map: `${habitId}::${dateKey}` -> HabitLog
+  const logLookup = useMemo(() => {
+    const map = new Map<string, HabitLog>();
+    for (const l of habitLogs) {
+      map.set(`${l.habitId}::${l.dateKey}`, l);
+    }
+    return map;
+  }, [habitLogs]);
 
   const heatmap = useMemo(
     () =>
@@ -69,13 +142,6 @@ export function HabitsPage() {
     [heatmap.cells, selectedDateKey]
   );
 
-  const selectedDayLogs = useMemo(() => {
-    const map = new Map(
-      habitLogs.filter((l) => l.dateKey === selectedDateKey).map((l) => [l.habitId, l])
-    );
-    return map;
-  }, [habitLogs, selectedDateKey]);
-
   const habitStatsMap = useMemo(() => {
     const map = new Map<string, ReturnType<typeof computeHabitStats>>();
     activeHabits.forEach((h) => {
@@ -84,12 +150,107 @@ export function HabitsPage() {
     return map;
   }, [activeHabits, habitLogs, todayKey]);
 
+  // Last 7 days ending on selectedDateKey (for interactive 7-day vertical matrix strip)
+  const last7Days = useMemo(() => {
+    const anchor = selectedDateKey <= todayKey ? selectedDateKey : todayKey;
+    return Array.from({ length: 7 }, (_, i) => {
+      const dk = addDays(anchor, i - 6);
+      const j = dateKeyToJalaali(dk);
+      return {
+        dateKey: dk,
+        dayNum: j.jd,
+        weekdayShort: PERSIAN_WEEKDAYS_SHORT[getPersianWeekdayIndex(dk)],
+      };
+    });
+  }, [selectedDateKey, todayKey]);
+
+  // Daily Executive Summary for selectedDateKey
+  const daySummary = useMemo(() => {
+    const scheduled = activeHabits.filter((h) => isHabitScheduledOnDate(h, selectedDateKey));
+    let completed = 0;
+    let missed = 0;
+    for (const h of scheduled) {
+      const log = logLookup.get(`${h.id}::${selectedDateKey}`);
+      if (log?.status === 'completed') completed += 1;
+      else if (log?.status === 'missed') missed += 1;
+    }
+    const percent = scheduled.length > 0 ? Math.round((completed / scheduled.length) * 100) : 0;
+    let topStreak = 0;
+    let avgAdherenceSum = 0;
+    for (const h of activeHabits) {
+      const st = habitStatsMap.get(h.id);
+      if (st) {
+        if (st.currentStreak > topStreak) topStreak = st.currentStreak;
+        avgAdherenceSum += st.adherencePercent;
+      }
+    }
+    const avgAdherence =
+      activeHabits.length > 0 ? Math.round(avgAdherenceSum / activeHabits.length) : 0;
+    return {
+      scheduledCount: scheduled.length,
+      completedCount: completed,
+      missedCount: missed,
+      pendingCount: Math.max(0, scheduled.length - completed),
+      percent,
+      topStreak,
+      avgAdherence,
+    };
+  }, [activeHabits, selectedDateKey, logLookup, habitStatsMap]);
+
+  // Filtered & sorted habit list
+  const visibleHabits = useMemo(() => {
+    if (filterMode === 'archived') {
+      return archivedHabits;
+    }
+
+    let list = activeHabits.filter((h) => {
+      const log = logLookup.get(`${h.id}::${selectedDateKey}`);
+      if (filterMode === 'scheduled') return isHabitScheduledOnDate(h, selectedDateKey);
+      if (filterMode === 'completed') return log?.status === 'completed';
+      if (filterMode === 'pending') {
+        return isHabitScheduledOnDate(h, selectedDateKey) && log?.status !== 'completed';
+      }
+      return true;
+    });
+
+    if (sortMode === 'streak') {
+      list = list.slice().sort((a, b) => {
+        const sa = habitStatsMap.get(a.id)?.currentStreak ?? 0;
+        const sb = habitStatsMap.get(b.id)?.currentStreak ?? 0;
+        return sb - sa;
+      });
+    } else if (sortMode === 'adherence_desc') {
+      list = list.slice().sort((a, b) => {
+        const aa = habitStatsMap.get(a.id)?.adherencePercent ?? 0;
+        const ab = habitStatsMap.get(b.id)?.adherencePercent ?? 0;
+        return ab - aa;
+      });
+    } else if (sortMode === 'needs_focus') {
+      list = list.slice().sort((a, b) => {
+        const aa = habitStatsMap.get(a.id)?.adherencePercent ?? 100;
+        const ab = habitStatsMap.get(b.id)?.adherencePercent ?? 100;
+        return aa - ab;
+      });
+    }
+
+    return list;
+  }, [
+    filterMode,
+    sortMode,
+    activeHabits,
+    archivedHabits,
+    logLookup,
+    selectedDateKey,
+    habitStatsMap,
+  ]);
+
   const handleSetDayHabit = async (
     habit: Habit,
     dateKey: string,
-    action: 'completed' | 'step' | 'missed' | 'unlogged'
+    action: 'completed' | 'step_up' | 'step_down' | 'missed' | 'unlogged'
   ) => {
-    const current = habitLogs.find((l) => l.habitId === habit.id && l.dateKey === dateKey);
+    if (dateKey > todayKey) return;
+    const current = logLookup.get(`${habit.id}::${dateKey}`);
     if (action === 'unlogged') {
       await clearHabitLog(habit.id, dateKey);
       void triggerHaptic('light', settings.hapticsEnabled);
@@ -100,9 +261,18 @@ export function HabitsPage() {
       void triggerHaptic('warning', settings.hapticsEnabled);
       return;
     }
-    if (action === 'step' && habit.trackingMode === 'quantitative') {
+    if ((action === 'step_up' || action === 'step_down') && habit.trackingMode === 'quantitative') {
       const step = habit.targetValue >= 20 ? Math.max(5, Math.round(habit.targetValue / 4)) : 1;
-      const nextVal = Math.min(habit.targetValue, (current?.value ?? 0) + step);
+      const curVal = current?.value ?? 0;
+      const nextVal =
+        action === 'step_up'
+          ? Math.min(habit.targetValue, curVal + step)
+          : Math.max(0, curVal - step);
+      if (nextVal <= 0) {
+        await clearHabitLog(habit.id, dateKey);
+        void triggerHaptic('light', settings.hapticsEnabled);
+        return;
+      }
       const done = nextVal >= habit.targetValue;
       await upsertHabitLog(habit.id, dateKey, done ? 'completed' : 'partial', nextVal);
       void triggerHaptic(done ? 'success' : 'light', settings.hapticsEnabled);
@@ -111,6 +281,58 @@ export function HabitsPage() {
 
     await upsertHabitLog(habit.id, dateKey, 'completed', habit.targetValue);
     void triggerHaptic('success', settings.hapticsEnabled);
+  };
+
+  // Cycle single day cell on the 7-day strip: unlogged -> completed -> missed -> unlogged
+  const handleCycleStripDay = async (habit: Habit, dateKey: string) => {
+    if (dateKey > todayKey) return;
+    const current = logLookup.get(`${habit.id}::${dateKey}`);
+    if (!current || current.status === 'partial') {
+      await handleSetDayHabit(habit, dateKey, 'completed');
+    } else if (current.status === 'completed') {
+      await handleSetDayHabit(habit, dateKey, 'missed');
+    } else {
+      await handleSetDayHabit(habit, dateKey, 'unlogged');
+    }
+  };
+
+  const handleToggleArchive = async (habit: Habit) => {
+    const nextArchived = !habit.archived;
+    await updateHabit(habit.id, { archived: nextArchived });
+    void triggerHaptic('light', settings.hapticsEnabled);
+    pushToast({
+      title: nextArchived ? 'عادت به آرشیو منتقل شد' : 'عادت بازگردانی شد',
+      description: habit.name,
+      tone: 'default',
+    });
+  };
+
+  const handlePermanentDelete = async (habit: Habit) => {
+    await deleteHabit(habit.id);
+    void triggerHaptic('warning', settings.hapticsEnabled);
+    pushToast({
+      title: 'عادت برای همیشه حذف شد',
+      description: habit.name,
+      tone: 'warning',
+    });
+  };
+
+  const shiftSelectedDate = (delta: number) => {
+    const next = addDays(selectedDateKey, delta);
+    if (next > todayKey) return;
+    setSelectedDateKey(next);
+    const nextJYear = dateKeyToJalaali(next).jy;
+    if (nextJYear !== selectedYear) setSelectedYear(nextJYear);
+  };
+
+  const handleHeatmapOrient = (next: HeatmapOrientation) => {
+    setHeatmapOrientation(next);
+    writeStoredPref('kairos_heatmap_orient', next);
+  };
+
+  const handleLayoutChange = (next: HabitLayoutMode) => {
+    setLayoutMode(next);
+    writeStoredPref('kairos_habit_layout', next);
   };
 
   // Dedicated Habit Detail Screen
@@ -136,198 +358,564 @@ export function HabitsPage() {
   }
 
   const selectedDateInfo = formatJalaaliFull(selectedDateKey);
+  const isViewingToday = selectedDateKey === todayKey;
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       {/* Page Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <div>
-          <h1 className="text-lg font-bold text-[#F4F1F8]">مدیریت عادت‌ها</h1>
+          <h1 className="text-lg font-bold text-[#F4F1F8]">مدیریت حرفه‌ای عادت‌ها</h1>
           <p className="mt-0.5 text-[11px] text-[#A79EB9]">
-            تقویم حرارتی 365 روزه با تفکیک دقیق روزهای موفق، انجام‌نشده و ثبت‌نشده
+            کنترل عمودی و افقی، ثبت ۷ روزه مستقیم و تفکیک دقیق روزهای ثبت‌نشده
           </p>
         </div>
 
         <button
           type="button"
           onClick={() => setModalState({ open: true, habit: null })}
-          className="btn-royal flex items-center gap-1.5 rounded-2xl px-3.5 py-2.5 text-xs font-semibold"
+          className="btn-royal flex shrink-0 items-center gap-1.5 rounded-2xl px-3.5 py-2.5 text-xs font-semibold"
         >
           <Plus className="h-4 w-4" />
           <span>عادت جدید</span>
         </button>
       </div>
 
-      {/* 365-DAY LUXURY PURPLE HEATMAP CARD */}
-      <LuxuryCard variant="hero" className="space-y-4 p-4">
+      {/* EXECUTIVE DAILY COMMAND BAR (Date Stepper + Live Daily Mastery) */}
+      <LuxuryCard variant="hero" className="space-y-3.5 p-4">
         <div className="flex items-center justify-between gap-2">
-          <div>
-            <h2 className="text-xs font-bold text-[#F4F1F8]">تقویم حرارتی سالانه</h2>
-            <p className="mt-0.5 text-[10.5px] text-[#A79EB9]">
-              <Numeric value={heatmap.activeDays} className="font-semibold text-[#B69AEF]" /> روز
-              فعال •{' '}
-              <Numeric value={heatmap.perfectDays} className="font-semibold text-[#F4F1F8]" /> روز
-              کامل
-            </p>
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => shiftSelectedDate(-1)}
+              aria-label="روز قبل"
+              className="flex h-8 w-8 items-center justify-center rounded-xl border border-[#B69AEF]/14 bg-[#09090D]/70 text-[#A79EB9] transition hover:border-[#B69AEF]/35 hover:text-[#F4F1F8]"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+            <div className="px-1">
+              <p className="text-xs font-bold text-[#F4F1F8]">
+                {isViewingToday ? 'امروز • ' : ''}
+                {selectedDateInfo.weekday}،{' '}
+                <Numeric value={selectedDateInfo.day} className="text-[#B69AEF]" />{' '}
+                {selectedDateInfo.month}
+              </p>
+              <p className="text-[10px] text-[#A79EB9]">
+                <Numeric
+                  value={daySummary.completedCount}
+                  className="font-semibold text-[#F4F1F8]"
+                />{' '}
+                از <Numeric value={daySummary.scheduledCount} /> عادت انجام شده
+                {daySummary.missedCount > 0 && (
+                  <>
+                    {' '}
+                    • <Numeric value={daySummary.missedCount} className="text-[#EB9BAB]" /> انجام‌نشده
+                  </>
+                )}
+              </p>
+            </div>
+            <button
+              type="button"
+              disabled={isViewingToday}
+              onClick={() => shiftSelectedDate(1)}
+              aria-label="روز بعد"
+              className="flex h-8 w-8 items-center justify-center rounded-xl border border-[#B69AEF]/14 bg-[#09090D]/70 text-[#A79EB9] transition hover:border-[#B69AEF]/35 hover:text-[#F4F1F8] disabled:opacity-35"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
           </div>
 
-          {/* Year Selector (Current & Past Jalali Years) */}
-          <div className="flex items-center gap-1 rounded-xl border border-[#B69AEF]/14 bg-[#09090D]/70 p-1">
-            {[currentJYear - 2, currentJYear - 1, currentJYear].map((yr) => (
+          <div className="flex items-center gap-2">
+            {!isViewingToday && (
               <button
-                key={yr}
                 type="button"
                 onClick={() => {
-                  setSelectedYear(yr);
-                  if (yr === currentJYear) setSelectedDateKey(todayKey);
+                  setSelectedDateKey(todayKey);
+                  setSelectedYear(currentJYear);
                 }}
-                className={`num-geo rounded-lg px-2 py-1 text-[11px] font-semibold transition ${
-                  selectedYear === yr
-                    ? 'bg-[#8052D6] text-[#F4F1F8]'
-                    : 'text-[#A79EB9] hover:text-[#F4F1F8]'
-                }`}
+                className="rounded-lg border border-[#B69AEF]/28 bg-[#241936] px-2.5 py-1 text-[10.5px] font-semibold text-[#B69AEF]"
               >
-                {yr}
+                امروز
               </button>
-            ))}
+            )}
+            <Numeric
+              value={daySummary.percent}
+              suffix="%"
+              variant="display"
+              className="text-3xl font-extrabold text-[#B69AEF]"
+            />
           </div>
         </div>
 
-        <ActivityHeatmap
-          cells={heatmap.cells}
-          selectedDateKey={selectedDateKey}
-          todayKey={todayKey}
-          onSelectDay={(cell: HeatmapDayCell) => setSelectedDateKey(cell.dateKey)}
-        />
+        {/* Daily Progress Bar */}
+        <div className="h-1.5 w-full overflow-hidden rounded-full bg-[#09090D]/80">
+          <div
+            className="h-full rounded-full bg-gradient-to-l from-[#B69AEF] to-[#8052D6] transition-all duration-300"
+            style={{ width: `${daySummary.percent}%` }}
+          />
+        </div>
 
-        {/* Selected Day Inspector */}
-        <div className="rounded-2xl border border-[#B69AEF]/14 bg-[#0B0A11]/90 p-3.5">
-          <div className="flex items-center justify-between gap-2">
-            <div>
-              <p className="text-xs font-bold text-[#F4F1F8]">
-                {selectedDateInfo.weekday}،{' '}
-                <Numeric value={selectedDateInfo.day} className="text-[#B69AEF]" />{' '}
-                {selectedDateInfo.month}{' '}
-                <Numeric value={selectedDateInfo.year} className="text-[#A79EB9]" />
-              </p>
-              <p className="mt-0.5 text-[10.5px] text-[#A79EB9]">
-                {selectedCell
-                  ? selectedCell.state === 'future'
-                    ? 'تاریخ آینده'
-                    : selectedCell.state === 'unlogged'
-                    ? 'هیچ فعالیتی برای این روز ثبت نشده است'
-                    : `موفق: ${selectedCell.habitsCompleted} • انجام‌نشده: ${selectedCell.habitsMissed} • ثبت‌نشده: ${selectedCell.habitsUnlogged}`
-                  : 'یک روز از تقویم انتخاب کنید'}
-              </p>
-            </div>
-            {selectedCell && selectedCell.state !== 'future' && (
-              <Numeric
-                value={selectedCell.score}
-                suffix="%"
-                variant="display"
-                className="text-2xl font-bold text-[#B69AEF]"
-              />
-            )}
+        {/* 3 Compact Pro KPI Chips */}
+        <div className="grid grid-cols-3 gap-2 pt-0.5">
+          <div className="rounded-xl border border-[#B69AEF]/10 bg-[#09090D]/55 px-2.5 py-2 text-center">
+            <Numeric
+              value={daySummary.pendingCount}
+              variant="display"
+              className="text-xl font-bold text-[#F4F1F8]"
+            />
+            <span className="mt-0.5 block text-[9.5px] text-[#A79EB9]">مانده این روز</span>
           </div>
-
-          {selectedDateKey <= todayKey && activeHabits.length > 0 && (
-            <div className="mt-3 space-y-1.5 border-t border-[#B69AEF]/10 pt-2.5">
-              {activeHabits
-                .filter((h) => isHabitScheduledOnDate(h, selectedDateKey))
-                .map((habit) => {
-                  const log = selectedDayLogs.get(habit.id);
-                  return (
-                    <div
-                      key={habit.id}
-                      className="flex items-center justify-between gap-2 text-xs"
-                    >
-                      <span className="truncate text-[#F4F1F8]/90">{habit.name}</span>
-                      <div className="flex shrink-0 items-center gap-1">
-                        <button
-                          type="button"
-                          onClick={() => handleSetDayHabit(habit, selectedDateKey, 'completed')}
-                          aria-label="انجام شد"
-                          className={`rounded-md px-2 py-0.5 text-[10px] font-medium transition ${
-                            log?.status === 'completed'
-                              ? 'bg-[#8052D6] text-[#F4F1F8]'
-                              : 'bg-[#15141B] text-[#6E6680] hover:text-[#F4F1F8]'
-                          }`}
-                        >
-                          موفق
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleSetDayHabit(habit, selectedDateKey, 'missed')}
-                          aria-label="انجام نشد"
-                          className={`rounded-md px-2 py-0.5 text-[10px] font-medium transition ${
-                            log?.status === 'missed'
-                              ? 'bg-[#D9778B]/25 text-[#EB9BAB]'
-                              : 'bg-[#15141B] text-[#6E6680] hover:text-[#EB9BAB]'
-                          }`}
-                        >
-                          نشد
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleSetDayHabit(habit, selectedDateKey, 'unlogged')}
-                          aria-label="ثبت‌نشده"
-                          className={`rounded-md px-2 py-0.5 text-[10px] font-medium transition ${
-                            !log
-                              ? 'bg-[#241936] text-[#B69AEF]'
-                              : 'bg-[#15141B] text-[#6E6680]'
-                          }`}
-                        >
-                          ثبت‌نشده
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-            </div>
-          )}
+          <div className="rounded-xl border border-[#8052D6]/24 bg-[#241936]/55 px-2.5 py-2 text-center">
+            <Numeric
+              value={daySummary.topStreak}
+              suffix="d"
+              variant="display"
+              className="text-xl font-bold text-[#B69AEF]"
+            />
+            <span className="mt-0.5 block text-[9.5px] text-[#B69AEF]">بالاترین رکورد</span>
+          </div>
+          <div className="rounded-xl border border-[#B69AEF]/10 bg-[#09090D]/55 px-2.5 py-2 text-center">
+            <Numeric
+              value={daySummary.avgAdherence}
+              suffix="%"
+              variant="display"
+              className="text-xl font-bold text-[#F4F1F8]"
+            />
+            <span className="mt-0.5 block text-[9.5px] text-[#A79EB9]">میانگین پایبندی</span>
+          </div>
         </div>
       </LuxuryCard>
 
-      {/* HABIT CARDS LIST */}
-      <section className="space-y-2.5">
-        <div className="flex items-center justify-between px-0.5">
-          <h2 className="text-sm font-bold text-[#F4F1F8]">عادت‌های فعال شما</h2>
-          <Numeric
-            value={activeHabits.length}
-            variant="geo"
-            className="rounded-lg bg-[#15141B] px-2 py-0.5 text-xs text-[#B69AEF]"
-          />
+      {/* PRO HABIT MANAGEMENT TOOLBAR (Layout Mode + Filters + Sort) */}
+      <div className="space-y-2.5">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          {/* Layout Switcher: Vertical Pro / Compact / 2-Col Grid */}
+          <div className="inline-flex items-center gap-0.5 rounded-xl border border-[#B69AEF]/12 bg-[#15141B] p-1">
+            <button
+              type="button"
+              onClick={() => handleLayoutChange('vertical')}
+              aria-label="نمای عمودی حرفه‌ای"
+              className={`flex items-center gap-1 rounded-lg px-2.5 py-1 text-[11px] font-medium transition ${
+                layoutMode === 'vertical'
+                  ? 'bg-[#241936] text-[#F4F1F8]'
+                  : 'text-[#A79EB9] hover:text-[#F4F1F8]'
+              }`}
+            >
+              <LayoutList className="h-3.5 w-3.5" />
+              <span>عمودی</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleLayoutChange('compact')}
+              aria-label="نمای فشرده"
+              className={`flex items-center gap-1 rounded-lg px-2.5 py-1 text-[11px] font-medium transition ${
+                layoutMode === 'compact'
+                  ? 'bg-[#241936] text-[#F4F1F8]'
+                  : 'text-[#A79EB9] hover:text-[#F4F1F8]'
+              }`}
+            >
+              <ListChecks className="h-3.5 w-3.5" />
+              <span>فشرده</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleLayoutChange('grid')}
+              aria-label="نمای کارتی"
+              className={`flex items-center gap-1 rounded-lg px-2.5 py-1 text-[11px] font-medium transition ${
+                layoutMode === 'grid'
+                  ? 'bg-[#241936] text-[#F4F1F8]'
+                  : 'text-[#A79EB9] hover:text-[#F4F1F8]'
+              }`}
+            >
+              <LayoutGrid className="h-3.5 w-3.5" />
+              <span>کارتی</span>
+            </button>
+          </div>
+
+          {/* Smart Sort Control */}
+          <div className="flex items-center gap-1.5 rounded-xl border border-[#B69AEF]/12 bg-[#15141B] px-2.5 py-1.5">
+            <ArrowUpDown className="h-3.5 w-3.5 text-[#8052D6]" />
+            <select
+              aria-label="مرتب‌سازی عادت‌ها"
+              value={sortMode}
+              onChange={(e) => setSortMode(e.target.value as HabitSortMode)}
+              className="bg-transparent text-[11px] font-medium text-[#F4F1F8] outline-none"
+            >
+              <option value="default" className="bg-[#15141B]">
+                ترتیب پیش‌فرض
+              </option>
+              <option value="streak" className="bg-[#15141B]">
+                بیشترین رکورد
+              </option>
+              <option value="adherence_desc" className="bg-[#15141B]">
+                بالاترین پایبندی
+              </option>
+              <option value="needs_focus" className="bg-[#15141B]">
+                نیازمند توجه
+              </option>
+            </select>
+          </div>
         </div>
 
-        {activeHabits.length === 0 ? (
+        {/* Filter Pills Strip */}
+        <div className="no-scrollbar flex items-center gap-1.5 overflow-x-auto pb-0.5">
+          {(
+            [
+              { id: 'all', label: 'همه فعال', count: activeHabits.length },
+              { id: 'scheduled', label: 'برنامه این روز', count: daySummary.scheduledCount },
+              { id: 'pending', label: 'مانده', count: daySummary.pendingCount },
+              { id: 'completed', label: 'تکمیل‌شده', count: daySummary.completedCount },
+              { id: 'archived', label: 'آرشیو', count: archivedHabits.length },
+            ] as const
+          ).map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setFilterMode(tab.id)}
+              className={`flex shrink-0 items-center gap-1.5 rounded-xl border px-3 py-1.5 text-[11px] font-medium transition ${
+                filterMode === tab.id
+                  ? 'border-[#8052D6] bg-[#241936] text-[#F4F1F8]'
+                  : 'border-[#B69AEF]/10 bg-[#15141B] text-[#A79EB9] hover:text-[#F4F1F8]'
+              }`}
+            >
+              <span>{tab.label}</span>
+              <Numeric
+                value={tab.count}
+                className={`text-[10px] ${
+                  filterMode === tab.id ? 'text-[#B69AEF]' : 'text-[#6E6680]'
+                }`}
+              />
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* ===================== HABITS LIST / MATRIX ===================== */}
+      <section className="space-y-2.5">
+        {visibleHabits.length === 0 ? (
           <EmptyState
             icon={<Flame className="h-5 w-5" />}
-            title="هنوز عادتی تعریف نکرده‌اید"
-            description="اولین عادت روزانه یا هفتگی خود را ایجاد کنید تا پایبندی و رکورد متوالی شما محاسبه شود."
+            title={
+              filterMode === 'archived'
+                ? 'آرشیو عادت‌ها خالی است'
+                : activeHabits.length === 0
+                ? 'هنوز عادتی تعریف نکرده‌اید'
+                : 'عادتی در این فیلتر یافت نشد'
+            }
+            description={
+              filterMode === 'archived'
+                ? 'عادت‌هایی که آرشیو می‌کنید برای نگهداری سابقه در اینجا نمایش داده می‌شوند.'
+                : activeHabits.length === 0
+                ? 'اولین عادت روزانه یا هفتگی خود را ایجاد کنید تا پایبندی و رکورد متوالی شما محاسبه شود.'
+                : 'فیلتر دیگری را انتخاب کنید یا عادت جدیدی بسازید.'
+            }
             action={
-              <button
-                type="button"
-                onClick={() => setModalState({ open: true, habit: null })}
-                className="btn-royal rounded-xl px-4 py-2 text-xs font-semibold"
-              >
-                ساخت اولین عادت
-              </button>
+              filterMode === 'all' && activeHabits.length === 0 ? (
+                <button
+                  type="button"
+                  onClick={() => setModalState({ open: true, habit: null })}
+                  className="btn-royal rounded-xl px-4 py-2 text-xs font-semibold"
+                >
+                  ساخت اولین عادت
+                </button>
+              ) : undefined
             }
           />
-        ) : (
-          <div className="space-y-2.5">
-            {activeHabits.map((habit) => {
+        ) : filterMode === 'archived' ? (
+          <div className="space-y-2">
+            {visibleHabits.map((habit) => (
+              <LuxuryCard key={habit.id} variant="subtle" className="flex items-center justify-between gap-3 p-3.5">
+                <div className="flex min-w-0 items-center gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#B69AEF]/12 bg-[#100F16]">
+                    <HabitIcon name={habit.icon} color={habit.accentColor} className="h-4.5 w-4.5 opacity-75" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="truncate text-xs font-semibold text-[#F4F1F8]">{habit.name}</p>
+                    <p className="text-[10.5px] text-[#6E6680]">{getScheduleBadge(habit)}</p>
+                  </div>
+                </div>
+                <div className="flex shrink-0 items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => void handleToggleArchive(habit)}
+                    className="btn-ghost-luxury flex items-center gap-1 rounded-xl px-2.5 py-1.5 text-[11px] font-medium text-[#B69AEF]"
+                  >
+                    <ArchiveRestore className="h-3.5 w-3.5" />
+                    بازگردانی
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void handlePermanentDelete(habit)}
+                    aria-label="حذف کامل عادت"
+                    className="flex h-8 w-8 items-center justify-center rounded-xl border border-[#D9778B]/25 bg-[#D9778B]/10 text-[#EB9BAB]"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              </LuxuryCard>
+            ))}
+          </div>
+        ) : layoutMode === 'compact' ? (
+          /* ---------- COMPACT VERTICAL FAST-CHECK LIST ---------- */
+          <div className="space-y-2">
+            {visibleHabits.map((habit) => {
               const stats = habitStatsMap.get(habit.id);
-              const todayLog = habitLogs.find(
-                (l) => l.habitId === habit.id && l.dateKey === todayKey
-              );
-              const isCompletedToday = todayLog?.status === 'completed';
-              const isMissedToday = todayLog?.status === 'missed';
-              const currentVal = todayLog?.value ?? 0;
+              const dayLog = logLookup.get(`${habit.id}::${selectedDateKey}`);
+              const isDone = dayLog?.status === 'completed';
+              const isMissed = dayLog?.status === 'missed';
+              const currentVal = dayLog?.value ?? 0;
 
               return (
-                <LuxuryCard key={habit.id} className="p-4">
-                  <div className="flex items-start justify-between gap-3">
+                <LuxuryCard
+                  key={habit.id}
+                  className="flex items-center justify-between gap-2.5 px-3 py-2.5"
+                >
+                  <button
+                    type="button"
+                    onClick={() =>
+                      void handleSetDayHabit(
+                        habit,
+                        selectedDateKey,
+                        isDone ? 'unlogged' : 'completed'
+                      )
+                    }
+                    aria-label={isDone ? 'لغو تکمیل عادت' : 'تکمیل عادت'}
+                    className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border transition ${
+                      isDone
+                        ? 'border-[#B69AEF]/50 bg-[#8052D6] text-[#F4F1F8] shadow-[0_0_12px_rgba(128,82,214,0.45)]'
+                        : isMissed
+                        ? 'border-[#D9778B]/45 bg-[#231624] text-[#EB9BAB]'
+                        : 'border-[#B69AEF]/16 bg-[#100F16] text-[#6E6680]'
+                    }`}
+                  >
+                    {isDone ? (
+                      <Check className="h-4.5 w-4.5" />
+                    ) : isMissed ? (
+                      <X className="h-4 w-4" />
+                    ) : (
+                      <HabitIcon name={habit.icon} color={habit.accentColor} className="h-4 w-4" />
+                    )}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setDetailHabitId(habit.id)}
+                    className="min-w-0 flex-1 text-right"
+                  >
+                    <p
+                      className={`truncate text-[13px] font-semibold ${
+                        isDone ? 'text-[#B69AEF]' : 'text-[#F4F1F8]'
+                      }`}
+                    >
+                      {habit.name}
+                    </p>
+                    <div className="mt-0.5 flex items-center gap-2 text-[10.5px] text-[#A79EB9]">
+                      <span className="inline-flex items-center gap-0.5">
+                        <Flame className="h-3 w-3 text-[#8052D6]" />
+                        <Numeric value={stats?.currentStreak ?? 0} />d
+                      </span>
+                      <Numeric
+                        value={stats?.adherencePercent ?? 0}
+                        suffix="%"
+                        className="text-[#B69AEF]"
+                      />
+                      {habit.trackingMode === 'quantitative' && (
+                        <Numeric
+                          value={`${currentVal}/${habit.targetValue}`}
+                          className="text-[#F4F1F8]"
+                        />
+                      )}
+                    </div>
+                  </button>
+
+                  <div className="flex shrink-0 items-center gap-1">
+                    {habit.trackingMode === 'quantitative' && !isDone && (
+                      <button
+                        type="button"
+                        onClick={() => void handleSetDayHabit(habit, selectedDateKey, 'step_up')}
+                        aria-label="افزایش پیشرفت"
+                        className="flex h-7 w-7 items-center justify-center rounded-lg border border-[#B69AEF]/22 bg-[#241936] text-[#B69AEF]"
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        void handleSetDayHabit(
+                          habit,
+                          selectedDateKey,
+                          isMissed ? 'unlogged' : 'missed'
+                        )
+                      }
+                      title="ثبت انجام‌نشده"
+                      className={`flex h-7 w-7 items-center justify-center rounded-lg border transition ${
+                        isMissed
+                          ? 'border-[#D9778B]/50 bg-[#D9778B]/20 text-[#EB9BAB]'
+                          : 'border-[#B69AEF]/10 bg-[#100F16] text-[#6E6680]'
+                      }`}
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setModalState({ open: true, habit })}
+                      aria-label="ویرایش سریع"
+                      className="flex h-7 w-7 items-center justify-center rounded-lg border border-[#B69AEF]/10 bg-[#100F16] text-[#A79EB9]"
+                    >
+                      <Edit3 className="h-3 w-3" />
+                    </button>
+                  </div>
+                </LuxuryCard>
+              );
+            })}
+          </div>
+        ) : layoutMode === 'grid' ? (
+          /* ---------- 2-COLUMN TALL VERTICAL BENTO CARDS ---------- */
+          <div className="grid grid-cols-2 gap-2.5">
+            {visibleHabits.map((habit) => {
+              const stats = habitStatsMap.get(habit.id);
+              const dayLog = logLookup.get(`${habit.id}::${selectedDateKey}`);
+              const isDone = dayLog?.status === 'completed';
+              const isMissed = dayLog?.status === 'missed';
+              const currentVal = dayLog?.value ?? 0;
+              const quantPct =
+                habit.trackingMode === 'quantitative'
+                  ? Math.min(100, Math.round((currentVal / Math.max(1, habit.targetValue)) * 100))
+                  : isDone
+                  ? 100
+                  : 0;
+
+              return (
+                <LuxuryCard
+                  key={habit.id}
+                  className={`flex flex-col justify-between p-3.5 transition ${
+                    isDone ? 'border-[#8052D6]/45' : ''
+                  }`}
+                >
+                  <div>
+                    <div className="flex items-start justify-between gap-2">
+                      <div
+                        className="flex h-10 w-10 items-center justify-center rounded-2xl border"
+                        style={{
+                          backgroundColor: isDone
+                            ? 'rgba(128, 82, 214, 0.28)'
+                            : 'rgba(36, 25, 54, 0.55)',
+                          borderColor: isDone
+                            ? 'rgba(182, 154, 239, 0.48)'
+                            : 'rgba(182, 154, 239, 0.14)',
+                        }}
+                      >
+                        <HabitIcon name={habit.icon} color={habit.accentColor} className="h-4.5 w-4.5" />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setDetailHabitId(habit.id)}
+                        aria-label="تحلیل عادت"
+                        className="rounded-lg p-1 text-[#A79EB9] hover:bg-[#241936] hover:text-[#F4F1F8]"
+                      >
+                        <BarChart3 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setDetailHabitId(habit.id)}
+                      className="mt-2.5 block w-full text-right"
+                    >
+                      <h3 className="line-clamp-2 min-h-[34px] text-xs font-bold leading-snug text-[#F4F1F8]">
+                        {habit.name}
+                      </h3>
+                    </button>
+
+                    <div className="mt-2 flex items-center justify-between text-[10.5px] text-[#A79EB9]">
+                      <span className="inline-flex items-center gap-0.5">
+                        <Flame className="h-3 w-3 text-[#8052D6]" />
+                        <Numeric value={stats?.currentStreak ?? 0} className="text-[#F4F1F8]" />d
+                      </span>
+                      <Numeric
+                        value={stats?.adherencePercent ?? 0}
+                        suffix="%"
+                        className="font-semibold text-[#B69AEF]"
+                      />
+                    </div>
+
+                    {/* Mini progress bar */}
+                    <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-[#09090D]">
+                      <div
+                        className="h-full rounded-full bg-gradient-to-l from-[#B69AEF] to-[#8052D6] transition-all"
+                        style={{ width: `${quantPct}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="mt-3 flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        void handleSetDayHabit(
+                          habit,
+                          selectedDateKey,
+                          isDone ? 'unlogged' : 'completed'
+                        )
+                      }
+                      className={`flex flex-1 items-center justify-center gap-1 rounded-xl py-1.5 text-[11px] font-semibold transition ${
+                        isDone
+                          ? 'bg-[#8052D6] text-[#F4F1F8]'
+                          : 'border border-[#B69AEF]/18 bg-[#100F16] text-[#F4F1F8]'
+                      }`}
+                    >
+                      <Check className="h-3.5 w-3.5" />
+                      <span>{isDone ? 'انجام شد' : 'تکمیل'}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        void handleSetDayHabit(
+                          habit,
+                          selectedDateKey,
+                          isMissed ? 'unlogged' : 'missed'
+                        )
+                      }
+                      aria-label="انجام نشد"
+                      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-xl border ${
+                        isMissed
+                          ? 'border-[#D9778B]/50 bg-[#D9778B]/20 text-[#EB9BAB]'
+                          : 'border-[#B69AEF]/10 bg-[#100F16] text-[#6E6680]'
+                      }`}
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </LuxuryCard>
+              );
+            })}
+          </div>
+        ) : (
+          /* ---------- VERTICAL PRO MANAGEMENT CARDS (Interactive 7-Day Strip + Steppers) ---------- */
+          <div className="space-y-3">
+            {visibleHabits.map((habit) => {
+              const stats = habitStatsMap.get(habit.id);
+              const dayLog = logLookup.get(`${habit.id}::${selectedDateKey}`);
+              const isCompleted = dayLog?.status === 'completed';
+              const isMissed = dayLog?.status === 'missed';
+              const currentVal = dayLog?.value ?? 0;
+              const quantPercent =
+                habit.trackingMode === 'quantitative'
+                  ? Math.min(100, Math.round((currentVal / Math.max(1, habit.targetValue)) * 100))
+                  : isCompleted
+                  ? 100
+                  : 0;
+
+              return (
+                <LuxuryCard
+                  key={habit.id}
+                  className={`space-y-3.5 p-4 transition ${
+                    isCompleted ? 'border-[#8052D6]/40' : ''
+                  }`}
+                >
+                  {/* Card Top Header */}
+                  <div className="flex items-start justify-between gap-2.5">
                     <button
                       type="button"
                       onClick={() => setDetailHabitId(habit.id)}
@@ -336,12 +924,12 @@ export function HabitsPage() {
                       <div
                         className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border"
                         style={{
-                          backgroundColor: isCompletedToday
-                            ? 'rgba(128, 82, 214, 0.24)'
+                          backgroundColor: isCompleted
+                            ? 'rgba(128, 82, 214, 0.25)'
                             : 'rgba(36, 25, 54, 0.55)',
-                          borderColor: isCompletedToday
-                            ? 'rgba(182, 154, 239, 0.45)'
-                            : 'rgba(182, 154, 239, 0.12)',
+                          borderColor: isCompleted
+                            ? 'rgba(182, 154, 239, 0.48)'
+                            : 'rgba(182, 154, 239, 0.14)',
                         }}
                       >
                         <HabitIcon name={habit.icon} color={habit.accentColor} className="h-5 w-5" />
@@ -349,16 +937,17 @@ export function HabitsPage() {
 
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1.5">
-                          <h3 className="truncate text-[13.5px] font-semibold text-[#F4F1F8]">
+                          <h3 className="truncate text-[13.5px] font-bold text-[#F4F1F8]">
                             {habit.name}
                           </h3>
-                          <ChevronLeft className="h-3.5 w-3.5 shrink-0 text-[#6E6680]" />
                         </div>
 
-                        <div className="mt-1 flex flex-wrap items-center gap-2.5 text-[11px] text-[#A79EB9]">
-                          <span className="inline-flex items-center gap-1">
+                        <div className="mt-1 flex flex-wrap items-center gap-2 text-[10.5px] text-[#A79EB9]">
+                          <span className="rounded-md bg-[#100F16] px-1.5 py-0.5 text-[10px] text-[#A79EB9]">
+                            {getScheduleBadge(habit)}
+                          </span>
+                          <span className="inline-flex items-center gap-0.5">
                             <Flame className="h-3 w-3 text-[#8052D6]" />
-                            رکورد{' '}
                             <Numeric
                               value={stats?.currentStreak ?? 0}
                               className="font-semibold text-[#F4F1F8]"
@@ -373,78 +962,182 @@ export function HabitsPage() {
                               className="font-semibold text-[#B69AEF]"
                             />
                           </span>
-                          {habit.trackingMode === 'quantitative' && (
-                            <span>
-                              امروز:{' '}
-                              <Numeric
-                                value={`${currentVal}/${habit.targetValue}`}
-                                className="text-[#F4F1F8]"
-                              />{' '}
-                              {habit.unit}
+                          {habit.reminderTime && (
+                            <span className="inline-flex items-center gap-0.5 text-[#6E6680]">
+                              <Clock className="h-3 w-3" />
+                              <Numeric value={habit.reminderTime} />
                             </span>
                           )}
                         </div>
                       </div>
                     </button>
-                  </div>
 
-                  {/* Quick Today Controls: Complete / Step / Missed / Unlogged */}
-                  <div className="mt-3.5 flex items-center justify-between gap-2 border-t border-[#B69AEF]/10 pt-3">
-                    <div className="flex items-center gap-1.5">
-                      {habit.trackingMode === 'quantitative' && !isCompletedToday && (
-                        <button
-                          type="button"
-                          onClick={() => handleSetDayHabit(habit, todayKey, 'step')}
-                          className="btn-ghost-luxury rounded-xl px-3 py-1.5 text-[11px] font-semibold text-[#B69AEF]"
-                        >
-                          + ثبت پیشرفت
-                        </button>
-                      )}
+                    {/* Quick Pro Management Actions */}
+                    <div className="flex shrink-0 items-center gap-1">
                       <button
                         type="button"
-                        onClick={() =>
-                          handleSetDayHabit(
-                            habit,
-                            todayKey,
-                            isCompletedToday ? 'unlogged' : 'completed'
-                          )
-                        }
-                        className={`flex items-center gap-1 rounded-xl px-3 py-1.5 text-[11px] font-semibold transition ${
-                          isCompletedToday
-                            ? 'bg-[#8052D6] text-[#F4F1F8] shadow-[0_0_14px_rgba(128,82,214,0.45)]'
-                            : 'border border-[#B69AEF]/18 bg-[#100F16] text-[#F4F1F8] hover:border-[#B69AEF]/45'
-                        }`}
+                        onClick={() => setDetailHabitId(habit.id)}
+                        title="آمار و نمودار کامل"
+                        aria-label="آمار و نمودار کامل"
+                        className="flex h-7 w-7 items-center justify-center rounded-lg border border-[#B69AEF]/12 bg-[#100F16] text-[#B69AEF] hover:border-[#B69AEF]/35"
                       >
-                        <Check className="h-3.5 w-3.5" />
-                        <span>{isCompletedToday ? 'انجام شد' : 'تکمیل امروز'}</span>
+                        <BarChart3 className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setModalState({ open: true, habit })}
+                        title="ویرایش عادت"
+                        aria-label="ویرایش عادت"
+                        className="flex h-7 w-7 items-center justify-center rounded-lg border border-[#B69AEF]/12 bg-[#100F16] text-[#A79EB9] hover:text-[#F4F1F8]"
+                      >
+                        <Edit3 className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void handleToggleArchive(habit)}
+                        title="انتقال به آرشیو"
+                        aria-label="انتقال به آرشیو"
+                        className="flex h-7 w-7 items-center justify-center rounded-lg border border-[#B69AEF]/12 bg-[#100F16] text-[#6E6680] hover:text-[#A79EB9]"
+                      >
+                        <Archive className="h-3.5 w-3.5" />
                       </button>
                     </div>
+                  </div>
 
-                    <div className="flex items-center gap-1">
+                  {/* Interactive Quantitative Progress Stepper */}
+                  {habit.trackingMode === 'quantitative' && (
+                    <div className="space-y-1.5 rounded-xl border border-[#B69AEF]/10 bg-[#0D0C13] px-3 py-2.5">
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="text-[#A79EB9]">
+                          پیشرفت {isViewingToday ? 'امروز' : `${selectedDateInfo.day} ${selectedDateInfo.month}`}:
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              void handleSetDayHabit(habit, selectedDateKey, 'step_down')
+                            }
+                            aria-label="کاهش مقدار"
+                            className="flex h-6 w-6 items-center justify-center rounded-md border border-[#B69AEF]/16 bg-[#15141B] text-[#A79EB9] hover:text-[#F4F1F8]"
+                          >
+                            <Minus className="h-3 w-3" />
+                          </button>
+                          <span className="font-semibold text-[#F4F1F8]">
+                            <Numeric value={`${currentVal}/${habit.targetValue}`} />{' '}
+                            <span className="text-[10px] font-normal text-[#A79EB9]">
+                              {habit.unit}
+                            </span>
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              void handleSetDayHabit(habit, selectedDateKey, 'step_up')
+                            }
+                            aria-label="افزایش مقدار"
+                            className="flex h-6 w-6 items-center justify-center rounded-md border border-[#8052D6]/45 bg-[#241936] text-[#B69AEF] hover:bg-[#8052D6] hover:text-[#F4F1F8]"
+                          >
+                            <Plus className="h-3 w-3" />
+                          </button>
+                        </div>
+                      </div>
+                      <div className="h-1.5 w-full overflow-hidden rounded-full bg-[#15141B]">
+                        <div
+                          className="h-full rounded-full bg-gradient-to-l from-[#B69AEF] to-[#8052D6] transition-all duration-200"
+                          style={{ width: `${quantPercent}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Interactive 7-Day Quick Matrix Strip (Tap any day to cycle state directly!) */}
+                  <div className="grid grid-cols-7 gap-1.5">
+                    {last7Days.map((d) => {
+                      const dLog = logLookup.get(`${habit.id}::${d.dateKey}`);
+                      const isSel = d.dateKey === selectedDateKey;
+                      const st = dLog?.status;
+
+                      return (
+                        <button
+                          key={d.dateKey}
+                          type="button"
+                          onClick={() => void handleCycleStripDay(habit, d.dateKey)}
+                          title={`${d.dayNum} — کلیک برای تغییر وضعیت`}
+                          className={`flex flex-col items-center justify-center rounded-xl border py-1.5 transition active:scale-95 ${
+                            st === 'completed'
+                              ? 'border-[#B69AEF]/45 bg-[#8052D6]/90 text-[#F4F1F8]'
+                              : st === 'partial'
+                              ? 'border-[#8052D6]/45 bg-[#2C1C48] text-[#B69AEF]'
+                              : st === 'missed'
+                              ? 'border-[#D9778B]/40 bg-[#231624] text-[#EB9BAB]'
+                              : 'border-[#B69AEF]/10 bg-[#100F16] text-[#7A718F]'
+                          } ${isSel ? 'ring-1.5 ring-[#F4F1F8]/80' : ''}`}
+                        >
+                          <span className="text-[9px] leading-none opacity-80">
+                            {d.weekdayShort}
+                          </span>
+                          <span className="num-geo mt-1 text-[11px] font-bold leading-none">
+                            {d.dayNum}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Action Footer for Selected Date */}
+                  <div className="flex items-center justify-between gap-2 border-t border-[#B69AEF]/10 pt-2.5">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        void handleSetDayHabit(
+                          habit,
+                          selectedDateKey,
+                          isCompleted ? 'unlogged' : 'completed'
+                        )
+                      }
+                      className={`flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 text-[11px] font-semibold transition ${
+                        isCompleted
+                          ? 'bg-[#8052D6] text-[#F4F1F8] shadow-[0_0_14px_rgba(128,82,214,0.42)]'
+                          : 'border border-[#B69AEF]/18 bg-[#100F16] text-[#F4F1F8] hover:border-[#B69AEF]/45'
+                      }`}
+                    >
+                      <Check className="h-3.5 w-3.5" />
+                      <span>
+                        {isCompleted
+                          ? 'انجام شد'
+                          : isViewingToday
+                          ? 'تکمیل امروز'
+                          : 'تکمیل این روز'}
+                      </span>
+                    </button>
+
+                    <div className="flex items-center gap-1.5">
                       <button
                         type="button"
                         onClick={() =>
-                          handleSetDayHabit(
+                          void handleSetDayHabit(
                             habit,
-                            todayKey,
-                            isMissedToday ? 'unlogged' : 'missed'
+                            selectedDateKey,
+                            isMissed ? 'unlogged' : 'missed'
                           )
                         }
-                        title="ثبت انجام‌نشده"
-                        className={`flex h-7 w-7 items-center justify-center rounded-lg border transition ${
-                          isMissedToday
+                        className={`flex items-center gap-1 rounded-xl border px-2.5 py-1.5 text-[10.5px] font-medium transition ${
+                          isMissed
                             ? 'border-[#D9778B]/50 bg-[#D9778B]/20 text-[#EB9BAB]'
                             : 'border-[#B69AEF]/10 bg-[#100F16] text-[#6E6680] hover:text-[#EB9BAB]'
                         }`}
                       >
-                        <X className="h-3.5 w-3.5" />
+                        <X className="h-3 w-3" />
+                        <span>انجام نشد</span>
                       </button>
-                      {todayLog && (
+
+                      {dayLog && (
                         <button
                           type="button"
-                          onClick={() => handleSetDayHabit(habit, todayKey, 'unlogged')}
-                          title="برگرداندن به حالت ثبت‌نشده"
-                          className="flex h-7 w-7 items-center justify-center rounded-lg border border-[#B69AEF]/10 bg-[#100F16] text-[#6E6680] hover:text-[#A79EB9]"
+                          onClick={() =>
+                            void handleSetDayHabit(habit, selectedDateKey, 'unlogged')
+                          }
+                          title="برگرداندن به ثبت‌نشده"
+                          className="flex h-7 w-7 items-center justify-center rounded-xl border border-[#B69AEF]/10 bg-[#100F16] text-[#6E6680] hover:text-[#A79EB9]"
                         >
                           <Minus className="h-3.5 w-3.5" />
                         </button>
@@ -457,6 +1150,108 @@ export function HabitsPage() {
           </div>
         )}
       </section>
+
+      {/* ===================== 365-DAY VERTICAL / HORIZONTAL HEATMAP CARD ===================== */}
+      <LuxuryCard className="space-y-3.5 p-4">
+        <div className="flex items-center justify-between gap-2">
+          <button
+            type="button"
+            onClick={() => setHeatmapExpanded((v) => !v)}
+            className="flex items-center gap-2 text-right focus:outline-none"
+          >
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl border border-[#B69AEF]/16 bg-[#241936]/75 text-[#B69AEF]">
+              <CalendarDays className="h-4 w-4" />
+            </div>
+            <div>
+              <h2 className="text-xs font-bold text-[#F4F1F8]">تقویم حرارتی سالانه</h2>
+              <p className="text-[10px] text-[#A79EB9]">
+                <Numeric value={heatmap.activeDays} className="font-semibold text-[#B69AEF]" /> روز
+                فعال •{' '}
+                <Numeric value={heatmap.perfectDays} className="font-semibold text-[#F4F1F8]" /> روز
+                کامل
+              </p>
+            </div>
+          </button>
+
+          <div className="flex items-center gap-1.5">
+            {heatmapExpanded && (
+              <div className="flex items-center gap-0.5 rounded-xl border border-[#B69AEF]/14 bg-[#09090D]/70 p-0.5">
+                {[currentJYear - 1, currentJYear].map((yr) => (
+                  <button
+                    key={yr}
+                    type="button"
+                    onClick={() => {
+                      setSelectedYear(yr);
+                      if (yr === currentJYear) setSelectedDateKey(todayKey);
+                    }}
+                    className={`num-geo rounded-lg px-2 py-1 text-[10.5px] font-semibold transition ${
+                      selectedYear === yr
+                        ? 'bg-[#8052D6] text-[#F4F1F8]'
+                        : 'text-[#A79EB9] hover:text-[#F4F1F8]'
+                    }`}
+                  >
+                    {yr}
+                  </button>
+                ))}
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={() => setHeatmapExpanded((v) => !v)}
+              aria-label={heatmapExpanded ? 'بستن تقویم حرارتی' : 'باز کردن تقویم حرارتی'}
+              className="flex h-8 w-8 items-center justify-center rounded-xl border border-[#B69AEF]/12 bg-[#100F16] text-[#A79EB9]"
+            >
+              {heatmapExpanded ? (
+                <ChevronUp className="h-4 w-4" />
+              ) : (
+                <ChevronDown className="h-4 w-4" />
+              )}
+            </button>
+          </div>
+        </div>
+
+        {heatmapExpanded && (
+          <>
+            <ActivityHeatmap
+              cells={heatmap.cells}
+              selectedDateKey={selectedDateKey}
+              todayKey={todayKey}
+              orientation={heatmapOrientation}
+              onOrientationChange={handleHeatmapOrient}
+              onSelectDay={(cell: HeatmapDayCell) => setSelectedDateKey(cell.dateKey)}
+            />
+
+            {/* Selected Day Inspector */}
+            {selectedCell && (
+              <div className="flex items-center justify-between rounded-2xl border border-[#B69AEF]/12 bg-[#0B0A11]/90 px-3.5 py-2.5">
+                <div>
+                  <p className="text-xs font-bold text-[#F4F1F8]">
+                    {selectedDateInfo.weekday}،{' '}
+                    <Numeric value={selectedDateInfo.day} className="text-[#B69AEF]" />{' '}
+                    {selectedDateInfo.month}{' '}
+                    <Numeric value={selectedDateInfo.year} className="text-[#A79EB9]" />
+                  </p>
+                  <p className="mt-0.5 text-[10px] text-[#A79EB9]">
+                    {selectedCell.state === 'future'
+                      ? 'تاریخ آینده'
+                      : selectedCell.state === 'unlogged'
+                      ? 'هیچ فعالیتی برای این روز ثبت نشده است'
+                      : `موفق: ${selectedCell.habitsCompleted} • انجام‌نشده: ${selectedCell.habitsMissed} • ثبت‌نشده: ${selectedCell.habitsUnlogged}`}
+                  </p>
+                </div>
+                {selectedCell.state !== 'future' && (
+                  <Numeric
+                    value={selectedCell.score}
+                    suffix="%"
+                    variant="display"
+                    className="text-2xl font-bold text-[#B69AEF]"
+                  />
+                )}
+              </div>
+            )}
+          </>
+        )}
+      </LuxuryCard>
 
       <HabitModal
         open={modalState.open}

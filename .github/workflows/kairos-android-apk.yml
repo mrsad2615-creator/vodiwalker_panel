@@ -48,27 +48,27 @@ jobs:
         run: |
           chmod +x gradlew
           ./gradlew assembleDebug --no-daemon
-          cp app/build/outputs/apk/debug/app-debug.apk app/build/outputs/apk/debug/KAIROS-v1.1.0.apk
-          ls -lh app/build/outputs/apk/debug/KAIROS-v1.1.0.apk
+          cp app/build/outputs/apk/debug/app-debug.apk app/build/outputs/apk/debug/KAIROS-v1.2.0.apk
+          ls -lh app/build/outputs/apk/debug/KAIROS-v1.2.0.apk
 
       - name: Upload KAIROS Android APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: KAIROS-v1.1.0-APK
-          path: kairos-app/android/app/build/outputs/apk/debug/KAIROS-v1.1.0.apk
+          name: KAIROS-v1.2.0-APK
+          path: kairos-app/android/app/build/outputs/apk/debug/KAIROS-v1.2.0.apk
           if-no-files-found: error
 
       - name: Publish Direct Download Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          TAG="kairos-v1.1.0"
-          APK="kairos-app/android/app/build/outputs/apk/debug/KAIROS-v1.1.0.apk"
+          TAG="kairos-v1.2.0"
+          APK="kairos-app/android/app/build/outputs/apk/debug/KAIROS-v1.2.0.apk"
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" "$APK" --clobber
           else
             gh release create "$TAG" "$APK" \
               --target "${{ github.sha }}" \
-              --title "KAIROS v1.1.0 — mrsad Edition (Android APK)" \
-              --notes "نسخه 1.1.0 کایروس (mrsad): رفع کامل مشکل کیبورد و پاک‌شدن متن فارسی/انگلیسی در اندروید (captureInput: false و بازطراحی ورودی‌های عددی) + لوگوموشن سینمایی وکتور mrsad و آیکون وکتور باکیفیت اندروید"
+              --title "KAIROS v1.2.0 — Cinema Focus & Pro Habits (Android APK)" \
+              --notes "نسخه 1.2.0 کایروس (mrsad): بهینه‌سازی کامل لوگوموشن 120fps بدون لگ و گیرکردن، مدیریت حرفه‌ای عادت‌ها با نمای عمودی/افقی و ماتریس ۷ روزه، و تایمر سینمایی جدید در بخش تمرکز همراه با حالت سینمایی تمام‌صفحه و صداهای محیطی آفلاین"
           fi

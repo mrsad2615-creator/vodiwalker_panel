@@ -427,7 +427,7 @@ export function SettingsPage() {
         <div className="flex items-center gap-3">
           <KairosLogoMark size={34} />
           <div>
-            <p className="font-brand text-xs font-bold text-[#F4F1F8]">KAIROS v1.1.0 • MRSAD</p>
+            <p className="font-brand text-xs font-bold text-[#F4F1F8]">KAIROS v1.2.0 • MRSAD</p>
             <p className="mt-0.5 flex items-center gap-1 text-[10.5px] text-[#A79EB9]">
               <ShieldCheck className="h-3.5 w-3.5 text-[#8052D6]" />
               <span>

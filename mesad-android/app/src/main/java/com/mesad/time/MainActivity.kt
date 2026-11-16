@@ -142,7 +142,7 @@ private fun MesadApplicationUi(db: MesadDatabase) {
     var scale by remember { mutableStateOf(preferences.getFloat("scale", 1f)) }
     var glow by remember { mutableStateOf(preferences.getFloat("glow", .55f)) }
     var material by remember { mutableStateOf(preferences.getString("material", "BRUSHED_TITANIUM")!!) }
-    var currentTime by remember { mutableStateOf<java.time.ZonedDateTime>(ZonedDateTimeNow()) }
+    var currentTime by remember { mutableStateOf<java.time.ZonedDateTime>(java.time.ZonedDateTime.now(ZoneId.systemDefault())) }
     var tick by remember { mutableLongStateOf(0L) }
     val alarms by db.alarmDao().observeAll().collectAsState(initial = emptyList())
     val cities by db.worldCityDao().observeAll().collectAsState(initial = emptyList())
@@ -178,7 +178,7 @@ private fun MesadApplicationUi(db: MesadDatabase) {
     var studioSaved by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
-        while (true) { currentTime = ZonedDateTimeNow(); tick++; delay(250) }
+        while (true) { currentTime = java.time.ZonedDateTime.now(ZoneId.systemDefault()); tick++; delay(250) }
     }
     val jalali = remember(currentTime.toLocalDate()) { JalaliDate.fromGregorian(currentTime.toLocalDate()) }
     val timeFormatter = remember(use24h, showSeconds) { DateTimeFormatter.ofPattern(if (use24h) if (showSeconds) "HH:mm:ss" else "HH:mm" else if (showSeconds) "h:mm:ss a" else "h:mm a", Locale.getDefault()) }
@@ -204,13 +204,11 @@ private fun MesadApplicationUi(db: MesadDatabase) {
                 NavigationBar(containerColor = if (dark) Graphite else Color.White) {
                     val primary = listOf(Screen.HOME, Screen.WORLD, Screen.ALARM, Screen.STOPWATCH, Screen.TIMER)
                     primary.forEach { item ->
-                        NavigationBarItem(selected = screen == item, onClick = { screen = item }, icon = { androidx.compose.material3.Icon(iconFor(item), null) }, label = { Text(item.title, fontSize=9.sp) })
+                        NavigationBarItem(selected = screen == item, onClick = { screen = item }, icon = { androidx.compose.material3.Icon(when(item){Screen.HOME->Icons.Outlined.Home;Screen.WORLD->Icons.Outlined.Public;Screen.ALARM->Icons.Outlined.Alarm;Screen.STOPWATCH->Icons.Outlined.WatchLater;Screen.TIMER->Icons.Outlined.HourglassBottom;else->Icons.Outlined.Tune}, null) }, label = { Text(item.title, fontSize=9.sp) })
                     }
-                    Box {
-                        NavigationBarItem(selected = screen in listOf(Screen.STUDIO,Screen.THEMES,Screen.SETTINGS), onClick = { showMore = true }, icon = { androidx.compose.material3.Icon(Icons.Outlined.Tune, null) }, label = { Text("More", fontSize=9.sp) })
-                        androidx.compose.material3.DropdownMenu(expanded=showMore,onDismissRequest={showMore=false}) {
-                            listOf(Screen.STUDIO,Screen.THEMES,Screen.SETTINGS).forEach { item -> androidx.compose.material3.DropdownMenuItem(text={Text(item.title)},onClick={screen=item;showMore=false}) }
-                        }
+                    NavigationBarItem(selected = screen in listOf(Screen.STUDIO,Screen.THEMES,Screen.SETTINGS), onClick = { showMore = true }, icon = { androidx.compose.material3.Icon(Icons.Outlined.Tune, null) }, label = { Text("More", fontSize=9.sp) })
+                    androidx.compose.material3.DropdownMenu(expanded=showMore,onDismissRequest={showMore=false}) {
+                        listOf(Screen.STUDIO,Screen.THEMES,Screen.SETTINGS).forEach { item -> androidx.compose.material3.DropdownMenuItem(text={Text(item.title)},onClick={screen=item;showMore=false}) }
                     }
                 }
             }
@@ -337,8 +335,6 @@ private fun MesadApplicationUi(db: MesadDatabase) {
 @Composable private fun SettingsScreen(use24:Boolean,on24:(Boolean)->Unit,seconds:Boolean,onSeconds:(Boolean)->Unit,jalali:Boolean,onJalali:(Boolean)->Unit,performance:Boolean,onPerformance:(Boolean)->Unit,dark:Boolean,onDark:(Boolean)->Unit,onTools:()->Unit,onExact:()->Unit,onNotifications:()->Unit){Column(verticalArrangement=Arrangement.spacedBy(6.dp)){Text("TIME & DISPLAY",fontSize=9.sp,letterSpacing=1.4.sp,color=Champagne);Setting("24-hour time","Use a 00–23 hour cycle.",use24,on24);Setting("Show seconds","Show seconds in the hero clock.",seconds,onSeconds);Setting("Jalali date","Display Persian calendar alongside Gregorian.",jalali,onJalali);Setting("Performance mode","Use efficient Compose Canvas clock.",performance,onPerformance);Setting("Dark finish","Prefer obsidian surfaces.",dark,onDark);Spacer(Modifier.height(8.dp));Button(onClick=onExact,modifier=Modifier.fillMaxWidth()){androidx.compose.material3.Icon(Icons.Outlined.Alarm,null);Text("Review exact alarm access")};Button(onClick=onNotifications,modifier=Modifier.fillMaxWidth()){Text("Allow alarm notifications")};Button(onClick=onTools,modifier=Modifier.fillMaxWidth()){androidx.compose.material3.Icon(Icons.Outlined.CalendarMonth,null);Text("Calendar · Converter · Reminders")};Text("Alarm schedules are stored locally in Room. Exact alarm access is checked when an alarm is enabled.",fontSize=10.sp,color=Titanium,modifier=Modifier.padding(top=12.dp))}}
 @Composable private fun Setting(title:String,detail:String,value:Boolean,onChange:(Boolean)->Unit){Row(Modifier.fillMaxWidth().padding(vertical=10.dp),verticalAlignment=Alignment.CenterVertically){Column(Modifier.weight(1f)){Text(title,fontSize=12.sp,color=TitaniumHi);Text(detail,fontSize=9.sp,color=Titanium)};Switch(value,onChange)}}
 
-@Composable private fun iconFor(screen:Screen)=when(screen){Screen.HOME->Icons.Outlined.Home;Screen.WORLD->Icons.Outlined.Public;Screen.ALARM->Icons.Outlined.Alarm;Screen.STOPWATCH->Icons.Outlined.WatchLater;Screen.TIMER->Icons.Outlined.HourglassBottom;else->Icons.Outlined.Tune}
 private fun formatMs(ms:Long):String{val s=(ms.coerceAtLeast(0)/1000);val h=s/3600;val m=s%3600/60;val sec=s%60;return if(h>0)String.format("%02d:%02d:%02d",h,m,sec) else String.format("%02d:%02d",m,sec)}
-private fun ZonedDateTimeNow()=java.time.ZonedDateTime.now(ZoneId.systemDefault())
 private fun syncTimerService(context: android.content.Context) { context.startForegroundService(android.content.Intent(context, com.mesad.time.platform.timer.TimerForegroundService::class.java).setAction(com.mesad.time.platform.timer.TimerForegroundService.ACTION_SYNC)) }
 private fun AlarmEntity.toDomainAlarm() = com.mesad.time.domain.model.Alarm(id=id,hour=hour,minute=minute,label=label,repeatDays=repeatDays.split(",").filter{it.isNotBlank()}.mapNotNull{runCatching{DayOfWeek.valueOf(it)}.getOrNull()}.toSet(),ringtoneUri=ringtoneUri,vibrate=vibrate,enabled=enabled,snoozeMinutes=snoozeMinutes)

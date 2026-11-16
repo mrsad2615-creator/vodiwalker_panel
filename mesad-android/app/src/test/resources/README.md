@@ -1,0 +1,1 @@
+Unit suite covers Gregorian/Jalali conversions, Jalali leap month lengths, monotonic timer deadlines, alarm repeat/DST scheduling, and snooze timing. Instrumentation suite covers Home and Alarm Compose navigation.

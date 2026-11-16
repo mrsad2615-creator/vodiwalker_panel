@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108" width="512" height="512">
+  <defs>
+    <radialGradient id="bgGrad" cx="50%" cy="44%" r="68%">
+      <stop offset="0%" stop-color="#121C2B"/>
+      <stop offset="58%" stop-color="#0A0D14"/>
+      <stop offset="100%" stop-color="#06070B"/>
+    </radialGradient>
+    <linearGradient id="tiGrad" x1="25%" y1="20%" x2="80%" y2="80%">
+      <stop offset="0%" stop-color="#E8EDF5"/>
+      <stop offset="50%" stop-color="#8C96A8"/>
+      <stop offset="100%" stop-color="#D4DCE8"/>
+    </linearGradient>
+    <radialGradient id="sapphireGrad" cx="50%" cy="58%" r="55%">
+      <stop offset="0%" stop-color="#00D8F6"/>
+      <stop offset="45%" stop-color="#0B2D48"/>
+      <stop offset="100%" stop-color="#06101D"/>
+    </radialGradient>
+    <linearGradient id="goldGrad" x1="50%" y1="0%" x2="50%" y2="100%">
+      <stop offset="0%" stop-color="#F5E2C4"/>
+      <stop offset="100%" stop-color="#C6A06C"/>
+    </linearGradient>
+  </defs>
+  <rect width="108" height="108" rx="24" fill="url(#bgGrad)"/>
+  <circle cx="54" cy="54" r="32.5" fill="none" stroke="#E6C79C" stroke-opacity="0.65" stroke-width="0.9"/>
+  <circle cx="54" cy="54" r="28.6" fill="none" stroke="url(#tiGrad)" stroke-width="6.6"/>
+  <path d="M81.5 64.5 A29.6 29.6 0 0 1 43.2 81.6" fill="none" stroke="#E6ECF5" stroke-width="7.6" stroke-linecap="round"/>
+  <circle cx="54" cy="54" r="22.4" fill="none" stroke="#00E5FF" stroke-opacity="0.85" stroke-width="1.0"/>
+  <circle cx="54" cy="54" r="20.8" fill="url(#sapphireGrad)" stroke="#E6C79C" stroke-width="1.1"/>
+  <polygon points="54,37.5 65.7,42.3 70.5,54 65.7,65.7 54,70.5 42.3,65.7 37.5,54 42.3,42.3" fill="#00E5FF" fill-opacity="0.12" stroke="#00E5FF" stroke-opacity="0.45" stroke-width="0.7"/>
+  <polygon points="54,43.2 61.6,46.4 64.8,54 61.6,61.6 54,64.8 46.4,61.6 43.2,54 46.4,46.4" fill="#07090F" fill-opacity="0.35" stroke="#00E5FF" stroke-opacity="0.7" stroke-width="0.8"/>
+  <polygon points="47.6,19.4 60.4,19.4 54.0,41.2" fill="url(#goldGrad)" stroke="#F7E6CA" stroke-width="0.6" stroke-linejoin="round"/>
+  <path d="M49.6 20.9 L54.0 26.2 L58.4 20.9 M54.0 26.2 L54.0 38.8" fill="none" stroke="#00E5FF" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

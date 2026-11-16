@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Outer Champagne Micro-Chamfer Ring (r=28.5, within 66dp safe zone r=33) -->
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M54,25.5 A28.5,28.5 0 1,1 53.99,25.5 Z"
+        android:strokeColor="#99E6C79C"
+        android:strokeWidth="0.9" />
+
+    <!-- Main Brushed Titanium Orbital Ring (outer r=28, inner r=22.2 -> stroke r=25.1, width=5.8) -->
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M54,28.9 A25.1,25.1 0 1,1 53.99,28.9 Z"
+        android:strokeWidth="5.8">
+        <aapt:attr name="android:strokeColor">
+            <gradient
+                android:endX="80"
+                android:endY="80"
+                android:startX="28"
+                android:startY="28"
+                android:type="linear">
+                <item android:color="#FFE8EDF5" android:offset="0.0" />
+                <item android:color="#FF9AA4B5" android:offset="0.5" />
+                <item android:color="#FFD0D7E2" android:offset="1.0" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Asymmetric Sculpted Lower-Right Titanium Crescent Wrap -->
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M78.2,63.2 A26.0,26.0 0 0,1 44.5,78.2"
+        android:strokeColor="#FFE2E8F2"
+        android:strokeLineCap="round"
+        android:strokeWidth="6.8" />
+
+    <!-- Electric Cyan Inner Orbital Halo -->
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M54,34.2 A19.8,19.8 0 1,1 53.99,34.2 Z"
+        android:strokeColor="#CC00E5FF"
+        android:strokeWidth="0.9" />
+
+    <!-- Deep Midnight Sapphire Core -->
+    <path android:pathData="M54,35.6 A18.4,18.4 0 1,1 53.99,35.6 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:centerX="54"
+                android:centerY="60"
+                android:gradientRadius="19"
+                android:type="radial">
+                <item android:color="#FF00B8D4" android:offset="0.0" />
+                <item android:color="#FF0B2D48" android:offset="0.48" />
+                <item android:color="#FF071322" android:offset="1.0" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Sapphire Crystal Octagonal Facet Lines -->
+    <path
+        android:fillColor="#1F00E5FF"
+        android:pathData="M54,39.5 L64.2,43.8 L68.5,54 L64.2,64.2 L54,68.5 L43.8,64.2 L39.5,54 L43.8,43.8 Z"
+        android:strokeColor="#6600E5FF"
+        android:strokeWidth="0.65" />
+    <path
+        android:fillColor="#3307090F"
+        android:pathData="M54,44.5 L60.7,47.3 L63.5,54 L60.7,60.7 L54,63.5 L47.3,60.7 L44.5,54 L47.3,47.3 Z"
+        android:strokeColor="#9900E5FF"
+        android:strokeWidth="0.75" />
+
+    <!-- Warm Champagne Core Retaining Bezel -->
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M54,35.6 A18.4,18.4 0 1,1 53.99,35.6 Z"
+        android:strokeColor="#FFE6C79C"
+        android:strokeWidth="1.0" />
+
+    <!-- 12 O'Clock Zenith Time Index Wedge (Warm Champagne Gold + Cyan Y-Meridian) -->
+    <path
+        android:pathData="M48.4,23.5 L59.6,23.5 L54.0,42.5 Z"
+        android:strokeColor="#FFF5E1C0"
+        android:strokeLineJoin="round"
+        android:strokeWidth="0.6">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:endX="54"
+                android:endY="42.5"
+                android:startX="54"
+                android:startY="23.5"
+                android:type="linear">
+                <item android:color="#FFF3DEC0" android:offset="0.0" />
+                <item android:color="#FFC9A574" android:offset="1.0" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <!-- Electric Cyan Y-Meridian Inlay inside Zenith Index -->
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M50.2,24.8 L54.0,29.4 L57.8,24.8 M54.0,29.4 L54.0,40.4"
+        android:strokeColor="#FF00E5FF"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:strokeWidth="1.1" />
+</vector>

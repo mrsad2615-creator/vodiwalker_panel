@@ -36,7 +36,7 @@ class MesadWidget : GlanceAppWidget() {
                 val dateStr = now.atZone(zone).format(DateTimeFormatter.ofPattern("EEE, MMM d"))
 
                 Column(
-                    modifier = androidx.glance.Modifier
+                    modifier = androidx.glance.GlanceModifier
                         .fillMaxSize()
                         .background(ColorProvider(day = androidx.compose.ui.graphics.Color(0xFF12161F), night = androidx.compose.ui.graphics.Color(0xFF06070B)))
                         .padding(16.dp)
@@ -49,7 +49,7 @@ class MesadWidget : GlanceAppWidget() {
                             color = ColorProvider(day = androidx.compose.ui.graphics.Color(0xFFE6C79C), night = androidx.compose.ui.graphics.Color(0xFFE6C79C))
                         )
                     )
-                    Spacer(modifier = androidx.glance.Modifier.height(4.dp))
+                    Spacer(modifier = androidx.glance.GlanceModifier.height(4.dp))
                     Text(
                         text = timeStr,
                         style = TextStyle(

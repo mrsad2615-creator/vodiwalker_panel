@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">MESAD</string>
+    <string name="shortcut_alarm_short">New alarm</string>
+    <string name="shortcut_alarm_long">Create a new MESAD alarm</string>
+    <string name="shortcut_stopwatch_short">Stopwatch</string>
+    <string name="shortcut_stopwatch_long">Open MESAD Stopwatch</string>
+    <string name="shortcut_timer_short">New timer</string>
+    <string name="shortcut_timer_long">Start a MESAD timer</string>
+</resources>

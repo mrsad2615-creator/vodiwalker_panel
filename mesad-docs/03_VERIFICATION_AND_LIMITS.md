@@ -7,9 +7,11 @@
 - `python3 -m venv .venv && .venv/bin/pip install pillow pytest` — succeeded. The icon suite generator completed; PNG and SVG outputs are checked in under `mesad-assets/icons/`.
 - Three.js renderer uses generated 3D meshes and real-time lighting/material response. The Android view uses GLES 3 context, triangle geometry, depth buffer and shader lighting. The Performance Mode selects a 2D Compose Canvas renderer.
 
-## Android build boundary
+## Android build boundary and verified artifact
 
-This sandbox does not include a JDK, Kotlin compiler, Gradle, Android SDK, or ADB. Outbound access to Google's SDK download host is blocked by the sandbox allowlist. The Android source and GitHub Actions build workflow are provided, but **the native APK has not been compiled here**. Use the `MESAD verification` GitHub workflow (standard Ubuntu/JDK 17/SDK 36 environment) or build in Android Studio to confirm dependency resolution, Kotlin/manifest/resource correctness, emulator behavior, exact-alarm permission handling, notification behavior, boot rescheduling, and frame-time/battery targets. Do not treat source-level inspection as equivalent to device QA.
+The sandbox does not include a JDK, Kotlin compiler, Gradle, Android SDK, or ADB, and outbound access to Google's SDK download host is blocked. However, GitHub Actions run [43939238578](https://github.com/mrsad2615-creator/vodiwalker_panel/actions/runs/43939238578) on commit `497b412` passed `testDebugUnitTest` and `assembleDebug`, then uploaded the `mesad-debug-apk` artifact. The separate WebGL studio tests and production build also passed. The APK can be downloaded from the run's **Artifacts** section; see `mesad/README.md` for installation steps. The artifact expires after 14 days.
+
+This CI result confirms compilation and JVM unit tests, not emulator or physical-device behavior. Exact-alarm permission handling, notification behavior, boot rescheduling, adaptive launcher icon appearance, and frame-time/battery targets still need device verification. Do not treat a successful build as device QA.
 
 ## Product implementation caveats to check in CI/device QA
 

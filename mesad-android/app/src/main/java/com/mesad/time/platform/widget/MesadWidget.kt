@@ -38,7 +38,7 @@ class MesadWidget : GlanceAppWidget() {
                 Column(
                     modifier = androidx.glance.GlanceModifier
                         .fillMaxSize()
-                        .background(ColorProvider(day = androidx.compose.ui.graphics.Color(0xFF12161F), night = androidx.compose.ui.graphics.Color(0xFF06070B)))
+                        .background(ColorProvider(androidx.compose.ui.graphics.Color(0xFF12161F)))
                         .padding(16.dp)
                 ) {
                     Text(
@@ -46,7 +46,7 @@ class MesadWidget : GlanceAppWidget() {
                         style = TextStyle(
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
-                            color = ColorProvider(day = androidx.compose.ui.graphics.Color(0xFFE6C79C), night = androidx.compose.ui.graphics.Color(0xFFE6C79C))
+                            color = ColorProvider(androidx.compose.ui.graphics.Color(0xFFE6C79C))
                         )
                     )
                     Spacer(modifier = androidx.glance.GlanceModifier.height(4.dp))
@@ -55,14 +55,14 @@ class MesadWidget : GlanceAppWidget() {
                         style = TextStyle(
                             fontSize = 36.sp,
                             fontWeight = FontWeight.Bold,
-                            color = ColorProvider(day = androidx.compose.ui.graphics.Color(0xFF06070B), night = androidx.compose.ui.graphics.Color(0xFFE8EDF5))
+                            color = ColorProvider(androidx.compose.ui.graphics.Color(0xFF06070B))
                         )
                     )
                     Text(
                         text = dateStr,
                         style = TextStyle(
                             fontSize = 12.sp,
-                            color = ColorProvider(day = androidx.compose.ui.graphics.Color(0xFF6B7280), night = androidx.compose.ui.graphics.Color(0xFF9AA4B5))
+                            color = ColorProvider(androidx.compose.ui.graphics.Color(0xFF6B7280))
                         )
                     )
                 }

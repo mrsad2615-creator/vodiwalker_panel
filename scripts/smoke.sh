@@ -5,7 +5,7 @@
 set -u
 
 PKG="com.typflow.app"
-APK="${1:-apk/TYPFLOW-1.0.0.apk}"
+APK="${1:-apk/TYPFLOW-1.1.0.apk}"
 OUT="telemetry"
 
 mkdir -p "$OUT"
@@ -149,8 +149,8 @@ sleep 1
 nav_wait d11 4 analytics-en
 shot 12-analytics-en
 
-nav_wait d12 1 home-en
-swipe_up 1
+nav_wait d12 5 profile-en
+swipe_up 2
 tap_text_scroll d13 "SETTINGS" settings-en
 shot 13-settings-en
 

@@ -129,7 +129,7 @@ jobs:
           ls -lh telemetry/ || true
           git config user.name "typflow-ci"
           git config user.email "ci@typflow.local"
-          git add telemetry
+          git add -A telemetry
           git commit -m "ci: emulator screenshots [skip ci]" || true
           git pull --rebase --autostash || true
           git push || true

@@ -91,6 +91,34 @@ dump d09
 tap_text d09 "NEBULA" theme-nebula
 shot 09-theme-nebula
 
+# language switch to English (LTR) and a real typing session
+dump d10
+tap_text d10 "English" lang-en
+shot 10-english
+dump d11
+tap_nav d11 3 typing-en
+shot 11-typing-en
+dump d12
+tap_text d12 "Type here" typing-field
+adb shell input text "the%squick%sbrown%sfox" > /dev/null 2>&1 || true
+sleep 2
+shot 12-typing-input
+adb shell input keyevent 111 > /dev/null 2>&1 || true
+dump d13
+tap_nav d13 1 analytics-en
+shot 13-analytics-en
+
+# back to Persian
+dump d14
+tap_nav d14 4 profile-en
+adb shell input swipe $((W / 2)) $((H * 3 / 4)) $((W / 2)) $((H / 3)) 350 > /dev/null 2>&1 || true
+sleep 1
+dump d15
+tap_text d15 "Settings" settings-en
+dump d16
+tap_text d16 "فارسی" lang-fa
+shot 14-back-to-fa
+
 # start a typing session from the home quick-access button
 dump d06
 tap_nav d06 0 home

@@ -8,8 +8,9 @@ import com.typflow.app.ui.TypflowApp
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val deepLink = intent?.getStringExtra("screen")?.lowercase()
         setContent {
-            TypflowApp()
+            TypflowApp(initialScreen = deepLink)
         }
     }
 }

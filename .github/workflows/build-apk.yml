@@ -122,37 +122,41 @@ jobs:
             adb install -r apk/TYPFLOW-1.0.0.apk
             adb logcat -c
             adb shell am start -n com.typflow.app/.MainActivity
-            sleep 2
-            adb exec-out screencap -p > shot-01-splash.png
-            sleep 6
-            adb exec-out screencap -p > shot-02-home.png
-            SIZE=$(adb shell wm size | tr -d '\r' | grep -o '[0-9]\+x[0-9]\+' | head -1)
+            sleep 7
+            adb exec-out screencap -p > shot-01-home.png
+            adb shell dumpsys window | grep -E "mCurrentFocus|mFocusedApp" > diag-window.txt 2>&1
+            # tap the app's bottom navigation (second slot) and report result
+            SIZE=$(adb shell wm size | grep -o '[0-9]*x[0-9]*' | head -1)
             W=${SIZE%x*}; H=${SIZE#*x}
-            Y=$((H - 64))
-            nav() { adb shell input tap $((W * $1 / 100)) $Y; sleep 3; }
-            nav 30; adb exec-out screencap -p > shot-03-typing.png
-            nav 50; adb exec-out screencap -p > shot-04-reading.png
-            nav 70; adb exec-out screencap -p > shot-05-analytics.png
-            nav 90; adb exec-out screencap -p > shot-06-profile.png
-            # open settings via profile screen scroll button area (top-right chip) if present
-            adb shell input tap $((W / 2)) $((H * 6 / 100)) > /dev/null 2>&1 || true
-            sleep 2
-            adb exec-out screencap -p > shot-07-extra.png
+            echo "screen=$SIZE" >> diag-window.txt
+            adb shell input tap $((W * 22 / 100)) $((H - 60)); echo "tap_exit=$?" >> diag-window.txt
+            sleep 3
+            adb exec-out screencap -p > shot-02-after-tap.png
+            adb shell uiautomator dump /sdcard/ui.xml > /dev/null 2>&1 || true
+            adb pull /sdcard/ui.xml diag-ui.xml > /dev/null 2>&1 || true
+            # deep-link screens: guaranteed deterministic screenshots
+            for S in typing reading analytics profile settings; do
+              adb shell am force-stop com.typflow.app
+              adb shell am start -n com.typflow.app/.MainActivity -e screen $S
+              sleep 4
+              adb exec-out screencap -p > shot-$S.png
+            done
             adb logcat -d > emu-logcat.txt
             echo "--- crash check ---"
             if grep -q "FATAL EXCEPTION" emu-logcat.txt; then
               echo "CRASH DETECTED"; grep -A 30 "FATAL EXCEPTION" emu-logcat.txt | head -60; exit 1
             fi
             echo "NO CRASH"
-            exit 0
 
       - name: Commit screenshots to branch
         if: always()
         run: |
           ls -lh shot-*.png 2>/dev/null || true
           mkdir -p telemetry
+          rm -f telemetry/*.png
           cp shot-*.png telemetry/ 2>/dev/null || true
-          tail -c 20000 emu-logcat.txt > telemetry/logcat.txt 2>/dev/null || true
+          cp diag-window.txt diag-ui.xml telemetry/ 2>/dev/null || true
+          tail -c 60000 emu-logcat.txt > telemetry/logcat.txt 2>/dev/null || true
           git config user.name "typflow-ci"
           git config user.email "ci@typflow.local"
           git add telemetry

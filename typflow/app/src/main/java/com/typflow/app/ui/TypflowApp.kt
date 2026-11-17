@@ -47,12 +47,23 @@ private val NAV_ITEMS = listOf(
 )
 
 @Composable
-fun TypflowApp() {
+fun TypflowApp(initialScreen: String? = null) {
     val context = LocalContext.current
     val store = remember { TypflowStore(context) }
     val theme = themeById(store.themeId)
-    var screen by remember { mutableStateOf(Screen.HOME) }
-    var showSplash by remember { mutableStateOf(true) }
+    val startScreen = remember(initialScreen) {
+        when (initialScreen) {
+            "typing" -> Screen.TYPING
+            "reading" -> Screen.READING
+            "analytics" -> Screen.ANALYTICS
+            "profile" -> Screen.PROFILE
+            "settings" -> Screen.SETTINGS
+            "home" -> Screen.HOME
+            else -> Screen.HOME
+        }
+    }
+    var screen by remember { mutableStateOf(startScreen) }
+    var showSplash by remember { mutableStateOf(initialScreen == null) }
 
     CompositionLocalProvider(
         LocalLayoutDirection provides if (store.lang == "fa") LayoutDirection.Rtl else LayoutDirection.Ltr

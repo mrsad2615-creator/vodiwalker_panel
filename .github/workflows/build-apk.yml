@@ -9,8 +9,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
-  issues: write
+  contents: write
 
 jobs:
   build:
@@ -50,19 +49,42 @@ jobs:
           path: typflow/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
 
-      - name: Publish build log to issue (on failure)
+      - name: Publish build log into repo (on failure)
         if: failure()
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           {
-            echo "### compile errors"
+            echo "run: ${{ github.run_number }}"
+            echo
+            echo "## compile errors"
             echo '```'
-            grep -E "^(e:|w: .*error)|error:|FAILURE:|Execution failed" /tmp/build.log | head -60 || true
+            grep -E "(^e: |error:|FAILURE:|Execution failed|Caused by)" /tmp/build.log | head -80 || true
             echo '```'
-            echo "### tail"
+            echo
+            echo "## tail"
             echo '```'
-            tail -c 40000 /tmp/build.log || true
+            tail -c 30000 /tmp/build.log || true
             echo '```'
-          } > /tmp/body.md
-          gh api "repos/${{ github.repository }}/issues" -F "title=CI log run ${{ github.run_number }}" -F "body=@/tmp/body.md" > /dev/null 2>&1 || echo "log publish failed"
+          } > ci-logs/last-build.md 2>/dev/null || { mkdir -p ci-logs; }
+          mkdir -p ci-logs
+          # rebuild file now that dir exists
+          {
+            echo "run: ${{ github.run_number }}"
+            echo
+            echo "## compile errors"
+            echo '```'
+            grep -E "(^e: |error:|FAILURE:|Execution failed|Caused by)" /tmp/build.log | head -80 || true
+            echo '```'
+            echo
+            echo "## tail"
+            echo '```'
+            tail -c 30000 /tmp/build.log || true
+            echo '```'
+          } > ci-logs/last-build.md
+          git config user.name "typflow-ci"
+          git config user.email "ci@typflow.local"
+          git add ci-logs/last-build.md
+          git commit -m "ci: build log [skip ci]" || true
+          git pull --rebase --autostash || true
+          git push || true

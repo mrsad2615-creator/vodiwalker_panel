@@ -31,7 +31,7 @@ fun AnalyticsScreen(theme: TypflowTheme, store: TypflowStore) {
     val lang = store.lang
     val series = store.typingSeries(18)
     val days = store.dailyCounts(7)
-    val maxDay = (days.maxOfOrNull { it.value } ?: 0).coerceAtLeast(1)
+    val maxDay = (days.maxOfOrNull { it.second } ?: 0).coerceAtLeast(1)
     val problems = store.topProblemKeys(8)
     val avgAcc = run {
         val list = store.history.filter { it.type == "typing" }

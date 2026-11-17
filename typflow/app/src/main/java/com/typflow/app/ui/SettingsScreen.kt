@@ -137,8 +137,8 @@ fun SettingsScreen(
         SectionLabel(theme, tr(lang, "زبان", "LANGUAGE"))
         Spacer(Modifier.height(12.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            MonoChip(theme, "فارسی", lang == "fa") { store.updateLang("fa") }
-            MonoChip(theme, "ENGLISH", lang == "en") { store.updateLang("en") }
+            MonoChip(theme, "فارسی", lang == "fa", onClick = { store.updateLang("fa") })
+            MonoChip(theme, "ENGLISH", lang == "en", onClick = { store.updateLang("en") })
         }
 
         Spacer(Modifier.height(22.dp))

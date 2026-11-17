@@ -10,12 +10,14 @@ import java.io.InterruptedIOException
 import java.net.InetAddress
 import java.net.Proxy
 import java.net.UnknownHostException
+import java.util.concurrent.TimeUnit
 import javax.net.ssl.SSLException
+import kotlinx.serialization.json.JsonObject
+import okhttp3.ConnectionPool
 import okhttp3.Dns
 import okhttp3.OkHttpClient
 import okhttp3.Response
 import okhttp3.ResponseBody
-import kotlinx.serialization.json.JsonObject
 
 internal fun Response.requireSuccess(protocol: ProviderProtocol) {
     if (isSuccessful) return
@@ -66,7 +68,8 @@ internal class ApplePrivateDns(private val delegate: Dns) : Dns {
 
 internal fun OkHttpClient.privateAppleClient(): OkHttpClient = newBuilder()
     // Use a separate connection pool; do not reuse sockets or HTTP/2 routes from WAN profiles.
-    .connectionPool(okhttp3.ConnectionPool())
+    .connectionPool(ConnectionPool())
     .dns(ApplePrivateDns(dns))
     .proxy(Proxy.NO_PROXY)
+    .readTimeout(86, TimeUnit.SECONDS)
     .build()

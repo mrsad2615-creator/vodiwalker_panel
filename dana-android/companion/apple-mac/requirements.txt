@@ -1,0 +1,3 @@
+# Apple silicon, macOS 26+, Xcode 26+ and Python 3.11+ are required for the model runtime.
+-r requirements-server.txt
+apple-fm-sdk==0.2.2

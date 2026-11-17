@@ -62,27 +62,40 @@ dump_ui() {
   fail 'Cannot inspect the running Dana activity.'
 }
 
-dump_ui
-coords=$(python3 - "$snapshot" <<'PYTHON'
+tap_text() {
+  local needle="$1" xy x y
+  xy=$(python3 - "$snapshot" "$needle" <<'PYTHON'
 import re
 import sys
 from xml.etree import ElementTree as ET
 
-nodes = [node for node in ET.parse(sys.argv[1]).iter('node') if node.get('text') == 'مقایسه']
+nodes = [n for n in ET.parse(sys.argv[1]).iter('node') if n.get('text') == sys.argv[2]]
 for node in nodes:
-    m = re.fullmatch(r'\[(\d+),(\d+)\]\[(\d+),(\d+)\]', node.get('bounds', ''))
-    if m:
-        left, top, right, bottom = map(int, m.groups())
+    match = re.fullmatch(r'\[(\d+),(\d+)\]\[(\d+),(\d+)\]', node.get('bounds', ''))
+    if match:
+        left, top, right, bottom = map(int, match.groups())
         if right > left and bottom > top:
             print((left + right) // 2, (top + bottom) // 2)
             break
 PYTHON
 )
-[[ -n "$coords" ]] || fail 'The comparison control is missing from the home screen.'
-read -r x y <<< "$coords"
-adb shell input tap "$x" "$y"
+  [[ -n "$xy" ]] || fail "Cannot find the control: $needle"
+  read -r x y <<< "$xy"
+  adb shell input tap "$x" "$y"
+}
+
+dump_ui
+grep -Fq 'میز کار دانا' "$snapshot" || fail 'The Studio home screen is missing.'
+tap_text 'مقایسه'
 dump_ui
 grep -Fq 'یک سؤال، چند پاسخ' "$snapshot" || fail 'The comparison screen did not open.'
 grep -Fq 'حالت کاملاً آفلاین روشن است' "$snapshot" || fail 'A clean install did not display the offline guard.'
+tap_text 'تنظیمات'
+dump_ui
+grep -Fq 'مرکز اتصال موتورها' "$snapshot" || fail 'The Engine Hub did not open.'
+tap_text 'راه‌اندازی Gemini'
+dump_ui
+grep -Fq 'نشانی رسمی Gemini آماده است' "$snapshot" || fail 'The Gemini preset did not open.'
+adb shell input keyevent KEYCODE_BACK
 adb shell pidof "$package" >/dev/null || fail 'Dana terminated during the smoke test.'
-printf '\nDana APK installed, launched, opened comparison, and showed the default offline guard.\n'
+printf '\nDana APK installed, opened the Studio, showed the default offline guard, and opened the Gemini preset.\n'

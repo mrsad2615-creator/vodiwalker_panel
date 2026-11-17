@@ -149,7 +149,7 @@ class OkHttpEngineTransportTest {
             assertEquals("100", request.url.queryParameter("pageSize"))
             assertEquals(key.value, request.headers["x-goog-api-key"])
             assertFalse(request.url.toString().contains(key.value))
-            assertTrue(request.body == null || request.body!!.size == 0L)
+            assertEquals(0, request.body?.size ?: 0)
         }
     }
 

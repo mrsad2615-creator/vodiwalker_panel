@@ -167,15 +167,11 @@ private fun ProviderEditor(
     ) {
         if (gemini) {
             Text(stringResource(R.string.engine_gemini_intro))
-            val browser = LocalUriHandler.current
-            var browserError by remember { mutableStateOf(false) }
-            TextButton(onClick = {
-                browserError = runCatching { browser.openUri("https://aistudio.google.com/apikey") }.isFailure
-            }, enabled = formEnabled) { Text(stringResource(R.string.engine_gemini_key_link)) }
-            if (browserError) SelectionContainer { TechnicalText("https://aistudio.google.com/apikey") }
+            SetupLink(R.string.engine_gemini_key_link, "https://aistudio.google.com/api-keys", formEnabled)
         } else if (apple) {
             Text(stringResource(R.string.engine_apple_intro))
             Text(stringResource(R.string.apple_language_note), style = MaterialTheme.typography.bodySmall, color = Amber)
+            SetupLink(R.string.engine_apple_guide, APPLE_GUIDE_URL, formEnabled)
         }
         OutlinedTextField(
             name, { if (it.length <= ProviderConfig.NAME_LIMIT) name = it }, Modifier.fillMaxWidth(),
@@ -272,6 +268,19 @@ private fun ProviderEditor(
             label = { Text(stringResource(R.string.engine_model)) },
         )
     }
+}
+
+private const val APPLE_GUIDE_URL =
+    "https://github.com/mrsad2615-creator/vodiwalker_panel/blob/arena/13014174-vodiwalker-panel/dana-android/docs/03-engine-guide-fa.md"
+
+@Composable
+private fun SetupLink(label: Int, target: String, enabled: Boolean) {
+    val browser = LocalUriHandler.current
+    var failed by remember(target) { mutableStateOf(false) }
+    TextButton(onClick = { failed = runCatching { browser.openUri(target) }.isFailure }, enabled = enabled) {
+        Text(stringResource(label))
+    }
+    if (failed) SelectionContainer { TechnicalText(target, maxLines = Int.MAX_VALUE) }
 }
 
 internal fun presetLabel(protocol: ProviderProtocol): Int = when (protocol) {

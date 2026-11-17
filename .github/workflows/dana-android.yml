@@ -100,7 +100,7 @@ jobs:
           from xml.etree import ElementTree as ET
           import os
 
-          for module, task, minimum in [('core/domain', 'test', 20), ('core/data', 'testDebugUnitTest', 6)]:
+          for module, task, minimum in [('core/domain', 'test', 25), ('core/data', 'testDebugUnitTest', 11)]:
               reports = list((Path(module) / 'build/test-results' / task).glob('TEST-*.xml'))
               tests = [case for report in reports for case in ET.parse(report).iter('testcase')]
               if len(tests) < minimum or any(case.find('skipped') is not None or case.find('failure') is not None or case.find('error') is not None for case in tests):
@@ -115,7 +115,7 @@ jobs:
           "$tools/apksigner" verify --verbose --print-certs "$apk"
           "$tools/zipalign" -c -P 16 4 "$apk"
           badging=$("$tools/aapt" dump badging "$apk")
-          grep -Fq "package: name='ai.dana.preview'" <<< "$badging"
+          grep -Fq "package: name='ai.dana.preview' versionCode='3' versionName='0.3.0-preview'" <<< "$badging"
           digest=$(sha256sum "$apk" | cut -d' ' -f1)
           printf 'sha256=%s\n' "$digest" >> "$GITHUB_OUTPUT"
           printf '\nSHA-256: `%s`\n' "$digest" >> "$GITHUB_STEP_SUMMARY"
@@ -147,10 +147,30 @@ jobs:
           APK_URL: ${{ steps.apk.outputs.artifact-url }}
         run: printf '\n[Download DANA AI APK](%s)\n' "$APK_URL" >> "$GITHUB_STEP_SUMMARY"
 
+  apple-bridge:
+    name: Verify private Mac bridge protocol (no Apple model)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    defaults:
+      run:
+        working-directory: dana-android/companion/apple-mac
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Test protocol, TLS and worker cleanup
+        shell: bash
+        run: |
+          python3 -m venv "$RUNNER_TEMP/dana-bridge"
+          python="$RUNNER_TEMP/dana-bridge/bin/python"
+          "$python" -m pip install --disable-pip-version-check -r requirements-server.txt
+          "$python" -m unittest discover -s tests -v
+          printf '\nMac bridge transport and protocol passed on Linux; Apple inference needs a compatible Mac.\n' >> "$GITHUB_STEP_SUMMARY"
+
   publish:
     name: Publish the tested preview APK
     if: github.event_name == 'push' && github.ref == 'refs/heads/arena/13014174-vodiwalker-panel' && contains(github.event.head_commit.message, '[dana-apk]')
-    needs: build
+    needs: [build, apple-bridge]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
@@ -173,7 +193,7 @@ jobs:
           tag="dana-preview-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
           gh release create "$tag" DANA-AI-preview.apk SHA256SUMS.txt \
             --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
-            --title "DANA AI 0.2 preview (${GITHUB_SHA:0:8})" --prerelease --latest=false \
-            --notes "Tested Android preview for commit $GITHUB_SHA. Debug-signed (ai.dana.preview), not a production or Play Store build. Includes concurrent, opt-in OpenAI-compatible and Gemini-native requests. Build and test evidence: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID."
+            --title "DANA AI 0.3 Studio preview (${GITHUB_SHA:0:8})" --prerelease --latest=false \
+            --notes "Tested Android preview for commit $GITHUB_SHA. Debug-signed (ai.dana.preview), not a production or Play Store build. Includes a text workspace, opt-in model discovery, and independent Gemini/OpenAI-compatible/Mac bridge streams. Gemini needs a personal API key; Apple needs the separate bridge on a compatible Mac. CI checks transport and Android behavior, not live provider access. Build and test evidence: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID."
           printf '\n[Download DANA AI APK](%s/%s/releases/download/%s/DANA-AI-preview.apk)\n' \
             "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$tag" >> "$GITHUB_STEP_SUMMARY"

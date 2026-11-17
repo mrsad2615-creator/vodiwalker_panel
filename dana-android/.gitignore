@@ -9,3 +9,7 @@ captures/
 *.keystore
 *.apk
 *.aab
+.venv/
+__pycache__/
+*.pem
+.env

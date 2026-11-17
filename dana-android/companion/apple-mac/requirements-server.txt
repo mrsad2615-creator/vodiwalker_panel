@@ -1,0 +1,2 @@
+# ASGI transport; also used for Linux protocol checks (no Apple weights).
+hypercorn==0.18.0

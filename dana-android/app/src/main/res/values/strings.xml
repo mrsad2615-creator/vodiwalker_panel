@@ -25,13 +25,11 @@
     <string name="note_input">متن یادداشت</string>
     <string name="note_delete_title">این یادداشت حذف شود؟</string>
     <string name="note_delete_body">حذف یادداشت قابل بازگشت نیست.</string>
-    <string name="engines_title">مرکز اتصال موتور‌ها</string>
+    <string name="engines_title">مرکز اتصال موتورها</string>
     <string name="engines_description">یک موتور را راه‌اندازی کنید، فهرست مدل‌ها را بگیرید و بعد آن را در میز کار انتخاب کنید.</string>
     <string name="engines_empty">هنوز پروفایلی ذخیره نشده است.</string>
-    <string name="engine_add">افزودن پروفایل</string>
     <string name="engine_edit">ویرایش پروفایل</string>
     <string name="engine_name">نام نمایشی</string>
-    <string name="engine_protocol">قالب API</string>
     <string name="engine_openai" translatable="false">OpenAI-compatible</string>
     <string name="engine_gemini" translatable="false">Gemini native</string>
     <string name="engine_lan">میزبان در شبکهٔ محلی</string>
@@ -104,6 +102,7 @@
     <string name="engine_gemini_proxy">آدرس سفارشی Gemini</string>
     <string name="engine_gemini_proxy_notice">این مقصد گوگل نیست. فقط از میزبان مورد اعتماد و کلید مخصوص همان مقصد استفاده کنید.</string>
     <string name="engine_apple_intro">پل خصوصی دانا را روی مک سازگار با Apple Intelligence اجرا کنید. این اتصال، Siri یا سرویس ابری اپل نیست.</string>
+    <string name="engine_apple_guide">راهنمای نصب پل مک</string>
     <string name="engine_apple_token">توکن خصوصی پل مک</string>
     <string name="engine_apple_url_tip">نشانی خصوصی پل مک با مسیر v1 و گواهی HTTPS معتبر برای اندروید؛ گوشی باید به همان شبکه دسترسی داشته باشد.</string>
     <string name="engine_apple_check">بررسی آمادگی مدل مک</string>

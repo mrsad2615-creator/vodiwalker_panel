@@ -49,4 +49,6 @@ npm run build
 
 فایل‌های ساخته‌شده در `black_hole/dist/` قرار می‌گیرند و از سوی برنامه‌ی FastAPI ارائه می‌شوند. برای خروجی مستقل و آماده‌ی میزبانی نیز از `npm run build:standalone` استفاده کنید؛ سپس می‌توانید `python3 -m http.server 8080 --directory standalone` را در پوشه‌ی `black_hole/` اجرا کنید. رابط از Three.js، Vite و قلم فارسیِ محلیِ Vazirmatn استفاده می‌کند؛ دریافت قلم یا کتابخانه از CDN هنگام اجرا لازم نیست.
 
-برای ساخت APK اندروید، راهنمای فارسی `black_hole/README_FA.md` را ببینید؛ گردش‌کار GitHub Actions نیز پس از push یا اجرای دستی، APK نصب‌پذیر را به‌صورت artifact تولید می‌کند.
+نسخه‌ی نصب مستقیم اندروید: [دانلود APK سیاه‌چاله](https://github.com/mrsad2615-creator/vodiwalker_panel/releases/download/black-hole-v1.0.0/black-hole.apk). این نسخه با کلید debug امضا شده و برای نصب مستقیم/آزمایش است.
+
+برای ساخت از سورس، راهنمای فارسی `black_hole/README_FA.md` را ببینید؛ گردش‌کار GitHub Actions نیز APK را می‌سازد و در GitHub Release منتشر می‌کند.

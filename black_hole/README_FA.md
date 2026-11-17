@@ -20,7 +20,7 @@ npm run build:standalone
 gradle --no-daemon -p android assembleDebug
 ```
 
-APK در مسیر `android/app/build/outputs/apk/debug/app-debug.apk` ساخته می‌شود. گردش‌کار GitHub Actions همین بررسی‌ها و build را انجام می‌دهد و APK را به‌صورت artifact قابل‌دانلود ارائه می‌کند.
+APK در مسیر `android/app/build/outputs/apk/debug/app-debug.apk` ساخته می‌شود. گردش‌کار GitHub Actions همین بررسی‌ها و build را انجام می‌دهد، APK را در GitHub Release منتشر می‌کند و برای مدت محدود به‌صورت artifact هم نگه می‌دارد.
 
 ## نسخه‌ی وب و توسعه
 

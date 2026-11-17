@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build-apk:
@@ -58,10 +58,21 @@ jobs:
           cp black_hole/android/app/build/outputs/apk/debug/app-debug.apk artifacts/black-hole.apk
           sha256sum artifacts/black-hole.apk
 
-      - name: Upload APK
+      - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: black-hole-apk
           path: artifacts/black-hole.apk
           if-no-files-found: error
           retention-days: 30
+
+      - name: Publish direct-download APK release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="black-hole-v1.0.0"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG already exists; keeping its published APK."
+          else
+            gh release create "$TAG" artifacts/black-hole.apk --target "$GITHUB_SHA" --title "BLACK HOLE v1.0.0 — Android APK" --notes "APK نصب مستقیم اندروید، شامل تجربه‌ی سه‌بعدی و فارسی. برنامه آفلاین اجرا می‌شود. این نسخه با کلید debug امضا شده و برای نصب مستقیم/آزمایش است؛ برای Google Play به کلید انتشار نیاز دارد."
+          fi

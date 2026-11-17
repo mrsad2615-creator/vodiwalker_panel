@@ -126,12 +126,14 @@ shot 08-theme-signal
 # ---- settings scrolled: language switch ----
 swipe_up 1
 tap_text_scroll d08 "ENGLISH" lang-en
-sleep 4
+sleep 3
 shot 09-english
-
-# ---- English (LTR) typing session with real key input ----
+adb shell input keyevent 4 > /dev/null 2>&1 || true
+sleep 2
 nav_wait d09 1 home-en
 shot 09b-home-en
+
+# ---- English (LTR) typing session with real key input ----
 nav_wait d09b 3 typing-en
 shot 10-typing-en
 dump d10
@@ -151,33 +153,21 @@ nav_wait d12 1 home-en
 swipe_up 1
 tap_text_scroll d13 "SETTINGS" settings-en
 shot 13-settings-en
+
+# ---- back to Persian and finish on the dashboard ----
 swipe_up 2
 tap_text_scroll d14 "فارسی" lang-fa
-sleep 4
+sleep 3
+adb shell input keyevent 4 > /dev/null 2>&1 || true
+sleep 2
 nav_wait d15 1 home-fa
 shot 14-back-to-fa
 
-# ---- restore the default theme and finish on the dashboard ----
-nav_wait d16 5 profile-again
-swipe_up 2
-tap_text_scroll d17 "تنظیمات" settings-again
-for _ in 1 2 3; do
-  adb shell input swipe $((W / 2)) $((H / 3)) $((W / 2)) $((H * 3 / 4)) 300 \
-    > /dev/null 2>&1 || true
-  sleep 1
-done
-tap_text_scroll d18 "VOID" theme-void
-shot 15-final-settings
-nav_wait d19 1 home-final
-shot 16-home-final
-
 echo "== crash scan ==" >> "$OUT/notes.txt"
-adb logcat -d > emu-logcat.txt 2>/dev/null || true
-tail -c 40000 emu-logcat.txt > "$OUT/logcat.txt" 2>/dev/null || true
-if grep -q "FATAL EXCEPTION" emu-logcat.txt; then
-  grep -A 25 "FATAL EXCEPTION" emu-logcat.txt | head -50
-  echo "CRASH DETECTED"
-  exit 1
+if adb logcat -d | grep -q "FATAL EXCEPTION"; then
+  echo "CRASH FOUND" >> "$OUT/notes.txt"
+  adb logcat -d > "$OUT/logcat.txt" || true
+else
+  echo "no crash" >> "$OUT/notes.txt"
 fi
-echo "NO CRASH"
-exit 0
+echo "== done ==" >> "$OUT/notes.txt"

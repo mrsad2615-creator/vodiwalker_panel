@@ -1,5 +1,6 @@
 package com.typflow.app.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -60,6 +61,9 @@ fun TypflowApp(initialScreen: String? = null) {
     var tab by remember { mutableStateOf(tabFromName(initialScreen)) }
     var showSettings by remember { mutableStateOf(initialScreen == "settings") }
     var showSplash by remember { mutableStateOf(initialScreen == null) }
+
+    // Hardware back closes the settings overlay instead of leaving the app.
+    BackHandler(enabled = showSettings) { showSettings = false }
 
     CompositionLocalProvider(
         LocalLayoutDirection provides

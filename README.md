@@ -19,3 +19,34 @@
 https://t.me/vodiwalkervpn03
 گیت هاب :
 https://github.com/Vodiwalker
+
+---
+
+## تجربه‌ی BLACK HOLE
+
+یک تجربه‌ی عمومی، سه‌بعدی و فارسی از سیاه‌چاله در مسیر `/black-hole/` در دسترس است؛ این مسیر مستقل از ورود به پنل VodiWalker است و مسیرهای قبلی پنل را تغییر نمی‌دهد.
+
+```bash
+cd black_hole
+npm ci
+npm run dev -- --host 0.0.0.0 --base /
+```
+
+پیش‌نمایش مستقل روی `http://localhost:5173/` باز می‌شود؛ نسخه‌ی ساخته‌شده‌ی یکپارچه با FastAPI در `/black-hole/` ارائه می‌شود.
+
+آزمون‌های تعامل رابط:
+
+```bash
+npm test
+```
+
+برای ساخت نسخه‌ی قابل‌سروِیس توسط FastAPI:
+
+```bash
+cd black_hole
+npm run build
+```
+
+فایل‌های ساخته‌شده در `black_hole/dist/` قرار می‌گیرند و از سوی برنامه‌ی FastAPI ارائه می‌شوند. برای خروجی مستقل و آماده‌ی میزبانی نیز از `npm run build:standalone` استفاده کنید؛ سپس می‌توانید `python3 -m http.server 8080 --directory standalone` را در پوشه‌ی `black_hole/` اجرا کنید. رابط از Three.js، Vite و قلم فارسیِ محلیِ Vazirmatn استفاده می‌کند؛ دریافت قلم یا کتابخانه از CDN هنگام اجرا لازم نیست.
+
+برای ساخت APK اندروید، راهنمای فارسی `black_hole/README_FA.md` را ببینید؛ گردش‌کار GitHub Actions نیز پس از push یا اجرای دستی، APK نصب‌پذیر را به‌صورت artifact تولید می‌کند.

@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#03050b" />
+    <meta name="description" content="یک تجربه‌ی سه‌بعدی و تعاملی از سیاه‌چاله، دیسک برافزایشی و خمیدگی نور؛ با روایت کوتاه علمی به زبان فارسی." />
+    <meta name="color-scheme" content="dark" />
+    <title>BLACK HOLE — فراتر از افق رویداد</title>
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+  </head>
+  <body>
+    <div id="app" class="app-shell">
+      <div class="space-backdrop" aria-hidden="true">
+        <div class="nebula nebula--amber"></div>
+        <div class="nebula nebula--blue"></div>
+        <div class="nebula nebula--violet"></div>
+        <div class="grain"></div>
+      </div>
+
+      <div id="universe" class="universe" aria-label="نمای سه‌بعدی تعاملی سیاه‌چاله">
+        <div id="visualFallback" class="visual-fallback" hidden aria-hidden="true">
+          <div class="fallback-halo"></div>
+          <div class="fallback-disk fallback-disk--outer"></div>
+          <div class="fallback-disk fallback-disk--inner"></div>
+          <div class="fallback-shadow"></div>
+          <div class="fallback-core"></div>
+          <div class="fallback-stream"></div>
+          <div class="fallback-star"></div>
+        </div>
+      </div>
+
+      <div class="edge-vignette" aria-hidden="true"></div>
+
+      <header class="topbar" aria-label="نوار ابزار اصلی">
+        <a class="brand" href="./" aria-label="BLACK HOLE، بازگشت به نمای کیهانی">
+          <span class="brand-mark" aria-hidden="true"><i></i><b></b></span>
+          <span class="brand-copy">
+            <strong>BLACK HOLE</strong>
+            <small>BEYOND THE EVENT HORIZON</small>
+          </span>
+        </a>
+
+        <div class="topbar-center" aria-hidden="true">
+          <span class="live-dot"></span>
+          <span>آزمایشگاه دیداری گرانش</span>
+        </div>
+
+        <div class="top-actions">
+          <button id="lensButton" class="icon-button lens-button is-on" type="button" aria-pressed="true" aria-label="خاموش‌کردن خمیدگی نور" title="خمیدگی نور">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="2.3"/><path d="M3.4 12c1.9-3.1 4.8-4.7 8.6-4.7s6.7 1.6 8.6 4.7c-1.9 3.1-4.8 4.7-8.6 4.7S5.3 15.1 3.4 12Z"/><path d="M12 3.2v1.5M20.2 5.7l-1 1M3.8 5.7l1 1"/></svg>
+            <span class="button-label">خمیدگی نور</span>
+          </button>
+          <button id="compareButton" class="icon-button" type="button" aria-expanded="false" aria-controls="comparisonPanel" aria-label="مقایسه‌ی خمیدگی نور" title="مقایسه‌ی قبل و بعد">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5h6v13H4zM14 5.5h6v13h-6z"/><path d="M7 9h.1M17 9h.1M7 12h.1M17 12h.1"/></svg>
+            <span class="button-label">مقایسه</span>
+          </button>
+          <button id="knowledgeButton" class="icon-button knowledge-trigger" type="button" aria-expanded="false" aria-controls="knowledgePanel" aria-label="بازکردن دانش فضا" title="دانش فضا">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5a7.3 7.3 0 0 0-4.7 12.9c.7.6 1.2 1.2 1.3 2h6.8c.1-.8.6-1.4 1.3-2A7.3 7.3 0 0 0 12 3.5Z"/><path d="M9.4 21h5.2M9 8.9c.6-.9 1.5-1.4 2.7-1.4M10 18.4v-1.1M14 18.4v-1.1"/></svg>
+            <span class="button-label">دانش فضا</span>
+          </button>
+          <button id="settingsButton" class="icon-button compact-action" type="button" aria-expanded="false" aria-controls="settingsPanel" aria-label="تنظیمات تصویر" title="تنظیمات">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8.8a3.2 3.2 0 1 0 0 6.4 3.2 3.2 0 0 0 0-6.4Z"/><path d="m19.1 13.6 1.1.9-1.2 2.1-1.4-.5a7.8 7.8 0 0 1-1.5.9l-.3 1.5h-2.4l-.4-1.5a7.8 7.8 0 0 1-1.6-.3l-1.2 1-2-1.3.6-1.4a7.8 7.8 0 0 1-.7-1.6l-1.5-.4v-2.4l1.5-.3a7.8 7.8 0 0 1 .4-1.7l-1-1.1 1.3-2 1.4.6a7.8 7.8 0 0 1 1.6-.7l.4-1.5h2.4l.3 1.5a7.8 7.8 0 0 1 1.7.4l1.1-1 2 1.3-.6 1.4a7.8 7.8 0 0 1 .7 1.6l1.5.4v2.4l-1.5.3a7.8 7.8 0 0 1-.4 1.4Z" transform="translate(-.9 -.5) scale(.95)"/></svg>
+            <span class="button-label">تنظیمات</span>
+          </button>
+          <button id="cinematicButton" class="icon-button compact-action" type="button" aria-pressed="false" aria-label="فعال‌کردن حالت سینمایی" title="حالت سینمایی">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 7.5h17v9h-17z"/><path d="M7 7.5v3M12 7.5v3M17 7.5v3M7 13.5v3M12 13.5v3M17 13.5v3"/></svg>
+            <span class="button-label">سینمایی</span>
+          </button>
+          <button id="fullscreenButton" class="icon-button compact-action" type="button" aria-label="تمام‌صفحه" title="تمام‌صفحه">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.3 4H4v4.3M15.7 4H20v4.3M20 15.7V20h-4.3M4 15.7V20h4.3"/></svg>
+            <span class="button-label">تمام‌صفحه</span>
+          </button>
+        </div>
+      </header>
+
+      <main class="experience" id="experience">
+        <section class="hero-intro" aria-labelledby="heroTitle">
+          <div class="eyebrow"><span class="eyebrow-line"></span><span>نوری از مرزِ بازگشت</span><span class="eyebrow-index">۰۱ / ۰۵</span></div>
+          <h1 id="heroTitle">به <em>مرزِ</em> ناشناخته‌ها نزدیک شو</h1>
+          <p>سیاه‌چاله را بچرخان، نور را دنبال کن و لحظه‌ی ازهم‌گسیختن یک ستاره را ببین.</p>
+        </section>
+
+        <aside class="science-note" aria-label="اطلاعات سیاه‌چاله">
+          <div class="note-heading"><span class="note-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.3"/><circle cx="12" cy="12" r="3.2"/><path d="M2.5 12h3M18.5 12h3"/></svg></span><span>پدیده‌ی پیشِ رو</span></div>
+          <strong>سیاه‌چاله‌ی ابرپرجرم</strong>
+          <p>تصویری هنری از دیسک داغ و نورِ خمیده در نزدیکی افق رویداد.</p>
+          <button class="text-link" type="button" data-open-lesson="event-horizon">افق رویداد چیست؟ <span aria-hidden="true">←</span></button>
+        </aside>
+
+        <div class="scene-readout" aria-live="polite">
+          <span class="readout-kicker">میدان گرانشی</span>
+          <strong id="sceneStatus">نمای کیهانی</strong>
+          <span class="readout-line"><i></i><span id="lensStatus">خمیدگی نور فعال</span></span>
+        </div>
+
+        <section id="comparisonPanel" class="comparison-panel glass-panel" aria-label="مقایسه‌ی مسیر نور قبل و بعد از خمیدگی" hidden>
+          <div class="panel-head">
+            <div><span class="panel-kicker">مسیر نور</span><h2>نور چگونه خم می‌شود؟</h2></div>
+            <button class="close-button" id="closeComparison" type="button" aria-label="بستن مقایسه">×</button>
+          </div>
+          <div class="compare-visuals">
+            <figure class="compare-figure">
+              <svg viewBox="0 0 160 82" role="img" aria-label="مسیر مستقیم نور در فضای بدون سیاه‌چاله">
+                <defs><linearGradient id="straightPath" x1="0" x2="1"><stop stop-color="#72dfff" stop-opacity=".2"/><stop offset=".5" stop-color="#f0f5ff"/><stop offset="1" stop-color="#72dfff" stop-opacity=".2"/></linearGradient></defs>
+                <circle cx="80" cy="41" r="11" fill="#03050b" stroke="#68788d" stroke-opacity=".35"/>
+                <circle cx="22" cy="41" r="2.5" fill="#f0f5ff"/><circle cx="138" cy="41" r="2.5" fill="#f0f5ff"/>
+                <path d="M24 41H136" stroke="url(#straightPath)" stroke-width="1.5" stroke-dasharray="3 3"/>
+                <path d="M74 37l6 4-6 4" fill="none" stroke="#f0f5ff" stroke-opacity=".55"/>
+              </svg>
+              <figcaption><strong>پیش از خمیدگی</strong><span>مسیر تقریباً مستقیم</span></figcaption>
+            </figure>
+            <figure class="compare-figure compare-figure--bent">
+              <svg viewBox="0 0 160 82" role="img" aria-label="مسیر منحنی نور پیرامون سیاه‌چاله">
+                <defs><linearGradient id="bentPath" x1="0" x2="1"><stop stop-color="#72dfff" stop-opacity=".16"/><stop offset=".48" stop-color="#ffc16b"/><stop offset="1" stop-color="#72dfff" stop-opacity=".3"/></linearGradient></defs>
+                <circle cx="80" cy="41" r="11" fill="#03050b" stroke="#ffba67" stroke-opacity=".5"/>
+                <circle cx="22" cy="18" r="2.5" fill="#f0f5ff"/><circle cx="138" cy="18" r="2.5" fill="#f0f5ff"/>
+                <path d="M24 18C57 18 54 47 80 50S104 18 136 18" fill="none" stroke="url(#bentPath)" stroke-width="1.8"/>
+                <path d="M24 18C55 18 57 35 80 32S108 18 136 18" fill="none" stroke="#72dfff" stroke-opacity=".48" stroke-width="1" stroke-dasharray="3 4"/>
+                <path d="M132 14l5 4-6 2" fill="none" stroke="#f0f5ff" stroke-opacity=".65"/>
+              </svg>
+              <figcaption><strong>پس از خمیدگی</strong><span>مسیر منحنی و جابه‌جا</span></figcaption>
+            </figure>
+          </div>
+          <label class="range-row compare-range"><span>نمایش اثر</span><input id="lensingRange" type="range" min="0" max="100" value="100" aria-label="شدت نمایش خمیدگی نور"><span id="lensingPercent">۱۰۰٪</span></label>
+        </section>
+
+        <section id="settingsPanel" class="settings-panel glass-panel" aria-label="تنظیمات تصویر" hidden>
+          <div class="panel-head">
+            <div><span class="panel-kicker">کنترل تصویر</span><h2>تنظیم تجربه</h2></div>
+            <button class="close-button" id="closeSettings" type="button" aria-label="بستن تنظیمات">×</button>
+          </div>
+          <label class="range-row"><span>سرعت گردش</span><input id="rotationRange" type="range" min="0" max="100" value="28" aria-label="سرعت گردش دوربین و دیسک"><span id="rotationValue">۲۸٪</span></label>
+          <label class="range-row"><span>شدت ذرات</span><input id="particleRange" type="range" min="0" max="100" value="70" aria-label="شدت ذرات کیهانی"><span id="particleValue">۷۰٪</span></label>
+          <div class="quality-row"><div><strong>کیفیت رندر</strong><small id="qualityDescription">تنظیم خودکار با توجه به دستگاه</small></div><button id="qualityButton" class="quality-button" type="button" aria-label="تغییر کیفیت رندر">خودکار</button></div>
+          <p class="settings-hint"><span class="tiny-orbit" aria-hidden="true"></span>برای چرخش، تصویر را بکشید؛ برای نزدیک‌شدن، دو انگشت یا چرخ ماوس را به‌کار ببرید.</p>
+        </section>
+
+        <section id="demoPanel" class="demo-panel glass-panel" aria-label="نمایش کشندی ستاره" hidden>
+          <div class="demo-topline"><span class="demo-live"><i></i>رویداد زنده</span><span id="demoTime">۰۰:۰۰</span></div>
+          <h2 id="demoTitle">ستاره در راهِ سقوط</h2>
+          <p id="demoDescription">ستاره به میدان گرانشی نزدیک می‌شود.</p>
+          <div class="demo-progress"><i id="demoProgress"></i></div>
+          <div class="demo-bottomline"><span id="demoStage">نزدیک‌شدن</span><div class="demo-controls">
+            <button id="demoPlayButton" type="button" aria-label="مکث نمایش">Ⅱ</button>
+            <button id="demoReplayButton" type="button" aria-label="شروع دوباره‌ی نمایش">↺</button>
+          </div></div>
+        </section>
+
+        <div class="cinematic-exit-wrap"><button id="cinematicExit" class="cinematic-exit" type="button">بازگشت به رابط <span>Esc</span></button></div>
+
+        <nav class="control-dock glass-panel" aria-label="کنترل دوربین و نمای کیهانی">
+          <div class="mode-switch" role="group" aria-label="حالت نمایش">
+            <button id="cosmicMode" class="mode-button is-active" type="button" aria-pressed="true">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="2.3"/><ellipse cx="12" cy="12" rx="9" ry="4.6" transform="rotate(-22 12 12)"/><circle cx="5" cy="9.4" r=".8"/></svg>
+              <span>نمای کیهانی</span>
+            </button>
+            <span class="mode-divider" aria-hidden="true"></span>
+            <button id="disruptionMode" class="mode-button" type="button" aria-pressed="false">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.8 14 9l6.2 2-6.2 2-2 7.2L10 13l-6.2-2L10 9l2-6.2Z"/><path d="m18.8 3 .5 1.7L21 5.3l-1.7.5-.5 1.7-.5-1.7-1.7-.5 1.7-.6.5-1.7Z"/></svg>
+              <span>سرنوشت یک ستاره</span>
+            </button>
+          </div>
+          <span class="dock-divider" aria-hidden="true"></span>
+          <div class="camera-tools" role="group" aria-label="کنترل دوربین">
+            <button id="zoomInButton" class="dock-icon" type="button" aria-label="بزرگ‌نمایی" title="نزدیک‌شدن"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 4.5 4.5M10.8 7.6v6.4M7.6 10.8H14"/></svg></button>
+            <button id="zoomOutButton" class="dock-icon" type="button" aria-label="کوچک‌نمایی" title="دورشدن"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 4.5 4.5M7.6 10.8H14"/></svg></button>
+            <button id="angleButton" class="dock-icon angle-button" type="button" aria-label="تغییر زاویه‌ی دید" title="زاویه‌ی دوربین"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17.5 12 5l9 12.5H3Z"/><path d="m7.5 17.5 4.5-6 4.5 6"/></svg></button>
+            <button id="resetCameraButton" class="dock-icon reset-button" type="button" aria-label="بازنشانی دوربین" title="بازنشانی دوربین"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.7 8.3A8 8 0 1 1 4 14"/><path d="M4.7 3.8v4.8h4.8"/></svg></button>
+          </div>
+        </nav>
+
+        <div id="renderStatus" class="render-status" role="status" aria-live="polite"><span class="render-dot"></span><span>تصویرسازی سه‌بعدی آماده است</span></div>
+      </main>
+
+      <div id="panelBackdrop" class="panel-backdrop" hidden></div>
+      <aside id="knowledgePanel" class="knowledge-panel glass-panel" aria-labelledby="knowledgeTitle" aria-hidden="true" inert>
+        <div class="knowledge-header">
+          <div><span class="panel-kicker">SPACE KNOWLEDGE</span><h2 id="knowledgeTitle">دانش فضا</h2><p>پنج مفهوم، در چند ثانیه</p></div>
+          <button id="closeKnowledge" class="close-button" type="button" aria-label="بستن دانش فضا">×</button>
+        </div>
+        <nav id="lessonNav" class="lesson-nav" aria-label="موضوع‌های علمی"></nav>
+        <article class="lesson-card" aria-live="polite">
+          <div id="lessonVisual" class="lesson-visual" aria-hidden="true"></div>
+          <div class="lesson-body"><span id="lessonIndex" class="lesson-index">۰۱ / ۰۵</span><h3 id="lessonTitle"></h3><p id="lessonDescription"></p><div class="lesson-fact"><span class="fact-star" aria-hidden="true">✦</span><p id="lessonFact"></p></div></div>
+        </article>
+        <div class="knowledge-footer"><span class="footer-orbit" aria-hidden="true"></span><p>مدل دیداری با الهام از فیزیک سیاه‌چاله‌ها؛ نه شبیه‌سازی عددی.</p></div>
+      </aside>
+
+      <div class="bottom-caption" aria-hidden="true"><span>گرانش · نور · ماده</span><span class="caption-separator"></span><span>یک تجربه‌ی دیداری، با نگاهی علمی</span></div>
+    </div>
+    <script type="module" src="./src/main.js"></script>
+  </body>
+</html>

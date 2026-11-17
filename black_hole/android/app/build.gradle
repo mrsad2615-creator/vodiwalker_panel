@@ -1,0 +1,39 @@
+plugins {
+    id 'com.android.application'
+}
+
+// Bundle the exact offline web build inside the APK; no web server or network is needed.
+def webBuildDirectory = new File(rootProject.projectDir.parentFile, 'standalone')
+def generatedWebAssets = layout.buildDirectory.dir('generated/black-hole-assets')
+
+tasks.register('prepareBlackHoleAssets', Sync) {
+    from(webBuildDirectory)
+    into(generatedWebAssets.map { it.dir('www') })
+    includeEmptyDirs = false
+}
+
+android {
+    namespace 'com.vodiwalker.blackhole'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'com.vodiwalker.blackhole'
+        minSdk 23
+        targetSdk 34
+        versionCode 1
+        versionName '1.0.0'
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    sourceSets {
+        main.assets.srcDir(generatedWebAssets)
+    }
+}
+
+tasks.named('preBuild').configure {
+    dependsOn tasks.named('prepareBlackHoleAssets')
+}

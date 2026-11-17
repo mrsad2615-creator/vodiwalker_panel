@@ -1,0 +1,23 @@
+{
+  "name": "black-hole-experience",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "build:standalone": "vite build --base ./ --outDir standalone",
+    "preview": "vite preview --host 0.0.0.0",
+    "check": "node --check src/main.js && node --check src/black-hole.js && node --check src/lessons.js && node --check src/main.test.js && node --check src/black-hole.test.js",
+    "test": "vitest run --config vitest.config.js"
+  },
+  "dependencies": {
+    "@fontsource-variable/vazirmatn": "5.3.0",
+    "three": "0.187.0"
+  },
+  "devDependencies": {
+    "jsdom": "^31.0.1",
+    "vite": "8.3.8",
+    "vitest": "^5.1.0"
+  }
+}

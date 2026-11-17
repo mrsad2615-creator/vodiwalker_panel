@@ -34,7 +34,9 @@ from fastapi.responses import (
     HTMLResponse,
     JSONResponse,
     RedirectResponse,
+    FileResponse,
 )
+from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 
 
@@ -2555,6 +2557,42 @@ async def root(request: Request):
         return RedirectResponse("/dashboard")
     return RedirectResponse("/login")
 
+
+# ============================================================
+# PUBLIC BLACK HOLE VISUALIZATION
+# ============================================================
+
+BLACK_HOLE_DIST = Path(__file__).resolve().parent / "black_hole" / "dist"
+BLACK_HOLE_ASSETS = BLACK_HOLE_DIST / "assets"
+app.mount(
+    "/black-hole/assets",
+    StaticFiles(directory=str(BLACK_HOLE_ASSETS), check_dir=False),
+    name="black-hole-assets",
+)
+
+
+@app.get("/black-hole", include_in_schema=False)
+async def black_hole_redirect():
+    return RedirectResponse("/black-hole/", status_code=307)
+
+
+@app.get("/black-hole/", response_class=HTMLResponse, include_in_schema=False)
+async def black_hole_experience():
+    index_file = BLACK_HOLE_DIST / "index.html"
+    if not index_file.is_file():
+        return HTMLResponse(
+            """<!doctype html><html lang=\"fa\" dir=\"rtl\"><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>BLACK HOLE</title><body style=\"margin:0;background:#03050b;color:#f0f5ff;font-family:Tahoma,sans-serif;display:grid;place-items:center;min-height:100vh\"><main style=\"max-width:520px;padding:28px;text-align:center\"><h1>تجربه‌ی سیاه‌چاله هنوز ساخته نشده است</h1><p style=\"color:#9aa8bd;line-height:2\">برای ساخت رابط، در پوشه‌ی black_hole دستور <b>npm install</b> و سپس <b>npm run build</b> را اجرا کنید.</p></main></body></html>""",
+            status_code=503,
+        )
+    return FileResponse(index_file, media_type="text/html")
+
+
+@app.get("/black-hole/favicon.svg", include_in_schema=False)
+async def black_hole_favicon():
+    favicon_file = BLACK_HOLE_DIST / "favicon.svg"
+    if not favicon_file.is_file():
+        raise HTTPException(status_code=404, detail="Not found")
+    return FileResponse(favicon_file, media_type="image/svg+xml")
 
 
 # ============================================================

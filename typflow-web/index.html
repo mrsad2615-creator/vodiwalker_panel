@@ -103,6 +103,19 @@
   .download-panel::after{content:"";position:absolute;width:420px;height:420px;border-radius:50%;
     background:radial-gradient(circle,rgba(0,245,212,.22),transparent 68%);top:-240px;left:50%;
     transform:translateX(-50%);filter:blur(30px)}
+
+  /* gallery */
+  .gallery{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;margin-top:26px}
+  .phone{position:relative;border-radius:26px;overflow:hidden;border:1px solid rgba(255,255,255,.12);
+    background:#05080F;box-shadow:0 26px 60px -30px rgba(0,0,0,.9);transition:.4s}
+  .phone:hover{transform:translateY(-6px);border-color:rgba(0,245,212,.4);
+    box-shadow:0 34px 70px -28px rgba(0,245,212,.28)}
+  .phone img{display:block;width:100%;height:auto}
+  .phone figcaption{position:absolute;bottom:0;left:0;right:0;padding:26px 16px 12px;
+    font-size:12px;letter-spacing:.12em;color:#D7E6E4;
+    background:linear-gradient(transparent,rgba(4,7,14,.92))}
+  @media(max-width:860px){.gallery{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:520px){.gallery{grid-template-columns:1fr}}
   footer{margin-top:52px;text-align:center;color:#4E6274;font-size:12px;line-height:2}
   footer b{color:var(--muted);letter-spacing:.2em}
   @media(max-width:720px){
@@ -181,6 +194,20 @@
         <p>چیدمان راست‌به‌چپ و چپ‌به‌راست، فونت تایپوگرافیک و اعداد انگلیسی بزرگ.</p></div>
       <div class="card"><div class="ico">✨</div><h3>طراحی سینمایی</h3>
         <p>گلَس‌مورفیزم پیشرفته، پس‌زمینه‌های عمیق، نورپردازی متحرک و انیمیشن‌های نرم.</p></div>
+    </div>
+  </section>
+
+
+  <section style="margin-top:64px">
+    <h2>یک نگاه به اپلیکیشن</h2>
+    <p class="lead">اسکرین‌شات‌های واقعی گرفته‌شده از اجرای اپلیکیشن روی شبیه‌ساز اندروید.</p>
+    <div class="gallery">
+      <figure class="phone"><img src="screens/splash.png" alt="Splash" loading="lazy" /><figcaption>LOGO MOTION</figcaption></figure>
+      <figure class="phone"><img src="screens/home.png" alt="Home" loading="lazy" /><figcaption>DASHBOARD</figcaption></figure>
+      <figure class="phone"><img src="screens/typing.png" alt="Typing" loading="lazy" /><figcaption>TYPING</figcaption></figure>
+      <figure class="phone"><img src="screens/reading.png" alt="Reading" loading="lazy" /><figcaption>RSVP READING</figcaption></figure>
+      <figure class="phone"><img src="screens/analytics.png" alt="Analytics" loading="lazy" /><figcaption>ANALYTICS</figcaption></figure>
+      <figure class="phone"><img src="screens/profile.png" alt="Profile" loading="lazy" /><figcaption>PROFILE &amp; ACHIEVEMENTS</figcaption></figure>
     </div>
   </section>
 

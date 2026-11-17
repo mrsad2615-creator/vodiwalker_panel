@@ -124,7 +124,7 @@ fun ReadingScreen(theme: TypflowTheme, store: TypflowStore) {
                         else (currentWord.length * 0.35).toInt()
                             .coerceIn(0, currentWord.length - 1)
                         val wordStyle = TextStyle(
-                            fontSize = 46.sp,
+                            fontSize = 52.sp,
                             fontWeight = FontWeight.Bold,
                             color = theme.onBackground
                         )
@@ -146,7 +146,7 @@ fun ReadingScreen(theme: TypflowTheme, store: TypflowStore) {
                         else
                             prefixWidth + charWidth / 2f
                         Box(
-                            modifier = Modifier.height(74.dp),
+                            modifier = Modifier.height(88.dp),
                             contentAlignment = Alignment.Center
                         ) {
                             androidx.compose.foundation.Canvas(
@@ -157,10 +157,10 @@ fun ReadingScreen(theme: TypflowTheme, store: TypflowStore) {
                                 drawRoundRect(
                                     color = theme.primary.copy(alpha = 0.18f),
                                     topLeft = androidx.compose.ui.geometry.Offset(
-                                        cx - 16.dp.toPx(), size.height / 2f - 30.dp.toPx()
+                                        cx - 18.dp.toPx(), size.height / 2f - 34.dp.toPx()
                                     ),
                                     size = androidx.compose.ui.geometry.Size(
-                                        32.dp.toPx(), 60.dp.toPx()
+                                        36.dp.toPx(), 68.dp.toPx()
                                     ),
                                     cornerRadius = androidx.compose.ui.geometry.CornerRadius(
                                         10.dp.toPx()
@@ -170,7 +170,7 @@ fun ReadingScreen(theme: TypflowTheme, store: TypflowStore) {
                                     color = theme.primary,
                                     radius = 2.5.dp.toPx(),
                                     center = androidx.compose.ui.geometry.Offset(
-                                        cx, size.height / 2f + 34.dp.toPx()
+                                        cx, size.height / 2f + 40.dp.toPx()
                                     )
                                 )
                             }

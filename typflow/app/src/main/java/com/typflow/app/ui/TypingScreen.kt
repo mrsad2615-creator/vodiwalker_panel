@@ -108,21 +108,61 @@ fun TypingScreen(theme: TypflowTheme, store: TypflowStore) {
     val liveWpm = if (elapsed > 0) ((correctNow / 5.0) / (elapsed / 60.0)).toInt() else 0
     val timeLeft = if (mode == TypingMode.TIMED) (60 - elapsed).coerceAtLeast(0) else elapsed
 
+    // Persian shaping breaks if a style run ends inside a word, so the text is
+    // coloured word-by-word for Farsi and character-by-character for English.
     val annotated = buildAnnotatedString {
-        target.forEachIndexed { i, ch ->
-            val color = when {
-                i < input.length && input[i] == ch -> theme.success
-                i < input.length -> theme.error
-                i == input.length -> theme.primary
-                else -> theme.onSurface.copy(alpha = 0.45f)
+        if (!isFa) {
+            target.forEachIndexed { i, ch ->
+                val color = when {
+                    i < input.length && input[i] == ch -> theme.success
+                    i < input.length -> theme.error
+                    i == input.length -> theme.primary
+                    else -> theme.onSurface.copy(alpha = 0.45f)
+                }
+                withStyle(
+                    SpanStyle(
+                        color = color,
+                        fontWeight = if (i == input.length) FontWeight.Bold
+                        else FontWeight.Normal
+                    )
+                ) {
+                    append(ch)
+                }
             }
-            withStyle(
-                SpanStyle(
-                    color = color,
-                    fontWeight = if (i == input.length) FontWeight.Bold else FontWeight.Normal
-                )
-            ) {
-                append(ch)
+        } else {
+            var i = 0
+            while (i < target.length) {
+                val start = i
+                while (i < target.length && !target[i].isWhitespace()) i++
+                val word = target.substring(start, i)
+                val typed = (input.length - start).coerceIn(0, word.length)
+                val typedSlice = if (typed > 0) input.substring(start, minOf(start + typed, input.length)) else ""
+                val allTyped = typed == word.length
+                val hasError = typedSlice.indices.any { k ->
+                    k >= word.length || typedSlice[k] != word[k]
+                }
+                val inProgress = input.length > start && !allTyped
+                val color = when {
+                    typed == 0 -> theme.onSurface.copy(alpha = 0.45f)
+                    hasError -> theme.error
+                    allTyped -> theme.success
+                    inProgress -> theme.primary
+                    else -> theme.onSurface.copy(alpha = 0.45f)
+                }
+                withStyle(
+                    SpanStyle(
+                        color = color,
+                        fontWeight = if (inProgress || (typed == 0 && input.length == start))
+                            FontWeight.Bold else FontWeight.Normal
+                    )
+                ) {
+                    append(word)
+                }
+                // keep the trailing space in the same run so joins stay intact
+                while (i < target.length && target[i].isWhitespace()) {
+                    append(target[i])
+                    i++
+                }
             }
         }
     }
@@ -223,7 +263,8 @@ fun TypingScreen(theme: TypflowTheme, store: TypflowStore) {
                 disabledContainerColor = theme.surface.copy(alpha = 0.4f)
             ),
             singleLine = false,
-            minLines = 3
+            minLines = 3,
+            shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp)
         )
 
         Row(

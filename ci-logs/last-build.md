@@ -1,8 +1,11 @@
-run: 6
+run: 7
 
 ## compile errors
 ```
-e: file:///home/runner/work/vodiwalker_panel/vodiwalker_panel/typflow/app/src/main/java/com/typflow/app/ui/ReadingScreen.kt:244:46 Unresolved reference 'background'.
+e: file:///home/runner/work/vodiwalker_panel/vodiwalker_panel/typflow/app/src/main/java/com/typflow/app/data/Store.kt:20:5 Platform declaration clash: The following declarations have the same JVM signature (setLang(Ljava/lang/String;)V):
+e: file:///home/runner/work/vodiwalker_panel/vodiwalker_panel/typflow/app/src/main/java/com/typflow/app/data/Store.kt:21:5 Platform declaration clash: The following declarations have the same JVM signature (setDailyGoal(I)V):
+e: file:///home/runner/work/vodiwalker_panel/vodiwalker_panel/typflow/app/src/main/java/com/typflow/app/data/Store.kt:56:5 Platform declaration clash: The following declarations have the same JVM signature (setLang(Ljava/lang/String;)V):
+e: file:///home/runner/work/vodiwalker_panel/vodiwalker_panel/typflow/app/src/main/java/com/typflow/app/data/Store.kt:61:5 Platform declaration clash: The following declarations have the same JVM signature (setDailyGoal(I)V):
 FAILURE: Build failed with an exception.
 Execution failed for task ':app:compileDebugKotlin'.
 org.gradle.api.tasks.TaskExecutionException: Execution failed for task ':app:compileDebugKotlin'.
@@ -38,6 +41,7 @@ Starting a Gradle Daemon (subsequent builds will be faster)
 > Task :app:parseDebugLocalResources
 > Task :app:processDebugMainManifest
 > Task :app:processDebugManifest
+> Task :app:processDebugManifestForPackage
 > Task :app:javaPreCompileDebug
 > Task :app:mergeDebugShaders
 > Task :app:compileDebugShaders NO-SOURCE
@@ -45,25 +49,26 @@ Starting a Gradle Daemon (subsequent builds will be faster)
 > Task :app:mergeDebugAssets
 > Task :app:compressDebugAssets
 > Task :app:desugarDebugFileDependencies
-> Task :app:mergeDebugStartupProfile
-> Task :app:checkDebugDuplicateClasses
-> Task :app:mergeDebugJniLibFolders
-> Task :app:processDebugManifestForPackage
-> Task :app:mergeExtDexDebug
-> Task :app:mergeLibDexDebug
-> Task :app:mergeDebugNativeLibs
 > Task :app:processDebugResources
-> Task :app:validateSigningDebug
-> Task :app:writeDebugAppMetadata
-
-> Task :app:stripDebugDebugSymbols
-Unable to strip the following libraries, packaging them as they are: libandroidx.graphics.path.so.
-
-> Task :app:writeDebugSigningConfigVersions
+> Task :app:checkDebugDuplicateClasses
+> Task :app:mergeDebugStartupProfile
 
 > Task :app:compileDebugKotlin FAILED
-e: file:///home/runner/work/vodiwalker_panel/vodiwalker_panel/typflow/app/src/main/java/com/typflow/app/ui/ReadingScreen.kt:244:46 Unresolved reference 'background'.
-gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/__run_2-1794911671858.json
+e: file:///home/runner/work/vodiwalker_panel/vodiwalker_panel/typflow/app/src/main/java/com/typflow/app/data/Store.kt:20:5 Platform declaration clash: The following declarations have the same JVM signature (setLang(Ljava/lang/String;)V):
+    fun `<set-lang>`(`<set-?>`: String): Unit defined in com.typflow.app.data.TypflowStore
+    fun setLang(l: String): Unit defined in com.typflow.app.data.TypflowStore
+e: file:///home/runner/work/vodiwalker_panel/vodiwalker_panel/typflow/app/src/main/java/com/typflow/app/data/Store.kt:21:5 Platform declaration clash: The following declarations have the same JVM signature (setDailyGoal(I)V):
+    fun `<set-dailyGoal>`(`<set-?>`: Int): Unit defined in com.typflow.app.data.TypflowStore
+    fun setDailyGoal(g: Int): Unit defined in com.typflow.app.data.TypflowStore
+e: file:///home/runner/work/vodiwalker_panel/vodiwalker_panel/typflow/app/src/main/java/com/typflow/app/data/Store.kt:56:5 Platform declaration clash: The following declarations have the same JVM signature (setLang(Ljava/lang/String;)V):
+    fun `<set-lang>`(`<set-?>`: String): Unit defined in com.typflow.app.data.TypflowStore
+    fun setLang(l: String): Unit defined in com.typflow.app.data.TypflowStore
+e: file:///home/runner/work/vodiwalker_panel/vodiwalker_panel/typflow/app/src/main/java/com/typflow/app/data/Store.kt:61:5 Platform declaration clash: The following declarations have the same JVM signature (setDailyGoal(I)V):
+    fun `<set-dailyGoal>`(`<set-?>`: Int): Unit defined in com.typflow.app.data.TypflowStore
+    fun setDailyGoal(g: Int): Unit defined in com.typflow.app.data.TypflowStore
+
+> Task :app:mergeExtDexDebug
+gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/__run_2-1794911832335.json
 
 FAILURE: Build failed with an exception.
 
@@ -272,6 +277,6 @@ Caused by: org.jetbrains.kotlin.gradle.tasks.CompilationErrorException: Compilat
 	... 2 more
 
 
-BUILD FAILED in 1m 57s
-29 actionable tasks: 29 executed
+BUILD FAILED in 1m 51s
+22 actionable tasks: 22 executed
 ```

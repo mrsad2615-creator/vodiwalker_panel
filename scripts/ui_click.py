@@ -53,11 +53,17 @@ def main() -> int:
             print("NOTFOUND nav", file=sys.stderr)
             return 2
         bottom = max(n["box"][3] for n in clickable)
-        band = [
-            n
-            for n in clickable
-            if (n["box"][1] + n["box"][3]) // 2 > bottom * 0.8
-        ]
+        # nav items share one vertical row: keep the tallest cluster of equal tops
+        rows = {}
+        for n in clickable:
+            cy = (n["box"][1] + n["box"][3]) // 2
+            if cy > bottom * 0.8:
+                key = n["box"][1] // 12
+                rows.setdefault(key, []).append(n)
+        if not rows:
+            print("NOTFOUND nav", file=sys.stderr)
+            return 2
+        band = max(rows.values(), key=len)
         band.sort(key=lambda n: n["box"][0], reverse=True)
         if idx >= len(band):
             print("NOTFOUND nav index", file=sys.stderr)

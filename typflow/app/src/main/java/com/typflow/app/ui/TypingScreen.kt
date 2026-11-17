@@ -224,7 +224,7 @@ fun TypingScreen(theme: TypflowTheme, store: TypflowStore) {
             MODE_SECONDS.forEachIndexed { index, secs ->
                 MonoChip(
                     theme = theme,
-                    text = if (secs == 0) tr(lang, "آزاد", "FREE") else "$secs S",
+                    text = if (secs == 0) tr(lang, "آزاد", "FREE") else "${secs}s",
                     selected = modeIndex == index,
                     onClick = {
                         modeIndex = index
@@ -414,14 +414,21 @@ fun TypingScreen(theme: TypflowTheme, store: TypflowStore) {
         }
 
         Spacer(Modifier.height(18.dp))
-        MicroLabel(
-            theme,
-            tr(
-                lang,
-                "رکورد شما: ${store.bestWpm} WPM · جلسات: ${store.totalSessions}",
-                "Your best: ${store.bestWpm} WPM · sessions: ${store.totalSessions}"
-            )
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            MicroLabel(theme, tr(lang, "رکورد شما", "YOUR BEST"))
+            MicroLabel(theme, "${store.bestWpm} WPM", color = theme.ink)
+        }
+        Spacer(Modifier.height(4.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            MicroLabel(theme, tr(lang, "جلسات", "SESSIONS"))
+            MicroLabel(theme, store.totalSessions.toString(), color = theme.ink)
+        }
     }
 
     if (showPaste) {

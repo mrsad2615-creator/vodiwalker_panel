@@ -28,12 +28,20 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.typflow.app.theme.TypflowTheme
 
 fun tr(lang: String, fa: String, en: String): String = if (lang == "fa") fa else en
+
+/** Pure Latin/numeric strings must render LTR even inside an RTL layout. */
+private fun isLatinOnly(text: String): Boolean =
+    text.none { it.code in 0x0590..0x08FF }
+
+fun textDirFor(text: String): TextDirection =
+    if (isLatinOnly(text)) TextDirection.Ltr else TextDirection.ContentOrRtl
 
 fun uiFont(theme: TypflowTheme): FontFamily =
     if (theme.mono) FontFamily.Monospace else FontFamily.SansSerif
@@ -103,7 +111,8 @@ fun MicroLabel(
             fontSize = size.sp,
             letterSpacing = 1.6.sp,
             fontWeight = FontWeight.Medium,
-            color = color
+            color = color,
+            textDirection = textDirFor(text)
         )
     )
 }
@@ -192,7 +201,8 @@ fun BigFigure(
             fontWeight = FontWeight.Black,
             letterSpacing = (-1).sp,
             maxLines = 1,
-            textAlign = align
+            textAlign = align,
+            style = TextStyle(textDirection = TextDirection.Ltr)
         )
         if (unit != null) {
             Text(
@@ -293,7 +303,8 @@ fun MonoChip(
             fontSize = 11.sp,
             fontWeight = if (selected) FontWeight.Black else FontWeight.Normal,
             letterSpacing = 0.6.sp,
-            maxLines = 1
+            maxLines = 1,
+            style = TextStyle(textDirection = textDirFor(text))
         )
     }
 }

@@ -115,7 +115,7 @@ fun SplashScreen(theme: TypflowTheme, onDone: () -> Unit) {
             )
 
             Spacer(Modifier.height(30.dp))
-            MicroLabel(theme, "T I P Y N G   ·   R E A D I N G", color = theme.dim, size = 10)
+            MicroLabel(theme, "T Y P I N G   ·   R E A D I N G", color = theme.dim, size = 10)
             Spacer(Modifier.height(8.dp))
             Text(
                 text = "TYPFLOW",

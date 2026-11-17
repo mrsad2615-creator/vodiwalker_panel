@@ -287,7 +287,7 @@ fun ReadingScreen(theme: TypflowTheme, store: TypflowStore) {
                         )
                         MicroLabel(
                             theme,
-                            tr(lang, "هر ۲۵ کلمه ۱۰+", "+10 every 25 words")
+                            tr(lang, "هر 25 کلمه 10+", "+10 every 25 words")
                         )
                     }
                     Switch(
@@ -423,13 +423,20 @@ fun ReadingScreen(theme: TypflowTheme, store: TypflowStore) {
         }
 
         Spacer(Modifier.height(18.dp))
-        MicroLabel(
-            theme,
-            tr(
-                lang,
-                "رکورد: ${store.bestReadingWpm} WPM · بهترین درک: ${store.bestComprehension}%",
-                "Best: ${store.bestReadingWpm} WPM · top comprehension: ${store.bestComprehension}%"
-            )
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            MicroLabel(theme, tr(lang, "رکورد مطالعه", "READING BEST"))
+            MicroLabel(theme, "${store.bestReadingWpm} WPM", color = theme.ink)
+        }
+        Spacer(Modifier.height(4.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            MicroLabel(theme, tr(lang, "بهترین درک مطلب", "TOP COMPREHENSION"))
+            MicroLabel(theme, "${store.bestComprehension}%", color = theme.ink)
+        }
     }
 }

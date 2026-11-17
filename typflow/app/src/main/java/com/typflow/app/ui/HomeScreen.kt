@@ -75,11 +75,19 @@ fun HomeScreen(
                         color = theme.dim
                     )
                     Spacer(Modifier.height(4.dp))
-                    MicroLabel(
-                        theme,
-                        "${store.minutesToday()} " + tr(lang, "دقیقه تمرین", "min practiced"),
-                        color = theme.dim
-                    )
+                    Row {
+                        MicroLabel(
+                            theme,
+                            "${store.minutesToday()}",
+                            color = theme.ink
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        MicroLabel(
+                            theme,
+                            tr(lang, "دقیقه تمرین امروز", "min today"),
+                            color = theme.dim
+                        )
+                    }
                 }
             }
             Spacer(Modifier.height(14.dp))
@@ -89,16 +97,16 @@ fun HomeScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                MicroLabel(
-                    theme,
-                    tr(lang, "زنجیره", "STREAK") + " · ${store.streak} " + tr(lang, "روز", "d"),
-                    color = theme.dim
-                )
-                MicroLabel(
-                    theme,
-                    tr(lang, "بهترین", "BEST") + " · ${store.bestStreak}",
-                    color = theme.dim
-                )
+                Row {
+                    MicroLabel(theme, tr(lang, "زنجیره", "STREAK"))
+                    Spacer(Modifier.width(8.dp))
+                    MicroLabel(theme, "${store.streak} D", color = theme.ink)
+                }
+                Row {
+                    MicroLabel(theme, tr(lang, "بهترین زنجیره", "BEST"))
+                    Spacer(Modifier.width(8.dp))
+                    MicroLabel(theme, "${store.bestStreak} D", color = theme.ink)
+                }
             }
         }
 
@@ -113,15 +121,27 @@ fun HomeScreen(
                 MicroLabel(theme, tr(lang, "سرعت تایپ", "TYPING"))
                 Spacer(Modifier.height(10.dp))
                 BigFigure(theme, store.bestWpm.toString(), "WPM", size = 34)
-                Spacer(Modifier.height(8.dp))
-                MicroLabel(theme, tr(lang, "دقت", "ACC") + " ${store.bestAccuracy}%")
+                Spacer(Modifier.height(10.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    MicroLabel(theme, tr(lang, "دقت", "ACC"))
+                    MicroLabel(theme, "${store.bestAccuracy}%", color = theme.ink)
+                }
             }
             Panel(theme, Modifier.weight(1f)) {
                 MicroLabel(theme, tr(lang, "سرعت مطالعه", "READING"))
                 Spacer(Modifier.height(10.dp))
                 BigFigure(theme, store.bestReadingWpm.toString(), "WPM", size = 34)
-                Spacer(Modifier.height(8.dp))
-                MicroLabel(theme, tr(lang, "درک", "COMP") + " ${store.bestComprehension}%")
+                Spacer(Modifier.height(10.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    MicroLabel(theme, tr(lang, "درک مطلب", "COMP"))
+                    MicroLabel(theme, "${store.bestComprehension}%", color = theme.ink)
+                }
             }
         }
 

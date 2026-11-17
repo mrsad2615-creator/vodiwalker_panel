@@ -118,45 +118,13 @@ jobs:
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -no-snapshot
           disable-animations: true
           script: |
-            set -x
-            adb install -r apk/TYPFLOW-1.0.0.apk
-            adb logcat -c
-            adb shell am start -n com.typflow.app/.MainActivity
-            sleep 7
-            adb exec-out screencap -p > shot-01-home.png
-            adb shell dumpsys window | grep -E "mCurrentFocus|mFocusedApp" > diag-window.txt 2>&1
-            # tap the app's bottom navigation (second slot) and report result
-            SIZE=$(adb shell wm size | grep -o '[0-9]*x[0-9]*' | head -1)
-            W=${SIZE%x*}; H=${SIZE#*x}
-            echo "screen=$SIZE" >> diag-window.txt
-            adb shell input tap $((W * 22 / 100)) $((H - 60)); echo "tap_exit=$?" >> diag-window.txt
-            sleep 3
-            adb exec-out screencap -p > shot-02-after-tap.png
-            adb shell uiautomator dump /sdcard/ui.xml > /dev/null 2>&1 || true
-            adb pull /sdcard/ui.xml diag-ui.xml > /dev/null 2>&1 || true
-            # deep-link screens: guaranteed deterministic screenshots
-            for S in typing reading analytics profile settings; do
-              adb shell am force-stop com.typflow.app
-              adb shell am start -n com.typflow.app/.MainActivity -e screen $S
-              sleep 4
-              adb exec-out screencap -p > shot-$S.png
-            done
-            adb logcat -d > emu-logcat.txt
-            echo "--- crash check ---"
-            if grep -q "FATAL EXCEPTION" emu-logcat.txt; then
-              echo "CRASH DETECTED"; grep -A 30 "FATAL EXCEPTION" emu-logcat.txt | head -60; exit 1
-            fi
-            echo "NO CRASH"
+            bash scripts/smoke.sh apk/TYPFLOW-1.0.0.apk
 
       - name: Commit screenshots to branch
         if: always()
         run: |
           ls -lh shot-*.png 2>/dev/null || true
-          mkdir -p telemetry
-          rm -f telemetry/*.png
-          cp shot-*.png telemetry/ 2>/dev/null || true
-          cp diag-window.txt diag-ui.xml telemetry/ 2>/dev/null || true
-          tail -c 60000 emu-logcat.txt > telemetry/logcat.txt 2>/dev/null || true
+          ls -lh telemetry/ || true
           git config user.name "typflow-ci"
           git config user.email "ci@typflow.local"
           git add telemetry

@@ -9,13 +9,13 @@ NAV reading -> 539,2060
 NAV analytics -> 330,2060
 NAV profile -> 121,2060
 TAP settings -> 540,1881
-TAP MISS: NEBULA
-TAP MISS: English
+TAP theme-signal -> 540,913
+TAP MISS: ENGLISH
 NAV MISS: typing-en
-TAP MISS: Type here
+TAP MISS: TYPE HERE
 NAV analytics-en -> 339,1975
 NAV MISS: home-en
-TAP MISS: Change theme
+TAP MISS: SETTINGS
 TAP MISS: فارسی
-TAP MISS: CYBER FUSION
+TAP MISS: VOID
 == crash scan ==

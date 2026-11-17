@@ -1,10 +1,8 @@
-run: 5
+run: 6
 
 ## compile errors
 ```
-e: file:///home/runner/work/vodiwalker_panel/vodiwalker_panel/typflow/app/src/main/java/com/typflow/app/ui/AnalyticsScreen.kt:144:38 Unresolved reference 'background'.
-e: file:///home/runner/work/vodiwalker_panel/vodiwalker_panel/typflow/app/src/main/java/com/typflow/app/ui/ProfileScreen.kt:126:53 Unresolved reference 'alpha'.
-e: file:///home/runner/work/vodiwalker_panel/vodiwalker_panel/typflow/app/src/main/java/com/typflow/app/ui/ReadingScreen.kt:242:46 Unresolved reference 'clip'.
+e: file:///home/runner/work/vodiwalker_panel/vodiwalker_panel/typflow/app/src/main/java/com/typflow/app/ui/ReadingScreen.kt:244:46 Unresolved reference 'background'.
 FAILURE: Build failed with an exception.
 Execution failed for task ':app:compileDebugKotlin'.
 org.gradle.api.tasks.TaskExecutionException: Execution failed for task ':app:compileDebugKotlin'.
@@ -40,7 +38,6 @@ Starting a Gradle Daemon (subsequent builds will be faster)
 > Task :app:parseDebugLocalResources
 > Task :app:processDebugMainManifest
 > Task :app:processDebugManifest
-> Task :app:processDebugManifestForPackage
 > Task :app:javaPreCompileDebug
 > Task :app:mergeDebugShaders
 > Task :app:compileDebugShaders NO-SOURCE
@@ -48,17 +45,25 @@ Starting a Gradle Daemon (subsequent builds will be faster)
 > Task :app:mergeDebugAssets
 > Task :app:compressDebugAssets
 > Task :app:desugarDebugFileDependencies
-> Task :app:processDebugResources
-> Task :app:checkDebugDuplicateClasses
 > Task :app:mergeDebugStartupProfile
+> Task :app:checkDebugDuplicateClasses
+> Task :app:mergeDebugJniLibFolders
+> Task :app:processDebugManifestForPackage
+> Task :app:mergeExtDexDebug
+> Task :app:mergeLibDexDebug
+> Task :app:mergeDebugNativeLibs
+> Task :app:processDebugResources
+> Task :app:validateSigningDebug
+> Task :app:writeDebugAppMetadata
+
+> Task :app:stripDebugDebugSymbols
+Unable to strip the following libraries, packaging them as they are: libandroidx.graphics.path.so.
+
+> Task :app:writeDebugSigningConfigVersions
 
 > Task :app:compileDebugKotlin FAILED
-e: file:///home/runner/work/vodiwalker_panel/vodiwalker_panel/typflow/app/src/main/java/com/typflow/app/ui/AnalyticsScreen.kt:144:38 Unresolved reference 'background'.
-e: file:///home/runner/work/vodiwalker_panel/vodiwalker_panel/typflow/app/src/main/java/com/typflow/app/ui/ProfileScreen.kt:126:53 Unresolved reference 'alpha'.
-e: file:///home/runner/work/vodiwalker_panel/vodiwalker_panel/typflow/app/src/main/java/com/typflow/app/ui/ReadingScreen.kt:242:46 Unresolved reference 'clip'.
-
-> Task :app:mergeExtDexDebug
-gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/__run_2-1794911528178.json
+e: file:///home/runner/work/vodiwalker_panel/vodiwalker_panel/typflow/app/src/main/java/com/typflow/app/ui/ReadingScreen.kt:244:46 Unresolved reference 'background'.
+gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/__run_2-1794911671858.json
 
 FAILURE: Build failed with an exception.
 
@@ -267,6 +272,6 @@ Caused by: org.jetbrains.kotlin.gradle.tasks.CompilationErrorException: Compilat
 	... 2 more
 
 
-BUILD FAILED in 1m 38s
-22 actionable tasks: 22 executed
+BUILD FAILED in 1m 57s
+29 actionable tasks: 29 executed
 ```

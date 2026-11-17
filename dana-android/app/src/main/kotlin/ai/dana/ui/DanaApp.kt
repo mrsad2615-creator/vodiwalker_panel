@@ -111,6 +111,7 @@ internal fun DanaApp(model: DanaViewModel) {
                     }
                     when (session.tab) {
                         DashboardTab.HOME -> home(state, dispatch)
+                        DashboardTab.COMPARE -> comparison(state, dispatch)
                         DashboardTab.NOTES -> notes(state, dispatch)
                         DashboardTab.SETTINGS -> settings(state, dispatch)
                     }
@@ -160,8 +161,8 @@ private fun LazyListScope.home(state: DashboardState, dispatch: (DanaIntent) -> 
                 style = MaterialTheme.typography.bodyMedium,
                 color = Titanium,
             )
-            Button(onClick = { dispatch(DanaIntent.Navigate(DashboardTab.NOTES)) }, enabled = !state.session.busy) {
-                Text(stringResource(R.string.tab_notes))
+            Button(onClick = { dispatch(DanaIntent.Navigate(DashboardTab.COMPARE)) }, enabled = !state.session.busy) {
+                Text(stringResource(R.string.tab_compare))
             }
         }
     }
@@ -273,7 +274,7 @@ internal fun protocolLabel(protocol: ProviderProtocol): Int = when (protocol) {
 }
 
 @Composable
-private fun TechnicalText(value: String) {
+internal fun TechnicalText(value: String) {
     Text(
         value,
         modifier = Modifier.fillMaxWidth(),
@@ -402,6 +403,12 @@ private fun TabGlyph(tab: DashboardTab, tint: Color) {
                 }
                 drawPath(outline, tint, style = Stroke(stroke))
                 drawCircle(tint, 1.5f * t, point(12f, 12f))
+            }
+            DashboardTab.COMPARE -> {
+                drawRoundRect(tint, point(2f, 5f), Size(9f * t, 13f * t), CornerRadius(2 * t), style = Stroke(stroke))
+                drawRoundRect(tint, point(13f, 5f), Size(9f * t, 13f * t), CornerRadius(2 * t), style = Stroke(stroke))
+                line(4.5f, 10f, 8.5f, 10f)
+                line(15.5f, 10f, 19.5f, 10f)
             }
             DashboardTab.NOTES -> {
                 drawRoundRect(tint, point(5f, 3f), Size(14f * t, 18f * t), CornerRadius(2 * t), style = Stroke(stroke))

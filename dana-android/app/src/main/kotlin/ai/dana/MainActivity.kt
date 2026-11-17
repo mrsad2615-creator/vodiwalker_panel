@@ -1,6 +1,7 @@
 package ai.dana
 
 import ai.dana.ui.DanaApp
+import ai.dana.ui.DanaIntent
 import ai.dana.ui.DanaTheme
 import ai.dana.ui.DanaViewModel
 import android.graphics.Color
@@ -25,5 +26,9 @@ class MainActivity : ComponentActivity() {
         setContent {
             DanaTheme { DanaApp(model) }
         }
+    }
+    override fun onStop() {
+        if (!isChangingConfigurations) model.dispatch(DanaIntent.StopComparison)
+        super.onStop()
     }
 }

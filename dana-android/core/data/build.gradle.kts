@@ -30,8 +30,14 @@ dependencies {
     implementation(libs.data.store)
     implementation(libs.room.runtime)
     implementation(libs.hilt.android)
+    implementation(libs.okhttp.client)
+    implementation(libs.serialization.json)
     ksp(libs.room.compiler)
     ksp(libs.hilt.compiler)
+
+    testImplementation(libs.junit)
+    testImplementation(libs.okhttp.mockwebserver)
+    testImplementation(libs.okhttp.tls)
 
     androidTestImplementation(libs.androidx.test.core)
     androidTestImplementation(libs.androidx.test.runner)

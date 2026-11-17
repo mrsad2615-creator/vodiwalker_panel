@@ -2,8 +2,13 @@ package ai.dana.ui
 
 import ai.dana.R
 import ai.dana.domain.ApiCredential
+import ai.dana.domain.ComparisonLimits
+import ai.dana.domain.ComparisonRequest
 import ai.dana.domain.CredentialChange
+import ai.dana.domain.DanaAiRouter
 import ai.dana.domain.DanaNote
+import ai.dana.domain.EngineEvent
+import ai.dana.domain.EngineProblem
 import ai.dana.domain.NetworkMonitor
 import ai.dana.domain.NetworkStatus
 import ai.dana.domain.NotesRepository
@@ -21,6 +26,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -35,6 +41,7 @@ import kotlinx.coroutines.launch
 
 internal enum class DashboardTab(@StringRes val label: Int) {
     HOME(R.string.tab_home),
+    COMPARE(R.string.tab_compare),
     NOTES(R.string.tab_notes),
     SETTINGS(R.string.tab_settings),
 }
@@ -50,6 +57,7 @@ internal sealed interface Editor {
     data class Provider(val previous: ProviderProfile?) : Editor
     data class DeleteNote(val id: Long) : Editor
     data class DeleteProvider(val id: String) : Editor
+    class ConfirmComparison(val request: ComparisonRequest) : Editor
 }
 
 internal data class DashboardSession(
@@ -65,6 +73,7 @@ internal data class DashboardState(
     val notes: Reading<List<DanaNote>> = Reading.Loading,
     val profiles: Reading<List<ProviderProfile>> = Reading.Loading,
     val session: DashboardSession = DashboardSession(),
+    val comparison: ComparisonState = ComparisonState(),
 )
 
 internal sealed interface DanaIntent {
@@ -77,6 +86,11 @@ internal sealed interface DanaIntent {
     data object DismissEditor : DanaIntent
     data object Reload : DanaIntent
     data class SetOffline(val enabled: Boolean) : DanaIntent
+    class ChangePrompt(val value: String) : DanaIntent
+    data class ToggleEngine(val profileId: String) : DanaIntent
+    data object ReviewComparison : DanaIntent
+    data object SendComparison : DanaIntent
+    data object StopComparison : DanaIntent
     data class SaveNote(val text: String) : DanaIntent
 
     // Intentionally not a data class: the credential is never part of a generated toString or UI state.
@@ -97,9 +111,12 @@ internal class DanaViewModel @Inject constructor(
     private val preferences: PrivacyPreferences,
     private val notes: NotesRepository,
     private val providers: ProviderRepository,
+    private val router: DanaAiRouter,
 ) : ViewModel() {
     private val session = MutableStateFlow(DashboardSession())
     private val reloadGeneration = MutableStateFlow(0L)
+    private val comparison = MutableStateFlow(ComparisonState())
+    private var comparisonJob: Job? = null
 
     val uiState = combine(
         monitor.status.onStart { emit(NetworkStatus.CHECKING) },
@@ -109,21 +126,37 @@ internal class DanaViewModel @Inject constructor(
         session,
     ) { network, offline, notes, profiles, session ->
         DashboardState(network, offline, notes, profiles, session)
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DashboardState())
+    }.combine(comparison) { state, comparing -> state.copy(comparison = comparing) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DashboardState())
 
     @MainThread
     fun dispatch(intent: DanaIntent) {
         val current = session.value
-        if (current.busy) return
+        if (current.busy && intent != DanaIntent.StopComparison) return
         when (intent) {
-            is DanaIntent.Navigate -> session.value = DashboardSession(tab = intent.tab)
+            is DanaIntent.Navigate -> {
+                if (intent.tab != DashboardTab.COMPARE) comparisonJob?.cancel()
+                session.value = DashboardSession(tab = intent.tab)
+            }
+            is DanaIntent.ChangePrompt -> {
+                if (!comparison.value.running && intent.value.length <= ComparisonLimits.PROMPT_CHARS) {
+                    comparison.update { it.copy(prompt = intent.value, problem = null) }
+                }
+            }
+            is DanaIntent.ToggleEngine -> toggleEngine(intent.profileId)
+            DanaIntent.ReviewComparison -> reviewComparison()
+            DanaIntent.SendComparison -> (current.editor as? Editor.ConfirmComparison)?.let { startComparison(it.request) }
+            DanaIntent.StopComparison -> comparisonJob?.cancel()
             is DanaIntent.EditNote -> show(Editor.Note(intent.note))
             is DanaIntent.EditProvider -> show(Editor.Provider(intent.profile))
             is DanaIntent.RequestNoteDeletion -> show(Editor.DeleteNote(intent.id))
             is DanaIntent.RequestProviderDeletion -> show(Editor.DeleteProvider(intent.id))
             DanaIntent.DismissEditor -> show(null)
             DanaIntent.Reload -> reloadGeneration.update { it + 1 }
-            is DanaIntent.SetOffline -> write { preferences.setOfflineMode(intent.enabled) }
+            is DanaIntent.SetOffline -> {
+                if (intent.enabled) comparisonJob?.cancel()
+                write { preferences.setOfflineMode(intent.enabled) }
+            }
             is DanaIntent.SaveNote -> {
                 val editor = current.editor as? Editor.Note ?: return
                 write(closeEditor = true) { notes.save(editor.previous?.id, intent.text) }
@@ -144,6 +177,53 @@ internal class DanaViewModel @Inject constructor(
                 is Editor.DeleteNote -> write(closeEditor = true) { notes.delete(editor.id) }
                 is Editor.DeleteProvider -> write(closeEditor = true) { providers.delete(editor.id) }
                 else -> Unit
+            }
+        }
+    }
+
+    private fun availableProfiles(): List<ProviderProfile> = (uiState.value.profiles as? Reading.Ready)?.value.orEmpty()
+
+    private fun toggleEngine(id: String) {
+        val existing = availableProfiles().mapTo(mutableSetOf()) { it.id }
+        if (id !in existing) return
+        comparison.update { state ->
+            if (state.running) return@update state
+            val selected = state.selected.intersect(existing)
+            val next = when {
+                id in selected -> selected - id
+                selected.size < ComparisonLimits.ENGINE_COUNT -> selected + id
+                else -> selected
+            }
+            state.copy(selected = next, problem = null)
+        }
+    }
+
+    private fun reviewComparison() {
+        val state = comparison.value
+        if (session.value.tab != DashboardTab.COMPARE || state.running) return
+        if ((uiState.value.offline as? Reading.Ready)?.value != false) {
+            comparison.update { it.copy(problem = EngineProblem.OFFLINE) }
+            return
+        }
+        val targets = availableProfiles().filter { it.id in state.selected }
+        ComparisonRequest.create(state.prompt, targets)?.let { show(Editor.ConfirmComparison(it)) }
+    }
+
+    private fun startComparison(request: ComparisonRequest) {
+        if (session.value.tab != DashboardTab.COMPARE || comparison.value.running) return
+        show(null)
+        comparison.update { it.copy(running = true, lanes = request.targets.map { EngineLane(it) }, problem = null) }
+        comparisonJob = viewModelScope.launch {
+            try {
+                router.compare(request).collect { event ->
+                    comparison.update { it.reduce(event) }
+                }
+            } catch (canceled: CancellationException) {
+                throw canceled
+            } catch (_: Exception) {
+                comparison.update { it.copy(problem = EngineProblem.SERVER) }
+            } finally {
+                comparison.update { it.finish() }
             }
         }
     }

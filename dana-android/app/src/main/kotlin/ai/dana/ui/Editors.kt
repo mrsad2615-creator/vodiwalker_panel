@@ -45,6 +45,21 @@ internal fun DanaEditor(editor: Editor, busy: Boolean, error: Int?, dispatch: (D
     when (editor) {
         is Editor.Note -> NoteEditor(editor, busy, error, dismiss) { dispatch(DanaIntent.SaveNote(it)) }
         is Editor.Provider -> ProviderEditor(editor, busy, error, dismiss, dispatch)
+        is Editor.ConfirmComparison -> EditorDialog(
+            title = R.string.compare_confirm_title,
+            button = R.string.compare_send,
+            enabled = true,
+            busy = busy,
+            error = error,
+            onDismiss = dismiss,
+            onConfirm = { dispatch(DanaIntent.SendComparison) },
+        ) {
+            Text(stringResource(R.string.compare_confirm_body))
+            for (profile in editor.request.targets) {
+                Text(profile.config.name, style = MaterialTheme.typography.titleSmall)
+                TechnicalText(profile.config.baseUrl)
+            }
+        }
         is Editor.DeleteNote, is Editor.DeleteProvider -> {
             val note = editor is Editor.DeleteNote
             EditorDialog(

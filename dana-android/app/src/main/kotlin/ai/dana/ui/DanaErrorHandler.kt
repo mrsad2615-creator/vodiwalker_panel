@@ -2,6 +2,7 @@ package ai.dana.ui
 
 import ai.dana.R
 import ai.dana.domain.CredentialStoreUnavailable
+import ai.dana.domain.EngineProblem
 import ai.dana.domain.InputIssue
 import ai.dana.domain.InputRejected
 import android.database.sqlite.SQLiteException
@@ -26,5 +27,22 @@ internal object DanaErrorHandler {
         is CredentialStoreUnavailable -> R.string.error_vault
         is SQLiteException, is IOException -> R.string.error_local_io
         else -> R.string.error_generic
+    }
+    @StringRes
+    fun messageFor(problem: EngineProblem): Int = when (problem) {
+        EngineProblem.OFFLINE -> R.string.compare_offline
+        EngineProblem.CONFIGURATION -> R.string.error_engine_config
+        EngineProblem.CREDENTIAL_STORE -> R.string.error_vault
+        EngineProblem.AUTHENTICATION -> R.string.error_engine_auth
+        EngineProblem.FORBIDDEN -> R.string.error_engine_forbidden
+        EngineProblem.RATE_LIMIT -> R.string.error_engine_quota
+        EngineProblem.NETWORK -> R.string.error_engine_network
+        EngineProblem.TIMEOUT -> R.string.error_engine_timeout
+        EngineProblem.TLS -> R.string.error_engine_tls
+        EngineProblem.SERVER -> R.string.error_engine_server
+        EngineProblem.PROTOCOL -> R.string.error_engine_protocol
+        EngineProblem.FILTERED -> R.string.error_engine_filtered
+        EngineProblem.NO_TEXT -> R.string.error_engine_no_text
+        EngineProblem.OUTPUT_LIMIT -> R.string.error_engine_limit
     }
 }

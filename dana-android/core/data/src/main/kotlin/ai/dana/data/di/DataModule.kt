@@ -6,8 +6,10 @@ import ai.dana.data.local.RoomHistoryRepository
 import ai.dana.data.local.RoomMemoryRepository
 import ai.dana.data.local.RoomNotesRepository
 import ai.dana.data.network.AndroidNetworkMonitor
+import ai.dana.data.network.OkHttpEngineTransport
 import ai.dana.data.provider.EngineRepository
 import ai.dana.data.provider.KeystoreVault
+import ai.dana.domain.DanaAiRouter
 import ai.dana.domain.HistoryRepository
 import ai.dana.domain.MemoryRepository
 import ai.dana.domain.NetworkMonitor
@@ -54,4 +56,9 @@ internal object DataModule {
     @Provides
     @Singleton
     fun network(@ApplicationContext context: Context): NetworkMonitor = AndroidNetworkMonitor(context)
+
+    @Provides
+    @Singleton
+    fun router(preferences: PrivacyPreferences, providers: ProviderRepository): DanaAiRouter =
+        DanaAiRouter(preferences, providers, OkHttpEngineTransport())
 }

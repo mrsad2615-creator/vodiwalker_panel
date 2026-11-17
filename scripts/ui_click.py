@@ -63,7 +63,8 @@ def main() -> int:
         if not rows:
             print("NOTFOUND nav", file=sys.stderr)
             return 2
-        band = max(rows.values(), key=len)
+        # the navigation row is the deepest interactive row on screen
+        band = max(rows.values(), key=lambda ns: (ns[0]["box"][1], len(ns)))
         band.sort(key=lambda n: n["box"][0], reverse=True)
         if idx >= len(band):
             print("NOTFOUND nav index", file=sys.stderr)

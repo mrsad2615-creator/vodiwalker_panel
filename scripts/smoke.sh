@@ -115,6 +115,10 @@ tap_text d10 "Type here" typing-field
 adb shell input text "the%squick%sbrown%sfox" > /dev/null 2>&1 || true
 sleep 2
 shot 11-typing-input
+adb shell input keyevent 111 > /dev/null 2>&1 || true
+sleep 1
+adb shell input keyevent 4 > /dev/null 2>&1 || true
+sleep 1
 
 dump d11
 tap_nav d11 1 analytics-en

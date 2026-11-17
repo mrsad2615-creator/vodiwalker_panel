@@ -5,6 +5,7 @@ on:
     branches: ["arena/**", "main"]
     paths:
       - "typflow/**"
+      - "scripts/**"
       - ".github/workflows/build-apk.yml"
   workflow_dispatch:
 

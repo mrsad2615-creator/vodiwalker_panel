@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -Eeuo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 
 fail() {
@@ -7,7 +7,27 @@ fail() {
   exit 1
 }
 
-./gradlew --no-daemon --console=plain :core:data:connectedDebugAndroidTest
+trap 'code=$?; printf "::error title=Dana emulator script::Failed at line %s (exit %s).\n" "$LINENO" "$code"' ERR
+printf '::notice title=Dana emulator booted::Android API %s is visible to adb.\n' "$(adb shell getprop ro.build.version.sdk | tr -d '\r')"
+if ! ./gradlew --no-daemon --console=plain :core:data:connectedDebugAndroidTest 2>&1 | tee "$RUNNER_TEMP/dana-device.log"; then
+  python3 - "$RUNNER_TEMP/dana-device.log" <<'PYTHON'
+import sys
+from pathlib import Path
+from xml.etree import ElementTree as ET
+
+messages = []
+for report in Path('core/data/build/outputs/androidTest-results').rglob('TEST-*.xml'):
+    for case in ET.parse(report).iter('testcase'):
+        for node in case.findall('failure') + case.findall('error'):
+            messages.append(f"{case.get('name')}: {node.get('message', '')}\n{(node.text or '')[:1000]}")
+lines = Path(sys.argv[1]).read_text(errors='replace').splitlines()
+important = [line for line in lines if line.startswith(('e:', '> ', 'Caused by:', 'Error:', '* What went wrong')) and not line.startswith('> Task')]
+message = '\n'.join(messages + (important or lines[-25:]))[:3800]
+print('::error title=Dana device test failed::' + message.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A'))
+PYTHON
+  exit 1
+fi
+printf '::notice title=Dana device test execution::Storage instrumentation finished successfully.\n'
 python3 - <<'PYTHON'
 from pathlib import Path
 from xml.etree import ElementTree as ET

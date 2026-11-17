@@ -82,7 +82,10 @@ jobs:
             if git ls-files --error-unmatch "$schema" > /dev/null 2>&1; then
               git diff --exit-code -- "$schema"
             else
-              printf '::notice title=Generated Dana Room v1 schema::%s\n' "$(base64 -w0 "$schema")"
+              encoded=$(base64 -w0 "$schema")
+              for ((offset=0; offset < ${#encoded}; offset+=2800)); do
+                printf '::notice title=Dana Room v1 schema part %d::%s\n' "$((offset/2800+1))" "${encoded:offset:2800}"
+              done
             fi
           elif [[ '${{ job.status }}' == success ]]; then
             echo '::error title=Room schema::Room did not export the v1 schema.'
@@ -130,7 +133,7 @@ jobs:
           profile: pixel_6
           working-directory: dana-android
           disable-animations: true
-          script: bash ci/test-emulator.sh
+          script: bash "$GITHUB_WORKSPACE/dana-android/ci/test-emulator.sh"
       - name: Upload the APK without a ZIP wrapper
         id: apk
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7

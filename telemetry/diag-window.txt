@@ -1,0 +1,4 @@
+  mCurrentFocus=Window{bc12e19 u0 com.typflow.app/com.typflow.app.MainActivity}
+  mFocusedApp=ActivityRecord{60e5f65 u0 com.typflow.app/.MainActivity t9}
+screen=
+tap_exit=0

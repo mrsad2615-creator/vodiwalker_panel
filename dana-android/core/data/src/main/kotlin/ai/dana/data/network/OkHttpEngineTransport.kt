@@ -1,15 +1,15 @@
 package ai.dana.data.network
 
 import ai.dana.domain.ApiCredential
+import ai.dana.domain.AssistantTask
+import ai.dana.domain.EngineText
+import ai.dana.domain.ProviderProtocol
 import ai.dana.domain.EngineFailure
 import ai.dana.domain.EngineProblem
 import ai.dana.domain.EngineTransport
 import ai.dana.domain.ProviderConfig
-import java.io.EOFException
 import java.io.IOException
-import java.io.InterruptedIOException
 import java.util.concurrent.TimeUnit
-import javax.net.ssl.SSLException
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.channels.trySendBlocking
 import kotlinx.coroutines.flow.Flow
@@ -21,9 +21,13 @@ import okhttp3.ConnectionSpec
 import okhttp3.OkHttpClient
 import okhttp3.Response
 
-internal class OkHttpEngineTransport(private val client: OkHttpClient = danaHttpClient()) : EngineTransport {
-    override fun stream(config: ProviderConfig, key: ApiCredential?, prompt: String): Flow<String> = callbackFlow {
-        val call = client.newCall(EngineProtocol.request(config, key, prompt))
+internal class OkHttpEngineTransport(
+    private val client: OkHttpClient = danaHttpClient(),
+    private val appleClient: OkHttpClient = client.privateAppleClient(),
+) : EngineTransport {
+    override fun stream(config: ProviderConfig, key: ApiCredential?, prompt: String, task: AssistantTask): Flow<EngineText> = callbackFlow {
+        val http = if (config.protocol == ProviderProtocol.APPLE_MAC) appleClient else client
+        val call = http.newCall(EngineProtocol.request(config, key, prompt, task))
         call.enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
                 close(e.toEngineFailure())
@@ -32,7 +36,7 @@ internal class OkHttpEngineTransport(private val client: OkHttpClient = danaHttp
             override fun onResponse(call: Call, response: Response) {
                 try {
                     response.use {
-                        if (!response.isSuccessful) throw EngineFailure(httpProblem(response.code))
+                        response.requireSuccess(config.protocol)
                         val body = response.body
                         val type = body.contentType()
                         if (type?.type != "text" || type.subtype != "event-stream") {
@@ -53,22 +57,6 @@ internal class OkHttpEngineTransport(private val client: OkHttpClient = danaHttp
         awaitClose { call.cancel() }
     }.buffer(8)
 
-    private fun httpProblem(status: Int) = when (status) {
-        400, 404, 422 -> EngineProblem.CONFIGURATION
-        401 -> EngineProblem.AUTHENTICATION
-        403 -> EngineProblem.FORBIDDEN
-        408, 504 -> EngineProblem.TIMEOUT
-        429 -> EngineProblem.RATE_LIMIT
-        in 300..399 -> EngineProblem.PROTOCOL
-        else -> EngineProblem.SERVER
-    }
-
-    private fun IOException.toEngineFailure() = EngineFailure(when (this) {
-        is SSLException -> EngineProblem.TLS
-        is InterruptedIOException -> EngineProblem.TIMEOUT
-        is EOFException -> EngineProblem.PROTOCOL
-        else -> EngineProblem.NETWORK
-    })
 }
 
 internal fun danaHttpClient(): OkHttpClient = OkHttpClient.Builder()

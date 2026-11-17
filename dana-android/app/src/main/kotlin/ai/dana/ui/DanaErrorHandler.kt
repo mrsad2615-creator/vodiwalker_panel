@@ -3,6 +3,7 @@ package ai.dana.ui
 import ai.dana.R
 import ai.dana.domain.CredentialStoreUnavailable
 import ai.dana.domain.EngineProblem
+import ai.dana.domain.EngineFailure
 import ai.dana.domain.InputIssue
 import ai.dana.domain.InputRejected
 import android.database.sqlite.SQLiteException
@@ -12,6 +13,7 @@ import java.io.IOException
 internal object DanaErrorHandler {
     @StringRes
     fun messageFor(error: Exception): Int = when (error) {
+        is EngineFailure -> messageFor(error.problem)
         is InputRejected -> when (error.issue) {
             InputIssue.EMPTY_NOTE -> R.string.error_note_empty
             InputIssue.NOTE_TOO_LONG -> R.string.error_note_long
@@ -42,6 +44,9 @@ internal object DanaErrorHandler {
         EngineProblem.SERVER -> R.string.error_engine_server
         EngineProblem.PROTOCOL -> R.string.error_engine_protocol
         EngineProblem.FILTERED -> R.string.error_engine_filtered
+        EngineProblem.ENGINE_UNAVAILABLE -> R.string.error_apple_unavailable
+        EngineProblem.UNSUPPORTED_LANGUAGE -> R.string.error_engine_language
+        EngineProblem.CONTEXT_LIMIT -> R.string.error_engine_context
         EngineProblem.NO_TEXT -> R.string.error_engine_no_text
         EngineProblem.OUTPUT_LIMIT -> R.string.error_engine_limit
     }

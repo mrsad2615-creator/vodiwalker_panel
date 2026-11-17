@@ -1,5 +1,6 @@
 package ai.dana.domain
 
+import kotlin.time.TimeSource
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.coroutineScope
@@ -19,16 +20,18 @@ object ComparisonLimits {
     const val ANSWER_CHARS = 18_000
 }
 
+enum class AssistantTask { ASK, SUMMARIZE, TRANSLATE, DRAFT }
+
 /** Created only from the prompt and explicit destination selection reviewed by the user. */
-class ComparisonRequest private constructor(val prompt: String, val targets: List<ProviderProfile>) {
+class ComparisonRequest private constructor(val prompt: String, val targets: List<ProviderProfile>, val task: AssistantTask) {
     companion object {
-        fun create(prompt: String, targets: List<ProviderProfile>): ComparisonRequest? {
+        fun create(prompt: String, targets: List<ProviderProfile>, task: AssistantTask = AssistantTask.ASK): ComparisonRequest? {
             val clean = prompt.trim()
             if (clean.length !in 1..ComparisonLimits.PROMPT_CHARS ||
                 targets.size !in 1..ComparisonLimits.ENGINE_COUNT ||
                 targets.map { it.id }.toSet().size != targets.size
             ) return null
-            return ComparisonRequest(clean, targets.toList())
+            return ComparisonRequest(clean, targets.toList(), task)
         }
     }
 }
@@ -46,20 +49,26 @@ enum class EngineProblem {
     SERVER,
     PROTOCOL,
     FILTERED,
+    ENGINE_UNAVAILABLE,
+    UNSUPPORTED_LANGUAGE,
+    CONTEXT_LIMIT,
     NO_TEXT,
     OUTPUT_LIMIT,
 }
 
-class EngineFailure(val problem: EngineProblem) : Exception(problem.name)
+class EngineFailure(val problem: EngineProblem, val httpStatus: Int? = null) : Exception(problem.name)
+
+/** Apple sends full snapshots. Gemini and OpenAI send deltas. Never append a snapshot. */
+data class EngineText(val value: String, val replaces: Boolean = false)
 
 interface EngineTransport {
-    fun stream(config: ProviderConfig, key: ApiCredential?, prompt: String): Flow<String>
+    fun stream(config: ProviderConfig, key: ApiCredential?, prompt: String, task: AssistantTask = AssistantTask.ASK): Flow<EngineText>
 }
 
 sealed interface EngineEvent {
-    class Text(val profileId: String, val delta: String) : EngineEvent
-    data class Complete(val profileId: String) : EngineEvent
-    data class Failed(val profileId: String, val problem: EngineProblem) : EngineEvent
+    class Text(val profileId: String, val chunk: EngineText, val firstTextMillis: Long?) : EngineEvent
+    data class Complete(val profileId: String, val elapsedMillis: Long) : EngineEvent
+    data class Failed(val profileId: String, val problem: EngineProblem, val httpStatus: Int? = null) : EngineEvent
     data object Offline : EngineEvent
     data object Finished : EngineEvent
 }
@@ -93,7 +102,7 @@ class DanaAiRouter(
     private fun parallel(request: ComparisonRequest): Flow<EngineEvent> = channelFlow {
         coroutineScope {
             request.targets.forEach { profile ->
-                launch { runEngine(profile, request.prompt) { send(it) } }
+                launch { runEngine(profile, request.prompt, request.task) { send(it) } }
             }
         }
         send(EngineEvent.Finished)
@@ -102,21 +111,29 @@ class DanaAiRouter(
     private suspend fun runEngine(
         profile: ProviderProfile,
         prompt: String,
+        task: AssistantTask,
         emit: suspend (EngineEvent) -> Unit,
     ) {
         try {
             // A removed or changed snapshot must fail before any request is created.
             val key = providers.credentialFor(profile)
+            val started = TimeSource.Monotonic.markNow()
             var length = 0
             var hasVisibleText = false
-            transport.stream(profile.config, key, prompt).collect { delta ->
-                if (delta.length > ComparisonLimits.ANSWER_CHARS - length) throw EngineFailure(EngineProblem.OUTPUT_LIMIT)
-                length += delta.length
-                hasVisibleText = hasVisibleText || delta.isNotBlank()
-                if (delta.isNotEmpty()) emit(EngineEvent.Text(profile.id, delta))
+            var firstTextMillis: Long? = null
+            transport.stream(profile.config, key, prompt, task).collect { chunk ->
+                val previouslyWritten = if (chunk.replaces) 0 else length
+                if (chunk.value.length > ComparisonLimits.ANSWER_CHARS - previouslyWritten) {
+                    throw EngineFailure(EngineProblem.OUTPUT_LIMIT)
+                }
+                length = previouslyWritten + chunk.value.length
+                val visible = chunk.value.isNotBlank()
+                hasVisibleText = visible || (!chunk.replaces && hasVisibleText)
+                if (visible && firstTextMillis == null) firstTextMillis = started.elapsedNow().inWholeMilliseconds
+                if (chunk.replaces || chunk.value.isNotEmpty()) emit(EngineEvent.Text(profile.id, chunk, firstTextMillis))
             }
             if (!hasVisibleText) throw EngineFailure(EngineProblem.NO_TEXT)
-            emit(EngineEvent.Complete(profile.id))
+            emit(EngineEvent.Complete(profile.id, started.elapsedNow().inWholeMilliseconds))
         } catch (error: CancellationException) {
             throw error
         } catch (error: Exception) {
@@ -126,7 +143,7 @@ class DanaAiRouter(
                 is InputRejected -> EngineProblem.CONFIGURATION
                 else -> EngineProblem.SERVER
             }
-            emit(EngineEvent.Failed(profile.id, problem))
+            emit(EngineEvent.Failed(profile.id, problem, (error as? EngineFailure)?.httpStatus))
         }
     }
 }

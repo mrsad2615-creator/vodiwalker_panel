@@ -120,7 +120,7 @@ internal fun DanaApp(model: DanaViewModel) {
         }
     }
     session.editor?.let { editor ->
-        key(editor) { DanaEditor(editor, session.busy, session.error, dispatch) }
+        key(editor) { DanaEditor(editor, session, (state.offline as? Reading.Ready)?.value != false, dispatch) }
     }
 }
 
@@ -163,6 +163,14 @@ private fun LazyListScope.home(state: DashboardState, dispatch: (DanaIntent) -> 
             )
             Button(onClick = { dispatch(DanaIntent.Navigate(DashboardTab.COMPARE)) }, enabled = !state.session.busy) {
                 Text(stringResource(R.string.tab_compare))
+            }
+        }
+    }
+    item {
+        GlassCard(Modifier.fillMaxWidth()) {
+            Text(stringResource(R.string.studio_quick_tasks), style = MaterialTheme.typography.titleMedium)
+            TaskChoices(null, !state.session.busy) {
+                dispatch(DanaIntent.ChooseTask(it, openWorkspace = true))
             }
         }
     }
@@ -224,11 +232,27 @@ private fun LazyListScope.settings(state: DashboardState, dispatch: (DanaIntent)
     }
     item {
         SectionIntro(R.string.engines_title, R.string.engines_description)
-        OutlinedButton(
-            onClick = { dispatch(DanaIntent.EditProvider(null)) },
-            enabled = !busy && state.profiles is Reading.Ready,
-            modifier = Modifier.padding(top = 8.dp),
-        ) { Text(stringResource(R.string.engine_add)) }
+    }
+    item {
+        GlassCard(Modifier.fillMaxWidth()) {
+            Text(stringResource(R.string.engine_presets), style = MaterialTheme.typography.titleMedium, color = Ice)
+            val enabled = !busy && state.profiles is Reading.Ready
+            Button(
+                onClick = { dispatch(DanaIntent.EditProvider(null, ProviderProtocol.GEMINI_NATIVE)) },
+                enabled = enabled,
+                modifier = Modifier.fillMaxWidth(),
+            ) { Text(stringResource(R.string.engine_add_gemini)) }
+            OutlinedButton(
+                onClick = { dispatch(DanaIntent.EditProvider(null, ProviderProtocol.APPLE_MAC)) },
+                enabled = enabled,
+                modifier = Modifier.fillMaxWidth(),
+            ) { Text(stringResource(R.string.engine_add_apple)) }
+            TextButton(
+                onClick = { dispatch(DanaIntent.EditProvider(null)) },
+                enabled = enabled,
+                modifier = Modifier.fillMaxWidth(),
+            ) { Text(stringResource(R.string.engine_add_custom)) }
+        }
     }
     when (val profiles = state.profiles) {
         Reading.Loading -> item { Loading() }
@@ -271,6 +295,7 @@ private fun ProfileCard(profile: ProviderProfile, busy: Boolean, dispatch: (Dana
 internal fun protocolLabel(protocol: ProviderProtocol): Int = when (protocol) {
     ProviderProtocol.OPENAI_COMPATIBLE -> R.string.engine_openai
     ProviderProtocol.GEMINI_NATIVE -> R.string.engine_gemini
+    ProviderProtocol.APPLE_MAC -> R.string.engine_apple
 }
 
 @Composable

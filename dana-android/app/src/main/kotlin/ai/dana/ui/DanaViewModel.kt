@@ -2,6 +2,10 @@ package ai.dana.ui
 
 import ai.dana.R
 import ai.dana.domain.ApiCredential
+import ai.dana.domain.AssistantTask
+import ai.dana.domain.DirectoryResult
+import ai.dana.domain.EngineDiscovery
+import ai.dana.domain.EngineFailure
 import ai.dana.domain.ComparisonLimits
 import ai.dana.domain.ComparisonRequest
 import ai.dana.domain.CredentialChange
@@ -14,6 +18,7 @@ import ai.dana.domain.NetworkStatus
 import ai.dana.domain.NotesRepository
 import ai.dana.domain.PrivacyPreferences
 import ai.dana.domain.ProviderConfig
+import ai.dana.domain.ProviderEndpoint
 import ai.dana.domain.ProviderNetwork
 import ai.dana.domain.ProviderProfile
 import ai.dana.domain.ProviderProtocol
@@ -53,11 +58,17 @@ internal sealed interface Reading<out T> {
 }
 
 internal sealed interface Editor {
-    data class Note(val previous: DanaNote?) : Editor
-    data class Provider(val previous: ProviderProfile?) : Editor
+    data class Note(val previous: DanaNote?, val draft: String = previous?.text.orEmpty()) : Editor
+    data class Provider(val previous: ProviderProfile?, val initial: ProviderProtocol) : Editor
     data class DeleteNote(val id: Long) : Editor
     data class DeleteProvider(val id: String) : Editor
     class ConfirmComparison(val request: ComparisonRequest) : Editor
+}
+
+internal sealed interface DirectoryState {
+    data object Loading : DirectoryState
+    data class Ready(val result: DirectoryResult) : DirectoryState
+    data class Failed(@StringRes val message: Int, val httpStatus: Int?) : DirectoryState
 }
 
 internal data class DashboardSession(
@@ -65,6 +76,7 @@ internal data class DashboardSession(
     val editor: Editor? = null,
     val busy: Boolean = false,
     @StringRes val error: Int? = null,
+    val directory: DirectoryState? = null,
 )
 
 internal data class DashboardState(
@@ -79,7 +91,11 @@ internal data class DashboardState(
 internal sealed interface DanaIntent {
     data class Navigate(val tab: DashboardTab) : DanaIntent
     data class EditNote(val note: DanaNote?) : DanaIntent
-    data class EditProvider(val profile: ProviderProfile?) : DanaIntent
+    data class EditProvider(val profile: ProviderProfile?, val preset: ProviderProtocol = ProviderProtocol.OPENAI_COMPATIBLE) : DanaIntent
+    data class ChooseTask(val task: AssistantTask, val openWorkspace: Boolean = false) : DanaIntent
+    data class NoteFromAnswer(val profileId: String) : DanaIntent
+    data object ClearDirectory : DanaIntent
+    data object StopRemoteRequests : DanaIntent
     data class RequestNoteDeletion(val id: Long) : DanaIntent
     data class RequestProviderDeletion(val id: String) : DanaIntent
     data object ConfirmDeletion : DanaIntent
@@ -92,6 +108,14 @@ internal sealed interface DanaIntent {
     data object SendComparison : DanaIntent
     data object StopComparison : DanaIntent
     data class SaveNote(val text: String) : DanaIntent
+
+    class ReadModels(
+        val protocol: ProviderProtocol,
+        val network: ProviderNetwork,
+        val baseUrl: String,
+        val key: String,
+        val removeKey: Boolean,
+    ) : DanaIntent
 
     // Intentionally not a data class: the credential is never part of a generated toString or UI state.
     class SaveProvider(
@@ -112,11 +136,13 @@ internal class DanaViewModel @Inject constructor(
     private val notes: NotesRepository,
     private val providers: ProviderRepository,
     private val router: DanaAiRouter,
+    private val discovery: EngineDiscovery,
 ) : ViewModel() {
     private val session = MutableStateFlow(DashboardSession())
     private val reloadGeneration = MutableStateFlow(0L)
     private val comparison = MutableStateFlow(ComparisonState())
     private var comparisonJob: Job? = null
+    private var directoryJob: Job? = null
 
     val uiState = combine(
         monitor.status.onStart { emit(NetworkStatus.CHECKING) },
@@ -132,10 +158,16 @@ internal class DanaViewModel @Inject constructor(
     @MainThread
     fun dispatch(intent: DanaIntent) {
         val current = session.value
+        if (intent == DanaIntent.StopRemoteRequests) {
+            comparisonJob?.cancel()
+            if (current.directory == DirectoryState.Loading) clearDirectory()
+            return
+        }
         if (current.busy && intent != DanaIntent.StopComparison) return
         when (intent) {
             is DanaIntent.Navigate -> {
                 if (intent.tab != DashboardTab.COMPARE) comparisonJob?.cancel()
+                clearDirectory()
                 session.value = DashboardSession(tab = intent.tab)
             }
             is DanaIntent.ChangePrompt -> {
@@ -143,18 +175,38 @@ internal class DanaViewModel @Inject constructor(
                     comparison.update { it.copy(prompt = intent.value, problem = null) }
                 }
             }
+            is DanaIntent.ChooseTask -> if (!comparison.value.running) {
+                comparison.update { it.copy(task = intent.task, problem = null) }
+                if (intent.openWorkspace) {
+                    clearDirectory()
+                    session.value = DashboardSession(tab = DashboardTab.COMPARE)
+                }
+            }
+            is DanaIntent.NoteFromAnswer -> if (!comparison.value.running) {
+                comparison.value.lanes.firstOrNull { it.profile.id == intent.profileId }?.answer
+                    ?.takeIf { it.isNotBlank() }?.let { answer ->
+                        clearDirectory()
+                        session.value = DashboardSession(tab = DashboardTab.NOTES, editor = Editor.Note(null, answer))
+                    }
+            }
             is DanaIntent.ToggleEngine -> toggleEngine(intent.profileId)
             DanaIntent.ReviewComparison -> reviewComparison()
             DanaIntent.SendComparison -> (current.editor as? Editor.ConfirmComparison)?.let { startComparison(it.request) }
             DanaIntent.StopComparison -> comparisonJob?.cancel()
+            DanaIntent.StopRemoteRequests -> Unit // Handled before the write lock.
+            DanaIntent.ClearDirectory -> clearDirectory()
+            is DanaIntent.ReadModels -> readModels(intent)
             is DanaIntent.EditNote -> show(Editor.Note(intent.note))
-            is DanaIntent.EditProvider -> show(Editor.Provider(intent.profile))
+            is DanaIntent.EditProvider -> show(Editor.Provider(intent.profile, intent.profile?.config?.protocol ?: intent.preset))
             is DanaIntent.RequestNoteDeletion -> show(Editor.DeleteNote(intent.id))
             is DanaIntent.RequestProviderDeletion -> show(Editor.DeleteProvider(intent.id))
             DanaIntent.DismissEditor -> show(null)
             DanaIntent.Reload -> reloadGeneration.update { it + 1 }
             is DanaIntent.SetOffline -> {
-                if (intent.enabled) comparisonJob?.cancel()
+                if (intent.enabled) {
+                    comparisonJob?.cancel()
+                    clearDirectory()
+                }
                 write { preferences.setOfflineMode(intent.enabled) }
             }
             is DanaIntent.SaveNote -> {
@@ -163,14 +215,10 @@ internal class DanaViewModel @Inject constructor(
             }
             is DanaIntent.SaveProvider -> {
                 val editor = current.editor as? Editor.Provider ?: return
+                if (current.directory == DirectoryState.Loading) return
                 write(closeEditor = true) {
                     val config = ProviderConfig.create(intent.name, intent.protocol, intent.network, intent.baseUrl, intent.model)
-                    val change = when {
-                        intent.removeKey -> CredentialChange.Remove
-                        intent.key.isNotEmpty() -> CredentialChange.Replace(ApiCredential.parse(intent.key))
-                        else -> CredentialChange.Keep
-                    }
-                    providers.save(editor.previous?.id, config, change)
+                    providers.save(editor.previous?.id, config, keyChange(intent.key, intent.removeKey))
                 }
             }
             DanaIntent.ConfirmDeletion -> when (val editor = current.editor) {
@@ -206,7 +254,7 @@ internal class DanaViewModel @Inject constructor(
             return
         }
         val targets = availableProfiles().filter { it.id in state.selected }
-        ComparisonRequest.create(state.prompt, targets)?.let { show(Editor.ConfirmComparison(it)) }
+        ComparisonRequest.create(state.prompt, targets, state.task)?.let { show(Editor.ConfirmComparison(it)) }
     }
 
     private fun startComparison(request: ComparisonRequest) {
@@ -228,7 +276,37 @@ internal class DanaViewModel @Inject constructor(
         }
     }
 
+    private fun keyChange(raw: String, remove: Boolean): CredentialChange = when {
+        remove -> CredentialChange.Remove
+        raw.isNotEmpty() -> CredentialChange.Replace(ApiCredential.parse(raw))
+        else -> CredentialChange.Keep
+    }
+
+    private fun readModels(intent: DanaIntent.ReadModels) {
+        val editor = session.value.editor as? Editor.Provider ?: return
+        if (session.value.directory == DirectoryState.Loading) return
+        session.update { it.copy(directory = DirectoryState.Loading, error = null) }
+        directoryJob = viewModelScope.launch {
+            val result = try {
+                val endpoint = ProviderEndpoint.create(intent.protocol, intent.network, intent.baseUrl)
+                DirectoryState.Ready(discovery.models(endpoint, editor.previous, keyChange(intent.key, intent.removeKey)))
+            } catch (canceled: CancellationException) {
+                throw canceled
+            } catch (error: Exception) {
+                DirectoryState.Failed(DanaErrorHandler.messageFor(error), (error as? EngineFailure)?.httpStatus)
+            }
+            session.update { it.copy(directory = result) }
+        }
+    }
+
+    private fun clearDirectory() {
+        directoryJob?.cancel()
+        directoryJob = null
+        session.update { it.copy(directory = null) }
+    }
+
     private fun show(editor: Editor?) {
+        clearDirectory()
         session.update { it.copy(editor = editor, error = null) }
     }
 
@@ -237,7 +315,7 @@ internal class DanaViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 operation()
-                session.update { it.copy(busy = false, editor = if (closeEditor) null else it.editor) }
+                session.update { it.copy(busy = false, editor = if (closeEditor) null else it.editor, directory = if (closeEditor) null else it.directory) }
             } catch (canceled: CancellationException) {
                 throw canceled
             } catch (error: Exception) {

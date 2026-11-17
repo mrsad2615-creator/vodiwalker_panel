@@ -28,7 +28,7 @@ class MainActivity : ComponentActivity() {
         }
     }
     override fun onStop() {
-        if (!isChangingConfigurations) model.dispatch(DanaIntent.StopComparison)
+        if (!isChangingConfigurations) model.dispatch(DanaIntent.StopRemoteRequests)
         super.onStop()
     }
 }

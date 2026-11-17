@@ -1,6 +1,9 @@
 package ai.dana.data.network
 
 import ai.dana.domain.ApiCredential
+import ai.dana.domain.AssistantTask
+import ai.dana.domain.EngineText
+import ai.dana.domain.ProviderEndpoint
 import ai.dana.domain.EngineFailure
 import ai.dana.domain.EngineProblem
 import ai.dana.domain.ProviderConfig
@@ -14,6 +17,7 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
 import kotlinx.serialization.json.putJsonObject
+import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.Request
@@ -28,23 +32,35 @@ internal object EngineProtocol {
     private const val MAX_SSE_LINE_BYTES = 128_000L
     private const val MAX_SSE_EVENT_CHARS = 128_000
     private val jsonType = "application/json; charset=utf-8".toMediaType()
-    private val geminiId = Regex("[a-zA-Z0-9][a-zA-Z0-9._-]{0,100}")
+    internal val geminiId = Regex("[a-zA-Z0-9][a-zA-Z0-9._-]{0,100}")
 
-    fun request(config: ProviderConfig, key: ApiCredential?, prompt: String): Request {
-        val base = config.baseUrl.toHttpUrlOrNull()?.takeIf { it.isHttps }
-            ?: throw EngineFailure(EngineProblem.CONFIGURATION)
-        val url = base.newBuilder()
+    fun url(endpoint: ProviderEndpoint): HttpUrl.Builder = endpoint.baseUrl.toHttpUrlOrNull()?.takeIf { it.isHttps }?.newBuilder()
+        ?: throw EngineFailure(EngineProblem.CONFIGURATION)
+
+    fun authenticate(request: Request.Builder, protocol: ProviderProtocol, key: ApiCredential?) {
+        when (protocol) {
+            ProviderProtocol.GEMINI_NATIVE -> request.header("x-goog-api-key", required(key).value)
+            ProviderProtocol.APPLE_MAC -> request.header("Authorization", "Bearer ${required(key).value}")
+            ProviderProtocol.OPENAI_COMPATIBLE -> if (key != null) request.header("Authorization", "Bearer ${key.value}")
+        }
+    }
+
+    private fun required(key: ApiCredential?): ApiCredential = key ?: throw EngineFailure(EngineProblem.AUTHENTICATION)
+
+    fun request(config: ProviderConfig, key: ApiCredential?, prompt: String, task: AssistantTask): Request {
+        val url = url(config.endpoint)
         val headers = Request.Builder().header("Accept", "text/event-stream")
+        authenticate(headers, config.protocol, key)
+        val instructions = instructions(task, config.protocol == ProviderProtocol.APPLE_MAC)
         val body = when (config.protocol) {
             ProviderProtocol.OPENAI_COMPATIBLE -> {
                 url.addPathSegments("chat/completions")
-                key?.let { headers.header("Authorization", "Bearer ${it.value}") }
                 buildJsonObject {
                     put("model", config.model)
                     put("stream", true)
                     put("max_tokens", MAX_TOKENS)
                     putJsonArray("messages") {
-                        add(message("system", SYSTEM))
+                        add(message("system", instructions))
                         add(message("user", prompt))
                     }
                 }
@@ -52,21 +68,43 @@ internal object EngineProtocol {
             ProviderProtocol.GEMINI_NATIVE -> {
                 val id = config.model.removePrefix("models/")
                 if (!geminiId.matches(id)) throw EngineFailure(EngineProblem.CONFIGURATION)
-                if (key == null) throw EngineFailure(EngineProblem.AUTHENTICATION)
                 url.addPathSegment("models").addPathSegment("$id:streamGenerateContent").addQueryParameter("alt", "sse")
-                headers.header("x-goog-api-key", key.value)
                 buildJsonObject {
-                    put("systemInstruction", geminiContent(SYSTEM))
+                    put("systemInstruction", geminiContent(instructions))
                     putJsonArray("contents") { add(geminiContent(prompt, role = "user")) }
                     putJsonObject("generationConfig") { put("maxOutputTokens", MAX_TOKENS) }
+                }
+            }
+            ProviderProtocol.APPLE_MAC -> {
+                url.addPathSegment("respond")
+                buildJsonObject {
+                    put("model", config.model)
+                    put("instructions", instructions)
+                    put("prompt", prompt)
+                    put("max_output_tokens", MAX_TOKENS)
                 }
             }
         }
         return headers.url(url.build()).post(SingleAttemptBody(body.toString().toRequestBody(jsonType))).build()
     }
 
+    private fun instructions(task: AssistantTask, apple: Boolean): String {
+        if (apple) return "You are Dana, a concise and careful assistant. Answer in English. " + when (task) {
+            AssistantTask.ASK -> "If unsure, say so."
+            AssistantTask.SUMMARIZE -> "Summarize the input and preserve its key facts."
+            AssistantTask.TRANSLATE -> "Translate the input into English, preserving meaning and tone."
+            AssistantTask.DRAFT -> "Write a polished draft based on the user's request."
+        }
+        return SYSTEM + when (task) {
+            AssistantTask.ASK -> ""
+            AssistantTask.SUMMARIZE -> " متن ورودی را خلاصه کن و نکات و داده‌های مهم را حفظ کن."
+            AssistantTask.TRANSLATE -> " متن را به فارسی روان ترجمه کن؛ معنا و لحن را حفظ کن."
+            AssistantTask.DRAFT -> " بر اساس توضیح کاربر یک پیش‌نویس روشن بنویس؛ داده‌ای از خودت اضافه نکن."
+        }
+    }
+
     /** Returns only on an explicit terminal frame or cancellation of the downstream consumer. */
-    fun read(source: BufferedSource, protocol: ProviderProtocol, onText: (String) -> Boolean) {
+    fun read(source: BufferedSource, protocol: ProviderProtocol, onText: (EngineText) -> Boolean) {
         val data = StringBuilder()
         var firstLine = true
         while (!source.exhausted()) {
@@ -77,7 +115,7 @@ internal object EngineProtocol {
                 if (data.isEmpty()) continue
                 val frame = decode(data.substring(0, data.length - 1), protocol)
                 data.setLength(0)
-                if (frame.text.isNotEmpty() && !onText(frame.text)) return
+                if ((frame.text.replaces || frame.text.value.isNotEmpty()) && !onText(frame.text)) return
                 if (frame.filtered) throw EngineFailure(EngineProblem.FILTERED)
                 if (frame.finished) return
             } else if (line == "data" || line.startsWith("data:")) {
@@ -92,19 +130,16 @@ internal object EngineProtocol {
     private fun decode(data: String, protocol: ProviderProtocol): Frame {
         if (data.isBlank()) return Frame()
         if (protocol == ProviderProtocol.OPENAI_COMPATIBLE && data.trim() == "[DONE]") return Frame(finished = true)
-        checkNesting(data)
-        val root = try {
-            Json.parseToJsonElement(data) as? JsonObject ?: throw EngineFailure(EngineProblem.PROTOCOL)
-        } catch (_: IllegalArgumentException) {
-            throw EngineFailure(EngineProblem.PROTOCOL)
+        val root = decodeObject(data)
+        (root["error"] as? JsonObject)?.let { error ->
+            throw EngineFailure(if (protocol == ProviderProtocol.APPLE_MAC) appleProblem(error["code"].string()) else EngineProblem.SERVER)
         }
-        if (root["error"] is JsonObject) throw EngineFailure(EngineProblem.SERVER)
         return when (protocol) {
             ProviderProtocol.OPENAI_COMPATIBLE -> {
                 val choice = (root["choices"] as? JsonArray)?.firstOrNull() as? JsonObject
                 val finish = choice?.get("finish_reason").string()
                 Frame(
-                    text = ((choice?.get("delta") as? JsonObject)?.get("content")).string().orEmpty(),
+                    text = EngineText(((choice?.get("delta") as? JsonObject)?.get("content")).string().orEmpty()),
                     finished = finish != null,
                     filtered = finish == "content_filter",
                 )
@@ -119,12 +154,37 @@ internal object EngineProtocol {
                 }.joinToString("")
                 val reason = candidate?.get("finishReason").string()
                 Frame(
-                    text = text,
+                    text = EngineText(text),
                     finished = reason == "STOP" || reason == "MAX_TOKENS",
                     filtered = (block != null && block != "BLOCK_REASON_UNSPECIFIED") ||
                         (reason != null && reason !in setOf("STOP", "MAX_TOKENS", "FINISH_REASON_UNSPECIFIED")),
                 )
             }
+            ProviderProtocol.APPLE_MAC -> {
+                if (root["done"] == JsonPrimitive(true)) return Frame(finished = true)
+                val snapshot = root["snapshot"].string() ?: throw EngineFailure(EngineProblem.PROTOCOL)
+                Frame(text = EngineText(snapshot, replaces = true))
+            }
+        }
+    }
+
+    fun appleProblem(code: String?): EngineProblem = when (code) {
+        "apple_unavailable" -> EngineProblem.ENGINE_UNAVAILABLE
+        "unsupported_language" -> EngineProblem.UNSUPPORTED_LANGUAGE
+        "context_length_exceeded" -> EngineProblem.CONTEXT_LIMIT
+        "apple_busy" -> EngineProblem.RATE_LIMIT
+        "apple_refusal" -> EngineProblem.FILTERED
+        "output_limit" -> EngineProblem.OUTPUT_LIMIT
+        "timeout" -> EngineProblem.TIMEOUT
+        else -> EngineProblem.SERVER
+    }
+
+    fun decodeObject(data: String): JsonObject {
+        checkNesting(data)
+        return try {
+            Json.parseToJsonElement(data) as? JsonObject ?: throw EngineFailure(EngineProblem.PROTOCOL)
+        } catch (_: IllegalArgumentException) {
+            throw EngineFailure(EngineProblem.PROTOCOL)
         }
     }
 
@@ -148,7 +208,7 @@ internal object EngineProtocol {
         }
     }
 
-    private fun JsonElement?.string(): String? = (this as? JsonPrimitive)?.takeIf { it.isString }?.content
+    internal fun JsonElement?.string(): String? = (this as? JsonPrimitive)?.takeIf { it.isString }?.content
 
     private fun message(role: String, text: String) = buildJsonObject {
         put("role", role)
@@ -167,5 +227,5 @@ internal object EngineProtocol {
         override fun writeTo(sink: BufferedSink) = inner.writeTo(sink)
     }
 
-    private data class Frame(val text: String = "", val finished: Boolean = false, val filtered: Boolean = false)
+    private data class Frame(val text: EngineText = EngineText(""), val finished: Boolean = false, val filtered: Boolean = false)
 }

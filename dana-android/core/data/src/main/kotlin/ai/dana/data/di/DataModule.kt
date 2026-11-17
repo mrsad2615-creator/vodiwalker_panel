@@ -7,9 +7,13 @@ import ai.dana.data.local.RoomMemoryRepository
 import ai.dana.data.local.RoomNotesRepository
 import ai.dana.data.network.AndroidNetworkMonitor
 import ai.dana.data.network.OkHttpEngineTransport
+import ai.dana.data.network.OkHttpModelDirectory
+import ai.dana.data.network.danaHttpClient
+import ai.dana.data.network.privateAppleClient
 import ai.dana.data.provider.EngineRepository
 import ai.dana.data.provider.KeystoreVault
 import ai.dana.domain.DanaAiRouter
+import ai.dana.domain.EngineDiscovery
 import ai.dana.domain.HistoryRepository
 import ai.dana.domain.MemoryRepository
 import ai.dana.domain.NetworkMonitor
@@ -57,8 +61,16 @@ internal object DataModule {
     @Singleton
     fun network(@ApplicationContext context: Context): NetworkMonitor = AndroidNetworkMonitor(context)
 
+    private val client by lazy { danaHttpClient() }
+    private val appleClient by lazy { client.privateAppleClient() }
+
+    @Provides
+    @Singleton
+    fun discovery(preferences: PrivacyPreferences, providers: ProviderRepository): EngineDiscovery =
+        EngineDiscovery(preferences, providers, OkHttpModelDirectory(client, appleClient))
+
     @Provides
     @Singleton
     fun router(preferences: PrivacyPreferences, providers: ProviderRepository): DanaAiRouter =
-        DanaAiRouter(preferences, providers, OkHttpEngineTransport())
+        DanaAiRouter(preferences, providers, OkHttpEngineTransport(client, appleClient))
 }

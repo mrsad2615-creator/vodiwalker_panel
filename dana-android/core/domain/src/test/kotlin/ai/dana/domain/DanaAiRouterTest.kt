@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
@@ -37,7 +38,7 @@ class DanaAiRouterTest {
         release.complete(Unit)
         val events = run.await()
         assertEquals(mapOf("alpha" to "پاسخ alpha", "beta" to "پاسخ beta"),
-            events.filterIsInstance<EngineEvent.Text>().associate { it.profileId to it.delta })
+            events.filterIsInstance<EngineEvent.Text>().associate { it.profileId to it.chunk.value })
         assertEquals(setOf("alpha", "beta"), events.filterIsInstance<EngineEvent.Complete>().map { it.profileId }.toSet())
         assertEquals(EngineEvent.Finished, events.last())
     }
@@ -51,7 +52,7 @@ class DanaAiRouterTest {
             }
         }.compare(request(profile("limited"), profile("working"))).toList()
         assertTrue(EngineEvent.Failed("limited", EngineProblem.RATE_LIMIT) in events)
-        assertTrue(EngineEvent.Complete("working") in events)
+        assertTrue(events.any { it is EngineEvent.Complete && it.profileId == "working" })
         assertEquals(listOf("working"), events.filterIsInstance<EngineEvent.Text>().map { it.profileId })
     }
 
@@ -110,7 +111,7 @@ class DanaAiRouterTest {
             }
         }
         val events = router.compare(request(profile("long"))).toList()
-        assertEquals("بخش اول", events.filterIsInstance<EngineEvent.Text>().single().delta)
+        assertEquals("بخش اول", events.filterIsInstance<EngineEvent.Text>().single().chunk.value)
         assertTrue(EngineEvent.Failed("long", EngineProblem.OUTPUT_LIMIT) in events)
     }
 
@@ -143,7 +144,7 @@ class DanaAiRouterTest {
         override suspend fun delete(id: String) = error("Unexpected delete")
         override suspend fun credentialFor(profile: ProviderProfile) = credentials(profile)
     }, object : EngineTransport {
-        override fun stream(config: ProviderConfig, key: ApiCredential?, prompt: String) = stream(config, key, prompt)
+        override fun stream(config: ProviderConfig, key: ApiCredential?, prompt: String, task: AssistantTask) = stream(config, key, prompt).map { EngineText(it) }
     })
 
     private fun testRunning(block: suspend kotlinx.coroutines.CoroutineScope.() -> Unit) {

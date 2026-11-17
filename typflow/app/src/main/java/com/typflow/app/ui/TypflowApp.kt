@@ -10,8 +10,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -21,9 +21,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
@@ -34,71 +31,72 @@ import com.typflow.app.data.TypflowStore
 import com.typflow.app.theme.TypflowTheme
 import com.typflow.app.theme.themeById
 
-private enum class Screen { HOME, TYPING, READING, ANALYTICS, PROFILE, SETTINGS }
+enum class Tab { HOME, TYPING, READING, ANALYTICS, PROFILE }
 
-private data class NavItem(val screen: Screen, val icon: String, val fa: String, val en: String)
+private data class TabSpec(val tab: Tab, val index: String, val fa: String, val en: String)
 
-private val NAV_ITEMS = listOf(
-    NavItem(Screen.HOME, "🏠", "خانه", "Home"),
-    NavItem(Screen.TYPING, "⌨️", "تایپ", "Typing"),
-    NavItem(Screen.READING, "📖", "خواندن", "Reading"),
-    NavItem(Screen.ANALYTICS, "📊", "آمار", "Analytics"),
-    NavItem(Screen.PROFILE, "👤", "پروفایل", "Profile")
+private val TABS = listOf(
+    TabSpec(Tab.HOME, "01", "خانه", "HOME"),
+    TabSpec(Tab.TYPING, "02", "تایپ", "TYPE"),
+    TabSpec(Tab.READING, "03", "خواندن", "READ"),
+    TabSpec(Tab.ANALYTICS, "04", "آمار", "STATS"),
+    TabSpec(Tab.PROFILE, "05", "پروفایل", "YOU")
 )
+
+private fun tabFromName(name: String?): Tab = when (name) {
+    "typing" -> Tab.TYPING
+    "reading" -> Tab.READING
+    "analytics" -> Tab.ANALYTICS
+    "profile" -> Tab.PROFILE
+    else -> Tab.HOME
+}
 
 @Composable
 fun TypflowApp(initialScreen: String? = null) {
     val context = LocalContext.current
     val store = remember { TypflowStore(context) }
     val theme = themeById(store.themeId)
-    val startScreen = remember(initialScreen) {
-        when (initialScreen) {
-            "typing" -> Screen.TYPING
-            "reading" -> Screen.READING
-            "analytics" -> Screen.ANALYTICS
-            "profile" -> Screen.PROFILE
-            "settings" -> Screen.SETTINGS
-            "home" -> Screen.HOME
-            else -> Screen.HOME
-        }
-    }
-    var screen by remember { mutableStateOf(startScreen) }
+
+    var tab by remember { mutableStateOf(tabFromName(initialScreen)) }
+    var showSettings by remember { mutableStateOf(initialScreen == "settings") }
     var showSplash by remember { mutableStateOf(initialScreen == null) }
 
     CompositionLocalProvider(
-        LocalLayoutDirection provides if (store.lang == "fa") LayoutDirection.Rtl else LayoutDirection.Ltr
+        LocalLayoutDirection provides
+            if (store.lang == "fa") LayoutDirection.Rtl else LayoutDirection.Ltr
     ) {
-        if (showSplash) {
-            SplashScreen(theme) { showSplash = false }
-        } else {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(theme.background)
-            ) {
-                CinematicBackdrop(theme)
+        Box(modifier = Modifier.fillMaxSize().background(theme.bg)) {
+            RawBackdrop(theme)
 
+            if (showSplash) {
+                SplashScreen(theme) { showSplash = false }
+            } else {
                 Column(modifier = Modifier.fillMaxSize()) {
                     Box(modifier = Modifier.weight(1f)) {
-                        when (screen) {
-                            Screen.HOME -> HomeScreen(theme, store) { target ->
-                                screen = when (target) {
-                                    "typing" -> Screen.TYPING
-                                    "reading" -> Screen.READING
-                                    "settings" -> Screen.SETTINGS
-                                    else -> Screen.HOME
-                                }
+                        if (showSettings) {
+                            SettingsScreen(theme, store) { showSettings = false }
+                        } else {
+                            when (tab) {
+                                Tab.HOME -> HomeScreen(
+                                    theme = theme,
+                                    store = store,
+                                    onNavigate = { tab = it },
+                                    onOpenSettings = { showSettings = true }
+                                )
+                                Tab.TYPING -> TypingScreen(theme, store)
+                                Tab.READING -> ReadingScreen(theme, store)
+                                Tab.ANALYTICS -> AnalyticsScreen(theme, store)
+                                Tab.PROFILE -> ProfileScreen(
+                                    theme = theme,
+                                    store = store,
+                                    onOpenSettings = { showSettings = true }
+                                )
                             }
-                            Screen.TYPING -> TypingScreen(theme, store)
-                            Screen.READING -> ReadingScreen(theme, store)
-                            Screen.ANALYTICS -> AnalyticsScreen(theme, store)
-                            Screen.PROFILE -> ProfileScreen(theme, store) { target ->
-                                if (target == "settings") screen = Screen.SETTINGS
-                            }
-                            Screen.SETTINGS -> SettingsScreen(theme, store)
                         }
                     }
-                    BottomBar(theme, store.lang, screen) { screen = it }
+                    if (!showSettings) {
+                        TabBar(theme, store.lang, tab) { tab = it }
+                    }
                 }
             }
         }
@@ -106,47 +104,48 @@ fun TypflowApp(initialScreen: String? = null) {
 }
 
 @Composable
-private fun BottomBar(
+private fun TabBar(
     theme: TypflowTheme,
     lang: String,
-    current: Screen,
-    onSelect: (Screen) -> Unit
+    current: Tab,
+    onSelect: (Tab) -> Unit
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 14.dp, vertical = 10.dp)
-            .clip(RoundedCornerShape(26.dp))
-            .background(theme.surface.copy(alpha = 0.75f))
-            .padding(vertical = 8.dp),
-        horizontalArrangement = Arrangement.SpaceEvenly,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        NAV_ITEMS.forEach { item ->
-            val selected = current == item.screen
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier
-                    .clip(RoundedCornerShape(18.dp))
-                    .background(
-                        if (selected) Brush.horizontalGradient(theme.gradient)
-                        else Brush.linearGradient(listOf(Color.Transparent, Color.Transparent))
+    Column(modifier = Modifier.fillMaxWidth().background(theme.bg)) {
+        Hairline(theme)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .padding(horizontal = 8.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            TABS.forEach { spec ->
+                val active = spec.tab == current
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .background(if (active) theme.ink else theme.bg)
+                        .clickable { onSelect(spec.tab) }
+                        .padding(vertical = 10.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = spec.index,
+                        color = if (active) theme.bg else theme.dim,
+                        fontFamily = uiFont(theme),
+                        fontSize = 9.sp,
+                        letterSpacing = 1.2.sp
                     )
-                    .clickable { onSelect(item.screen) }
-                    .padding(horizontal = 13.dp, vertical = 7.dp)
-            ) {
-                Text(
-                    text = item.icon,
-                    fontSize = 19.sp,
-                    color = if (selected) Color.Black else theme.onSurface
-                )
-                Spacer(Modifier.height(1.dp))
-                Text(
-                    text = if (lang == "fa") item.fa else item.en,
-                    fontSize = 10.sp,
-                    fontWeight = if (selected) FontWeight.Black else FontWeight.Medium,
-                    color = if (selected) Color.Black else theme.onSurface.copy(alpha = 0.75f)
-                )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = if (lang == "fa") spec.fa else spec.en,
+                        color = if (active) theme.bg else theme.ink,
+                        fontFamily = uiFont(theme),
+                        fontSize = 11.sp,
+                        fontWeight = if (active) FontWeight.Black else FontWeight.Normal,
+                        maxLines = 1
+                    )
+                }
             }
         }
     }

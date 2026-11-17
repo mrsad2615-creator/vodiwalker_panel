@@ -55,14 +55,15 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          cp typflow/app/build/outputs/apk/debug/app-debug.apk TYPFLOW-1.0.0.apk
-          ls -lh TYPFLOW-1.0.0.apk
+          cp typflow/app/build/outputs/apk/debug/app-debug.apk TYPFLOW-1.1.0.apk
+          ls -lh TYPFLOW-1.1.0.apk
           gh release view typflow-latest > /dev/null 2>&1 || \
             gh release create typflow-latest \
-              --title "TYPFLOW 1.0.0 — APK" \
-              --notes "اپلیکیشن TYPFLOW — تمرین تایپ و تندخوانی. نسخه اندروید ۸ به بالا. فایل TYPFLOW-1.0.0.apk را دانلود و نصب کنید." \
+              --title "TYPFLOW 1.1.0 — APK" \
+              --notes "TYPFLOW 1.1.0 — raw monochrome edition. تمرین تایپ و تندخوانی، چهار تم سیاه و سفید. فایل TYPFLOW-1.1.0.apk را دانلود و نصب کنید." \
               --prerelease
-          gh release upload typflow-latest TYPFLOW-1.0.0.apk --clobber
+          gh release delete-asset typflow-latest TYPFLOW-1.0.0.apk -y > /dev/null 2>&1 || true
+          gh release upload typflow-latest TYPFLOW-1.1.0.apk --clobber
 
       - name: Publish build log into repo (on failure)
         if: failure()
@@ -102,12 +103,11 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
 
-      - name: Download APK
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          mkdir -p apk
-          gh release download typflow-latest --pattern "*.apk" --dir apk --clobber
+      - name: Download built APK
+        uses: actions/download-artifact@v4
+        with:
+          name: typflow-apk
+          path: apk
 
       - name: Launch on emulator and capture screenshots
         uses: reactivecircus/android-emulator-runner@v2
@@ -120,7 +120,7 @@ jobs:
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -no-snapshot
           disable-animations: true
           script: |
-            bash scripts/smoke.sh apk/TYPFLOW-1.0.0.apk
+            bash scripts/smoke.sh "$(ls apk/*.apk | head -1)"
 
       - name: Commit screenshots to branch
         if: always()

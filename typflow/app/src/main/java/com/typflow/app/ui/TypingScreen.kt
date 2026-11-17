@@ -1,5 +1,10 @@
 package com.typflow.app.ui
 
+import android.media.AudioManager
+import android.media.ToneGenerator
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -9,156 +14,177 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.withStyle
-import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import com.typflow.app.data.Texts
 import com.typflow.app.data.TypflowStore
 import com.typflow.app.theme.TypflowTheme
 import kotlinx.coroutines.delay
-import kotlin.math.max
 
-private enum class TypingMode { PRACTICE, TIMED }
+private val MODE_SECONDS = listOf(0, 15, 30, 60, 120)
 
 @Composable
 fun TypingScreen(theme: TypflowTheme, store: TypflowStore) {
     val lang = store.lang
     val isFa = lang == "fa"
-    val pool = if (isFa) Texts.typingFa else Texts.typingEn
 
-    var mode by remember { mutableStateOf(TypingMode.PRACTICE) }
-    var target by remember { mutableStateOf(pool.random()) }
+    var modeIndex by remember { mutableIntStateOf(0) }
+    var level by remember { mutableIntStateOf(2) }
+    var custom by remember { mutableStateOf<String?>(null) }
+    var target by remember { mutableStateOf("") }
     var input by remember { mutableStateOf("") }
-    var elapsed by remember { mutableIntStateOf(0) }
-    var started by remember { mutableStateOf(false) }
+    var startedAt by remember { mutableLongStateOf(0L) }
+    var now by remember { mutableLongStateOf(0L) }
     var finished by remember { mutableStateOf(false) }
-    var resultWpm by remember { mutableIntStateOf(0) }
-    var resultAcc by remember { mutableIntStateOf(0) }
-    var resultErrors by remember { mutableIntStateOf(0) }
+    var showPaste by remember { mutableStateOf(false) }
+    var draft by remember { mutableStateOf("") }
+
+    var resWpm by remember { mutableIntStateOf(0) }
+    var resAcc by remember { mutableIntStateOf(0) }
+    var resErr by remember { mutableIntStateOf(0) }
+    var problemKeys by remember { mutableStateOf(listOf<Char>()) }
+
+    val haptic = LocalHapticFeedback.current
+    val tone = remember {
+        runCatching { ToneGenerator(AudioManager.STREAM_MUSIC, 30) }.getOrNull()
+    }
+    DisposableEffect(Unit) {
+        onDispose { runCatching { tone?.release() } }
+    }
+
+    fun pickTarget(): String =
+        custom ?: Texts.typingPool(lang, level).random()
 
     fun reset(newText: Boolean = true) {
-        if (newText) target = pool.random()
+        if (newText) target = pickTarget()
         input = ""
-        elapsed = 0
-        started = false
+        startedAt = 0L
+        now = 0L
         finished = false
+        resWpm = 0
+        resAcc = 0
+        resErr = 0
+        problemKeys = emptyList()
     }
+
+    LaunchedEffect(lang, level, custom) {
+        reset(newText = true)
+    }
+
+    LaunchedEffect(startedAt) {
+        if (startedAt == 0L) return@LaunchedEffect
+        while (true) {
+            now = System.currentTimeMillis()
+            if (finished) break
+            delay(80)
+        }
+    }
+
+    val elapsedMs = if (startedAt == 0L) 0L else (now - startedAt).coerceAtLeast(0L)
+    val elapsedSec = (elapsedMs / 1000L).toInt()
+    val timerMode = MODE_SECONDS[modeIndex]
+
+    val correctChars = input.indices.count { i ->
+        i < target.length && input[i] == target[i]
+    }
+    val errorChars = (input.length - correctChars).coerceAtLeast(0)
+    val accuracy = if (input.isEmpty()) 100 else (correctChars * 100 / input.length)
+    val wpm = if (elapsedSec > 0) ((correctChars / 5.0) / (elapsedSec / 60.0)).toInt() else 0
+    val timeShown = if (timerMode > 0) (timerMode - elapsedSec).coerceAtLeast(0) else elapsedSec
 
     fun finish() {
         if (finished) return
-        val correct = input.indices.count { i -> i < target.length && input[i] == target[i] }
-        val errors = (input.length - correct).coerceAtLeast(0)
-        val acc = if (input.isEmpty()) 0 else (correct * 100 / input.length)
-        val minutes = max(elapsed, 1) / 60.0
-        val wpm = if (minutes > 0) ((correct / 5.0) / minutes).toInt() else 0
-        resultWpm = wpm
-        resultAcc = acc
-        resultErrors = errors
         finished = true
-        started = false
-        store.recordTyping(wpm, acc, max(1, elapsed / 60))
+        val secs = if (elapsedSec < 1) 1 else elapsedSec
+        val finalWpm = ((correctChars / 5.0) / (secs / 60.0)).toInt()
+        val finalAcc = if (input.isEmpty()) 0 else (correctChars * 100 / input.length)
+        resWpm = finalWpm
+        resAcc = finalAcc
+        resErr = errorChars
+        problemKeys = sessionErrors(input, target)
+        store.recordTyping(
+            wpm = finalWpm,
+            acc = finalAcc,
+            minutes = (secs / 60).coerceAtLeast(1),
+            errors = errorChars,
+            sessionKeyErrors = sessionErrorMap(input, target)
+        )
     }
 
-    // Timer loop
-    LaunchedEffect(started, mode) {
-        if (started && !finished) {
-            while (!finished) {
-                delay(1000)
-                elapsed += 1
-                if (mode == TypingMode.TIMED && elapsed >= 60) {
-                    finish()
-                    break
-                }
-            }
-        }
+    LaunchedEffect(input, now, timerMode) {
+        if (finished) return@LaunchedEffect
+        if (startedAt == 0L) return@LaunchedEffect
+        if (timerMode > 0 && elapsedSec >= timerMode) finish()
+        else if (timerMode == 0 && target.isNotEmpty() && input.length >= target.length) finish()
     }
 
-    // Auto-finish in practice mode when the whole text is typed
-    LaunchedEffect(input) {
-        if (mode == TypingMode.PRACTICE && input.length >= target.length && input.isNotEmpty() && !finished) {
-            finish()
-        }
-    }
-
-    val correctNow = input.indices.count { i -> i < target.length && input[i] == target[i] }
-    val errorsNow = (input.length - correctNow).coerceAtLeast(0)
-    val accNow = if (input.isEmpty()) 100 else (correctNow * 100 / input.length)
-    val liveWpm = if (elapsed > 0) ((correctNow / 5.0) / (elapsed / 60.0)).toInt() else 0
-    val timeLeft = if (mode == TypingMode.TIMED) (60 - elapsed).coerceAtLeast(0) else elapsed
-
-    // Persian shaping breaks if a style run ends inside a word, so the text is
-    // coloured word-by-word for Farsi and character-by-character for English.
-    val annotated = buildAnnotatedString {
-        if (!isFa) {
+    val annotated = if (!isFa) {
+        buildAnnotatedString {
             target.forEachIndexed { i, ch ->
-                val color = when {
-                    i < input.length && input[i] == ch -> theme.success
-                    i < input.length -> theme.error
-                    i == input.length -> theme.primary
-                    else -> theme.onSurface.copy(alpha = 0.45f)
-                }
-                withStyle(
-                    SpanStyle(
-                        color = color,
-                        fontWeight = if (i == input.length) FontWeight.Bold
-                        else FontWeight.Normal
+                val style = when {
+                    i < input.length && input[i] == ch -> SpanStyle(color = theme.ink)
+                    i < input.length -> SpanStyle(
+                        color = theme.bg,
+                        background = theme.ink
                     )
-                ) {
-                    append(ch)
+                    i == input.length -> SpanStyle(
+                        color = theme.ink,
+                        fontWeight = FontWeight.Black,
+                        textDecoration = TextDecoration.Underline
+                    )
+                    else -> SpanStyle(color = theme.dim)
                 }
+                withStyle(style) { append(ch) }
             }
-        } else {
+        }
+    } else {
+        buildAnnotatedString {
             var i = 0
             while (i < target.length) {
                 val start = i
                 while (i < target.length && !target[i].isWhitespace()) i++
                 val word = target.substring(start, i)
                 val typed = (input.length - start).coerceIn(0, word.length)
-                val typedSlice = if (typed > 0) input.substring(start, minOf(start + typed, input.length)) else ""
-                val allTyped = typed == word.length
-                val hasError = typedSlice.indices.any { k ->
-                    k >= word.length || typedSlice[k] != word[k]
-                }
-                val inProgress = input.length > start && !allTyped
-                val color = when {
-                    typed == 0 -> theme.onSurface.copy(alpha = 0.45f)
-                    hasError -> theme.error
-                    allTyped -> theme.success
-                    inProgress -> theme.primary
-                    else -> theme.onSurface.copy(alpha = 0.45f)
-                }
-                withStyle(
-                    SpanStyle(
-                        color = color,
-                        fontWeight = if (inProgress || (typed == 0 && input.length == start))
-                            FontWeight.Bold else FontWeight.Normal
+                val slice = if (typed > 0) input.substring(start, start + typed) else ""
+                val hasError = slice.indices.any { k -> k >= word.length || slice[k] != word[k] }
+                val style = when {
+                    typed == 0 -> SpanStyle(color = theme.dim)
+                    hasError -> SpanStyle(
+                        color = theme.ink,
+                        textDecoration = TextDecoration.Underline,
+                        fontWeight = FontWeight.Bold
                     )
-                ) {
-                    append(word)
+                    typed == word.length -> SpanStyle(color = theme.ink)
+                    else -> SpanStyle(color = theme.ink, fontWeight = FontWeight.Bold)
                 }
-                // keep the trailing space in the same run so joins stay intact
+                withStyle(style) { append(word) }
                 while (i < target.length && target[i].isWhitespace()) {
                     append(target[i])
                     i++
@@ -167,157 +193,311 @@ fun TypingScreen(theme: TypflowTheme, store: TypflowStore) {
         }
     }
 
+    val fraction = when {
+        timerMode > 0 -> (elapsedSec.toFloat() / timerMode.toFloat())
+        target.isNotEmpty() -> input.length.toFloat() / target.length.toFloat()
+        else -> 0f
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+            .padding(horizontal = 20.dp)
+            .padding(top = 18.dp, bottom = 28.dp)
     ) {
-        SectionTitle(theme, tr(lang, "تمرین تایپ", "Typing Practice"))
+        ScreenHeader(
+            theme = theme,
+            index = "02",
+            title = tr(lang, "تمرین تایپ", "Typing lab"),
+            subtitle = tr(
+                lang,
+                "دقت را بساز، سرعت خودش می آید.",
+                "Build accuracy, speed follows."
+            )
+        )
 
-        // Mode chips
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Chip(theme, tr(lang, "تمرین آزاد", "Practice"), mode == TypingMode.PRACTICE) {
-                mode = TypingMode.PRACTICE
-                reset()
-            }
-            Chip(theme, tr(lang, "تست 60 ثانیه‌ای", "60s Test"), mode == TypingMode.TIMED) {
-                mode = TypingMode.TIMED
-                reset()
+        Spacer(Modifier.height(16.dp))
+
+        // ---- mode ----
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            MODE_SECONDS.forEachIndexed { index, secs ->
+                MonoChip(
+                    theme = theme,
+                    text = if (secs == 0) tr(lang, "آزاد", "FREE") else "$secs S",
+                    selected = modeIndex == index,
+                    onClick = {
+                        modeIndex = index
+                        reset(newText = false)
+                    }
+                )
             }
         }
 
-        // Live stats
+        Spacer(Modifier.height(10.dp))
+
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            StatCard(theme, tr(lang, "سرعت", "Speed"), liveWpm, "WPM", Modifier.weight(1f))
-            StatCard(theme, tr(lang, "دقت", "Accuracy"), accNow, "%", Modifier.weight(1f))
-            StatCard(
-                theme,
-                if (mode == TypingMode.TIMED) tr(lang, "زمان باقی‌مانده", "Time left")
-                else tr(lang, "زمان", "Time"),
-                timeLeft,
-                tr(lang, "ثانیه", "sec"),
-                Modifier.weight(1f)
+            MonoChip(theme, "L1", level == 1, { level = 1 })
+            MonoChip(theme, "L2", level == 2, { level = 2 })
+            MonoChip(theme, "L3", level == 3, { level = 3 })
+            Spacer(Modifier.weight(1f))
+            LineButton(
+                theme = theme,
+                text = tr(lang, "متن من", "MY TEXT"),
+                onClick = { draft = custom ?: ""; showPaste = true },
+                modifier = Modifier.height(36.dp)
             )
         }
 
-        // Target text
-        GlassCard(theme, Modifier.fillMaxWidth()) {
-            Column {
-                Text(
-                    text = tr(lang, "متن هدف — اشتباهات قرمز، درست سبز", "Target text — red = error, green = correct"),
-                    color = theme.onSurface.copy(alpha = 0.6f),
-                    fontSize = 12.sp
+        Spacer(Modifier.height(18.dp))
+
+        // ---- live stats ----
+        Panel(theme, Modifier.fillMaxWidth(), padding = 14.dp) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                StatBlock(theme, tr(lang, "سرعت", "WPM"), wpm, "WPM", size = 28)
+                StatBlock(theme, tr(lang, "دقت", "ACC"), accuracy, "%", size = 28)
+                StatBlock(theme, tr(lang, "زمان", "TIME"), timeShown, "S", size = 28)
+                StatBlock(theme, tr(lang, "خطا", "ERR"), errorChars, "", size = 28)
+            }
+            Spacer(Modifier.height(12.dp))
+            Bar(theme, fraction, height = 2.dp)
+        }
+
+        Spacer(Modifier.height(14.dp))
+
+        // ---- target text ----
+        Panel(theme, Modifier.fillMaxWidth()) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                MicroLabel(theme, tr(lang, "متن هدف", "TARGET"))
+                MicroLabel(
+                    theme,
+                    "${input.length} / ${target.length}",
+                    color = theme.dim
                 )
-                Spacer(Modifier.height(10.dp))
+            }
+            Spacer(Modifier.height(12.dp))
+            Text(
+                text = annotated,
+                style = TextStyle(
+                    fontSize = (19f * store.textScale).sp,
+                    lineHeight = (34f * store.textScale).sp,
+                    fontFamily = uiFont(theme),
+                    textDirection = if (isFa) TextDirection.Rtl else TextDirection.Ltr
+                )
+            )
+        }
+
+        Spacer(Modifier.height(12.dp))
+
+        // ---- input ----
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(theme.surface)
+                .border(1.dp, if (startedAt > 0 && !finished) theme.ink else theme.line)
+                .padding(14.dp)
+        ) {
+            if (input.isEmpty()) {
+                MicroLabel(
+                    theme,
+                    tr(lang, "اینجا تایپ کنید…", "TYPE HERE…"),
+                    color = theme.dim
+                )
+            }
+            BasicTextField(
+                value = input,
+                onValueChange = { value ->
+                    if (finished) return@BasicTextField
+                    if (startedAt == 0L && value.isNotEmpty()) {
+                        startedAt = System.currentTimeMillis()
+                        now = startedAt
+                    }
+                    input = value
+                    if (store.vibrationOn) {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    }
+                    if (store.soundOn) {
+                        runCatching { tone?.startTone(ToneGenerator.TONE_PROP_BEEP2, 12) }
+                    }
+                },
+                enabled = !finished,
+                textStyle = TextStyle(
+                    color = theme.ink,
+                    fontSize = (17f * store.textScale).sp,
+                    fontFamily = uiFont(theme),
+                    textDirection = if (isFa) TextDirection.Rtl else TextDirection.Ltr
+                ),
+                cursorBrush = SolidColor(theme.ink),
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+
+        if (finished) {
+            Spacer(Modifier.height(16.dp))
+            Panel(theme, Modifier.fillMaxWidth()) {
+                MicroLabel(theme, tr(lang, "نتیجه جلسه", "SESSION RESULT"), color = theme.ink)
+                Spacer(Modifier.height(12.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column {
+                        BigFigure(theme, resWpm.toString(), "WPM", size = 44)
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(22.dp)) {
+                        StatBlock(theme, tr(lang, "دقت", "ACC"), resAcc, "%", size = 24)
+                        StatBlock(theme, tr(lang, "خطا", "ERR"), resErr, "", size = 24)
+                    }
+                }
+                if (problemKeys.isNotEmpty()) {
+                    Spacer(Modifier.height(14.dp))
+                    Hairline(theme)
+                    Spacer(Modifier.height(10.dp))
+                    MicroLabel(theme, tr(lang, "کلیدهای مشکل‌دار", "PROBLEM KEYS"))
+                    Spacer(Modifier.height(6.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        problemKeys.forEach { key ->
+                            Box(
+                                modifier = Modifier
+                                    .height(30.dp)
+                                    .width(30.dp)
+                                    .border(1.dp, theme.line)
+                                    .background(theme.bg),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(key.toString(), color = theme.ink, fontSize = 14.sp)
+                            }
+                        }
+                    }
+                }
+                Spacer(Modifier.height(16.dp))
+                SolidButton(
+                    theme = theme,
+                    text = tr(lang, "متن جدید", "NEW TEXT"),
+                    onClick = { reset(newText = true) },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(Modifier.height(8.dp))
+                LineButton(
+                    theme = theme,
+                    text = tr(lang, "تکرار همین متن", "RETRY SAME TEXT"),
+                    onClick = { reset(newText = false) },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        } else {
+            Spacer(Modifier.height(12.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                LineButton(
+                    theme = theme,
+                    text = tr(lang, "متن جدید", "NEW TEXT"),
+                    onClick = { reset(newText = true) }
+                )
+                if (custom != null) {
+                    LineButton(
+                        theme = theme,
+                        text = tr(lang, "حذف متن من", "CLEAR MY TEXT"),
+                        onClick = { custom = null }
+                    )
+                }
+            }
+        }
+
+        Spacer(Modifier.height(18.dp))
+        MicroLabel(
+            theme,
+            tr(
+                lang,
+                "رکورد شما: ${store.bestWpm} WPM · جلسات: ${store.totalSessions}",
+                "Your best: ${store.bestWpm} WPM · sessions: ${store.totalSessions}"
+            )
+        )
+    }
+
+    if (showPaste) {
+        Dialog(onDismissRequest = { showPaste = false }) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(theme.bg)
+                    .border(1.dp, theme.line)
+                    .padding(18.dp)
+            ) {
+                MicroLabel(theme, tr(lang, "متن تمرین خودت", "YOUR OWN TEXT"), color = theme.ink)
+                Spacer(Modifier.height(12.dp))
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(4.dp)
+                        .height(130.dp)
+                        .border(1.dp, theme.line)
+                        .padding(10.dp)
                 ) {
-                    androidx.compose.runtime.CompositionLocalProvider(
-                        LocalLayoutDirection provides if (isFa) LayoutDirection.Rtl else LayoutDirection.Ltr
-                    ) {
-                        Text(
-                            text = annotated,
-                            fontSize = 19.sp,
-                            lineHeight = 32.sp,
-                            style = TextStyle(textDirection = if (isFa) TextDirection.Rtl else TextDirection.Ltr)
-                        )
+                    if (draft.isEmpty()) {
+                        MicroLabel(theme, tr(lang, "متن را اینجا بچسبان…", "PASTE TEXT HERE…"))
                     }
-                }
-            }
-        }
-
-        // Input
-        TextField(
-            value = input,
-            onValueChange = { v ->
-                if (!finished) {
-                    if (!started && v.isNotEmpty()) started = true
-                    input = v
-                }
-            },
-            modifier = Modifier.fillMaxWidth(),
-            enabled = !finished,
-            placeholder = {
-                Text(
-                    tr(lang, "اینجا تایپ کنید…", "Type here…"),
-                    color = theme.onSurface.copy(alpha = 0.4f)
-                )
-            },
-            textStyle = TextStyle(
-                color = theme.onBackground,
-                fontSize = 17.sp,
-                textDirection = if (isFa) TextDirection.Rtl else TextDirection.Ltr
-            ),
-            colors = TextFieldDefaults.colors(
-                focusedContainerColor = theme.surface.copy(alpha = 0.6f),
-                unfocusedContainerColor = theme.surface.copy(alpha = 0.6f),
-                focusedIndicatorColor = theme.primary,
-                unfocusedIndicatorColor = theme.primary.copy(alpha = 0.3f),
-                disabledContainerColor = theme.surface.copy(alpha = 0.4f)
-            ),
-            singleLine = false,
-            minLines = 3,
-            shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp)
-        )
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = tr(lang, "اشتباهات: ", "Errors: ") + errorsNow.toString(),
-                color = theme.error,
-                fontWeight = FontWeight.Bold,
-                fontSize = 14.sp
-            )
-            Spacer(Modifier.weight(1f))
-            GhostButton(theme, tr(lang, "متن جدید", "New text"), { reset(true) })
-            if (mode == TypingMode.TIMED && started && !finished) {
-                GradientButton(theme, tr(lang, "پایان آزمون", "Finish"), { finish() })
-            }
-        }
-
-        // Result
-        if (finished) {
-            GlassCard(theme, Modifier.fillMaxWidth()) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    HoloText(
-                        tr(lang, "نتیجه آزمون", "Test Result"),
-                        theme, 20
+                    BasicTextField(
+                        value = draft,
+                        onValueChange = { draft = it },
+                        textStyle = TextStyle(
+                            color = theme.ink,
+                            fontSize = 14.sp,
+                            fontFamily = uiFont(theme),
+                            textDirection = if (isFa) TextDirection.Rtl else TextDirection.Ltr
+                        ),
+                        cursorBrush = SolidColor(theme.ink),
+                        modifier = Modifier.fillMaxWidth()
                     )
-                    Spacer(Modifier.height(14.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(22.dp)) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            AnimatedNumber(resultWpm, theme, 40)
-                            Text(tr(lang, "کلمه در دقیقه", "WPM"), color = theme.onSurface, fontSize = 12.sp)
-                        }
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            AnimatedNumber(resultAcc, theme, 40)
-                            Text(tr(lang, "درصد دقت", "Accuracy %"), color = theme.onSurface, fontSize = 12.sp)
-                        }
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            AnimatedNumber(resultErrors, theme, 40)
-                            Text(tr(lang, "اشتباه", "Errors"), color = theme.onSurface, fontSize = 12.sp)
-                        }
-                    }
-                    Spacer(Modifier.height(16.dp))
-                    Text(
-                        text = tr(lang, "رکورد شما: ", "Your best: ") + store.bestWpm.toString() + " WPM",
-                        color = theme.primary,
-                        fontWeight = FontWeight.Bold
+                }
+                Spacer(Modifier.height(14.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    SolidButton(
+                        theme = theme,
+                        text = tr(lang, "استفاده", "USE TEXT"),
+                        onClick = {
+                            val trimmed = draft.trim()
+                            if (trimmed.isNotEmpty()) {
+                                custom = trimmed
+                                showPaste = false
+                            }
+                        },
+                        modifier = Modifier.weight(1f)
                     )
-                    Spacer(Modifier.height(14.dp))
-                    GradientButton(theme, tr(lang, "تمرین دوباره", "Practice again"), { reset(true) })
+                    LineButton(
+                        theme = theme,
+                        text = tr(lang, "بستن", "CLOSE"),
+                        onClick = { showPaste = false },
+                        modifier = Modifier.weight(1f)
+                    )
                 }
             }
         }
     }
 }
+
+private fun sessionErrorMap(input: String, target: String): Map<Char, Int> {
+    val out = LinkedHashMap<Char, Int>()
+    for (i in input.indices) {
+        if (i >= target.length) break
+        if (input[i] != target[i]) {
+            val expected = target[i]
+            if (!expected.isWhitespace()) out[expected] = (out[expected] ?: 0) + 1
+        }
+    }
+    return out
+}
+
+private fun sessionErrors(input: String, target: String): List<Char> =
+    sessionErrorMap(input, target).entries
+        .sortedByDescending { it.value }
+        .take(5)
+        .map { it.key }

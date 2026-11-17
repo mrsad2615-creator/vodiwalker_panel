@@ -1,5 +1,9 @@
 package com.typflow.app.ui
 
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -9,11 +13,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -24,17 +30,18 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.platform.LocalLayoutDirection
-import androidx.compose.ui.text.rememberTextMeasurer
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.typflow.app.data.ReadingText
 import com.typflow.app.data.Texts
 import com.typflow.app.data.TypflowStore
 import com.typflow.app.theme.TypflowTheme
@@ -46,41 +53,46 @@ private enum class ReadPhase { PLAYER, QUIZ, RESULT }
 fun ReadingScreen(theme: TypflowTheme, store: TypflowStore) {
     val lang = store.lang
     val isFa = lang == "fa"
-    val pool = if (isFa) Texts.readingFa else Texts.readingEn
+    val pool: List<ReadingText> = remember(lang) { Texts.readingPool(lang) }
 
     var textIndex by remember { mutableIntStateOf(0) }
     var phase by remember { mutableStateOf(ReadPhase.PLAYER) }
     var wordIndex by remember { mutableIntStateOf(0) }
     var playing by remember { mutableStateOf(false) }
-    var wpm by remember { mutableIntStateOf(250) }
+    var wpm by remember { mutableIntStateOf(300) }
     var showFull by remember { mutableStateOf(false) }
-    var answers by remember { mutableStateOf(List(pool[textIndex].questions.size) { -1 }) }
+    var answers by remember { mutableStateOf(List(8) { -1 }) }
     var score by remember { mutableIntStateOf(0) }
 
-    val text = pool[textIndex]
-    val words = remember(textIndex, lang) { text.body.split(Regex("\\s+")).filter { it.isNotEmpty() } }
-    val progress = if (words.isEmpty()) 0f else (wordIndex.toFloat() / words.size.toFloat()).coerceIn(0f, 1f)
-    val currentWord = words.getOrNull(wordIndex) ?: ""
+    val text = pool[textIndex.coerceIn(0, pool.size - 1)]
+    val words = remember(text) { text.body.split(" ").filter { it.isNotBlank() } }
+    val chunk = store.chunkSize.coerceIn(1, 3)
+    val current = words.getOrElse(wordIndex) { "" }
+    val progress = if (words.isEmpty()) 0f else wordIndex.toFloat() / words.size
 
     fun resetPlayer() {
         wordIndex = 0
         playing = false
-        phase = ReadPhase.PLAYER
-        answers = List(text.questions.size) { -1 }
+        answers = List(8) { -1 }
         score = 0
+        phase = ReadPhase.PLAYER
     }
 
-    // RSVP engine
-    LaunchedEffect(playing, wpm, textIndex) {
-        if (playing) {
-            val interval = (60000.0 / wpm).toLong().coerceAtLeast(40L)
-            while (playing && wordIndex < words.size) {
-                delay(interval)
-                wordIndex += 1
-            }
-            if (wordIndex >= words.size) {
+    LaunchedEffect(playing, wpm, chunk, textIndex) {
+        if (!playing) return@LaunchedEffect
+        while (playing) {
+            val ms = (60000f / wpm.toFloat() * chunk).toLong().coerceIn(40L, 1200L)
+            delay(ms)
+            if (!playing) break
+            if (wordIndex + chunk >= words.size) {
+                wordIndex = words.size - 1
                 playing = false
                 phase = ReadPhase.QUIZ
+                break
+            }
+            wordIndex += chunk
+            if (store.rampOn && wordIndex % 25 == 0 && wpm < 900) {
+                wpm += 10
             }
         }
     }
@@ -89,195 +101,232 @@ fun ReadingScreen(theme: TypflowTheme, store: TypflowStore) {
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+            .padding(horizontal = 20.dp)
+            .padding(top = 18.dp, bottom = 28.dp)
     ) {
-        SectionTitle(theme, tr(lang, "تندخوانی RSVP", "RSVP Speed Reading"))
+        ScreenHeader(
+            theme = theme,
+            index = "03",
+            title = tr(lang, "تندخوانی", "Speed reading"),
+            subtitle = tr(
+                lang,
+                "کلمه به کلمه، با نشانگر نقطه تمرکز.",
+                "One fixated point at a time."
+            )
+        )
 
-        // Text selector
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Spacer(Modifier.height(16.dp))
+
+        // ---- passage selector ----
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             pool.forEachIndexed { i, t ->
-                Chip(theme, t.title, i == textIndex) {
-                    textIndex = i
-                    resetPlayer()
-                }
+                MonoChip(
+                    theme = theme,
+                    text = t.title,
+                    selected = i == textIndex,
+                    onClick = {
+                        textIndex = i
+                        resetPlayer()
+                    }
+                )
             }
         }
 
+        Spacer(Modifier.height(16.dp))
+
         if (phase == ReadPhase.PLAYER) {
-            // RSVP stage
-            GlassCard(theme, Modifier.fillMaxWidth()) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = tr(lang, "کلمه ${wordIndex + 1} از ${words.size}", "Word ${wordIndex + 1} of ${words.size}"),
-                        color = theme.onSurface.copy(alpha = 0.65f),
-                        fontSize = 13.sp
+            Panel(theme, Modifier.fillMaxWidth(), padding = 14.dp) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    MicroLabel(theme, "${wordIndex + 1} / ${words.size}")
+                    MicroLabel(theme, if (store.rampOn) "RAMP ON" else "RAMP OFF")
+                }
+                Spacer(Modifier.height(16.dp))
+
+                // ---- RSVP word with ORP caret ----
+                androidx.compose.runtime.CompositionLocalProvider(
+                    LocalLayoutDirection provides
+                        if (isFa) LayoutDirection.Rtl else LayoutDirection.Ltr
+                ) {
+                    val wordStyle = TextStyle(
+                        fontSize = 46.sp,
+                        fontWeight = FontWeight.Black,
+                        color = theme.ink
                     )
-                    Spacer(Modifier.height(18.dp))
-                    androidx.compose.runtime.CompositionLocalProvider(
-                        LocalLayoutDirection provides if (isFa) LayoutDirection.Rtl else LayoutDirection.Ltr
+                    val display = if (chunk == 1) current
+                    else words.drop(wordIndex).take(chunk).joinToString(" ")
+                    val measurer = rememberTextMeasurer()
+                    val fullW = measurer.measure(AnnotatedString(display), wordStyle)
+                        .size.width.toFloat()
+                    val orp = (display.length * 0.35f).toInt().coerceIn(0, (display.length - 1).coerceAtLeast(0))
+                    val prefixW = measurer
+                        .measure(AnnotatedString(display.take(orp)), wordStyle)
+                        .size.width.toFloat()
+                    val charW = measurer
+                        .measure(AnnotatedString(display.drop(orp).take(1)), wordStyle)
+                        .size.width.toFloat()
+                    val orpX = if (isFa) fullW - prefixW - charW / 2f
+                    else prefixW + charW / 2f
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(92.dp),
+                        contentAlignment = Alignment.Center
                     ) {
-                        // ORP focus marker: the word stays a single styled run so
-                        // Persian letters keep their joins; the focal point is
-                        // indicated with a glowing guide instead of per-glyph colour.
-                        val orp = if (currentWord.isEmpty()) 0
-                        else (currentWord.length * 0.35).toInt()
-                            .coerceIn(0, currentWord.length - 1)
-                        val wordStyle = TextStyle(
-                            fontSize = 52.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = theme.onBackground
+                        Text(
+                            text = display,
+                            style = wordStyle,
+                            maxLines = 1,
+                            softWrap = false
                         )
-                        val measurer = rememberTextMeasurer()
-                        val fullWidth = measurer
-                            .measure(AnnotatedString(currentWord), wordStyle)
-                            .size.width.toFloat()
-                        val prefixWidth = measurer
-                            .measure(AnnotatedString(currentWord.take(orp)), wordStyle)
-                            .size.width.toFloat()
-                        val charWidth = measurer
-                            .measure(
-                                AnnotatedString(currentWord.drop(orp).take(1)),
-                                wordStyle
+                        Canvas(modifier = Modifier.matchParentSize()) {
+                            val cx = if (fullW >= size.width) size.width / 2f
+                            else orpX + (size.width - fullW) / 2f
+                            val topY = size.height / 2f + 30.dp.toPx()
+                            drawRect(
+                                color = theme.ink,
+                                topLeft = Offset(cx - 1.dp.toPx(), topY),
+                                size = Size(2.dp.toPx(), 10.dp.toPx())
                             )
-                            .size.width.toFloat()
-                        val orpX = if (isFa)
-                            fullWidth - prefixWidth - charWidth / 2f
-                        else
-                            prefixWidth + charWidth / 2f
-                        Box(
-                            modifier = Modifier.height(88.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            androidx.compose.foundation.Canvas(
-                                modifier = Modifier.matchParentSize()
-                            ) {
-                                val cx = if (fullWidth >= size.width)
-                                    size.width / 2f else orpX + (size.width - fullWidth) / 2f
-                                drawRoundRect(
-                                    color = theme.primary.copy(alpha = 0.18f),
-                                    topLeft = androidx.compose.ui.geometry.Offset(
-                                        cx - 18.dp.toPx(), size.height / 2f - 34.dp.toPx()
-                                    ),
-                                    size = androidx.compose.ui.geometry.Size(
-                                        36.dp.toPx(), 68.dp.toPx()
-                                    ),
-                                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(
-                                        10.dp.toPx()
-                                    )
-                                )
-                                drawCircle(
-                                    color = theme.primary,
-                                    radius = 2.5.dp.toPx(),
-                                    center = androidx.compose.ui.geometry.Offset(
-                                        cx, size.height / 2f + 40.dp.toPx()
-                                    )
-                                )
-                            }
-                            Text(
-                                text = currentWord,
-                                style = wordStyle,
-                                maxLines = 1,
-                                softWrap = false
+                            drawRect(
+                                color = theme.line,
+                                topLeft = Offset(cx - 40.dp.toPx(), topY + 16.dp.toPx()),
+                                size = Size(80.dp.toPx(), 1.dp.toPx())
                             )
                         }
                     }
-                    Spacer(Modifier.height(20.dp))
-                    LinearProgressIndicator(
-                        progress = { progress },
-                        modifier = Modifier.fillMaxWidth(),
-                        color = theme.primary,
-                        trackColor = theme.surfaceVariant
-                    )
-                    Spacer(Modifier.height(16.dp))
-                    GradientButton(
-                        theme,
-                        if (playing) tr(lang, "⏸ توقف", "⏸ Pause") else tr(lang, "▶ پخش", "▶ Play"),
-                        {
-                            if (wordIndex >= words.size) wordIndex = 0
+                }
+
+                Spacer(Modifier.height(12.dp))
+                Bar(theme, progress, height = 2.dp)
+                Spacer(Modifier.height(14.dp))
+
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    SolidButton(
+                        theme = theme,
+                        text = if (playing) tr(lang, "توقف", "PAUSE")
+                        else tr(lang, "پخش", "PLAY"),
+                        onClick = {
+                            if (wordIndex >= words.size - 1) wordIndex = 0
                             playing = !playing
                         },
-                        Modifier.fillMaxWidth()
+                        modifier = Modifier.weight(1f)
                     )
-                    Spacer(Modifier.height(10.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        GhostButton(
-                            theme,
-                            tr(lang, "↺ از اول", "↺ Restart"),
-                            { resetPlayer() },
-                            Modifier.weight(1f)
-                        )
-                        GhostButton(
-                            theme,
-                            tr(lang, "آزمون", "Quiz"),
-                            {
-                                playing = false
-                                phase = ReadPhase.QUIZ
-                            },
-                            Modifier.weight(1f)
-                        )
-                    }
-                }
-            }
-
-            // Speed control
-            GlassCard(theme, Modifier.fillMaxWidth()) {
-                Column {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text(
-                            tr(lang, "سرعت نمایش", "Display speed"),
-                            color = theme.onBackground,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = "$wpm WPM",
-                            color = theme.primary,
-                            fontWeight = FontWeight.Black,
-                            fontSize = 18.sp
-                        )
-                    }
-                    Slider(
-                        value = wpm.toFloat(),
-                        onValueChange = { wpm = it.toInt() },
-                        valueRange = 100f..1000f,
-                        steps = 35,
-                        colors = SliderDefaults.colors(
-                            thumbColor = theme.primary,
-                            activeTrackColor = theme.primary,
-                            inactiveTrackColor = theme.surfaceVariant
-                        )
+                    LineButton(
+                        theme = theme,
+                        text = tr(lang, "از اول", "RESET"),
+                        onClick = { resetPlayer() },
+                        modifier = Modifier.weight(1f)
                     )
-                    Text(
-                        text = tr(lang, "رکورد مطالعه شما: ", "Your reading best: ") + store.bestReadingWpm.toString() + " WPM",
-                        color = theme.onSurface.copy(alpha = 0.7f),
-                        fontSize = 13.sp
+                    LineButton(
+                        theme = theme,
+                        text = tr(lang, "آزمون", "QUIZ"),
+                        onClick = { playing = false; phase = ReadPhase.QUIZ },
+                        modifier = Modifier.weight(1f)
                     )
                 }
             }
 
-            // Full text toggle
-            GhostButton(
-                theme,
-                if (showFull) tr(lang, "پنهان کردن متن کامل", "Hide full text")
-                else tr(lang, "نمایش متن کامل", "Show full text"),
-                { showFull = !showFull }
-            )
+            Spacer(Modifier.height(12.dp))
+
+            // ---- speed control ----
+            Panel(theme, Modifier.fillMaxWidth(), padding = 14.dp) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    MicroLabel(theme, tr(lang, "سرعت نمایش", "SPEED"))
+                    MicroLabel(theme, "$wpm WPM", color = theme.ink)
+                }
+                Spacer(Modifier.height(4.dp))
+                Slider(
+                    value = wpm.toFloat(),
+                    onValueChange = { wpm = it.toInt() },
+                    valueRange = 100f..1000f,
+                    colors = SliderDefaults.colors(
+                        thumbColor = theme.ink,
+                        activeTrackColor = theme.ink,
+                        inactiveTrackColor = theme.line
+                    )
+                )
+                Spacer(Modifier.height(6.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    MicroLabel(theme, tr(lang, "اندازه قطعه", "CHUNK"))
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        listOf(1, 2, 3).forEach { c ->
+                            MonoChip(
+                                theme = theme,
+                                text = c.toString(),
+                                selected = chunk == c,
+                                onClick = { store.updateChunk(c) }
+                            )
+                        }
+                    }
+                }
+                Spacer(Modifier.height(10.dp))
+                Hairline(theme)
+                Spacer(Modifier.height(10.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text(
+                            text = tr(lang, "شیب افزایش سرعت", "Speed ramp"),
+                            color = theme.ink,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                        MicroLabel(
+                            theme,
+                            tr(lang, "هر ۲۵ کلمه ۱۰+", "+10 every 25 words")
+                        )
+                    }
+                    Switch(
+                        checked = store.rampOn,
+                        onCheckedChange = { store.updateRamp(it) },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = theme.bg,
+                            checkedTrackColor = theme.ink,
+                            uncheckedThumbColor = theme.dim,
+                            uncheckedTrackColor = theme.surface,
+                            uncheckedBorderColor = theme.line
+                        )
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(12.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                LineButton(
+                    theme = theme,
+                    text = if (showFull) tr(lang, "پنهان کردن متن", "HIDE TEXT")
+                    else tr(lang, "نمایش متن کامل", "SHOW FULL TEXT"),
+                    onClick = { showFull = !showFull },
+                    active = showFull
+                )
+            }
+
             if (showFull) {
-                GlassCard(theme, Modifier.fillMaxWidth()) {
+                Spacer(Modifier.height(12.dp))
+                Panel(theme, Modifier.fillMaxWidth()) {
                     androidx.compose.runtime.CompositionLocalProvider(
-                        LocalLayoutDirection provides if (isFa) LayoutDirection.Rtl else LayoutDirection.Ltr
+                        LocalLayoutDirection provides
+                            if (isFa) LayoutDirection.Rtl else LayoutDirection.Ltr
                     ) {
                         Text(
                             text = text.body,
-                            color = theme.onSurface,
-                            fontSize = 16.sp,
-                            lineHeight = 30.sp
+                            color = theme.ink,
+                            fontSize = (15f * store.textScale).sp,
+                            lineHeight = (30f * store.textScale).sp
                         )
                     }
                 }
@@ -285,81 +334,102 @@ fun ReadingScreen(theme: TypflowTheme, store: TypflowStore) {
         }
 
         if (phase == ReadPhase.QUIZ) {
-            SectionTitle(theme, tr(lang, "آزمون درک مطلب", "Comprehension Quiz"))
+            SectionLabel(theme, tr(lang, "آزمون درک مطلب", "COMPREHENSION"))
+            Spacer(Modifier.height(12.dp))
             text.questions.forEachIndexed { qi, q ->
-                GlassCard(theme, Modifier.fillMaxWidth()) {
-                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Text(
-                            text = "${qi + 1}. ${q.question}",
-                            color = theme.onBackground,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 15.sp
-                        )
-                        q.options.forEachIndexed { oi, opt ->
-                            val selected = answers[qi] == oi
-                            androidx.compose.foundation.layout.Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(2.dp)
-                                    .then(
-                                        androidx.compose.ui.Modifier
-                                            .clip(androidx.compose.foundation.shape.RoundedCornerShape(14.dp))
-                                            .background(
-                                                if (selected) androidx.compose.ui.graphics.Brush.horizontalGradient(theme.gradient)
-                                                else androidx.compose.ui.graphics.Brush.linearGradient(
-                                                    listOf(theme.surfaceVariant, theme.surfaceVariant)
-                                                )
-                                            )
-                                            .clickable {
-                                                answers = answers.toMutableList().also { it[qi] = oi }
-                                            }
-                                            .padding(horizontal = 14.dp, vertical = 11.dp)
-                                    )
-                            ) {
-                                Text(
-                                    text = opt,
-                                    color = if (selected) androidx.compose.ui.graphics.Color.Black else theme.onSurface,
-                                    fontSize = 14.sp,
-                                    fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
-                                )
-                            }
+                Panel(theme, Modifier.fillMaxWidth()) {
+                    Text(
+                        text = "${qi + 1}. ${q.question}",
+                        color = theme.ink,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        lineHeight = 24.sp
+                    )
+                    Spacer(Modifier.height(10.dp))
+                    q.options.forEachIndexed { oi, opt ->
+                        val selected = answers[qi] == oi
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 3.dp)
+                                .background(if (selected) theme.ink else theme.bg)
+                                .border(1.dp, if (selected) theme.ink else theme.line)
+                                .clickable {
+                                    answers = answers.toMutableList().also { it[qi] = oi }
+                                }
+                                .padding(horizontal = 12.dp, vertical = 11.dp)
+                        ) {
+                            Text(
+                                text = opt,
+                                color = if (selected) theme.bg else theme.ink,
+                                fontSize = 13.sp
+                            )
                         }
                     }
                 }
+                Spacer(Modifier.height(10.dp))
             }
-            GradientButton(theme, tr(lang, "ثبت پاسخ‌ها", "Submit answers"), {
-                var correct = 0
-                text.questions.forEachIndexed { i, q ->
-                    if (answers[i] == q.answerIndex) correct += 1
-                }
-                score = if (text.questions.isEmpty()) 0 else (correct * 100 / text.questions.size)
-                store.recordReading(wpm, score)
-                phase = ReadPhase.RESULT
-            })
+            SolidButton(
+                theme = theme,
+                text = tr(lang, "ثبت پاسخ‌ها", "SUBMIT ANSWERS"),
+                onClick = {
+                    var correct = 0
+                    text.questions.forEachIndexed { i, q ->
+                        if (answers[i] == q.answerIndex) correct += 1
+                    }
+                    score = if (text.questions.isEmpty()) 0
+                    else correct * 100 / text.questions.size
+                    store.recordReading(wpm, score)
+                    phase = ReadPhase.RESULT
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
         }
 
         if (phase == ReadPhase.RESULT) {
-            GlassCard(theme, Modifier.fillMaxWidth()) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    HoloText(tr(lang, "نتیجه مطالعه", "Reading Result"), theme, 20)
-                    Spacer(Modifier.height(14.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(22.dp)) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            AnimatedNumber(wpm, theme, 40)
-                            Text("WPM", color = theme.onSurface, fontSize = 12.sp)
-                        }
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            AnimatedNumber(score, theme, 40)
-                            Text(tr(lang, "درصد درک مطلب", "Comprehension %"), color = theme.onSurface, fontSize = 12.sp)
-                        }
+            Panel(theme, Modifier.fillMaxWidth()) {
+                MicroLabel(theme, tr(lang, "نتیجه مطالعه", "READING RESULT"), color = theme.ink)
+                Spacer(Modifier.height(14.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column {
+                        BigFigure(theme, wpm.toString(), "WPM", size = 40)
                     }
-                    Spacer(Modifier.height(16.dp))
-                    GradientButton(theme, tr(lang, "متن بعدی", "Next text"), {
+                    Column(horizontalAlignment = Alignment.End) {
+                        BigFigure(theme, score.toString(), "%", size = 40)
+                        MicroLabel(theme, tr(lang, "درک مطلب", "COMPREHENSION"))
+                    }
+                }
+                Spacer(Modifier.height(16.dp))
+                SolidButton(
+                    theme = theme,
+                    text = tr(lang, "متن بعدی", "NEXT PASSAGE"),
+                    onClick = {
                         textIndex = (textIndex + 1) % pool.size
                         resetPlayer()
-                    })
-                }
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(Modifier.height(8.dp))
+                LineButton(
+                    theme = theme,
+                    text = tr(lang, "تلاش دوباره", "TRY AGAIN"),
+                    onClick = { resetPlayer() },
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
         }
+
+        Spacer(Modifier.height(18.dp))
+        MicroLabel(
+            theme,
+            tr(
+                lang,
+                "رکورد: ${store.bestReadingWpm} WPM · بهترین درک: ${store.bestComprehension}%",
+                "Best: ${store.bestReadingWpm} WPM · top comprehension: ${store.bestComprehension}%"
+            )
+        )
     }
 }

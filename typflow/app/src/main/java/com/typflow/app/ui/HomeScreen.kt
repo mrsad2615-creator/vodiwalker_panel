@@ -1,7 +1,6 @@
 package com.typflow.app.ui
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -9,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
@@ -18,145 +18,188 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.typflow.app.data.Texts
 import com.typflow.app.data.TypflowStore
 import com.typflow.app.theme.TypflowTheme
-import com.typflow.app.theme.themeById
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @Composable
 fun HomeScreen(
     theme: TypflowTheme,
     store: TypflowStore,
-    onNavigate: (String) -> Unit
+    onNavigate: (Tab) -> Unit,
+    onOpenSettings: () -> Unit
 ) {
     val lang = store.lang
-    val todayMinutes = store.minutesToday()
-    val goalProgress = if (store.dailyGoal > 0) todayMinutes.toFloat() / store.dailyGoal.toFloat() else 0f
+    val today = SimpleDateFormat("EEE · d MMM", Locale.US).format(Date())
+    val quoteList = if (lang == "fa") Texts.quotesFa else Texts.quotesEn
+    val quote = quoteList[store.totalSessions % quoteList.size]
+    val goalPct = (store.goalFraction() * 100).toInt()
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+            .padding(horizontal = 20.dp)
+            .padding(top = 18.dp, bottom = 28.dp)
     ) {
-        // Header
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column {
-                Text(
-                    text = tr(lang, "خوش آمدید 👋", "Welcome 👋"),
-                    color = theme.onSurface.copy(alpha = 0.7f),
-                    fontSize = 14.sp
-                )
-                HoloText("TYPFLOW", theme, 30)
-            }
-            Box(contentAlignment = Alignment.Center) {
-                ProgressRing(theme, goalProgress, size = 74.dp)
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = "${(goalProgress * 100).toInt()}%",
-                        color = theme.onBackground,
-                        fontWeight = FontWeight.Black,
-                        fontSize = 15.sp
-                    )
-                    Text(
-                        text = tr(lang, "هدف امروز", "Today"),
-                        color = theme.onSurface.copy(alpha = 0.7f),
-                        fontSize = 9.sp
-                    )
-                }
-            }
-        }
-
-        // Big stats
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            StatCard(theme, tr(lang, "سرعت تایپ", "Typing speed"), store.bestWpm, "WPM", Modifier.weight(1f))
-            StatCard(theme, tr(lang, "سرعت مطالعه", "Reading speed"), store.bestReadingWpm, "WPM", Modifier.weight(1f))
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            StatCard(theme, tr(lang, "بهترین دقت", "Best accuracy"), store.bestAccuracy, "%", Modifier.weight(1f))
-            StatCard(theme, tr(lang, "جلسات تمرین", "Sessions"), store.totalSessions, tr(lang, "جلسه", "sessions"), Modifier.weight(1f))
-        }
-
-        // Quick actions
-        SectionTitle(theme, tr(lang, "دسترسی سریع", "Quick access"))
-        GradientButton(
-            theme,
-            tr(lang, "⌨️  شروع تمرین تایپ", "⌨️  Start typing practice"),
-            { onNavigate("typing") },
-            Modifier.fillMaxWidth()
-        )
-        GradientButton(
-            theme,
-            tr(lang, "📖  شروع تندخوانی RSVP", "📖  Start RSVP reading"),
-            { onNavigate("reading") },
-            Modifier.fillMaxWidth()
+        ScreenHeader(
+            theme = theme,
+            index = "01",
+            title = tr(lang, "داشبورد", "Dashboard"),
+            subtitle = "$today · ${if (lang == "fa") theme.nameFa else theme.name}"
         )
 
-        // Daily progress detail
-        GlassCard(theme, Modifier.fillMaxWidth()) {
-            Column {
-                SectionTitle(theme, tr(lang, "پیشرفت روزانه", "Daily progress"))
-                Spacer(Modifier.height(10.dp))
-                Text(
-                    text = tr(lang, "امروز ", "Today ") + todayMinutes.toString() +
-                        tr(lang, " دقیقه از ", " min of ") + store.dailyGoal.toString() +
-                        tr(lang, " دقیقه هدف", " min goal"),
-                    color = theme.onSurface,
-                    fontSize = 14.sp
-                )
-                Spacer(Modifier.height(8.dp))
-                androidx.compose.material3.LinearProgressIndicator(
-                    progress = { goalProgress.coerceIn(0f, 1f) },
-                    modifier = Modifier.fillMaxWidth(),
-                    color = theme.primary,
-                    trackColor = theme.surfaceVariant
-                )
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    text = tr(lang, "مجموع زمان تمرین: ", "Total practice time: ") +
-                        store.totalMinutes.toString() + tr(lang, " دقیقه", " min"),
-                    color = theme.onSurface.copy(alpha = 0.7f),
-                    fontSize = 13.sp
-                )
-            }
-        }
+        Spacer(Modifier.height(18.dp))
 
-        // Current theme chip
-        GlassCard(theme, Modifier.fillMaxWidth()) {
+        // ---- today / goal ----
+        Panel(theme, Modifier.fillMaxWidth()) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column {
-                    Text(
-                        text = tr(lang, "تم فعلی", "Current theme"),
-                        color = theme.onSurface.copy(alpha = 0.7f),
-                        fontSize = 12.sp
+                MicroLabel(theme, tr(lang, "هدف امروز", "TODAY'S GOAL"))
+                MicroLabel(theme, "${store.sessionsToday()} / ${store.dailyGoal}", color = theme.ink)
+            }
+            Spacer(Modifier.height(12.dp))
+            Row(verticalAlignment = Alignment.Bottom) {
+                BigFigure(theme, goalPct.toString(), "%", size = 56)
+                Spacer(Modifier.width(16.dp))
+                Column(modifier = Modifier.padding(bottom = 8.dp)) {
+                    MicroLabel(
+                        theme,
+                        tr(lang, "از هدف روزانه", "of daily goal"),
+                        color = theme.dim
                     )
-                    Text(
-                        text = if (lang == "fa") theme.nameFa else theme.name,
-                        color = theme.onBackground,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp
+                    Spacer(Modifier.height(4.dp))
+                    MicroLabel(
+                        theme,
+                        "${store.minutesToday()} " + tr(lang, "دقیقه تمرین", "min practiced"),
+                        color = theme.dim
                     )
                 }
-                GhostButton(theme, tr(lang, "تغییر تم", "Change theme"), { onNavigate("settings") })
+            }
+            Spacer(Modifier.height(14.dp))
+            Bar(theme, store.goalFraction())
+            Spacer(Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                MicroLabel(
+                    theme,
+                    tr(lang, "زنجیره", "STREAK") + " · ${store.streak} " + tr(lang, "روز", "d"),
+                    color = theme.dim
+                )
+                MicroLabel(
+                    theme,
+                    tr(lang, "بهترین", "BEST") + " · ${store.bestStreak}",
+                    color = theme.dim
+                )
             }
         }
 
-        // Footer credit
-        Text(
-            text = "TYPFLOW  •  by mrsad",
-            color = theme.onSurface.copy(alpha = 0.4f),
-            fontSize = 11.sp,
+        Spacer(Modifier.height(12.dp))
+
+        // ---- headline records ----
+        Row(
             modifier = Modifier.fillMaxWidth(),
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Panel(theme, Modifier.weight(1f)) {
+                MicroLabel(theme, tr(lang, "سرعت تایپ", "TYPING"))
+                Spacer(Modifier.height(10.dp))
+                BigFigure(theme, store.bestWpm.toString(), "WPM", size = 34)
+                Spacer(Modifier.height(8.dp))
+                MicroLabel(theme, tr(lang, "دقت", "ACC") + " ${store.bestAccuracy}%")
+            }
+            Panel(theme, Modifier.weight(1f)) {
+                MicroLabel(theme, tr(lang, "سرعت مطالعه", "READING"))
+                Spacer(Modifier.height(10.dp))
+                BigFigure(theme, store.bestReadingWpm.toString(), "WPM", size = 34)
+                Spacer(Modifier.height(8.dp))
+                MicroLabel(theme, tr(lang, "درک", "COMP") + " ${store.bestComprehension}%")
+            }
+        }
+
+        Spacer(Modifier.height(22.dp))
+        SectionLabel(theme, tr(lang, "دسترسی سریع", "QUICK ACCESS"))
+        Spacer(Modifier.height(12.dp))
+
+        SolidButton(
+            theme = theme,
+            text = tr(lang, "شروع تمرین تایپ", "START TYPING"),
+            onClick = { onNavigate(Tab.TYPING) },
+            modifier = Modifier.fillMaxWidth()
         )
-        Spacer(Modifier.height(4.dp))
+        Spacer(Modifier.height(10.dp))
+        LineButton(
+            theme = theme,
+            text = tr(lang, "شروع تندخوانی RSVP", "START RSVP READING"),
+            onClick = { onNavigate(Tab.READING) },
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Spacer(Modifier.height(22.dp))
+        SectionLabel(theme, tr(lang, "چالش روز", "DAILY CHALLENGE"))
+        Spacer(Modifier.height(12.dp))
+
+        Panel(theme, Modifier.fillMaxWidth()) {
+            val target = 3
+            val done = store.sessionsToday().coerceAtMost(target)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = tr(lang, "۳ جلسه تمرین امروز", "3 sessions today"),
+                    color = theme.ink,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                MicroLabel(theme, "$done / $target", color = theme.ink)
+            }
+            Spacer(Modifier.height(12.dp))
+            Bar(theme, done.toFloat() / target)
+            Spacer(Modifier.height(10.dp))
+            MicroLabel(
+                theme,
+                if (done >= target) tr(lang, "تکمیل شد", "COMPLETED")
+                else tr(lang, "در حال پیشرفت", "IN PROGRESS"),
+                color = theme.dim
+            )
+        }
+
+        Spacer(Modifier.height(22.dp))
+        SectionLabel(theme, tr(lang, "تمرکز امروز", "FOCUS LINE"))
+        Spacer(Modifier.height(12.dp))
+        Text(
+            text = quote,
+            color = theme.ink,
+            fontSize = 15.sp,
+            lineHeight = 28.sp,
+            fontWeight = FontWeight.Medium
+        )
+
+        Spacer(Modifier.height(22.dp))
+        Hairline(theme)
+        Spacer(Modifier.height(14.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            MicroLabel(theme, "TYPFLOW · BY MRSAD", color = theme.dim)
+            LineButton(
+                theme = theme,
+                text = tr(lang, "تنظیمات", "SETTINGS"),
+                onClick = onOpenSettings,
+                modifier = Modifier.height(36.dp)
+            )
+        }
+        Spacer(Modifier.height(20.dp))
     }
 }

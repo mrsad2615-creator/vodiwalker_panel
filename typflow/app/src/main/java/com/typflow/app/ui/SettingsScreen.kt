@@ -12,8 +12,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
@@ -27,9 +27,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -38,7 +35,11 @@ import com.typflow.app.theme.AllThemes
 import com.typflow.app.theme.TypflowTheme
 
 @Composable
-fun SettingsScreen(theme: TypflowTheme, store: TypflowStore) {
+fun SettingsScreen(
+    theme: TypflowTheme,
+    store: TypflowStore,
+    onBack: () -> Unit
+) {
     val lang = store.lang
     var confirmReset by remember { mutableStateOf(false) }
 
@@ -46,226 +47,264 @@ fun SettingsScreen(theme: TypflowTheme, store: TypflowStore) {
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+            .padding(horizontal = 20.dp)
+            .padding(top = 18.dp, bottom = 28.dp)
     ) {
-        SectionTitle(theme, tr(lang, "تنظیمات", "Settings"))
+        ScreenHeader(
+            theme = theme,
+            index = "06",
+            title = tr(lang, "تنظیمات", "Settings"),
+            subtitle = tr(
+                lang,
+                "چهار تم سیاه و سفید، زبان و رفتار تمرین.",
+                "Four monochrome themes, language, behaviour."
+            )
+        )
 
-        // ---- Themes ----
-        SectionTitle(theme, tr(lang, "🎨 تم‌های ظاهری", "🎨 Appearance themes"))
-        AllThemes.forEach { t ->
-            val selected = store.themeId == t.id
-            Box(
+        Spacer(Modifier.height(16.dp))
+        SectionLabel(theme, tr(lang, "تم‌ها", "THEMES"))
+        Spacer(Modifier.height(12.dp))
+
+        AllThemes.forEach { item ->
+            val selected = store.themeId == item.id
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(22.dp))
-                    .background(t.surface)
+                    .background(if (selected) item.surface else theme.bg)
                     .border(
-                        width = if (selected) 2.dp else 1.dp,
-                        color = if (selected) t.primary else t.primary.copy(alpha = 0.2f),
-                        shape = RoundedCornerShape(22.dp)
+                        1.dp,
+                        if (selected) theme.ink else theme.line
                     )
-                    .clickable { store.setTheme(t.id) }
-                    .padding(16.dp)
+                    .clickable { store.setTheme(item.id) }
+                    .padding(14.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Column {
-                    // Preview strip
+                // monochrome preview swatch
+                Row(
+                    modifier = Modifier
+                        .width(64.dp)
+                        .height(40.dp)
+                        .background(item.bg)
+                        .border(1.dp, item.line),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
                     Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(46.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(Brush.horizontalGradient(t.gradient))
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(46.dp)
-                                .background(t.background.copy(alpha = 0.55f))
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(12.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .height(10.dp)
-                                        .fillMaxWidth(0.35f)
-                                        .clip(RoundedCornerShape(5.dp))
-                                        .background(t.primary)
-                                )
-                                Box(
-                                    modifier = Modifier
-                                        .height(10.dp)
-                                        .fillMaxWidth(0.2f)
-                                        .clip(RoundedCornerShape(5.dp))
-                                        .background(t.secondary)
-                                )
-                            }
-                        }
-                    }
-                    Spacer(Modifier.height(10.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column {
-                            if (lang == "fa") {
-                                Text(
-                                    text = t.name,
-                                    color = t.primary.copy(alpha = 0.85f),
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 10.sp,
-                                    letterSpacing = 2.sp
-                                )
-                            }
-                            Text(
-                                text = if (lang == "fa") t.nameFa else t.name,
-                                color = t.onBackground,
-                                fontWeight = FontWeight.Black,
-                                fontSize = 16.sp
-                            )
-                            Text(
-                                text = if (lang == "fa") t.descriptionFa else t.descriptionEn,
-                                color = t.onSurface.copy(alpha = 0.7f),
-                                fontSize = 12.sp
-                            )
-                        }
-                        if (selected) {
-                            Text(
-                                text = "✓",
-                                color = t.primary,
-                                fontWeight = FontWeight.Black,
-                                fontSize = 22.sp
-                            )
-                        }
+                        Modifier
+                            .width(20.dp)
+                            .height(20.dp)
+                            .background(item.ink)
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Column {
+                        Box(Modifier.width(18.dp).height(2.dp).background(item.dim))
+                        Spacer(Modifier.height(4.dp))
+                        Box(Modifier.width(12.dp).height(2.dp).background(item.line))
                     }
                 }
-            }
-        }
-
-        // ---- Language ----
-        SectionTitle(theme, tr(lang, "🌐 زبان", "🌐 Language"))
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Chip(theme, "فارسی 🇮🇷", lang == "fa") { store.updateLang("fa") }
-            Chip(theme, "English 🇬🇧", lang == "en") { store.updateLang("en") }
-        }
-
-        // ---- Daily goal ----
-        GlassCard(theme, Modifier.fillMaxWidth()) {
-            Column {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
+                Spacer(Modifier.width(14.dp))
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = tr(lang, "هدف روزانه (دقیقه)", "Daily goal (minutes)"),
-                        color = theme.onBackground,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = store.dailyGoal.toString(),
-                        color = theme.primary,
+                        text = item.name,
+                        color = theme.ink,
+                        fontFamily = uiFont(theme),
+                        fontSize = 12.sp,
                         fontWeight = FontWeight.Black,
-                        fontSize = 18.sp
+                        letterSpacing = 1.6.sp
+                    )
+                    Spacer(Modifier.height(3.dp))
+                    Text(
+                        text = if (lang == "fa") item.nameFa + " · " + item.descriptionFa
+                        else item.descriptionEn,
+                        color = theme.dim,
+                        fontSize = 11.sp,
+                        lineHeight = 18.sp
                     )
                 }
-                Slider(
-                    value = store.dailyGoal.toFloat(),
-                    onValueChange = { store.updateDailyGoal(it.toInt()) },
-                    valueRange = 5f..60f,
-                    steps = 10,
-                    colors = SliderDefaults.colors(
-                        thumbColor = theme.primary,
-                        activeTrackColor = theme.primary,
-                        inactiveTrackColor = theme.surfaceVariant
+                if (selected) {
+                    Box(
+                        Modifier
+                            .width(14.dp)
+                            .height(14.dp)
+                            .background(theme.ink)
                     )
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+        }
+
+        Spacer(Modifier.height(14.dp))
+        SectionLabel(theme, tr(lang, "زبان", "LANGUAGE"))
+        Spacer(Modifier.height(12.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            MonoChip(theme, "فارسی", lang == "fa") { store.updateLang("fa") }
+            MonoChip(theme, "ENGLISH", lang == "en") { store.updateLang("en") }
+        }
+
+        Spacer(Modifier.height(22.dp))
+        SectionLabel(theme, tr(lang, "تمرین", "PRACTICE"))
+        Spacer(Modifier.height(12.dp))
+
+        Panel(theme, Modifier.fillMaxWidth(), padding = 14.dp) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                MicroLabel(theme, tr(lang, "هدف روزانه (جلسه)", "DAILY GOAL (SESSIONS)"))
+                MicroLabel(theme, store.dailyGoal.toString(), color = theme.ink)
+            }
+            Slider(
+                value = store.dailyGoal.toFloat(),
+                onValueChange = { store.updateDailyGoal(it.toInt()) },
+                valueRange = 1f..20f,
+                colors = SliderDefaults.colors(
+                    thumbColor = theme.ink,
+                    activeTrackColor = theme.ink,
+                    inactiveTrackColor = theme.line
+                )
+            )
+            Spacer(Modifier.height(8.dp))
+            Hairline(theme)
+            Spacer(Modifier.height(12.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                MicroLabel(theme, tr(lang, "اندازه متن", "TEXT SIZE"))
+                MicroLabel(
+                    theme,
+                    "${(store.textScale * 100).toInt()}%",
+                    color = theme.ink
                 )
             }
-        }
-
-        // ---- Toggles ----
-        GlassCard(theme, Modifier.fillMaxWidth()) {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = tr(lang, "🔊 صدا", "🔊 Sound"),
-                        color = theme.onBackground,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Switch(
-                        checked = store.soundOn,
-                        onCheckedChange = { store.setSound(it) },
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = Color.Black,
-                            checkedTrackColor = theme.primary
-                        )
-                    )
-                }
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = tr(lang, "📳 لرزش", "📳 Vibration"),
-                        color = theme.onBackground,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Switch(
-                        checked = store.vibrationOn,
-                        onCheckedChange = { store.setVibration(it) },
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = Color.Black,
-                            checkedTrackColor = theme.primary
-                        )
-                    )
-                }
-            }
-        }
-
-        // ---- Danger zone ----
-        if (!confirmReset) {
-            GhostButton(
-                theme,
-                tr(lang, "🗑 حذف همه داده‌ها", "🗑 Reset all data"),
-                { confirmReset = true },
-                Modifier.fillMaxWidth()
+            Slider(
+                value = store.textScale,
+                onValueChange = { store.updateTextScale(it) },
+                valueRange = 0.85f..1.35f,
+                colors = SliderDefaults.colors(
+                    thumbColor = theme.ink,
+                    activeTrackColor = theme.ink,
+                    inactiveTrackColor = theme.line
+                )
             )
-        } else {
-            GradientButton(
-                theme,
-                tr(lang, "⚠️ مطمئن هستید؟ برای تأیید بزنید", "⚠️ Are you sure? Tap to confirm"),
-                {
-                    store.resetAll()
-                    confirmReset = false
+        }
+
+        Spacer(Modifier.height(12.dp))
+
+        Panel(theme, Modifier.fillMaxWidth(), padding = 14.dp) {
+            ToggleRow(
+                theme = theme,
+                label = tr(lang, "صدای کلید", "Key sound"),
+                hint = tr(lang, "کلیک کوتاه هنگام تایپ", "Short click while typing"),
+                checked = store.soundOn,
+                onChange = { store.setSound(it) }
+            )
+            Spacer(Modifier.height(10.dp))
+            Hairline(theme)
+            Spacer(Modifier.height(10.dp))
+            ToggleRow(
+                theme = theme,
+                label = tr(lang, "لرزش", "Haptics"),
+                hint = tr(lang, "بازخورد لمسی", "Vibration feedback"),
+                checked = store.vibrationOn,
+                onChange = { store.setVibration(it) }
+            )
+        }
+
+        Spacer(Modifier.height(22.dp))
+        SectionLabel(theme, tr(lang, "داده‌ها", "DATA"))
+        Spacer(Modifier.height(12.dp))
+
+        Panel(theme, Modifier.fillMaxWidth(), padding = 14.dp) {
+            Text(
+                text = tr(
+                    lang,
+                    "همه داده‌ها فقط روی همین گوشی ذخیره می شوند. هیچ چیزی به اینترنت ارسال نمی شود.",
+                    "All data lives on this device only. Nothing is uploaded."
+                ),
+                color = theme.dim,
+                fontSize = 12.sp,
+                lineHeight = 22.sp
+            )
+            Spacer(Modifier.height(12.dp))
+            LineButton(
+                theme = theme,
+                text = if (confirmReset) tr(lang, "مطمئنی؟ دوباره بزن", "SURE? TAP AGAIN")
+                else tr(lang, "پاک کردن همه داده‌ها", "RESET ALL DATA"),
+                onClick = {
+                    if (confirmReset) {
+                        store.resetAll()
+                        confirmReset = false
+                    } else {
+                        confirmReset = true
+                    }
                 },
-                Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth()
             )
         }
 
-        // ---- About ----
-        GlassCard(theme, Modifier.fillMaxWidth()) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                HoloText("TYPFLOW", theme, 22)
-                Spacer(Modifier.height(6.dp))
-                Text(
-                    text = tr(lang, "نسخه ۱.۰.۰ — ساخته‌شده توسط mrsad", "Version 1.0.0 — crafted by mrsad"),
-                    color = theme.onSurface.copy(alpha = 0.7f),
-                    fontSize = 13.sp
-                )
-                Text(
-                    text = tr(lang, "تمرین تایپ و تندخوانی با طراحی سینمایی", "Typing & speed-reading trainer with cinematic design"),
-                    color = theme.onSurface.copy(alpha = 0.5f),
-                    fontSize = 12.sp
-                )
+        Spacer(Modifier.height(22.dp))
+        SectionLabel(theme, tr(lang, "درباره", "ABOUT"))
+        Spacer(Modifier.height(12.dp))
+        Panel(theme, Modifier.fillMaxWidth(), padding = 14.dp) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                MicroLabel(theme, "TYPFLOW", color = theme.ink)
+                MicroLabel(theme, "v1.1.0")
             }
+            Spacer(Modifier.height(8.dp))
+            MicroLabel(
+                theme,
+                tr(
+                    lang,
+                    "ساخته شده با Kotlin و Jetpack Compose",
+                    "Built with Kotlin & Jetpack Compose"
+                )
+            )
+            Spacer(Modifier.height(4.dp))
+            MicroLabel(theme, "BY MRSAD · OFFLINE FIRST")
         }
+
+        Spacer(Modifier.height(20.dp))
+        SolidButton(
+            theme = theme,
+            text = tr(lang, "بازگشت", "BACK"),
+            onClick = onBack,
+            modifier = Modifier.fillMaxWidth()
+        )
+    }
+}
+
+@Composable
+private fun ToggleRow(
+    theme: TypflowTheme,
+    label: String,
+    hint: String,
+    checked: Boolean,
+    onChange: (Boolean) -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column {
+            Text(text = label, color = theme.ink, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+            Spacer(Modifier.height(2.dp))
+            MicroLabel(theme, hint)
+        }
+        Switch(
+            checked = checked,
+            onCheckedChange = onChange,
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = theme.bg,
+                checkedTrackColor = theme.ink,
+                uncheckedThumbColor = theme.dim,
+                uncheckedTrackColor = theme.surface,
+                uncheckedBorderColor = theme.line
+            )
+        )
     }
 }

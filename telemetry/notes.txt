@@ -10,6 +10,13 @@ NAV profile -> 353,2045
 NAV profile -> 163,2045
 TAP settings -> 540,1842
 TAP theme-nebula -> 540,1460
-NAV home -> 922,2045
+TAP MISS: English
+NAV typing-en -> 355,2045
+TAP MISS: Type here
+NAV analytics-en -> 735,2045
+NAV profile-en -> 163,2045
+TAP MISS: Settings
+TAP MISS: فارسی
+NAV home -> 923,2045
 TAP typing-start -> 540,1276
 == crash scan ==

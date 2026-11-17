@@ -53,9 +53,11 @@ adb logcat -c > /dev/null 2>&1
 
 echo "== launch ==" >> "$OUT/notes.txt"
 adb shell am start -n "$PKG/.MainActivity" >> "$OUT/notes.txt" 2>&1
-sleep 2
+sleep 4
 shot 01-splash
-sleep 6
+sleep 2
+shot 01b-splash
+sleep 4
 shot 02-home
 dump d02
 tap_nav d02 1 typing

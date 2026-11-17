@@ -27,10 +27,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalLayoutDirection
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -116,31 +116,70 @@ fun ReadingScreen(theme: TypflowTheme, store: TypflowStore) {
                     androidx.compose.runtime.CompositionLocalProvider(
                         LocalLayoutDirection provides if (isFa) LayoutDirection.Rtl else LayoutDirection.Ltr
                     ) {
-                        // ORP highlight: single shaped string (keeps Persian
-                        // letters joined) with the focal character emphasised.
+                        // ORP focus marker: the word stays a single styled run so
+                        // Persian letters keep their joins; the focal point is
+                        // indicated with a glowing guide instead of per-glyph colour.
                         val orp = if (currentWord.isEmpty()) 0
-                        else (currentWord.length * 0.35).toInt().coerceIn(0, currentWord.length - 1)
-                        val wordStyle = SpanStyle(
-                            color = theme.onBackground,
-                            fontSize = 42.sp,
-                            fontWeight = FontWeight.Bold
+                        else (currentWord.length * 0.35).toInt()
+                            .coerceIn(0, currentWord.length - 1)
+                        val wordStyle = TextStyle(
+                            fontSize = 46.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = theme.onBackground
                         )
-                        val orpStyle = SpanStyle(
-                            color = theme.primary,
-                            fontSize = 50.sp,
-                            fontWeight = FontWeight.Black
-                        )
-                        val annotatedWord = buildAnnotatedString {
-                            withStyle(wordStyle) { append(currentWord.take(orp)) }
-                            withStyle(orpStyle) { append(currentWord.drop(orp).take(1)) }
-                            withStyle(wordStyle) { append(currentWord.drop(orp + 1)) }
+                        val measurer = rememberTextMeasurer()
+                        val fullWidth = measurer
+                            .measure(AnnotatedString(currentWord), wordStyle)
+                            .size.width.toFloat()
+                        val prefixWidth = measurer
+                            .measure(AnnotatedString(currentWord.take(orp)), wordStyle)
+                            .size.width.toFloat()
+                        val charWidth = measurer
+                            .measure(
+                                AnnotatedString(currentWord.drop(orp).take(1)),
+                                wordStyle
+                            )
+                            .size.width.toFloat()
+                        val orpX = if (isFa)
+                            fullWidth - prefixWidth - charWidth / 2f
+                        else
+                            prefixWidth + charWidth / 2f
+                        Box(
+                            modifier = Modifier.height(74.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            androidx.compose.foundation.Canvas(
+                                modifier = Modifier.matchParentSize()
+                            ) {
+                                val cx = if (fullWidth >= size.width)
+                                    size.width / 2f else orpX + (size.width - fullWidth) / 2f
+                                drawRoundRect(
+                                    color = theme.primary.copy(alpha = 0.18f),
+                                    topLeft = androidx.compose.ui.geometry.Offset(
+                                        cx - 16.dp.toPx(), size.height / 2f - 30.dp.toPx()
+                                    ),
+                                    size = androidx.compose.ui.geometry.Size(
+                                        32.dp.toPx(), 60.dp.toPx()
+                                    ),
+                                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(
+                                        10.dp.toPx()
+                                    )
+                                )
+                                drawCircle(
+                                    color = theme.primary,
+                                    radius = 2.5.dp.toPx(),
+                                    center = androidx.compose.ui.geometry.Offset(
+                                        cx, size.height / 2f + 34.dp.toPx()
+                                    )
+                                )
+                            }
+                            Text(
+                                text = currentWord,
+                                style = wordStyle,
+                                maxLines = 1,
+                                softWrap = false
+                            )
                         }
-                        Text(
-                            text = annotatedWord,
-                            maxLines = 1,
-                            softWrap = false,
-                            lineHeight = 58.sp
-                        )
                     }
                     Spacer(Modifier.height(20.dp))
                     LinearProgressIndicator(

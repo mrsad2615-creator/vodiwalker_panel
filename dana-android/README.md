@@ -2,11 +2,17 @@
 
 دانا یک پروژهٔ **Android بومی با Kotlin و Compose** است. این پوشه از پنل Python همین مخزن مستقل است. [گزارش فارسی فاز صفر](docs/00-audit-fa.md) تصمیم‌های معماری و برنامهٔ توسعه را ثبت کرده است؛ آن گزارش وضعیت آغاز پروژه است، نه فهرست امکانات نسخهٔ فعلی.
 
-## دریافت APK آزمایش‌شدهٔ قبلی (۰٫۲)
+## دریافت APK آزمایش‌شدهٔ Studio ۰٫۳
 
-[دانلود مستقیم DANA AI 0.2 Preview](https://github.com/mrsad2615-creator/vodiwalker_panel/releases/download/dana-preview-44186660013-1/DANA-AI-preview.apk) · [فایل SHA-256](https://github.com/mrsad2615-creator/vodiwalker_panel/releases/download/dana-preview-44186660013-1/SHA256SUMS.txt) · [نتیجهٔ بیلد و آزمون](https://github.com/mrsad2615-creator/vodiwalker_panel/actions/runs/44186660013)
+[دانلود مستقیم DANA AI 0.3 Studio Preview](https://github.com/mrsad2615-creator/vodiwalker_panel/releases/download/dana-preview-44191207890-1/DANA-AI-preview.apk) · [فایل SHA-256](https://github.com/mrsad2615-creator/vodiwalker_panel/releases/download/dana-preview-44191207890-1/SHA256SUMS.txt) · [بیلد و آزمون‌ها](https://github.com/mrsad2615-creator/vodiwalker_panel/actions/runs/44191207890)
 
-APK با commit `1f26e9d` ساخته شد. بیلد debug و release، lint، ۲۶ آزمون JVM (از جمله آزمون HTTP/TLS هم‌زمان)، ۶ آزمون ذخیره‌سازی روی Android API 34، نصب و بازشدن صفحهٔ مقایسه در حالت آفلاین و تأیید امضای APK در CI موفق بودند. هش APK منتشرشده با هش artifact خامِ همان اجرا یکسان است. این فایل امضای دیباگ دارد.
+APK با commit `90f1b404e51859be769d9542eec24cc91316018f` ساخته شده، ۱۳٬۶۲۵٬۳۰۳ بایت است و امضای دیباگ دارد. نسخهٔ package بررسی‌شده `ai.dana.preview` / `0.3.0-preview` / کد `3` است. انتشار پس از بیلد debug/release، lint، ۲۵ آزمون دامنه و ۱۱ آزمون JVM شبکه، ۶ آزمون ذخیره‌سازی و نصب/بازشدن میز کار و فرم Gemini روی Android API 34، و ۱۰ آزمون قرارداد پل مک روی Linux انجام شد. مقدار SHA-256 انتشار با artifact خام همان اجرا یکسان است:
+
+```text
+171da1f9edfa6e640891899ced33f468eda1754274e75bc85da4d76367a55cc6
+```
+
+این آزمون‌ها اعتبار حساب Google، اجرای مدل روی مک واقعی یا دسترسی از شبکهٔ ایران را تأیید نمی‌کنند. [پیش‌نمایش قبلی ۰٫۲](https://github.com/mrsad2615-creator/vodiwalker_panel/releases/tag/dana-preview-44186660013-1) نیز جدا باقی مانده است.
 
 ## پیش‌نمایش ۰٫۳ · Studio
 

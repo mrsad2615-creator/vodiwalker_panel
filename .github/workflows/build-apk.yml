@@ -1,0 +1,48 @@
+name: Build TYPFLOW APK
+
+on:
+  push:
+    branches: ["arena/**", "main"]
+    paths:
+      - "typflow/**"
+      - ".github/workflows/build-apk.yml"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle 8.7
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.7'
+
+      - name: Accept Android SDK licenses
+        run: yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
+
+      - name: Install Android SDK packages
+        run: |
+          sdkmanager "platforms;android-34" "build-tools;34.0.0" "platform-tools"
+
+      - name: Write local.properties
+        run: echo "sdk.dir=$ANDROID_HOME" > typflow/local.properties
+
+      - name: Build Debug APK
+        working-directory: typflow
+        run: gradle :app:assembleDebug --stacktrace
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: typflow-apk
+          path: typflow/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error

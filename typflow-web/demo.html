@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>TYPFLOW — تمرین تایپ و تندخوانی</title>
+<style>
+  :root{
+    --primary:#00F5D4; --secondary:#00B4D8; --accent:#B537F2;
+    --bg:#04070E; --surface:#0A1220; --surface2:#101B30;
+    --on-bg:#F2FBFA; --on-surface:#D7E6E4;
+    --success:#2EE6A8; --error:#FF5C7A;
+    --g1:#00F5D4; --g2:#00B4D8; --g3:#B537F2; --g4:#FF5C8A;
+    --glass:.65;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{
+    font-family:Tahoma,'Segoe UI',system-ui,sans-serif;
+    background:var(--bg); color:var(--on-bg);
+    overflow:hidden;
+  }
+  body::before,body::after{content:'';position:fixed;border-radius:50%;filter:blur(90px);z-index:0;pointer-events:none}
+  body::before{width:340px;height:340px;background:var(--primary);opacity:.16;top:-120px;inset-inline-start:-80px}
+  body::after{width:380px;height:380px;background:var(--accent);opacity:.13;bottom:-140px;inset-inline-end:-90px}
+  #app{position:relative;z-index:1;max-width:480px;margin:0 auto;height:100dvh;display:flex;flex-direction:column}
+  main{flex:1;overflow-y:auto;padding:20px 18px 110px;scrollbar-width:none}
+  main::-webkit-scrollbar{display:none}
+  .screen{display:none;animation:fadeUp .45s cubic-bezier(.2,.8,.2,1)}
+  .screen.active{display:block}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+  h2.sec{font-size:19px;font-weight:900;margin:6px 0 14px;display:flex;align-items:center;gap:10px}
+  h2.sec::before{content:'';width:4px;height:20px;border-radius:2px;background:linear-gradient(var(--g1),var(--g3))}
+  .card{
+    background:color-mix(in srgb,var(--surface) calc(var(--glass)*100%),transparent);
+    border:1px solid color-mix(in srgb,var(--primary) 22%,transparent);
+    border-radius:24px;padding:18px;margin-bottom:14px;
+    backdrop-filter:blur(14px);
+  }
+  .row{display:flex;gap:10px}
+  .row>*{flex:1}
+  .stat{text-align:center}
+  .stat .lbl{font-size:12px;color:var(--on-surface);opacity:.75}
+  .stat .num{font-size:32px;font-weight:900;line-height:1.2;direction:ltr}
+  .stat .unit{font-size:12px;color:var(--primary);font-weight:700}
+  .btn{
+    display:block;width:100%;border:none;cursor:pointer;text-align:center;
+    padding:15px 20px;border-radius:18px;font-size:16px;font-weight:800;font-family:inherit;
+    background:linear-gradient(90deg,var(--g1),var(--g2),var(--g3),var(--g4));
+    color:#000;transition:transform .15s,filter .15s;margin-bottom:10px;
+  }
+  .btn:active{transform:scale(.97)}
+  .btn.ghost{background:transparent;color:var(--primary);border:1px solid color-mix(in srgb,var(--primary) 50%,transparent)}
+  .btn.small{width:auto;padding:10px 18px;font-size:14px;display:inline-block;margin:0}
+  .chip{
+    border:none;cursor:pointer;padding:9px 16px;border-radius:50px;font-size:13px;font-weight:700;
+    font-family:inherit;background:var(--surface2);color:var(--on-surface);transition:.2s;
+  }
+  .chip.on{background:linear-gradient(90deg,var(--g1),var(--g2),var(--g3));color:#000}
+  .chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+  .holo{
+    background:linear-gradient(90deg,var(--g1),var(--g2),var(--g3),var(--g4));
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  /* Bottom nav */
+  nav{
+    position:fixed;bottom:12px;left:50%;transform:translateX(-50%);
+    width:min(460px,calc(100% - 24px));z-index:10;
+    display:flex;justify-content:space-around;
+    background:color-mix(in srgb,var(--surface) 82%,transparent);
+    border:1px solid color-mix(in srgb,var(--primary) 20%,transparent);
+    border-radius:26px;padding:8px 6px;backdrop-filter:blur(18px);
+  }
+  nav button{
+    border:none;background:transparent;cursor:pointer;font-family:inherit;
+    display:flex;flex-direction:column;align-items:center;gap:2px;
+    padding:7px 13px;border-radius:18px;font-size:10px;color:var(--on-surface);opacity:.8;transition:.2s;
+  }
+  nav button .ic{font-size:19px}
+  nav button.on{background:linear-gradient(90deg,var(--g1),var(--g2),var(--g3));color:#000;opacity:1;font-weight:800}
+  /* Splash */
+  #splash{
+    position:fixed;inset:0;z-index:50;background:var(--bg);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;
+    transition:opacity .6s,visibility .6s;
+  }
+  #splash.hide{opacity:0;visibility:hidden}
+  #splash .brand{display:flex;font-size:64px;font-weight:900;letter-spacing:2px}
+  #splash .brand span{
+    background:linear-gradient(90deg,var(--g1),var(--g2),var(--g3),var(--g4));
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    opacity:0;transform:translateY(46px) scale(.7);display:inline-block;
+    animation:letterIn .5s cubic-bezier(.2,1.4,.3,1) forwards;
+  }
+  @keyframes letterIn{to{opacity:1;transform:none}}
+  #splash .line{width:190px;height:4px;border-radius:2px;background:linear-gradient(90deg,var(--g1),var(--g2),var(--g3),var(--g4));margin-top:10px;animation:glow 1.1s ease-in-out infinite alternate}
+  @keyframes glow{from{opacity:.5;filter:brightness(.8)}to{opacity:1;filter:brightness(1.4)}}
+  #splash .flow{margin-top:26px;font-size:22px;letter-spacing:8px;font-weight:700;opacity:0;animation:fadeUp .6s .9s forwards}
+  #splash .tag{margin-top:10px;font-size:14px;color:var(--on-surface);opacity:0;animation:fadeUp .6s 1.2s forwards}
+  #splash .bar{width:170px;height:5px;border-radius:3px;background:var(--surface2);margin-top:44px;overflow:hidden}
+  #splash .bar i{display:block;height:100%;width:40%;border-radius:3px;background:linear-gradient(90deg,var(--g1),var(--g2),var(--g3),var(--g4));animation:slide 1.2s ease-in-out infinite}
+  @keyframes slide{0%{transform:translateX(120%)}100%{transform:translateX(-320%)}}
+  /* Typing */
+  #targetText{font-size:19px;line-height:2;min-height:110px}
+  #targetText .ok{color:var(--success)}
+  #targetText .bad{color:var(--error)}
+  #targetText .cur{color:var(--primary);font-weight:900}
+  #targetText .todo{color:var(--on-surface);opacity:.45}
+  textarea#typeInput{
+    width:100%;min-height:84px;resize:vertical;border-radius:18px;padding:14px;
+    background:color-mix(in srgb,var(--surface) 60%,transparent);
+    border:1px solid color-mix(in srgb,var(--primary) 30%,transparent);
+    color:var(--on-bg);font-size:17px;font-family:inherit;outline:none;
+  }
+  textarea#typeInput:focus{border-color:var(--primary)}
+  /* RSVP */
+  #rsvpWord{min-height:96px;display:flex;align-items:center;justify-content:center;font-size:44px;font-weight:800;direction:ltr}
+  #rsvpWord .orp{color:var(--primary);font-size:52px;font-weight:900}
+  .prog{height:8px;border-radius:4px;background:var(--surface2);overflow:hidden;margin:14px 0}
+  .prog i{display:block;height:100%;background:linear-gradient(90deg,var(--g1),var(--g2),var(--g3));width:0;transition:width .2s}
+  input[type=range]{width:100%;accent-color:var(--primary);height:34px}
+  .opt{
+    display:block;width:100%;text-align:start;border:none;cursor:pointer;font-family:inherit;
+    padding:12px 14px;border-radius:14px;margin-bottom:8px;font-size:14px;
+    background:var(--surface2);color:var(--on-surface);transition:.15s;
+  }
+  .opt.on{background:linear-gradient(90deg,var(--g1),var(--g2),var(--g3));color:#000;font-weight:800}
+  /* Themes */
+  .theme-card{cursor:pointer;transition:transform .15s}
+  .theme-card:active{transform:scale(.98)}
+  .theme-card.sel{border-color:var(--primary);border-width:2px}
+  .preview{height:46px;border-radius:12px;margin-bottom:10px;position:relative;overflow:hidden}
+  .preview .inner{position:absolute;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;gap:8px;padding:0 12px}
+  .preview .b1{height:10px;width:35%;border-radius:5px}
+  .preview .b2{height:10px;width:20%;border-radius:5px}
+  /* Charts */
+  .bars{display:flex;justify-content:space-around;align-items:flex-end;height:120px}
+  .bar-col{display:flex;flex-direction:column;align-items:center;gap:4px}
+  .bar-col .bar{width:26px;border-radius:7px;background:linear-gradient(var(--g1),var(--g3));min-height:4px}
+  .bar-col .d{font-size:10px;color:var(--on-surface);opacity:.6}
+  .bar-col .c{font-size:11px;color:var(--primary);font-weight:800}
+  /* Profile */
+  .avatar{
+    width:72px;height:72px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-size:30px;font-weight:900;color:#000;flex-shrink:0;
+    background:linear-gradient(135deg,var(--g1),var(--g2),var(--g3),var(--g4));
+  }
+  .ach{text-align:center}
+  .ach .ic{font-size:30px}
+  .ach .t{font-size:13px;font-weight:800;margin-top:6px}
+  .ach .s{font-size:11px;margin-top:4px}
+  .switch-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0}
+  .switch{position:relative;width:52px;height:30px;flex-shrink:0}
+  .switch input{display:none}
+  .switch .track{position:absolute;inset:0;border-radius:15px;background:var(--surface2);transition:.2s}
+  .switch .track::after{content:'';position:absolute;top:3px;inset-inline-start:3px;width:24px;height:24px;border-radius:50%;background:#888;transition:.2s}
+  .switch input:checked + .track{background:linear-gradient(90deg,var(--g1),var(--g2),var(--g3))}
+  .switch input:checked + .track::after{transform:translateX(-22px);background:#000}
+  [dir="ltr"] .switch input:checked + .track::after{transform:translateX(22px)}
+  .hist-row{display:flex;justify-content:space-between;align-items:center}
+  .hist-row .w{font-weight:900;color:var(--primary);font-size:16px;direction:ltr}
+  .small{font-size:12px;color:var(--on-surface);opacity:.7}
+  .center{text-align:center}
+  .mt{margin-top:14px}
+  .ring-wrap{position:relative;width:74px;height:74px;flex-shrink:0}
+  .ring-wrap svg{transform:rotate(-90deg)}
+  .ring-wrap .pct{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:14px;font-weight:900}
+  .ring-wrap .pct small{font-size:9px;font-weight:400;opacity:.7}
+  header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+  header .hi{font-size:14px;color:var(--on-surface);opacity:.75}
+  header .logo{font-size:30px;font-weight:900}
+</style>
+</head>
+<body>
+
+<div id="splash">
+  <div class="brand" id="brand"></div>
+  <div class="line"></div>
+  <div class="flow">T Y P F L O W</div>
+  <div class="tag">سرعت • دقت • تمرکز</div>
+  <div class="bar"><i></i></div>
+</div>
+
+<div id="app">
+  <main>
+    <!-- HOME -->
+    <section class="screen" id="s-home">
+      <header>
+        <div>
+          <div class="hi" id="greet">خوش آمدید 👋</div>
+          <div class="logo holo">TYPFLOW</div>
+        </div>
+        <div class="ring-wrap">
+          <svg width="74" height="74"><circle cx="37" cy="37" r="32" fill="none" stroke="var(--surface2)" stroke-width="8"/><circle id="goalRing" cx="37" cy="37" r="32" fill="none" stroke="url(#rg)" stroke-width="8" stroke-linecap="round" stroke-dasharray="201" stroke-dashoffset="201"/><defs><linearGradient id="rg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="var(--g1)"/><stop offset="1" stop-color="var(--g3)"/></linearGradient></defs></svg>
+          <div class="pct"><span id="goalPct">0%</span><small>هدف امروز</small></div>
+        </div>
+      </header>
+      <div class="row">
+        <div class="card stat"><div class="lbl">سرعت تایپ</div><div class="num" id="hWpm">0</div><div class="unit">WPM</div></div>
+        <div class="card stat"><div class="lbl">سرعت مطالعه</div><div class="num" id="hRead">0</div><div class="unit">WPM</div></div>
+      </div>
+      <div class="row">
+        <div class="card stat"><div class="lbl">بهترین دقت</div><div class="num" id="hAcc">0</div><div class="unit">%</div></div>
+        <div class="card stat"><div class="lbl">جلسات تمرین</div><div class="num" id="hSes">0</div><div class="unit">جلسه</div></div>
+      </div>
+      <h2 class="sec">دسترسی سریع</h2>
+      <button class="btn" onclick="go('typing')">⌨️ شروع تمرین تایپ</button>
+      <button class="btn" onclick="go('reading')">📖 شروع تندخوانی RSVP</button>
+      <div class="card">
+        <h2 class="sec">پیشرفت روزانه</h2>
+        <div id="dailyTxt" class="small" style="font-size:14px;opacity:1">امروز ۰ دقیقه از ۱۰ دقیقه هدف</div>
+        <div class="prog"><i id="dailyBar"></i></div>
+        <div class="small" id="totalTxt">مجموع زمان تمرین: ۰ دقیقه</div>
+      </div>
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <div class="small">تم فعلی</div>
+            <div id="curTheme" style="font-weight:800;font-size:16px">سایبر فیوژن</div>
+          </div>
+          <button class="btn ghost small" onclick="go('settings')">تغییر تم</button>
+        </div>
+      </div>
+      <div class="small center">TYPFLOW • by mrsad</div>
+    </section>
+
+    <!-- TYPING -->
+    <section class="screen" id="s-typing">
+      <h2 class="sec">تمرین تایپ</h2>
+      <div class="chips">
+        <button class="chip on" id="chipPrac" onclick="setMode('prac')">تمرین آزاد</button>
+        <button class="chip" id="chipTimed" onclick="setMode('timed')">آزمون ۶۰ ثانیه‌ای</button>
+      </div>
+      <div class="row">
+        <div class="card stat"><div class="lbl">سرعت</div><div class="num" id="tWpm">0</div><div class="unit">WPM</div></div>
+        <div class="card stat"><div class="lbl">دقت</div><div class="num" id="tAcc">100</div><div class="unit">%</div></div>
+        <div class="card stat"><div class="lbl" id="tTimeLbl">زمان</div><div class="num" id="tTime">0</div><div class="unit">ثانیه</div></div>
+      </div>
+      <div class="card">
+        <div class="small">متن هدف — اشتباهات قرمز، درست سبز</div>
+        <div id="targetText" class="mt"></div>
+      </div>
+      <textarea id="typeInput" placeholder="اینجا تایپ کنید…" oninput="onType()"></textarea>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px">
+        <span style="color:var(--error);font-weight:800;font-size:14px">اشتباهات: <span id="tErr">0</span></span>
+        <span>
+          <button class="btn ghost small" onclick="newText()">متن جدید</button>
+          <button class="btn small" id="finishBtn" style="display:none" onclick="finishTest()">پایان آزمون</button>
+        </span>
+      </div>
+      <div class="card center" id="tResult" style="display:none">
+        <h2 class="sec" style="justify-content:center">نتیجه آزمون</h2>
+        <div class="row">
+          <div class="stat"><div class="num" id="rWpm">0</div><div class="unit">WPM</div></div>
+          <div class="stat"><div class="num" id="rAcc">0</div><div class="unit">%</div></div>
+          <div class="stat"><div class="num" id="rErr">0</div><div class="unit">اشتباه</div></div>
+        </div>
+        <div class="mt" style="color:var(--primary);font-weight:800" id="rBest"></div>
+        <button class="btn mt" onclick="newText()">تمرین دوباره</button>
+      </div>
+    </section>
+
+    <!-- READING -->
+    <section class="screen" id="s-reading">
+      <h2 class="sec">تندخوانی RSVP</h2>
+      <div class="chips" id="readChips"></div>
+      <div id="rsvpBox">
+        <div class="card center">
+          <div class="small" id="wordCnt">کلمه ۱ از ۰</div>
+          <div id="rsvpWord">—</div>
+          <div class="prog"><i id="rsvpBar"></i></div>
+          <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+            <button class="btn small" id="playBtn" onclick="togglePlay()">▶ پخش</button>
+            <button class="btn ghost small" onclick="resetPlayer()">↺ از اول</button>
+            <button class="btn ghost small" onclick="goQuiz()">رفتن به آزمون</button>
+          </div>
+        </div>
+        <div class="card">
+          <div style="display:flex;justify-content:space-between">
+            <b>سرعت نمایش</b><b style="color:var(--primary)" id="wpmLbl">250 WPM</b>
+          </div>
+          <input type="range" min="100" max="1000" step="25" value="250" id="wpmRange" oninput="setWpm(this.value)">
+          <div class="small" id="readBest">رکورد مطالعه شما: ۰ WPM</div>
+        </div>
+        <button class="btn ghost" id="fullBtn" onclick="toggleFull()">نمایش متن کامل</button>
+        <div class="card" id="fullText" style="display:none;line-height:2;font-size:16px"></div>
+      </div>
+      <div id="quizBox" style="display:none">
+        <h2 class="sec">آزمون درک مطلب</h2>
+        <div id="quizList"></div>
+        <button class="btn" onclick="submitQuiz()">ثبت پاسخ‌ها</button>
+      </div>
+      <div class="card center" id="readResult" style="display:none">
+        <h2 class="sec" style="justify-content:center">نتیجه مطالعه</h2>
+        <div class="row">
+          <div class="stat"><div class="num" id="rrWpm">0</div><div class="unit">WPM</div></div>
+          <div class="stat"><div class="num" id="rrScore">0</div><div class="unit">درصد درک مطلب</div></div>
+        </div>
+        <button class="btn mt" onclick="nextText()">متن بعدی</button>
+      </div>
+    </section>
+
+    <!-- ANALYTICS -->
+    <section class="screen" id="s-analytics">
+      <h2 class="sec">آمار و نمودارها</h2>
+      <div class="row">
+        <div class="card stat"><div class="lbl">جلسات تایپ</div><div class="num" id="aType">0</div></div>
+        <div class="card stat"><div class="lbl">جلسات مطالعه</div><div class="num" id="aRead">0</div></div>
+      </div>
+      <div class="card">
+        <h2 class="sec">روند سرعت تایپ (WPM)</h2>
+        <canvas id="lineChart" width="420" height="150" style="width:100%;height:150px"></canvas>
+        <div class="small" id="chartHint">برای دیدن نمودار حداقل ۲ جلسه تایپ انجام دهید.</div>
+      </div>
+      <div class="card">
+        <h2 class="sec">فعالیت ۷ روز اخیر</h2>
+        <div class="bars" id="bars"></div>
+      </div>
+      <h2 class="sec">تاریخچه اخیر</h2>
+      <div id="histList"></div>
+    </section>
+
+    <!-- PROFILE -->
+    <section class="screen" id="s-profile">
+      <h2 class="sec">پروفایل</h2>
+      <div class="card">
+        <div style="display:flex;align-items:center;gap:14px">
+          <div class="avatar">M</div>
+          <div>
+            <div style="font-size:22px;font-weight:900">mrsad</div>
+            <div style="color:var(--primary);font-weight:800" id="lvlTxt">سطح ۱</div>
+            <div class="prog" style="width:150px;margin:8px 0 0"><i id="lvlBar"></i></div>
+          </div>
+        </div>
+      </div>
+      <h2 class="sec">رکوردها</h2>
+      <div class="row">
+        <div class="card stat"><div class="lbl">بهترین سرعت تایپ</div><div class="num" id="pWpm">0</div><div class="unit">WPM</div></div>
+        <div class="card stat"><div class="lbl">بهترین مطالعه</div><div class="num" id="pRead">0</div><div class="unit">WPM</div></div>
+      </div>
+      <div class="row">
+        <div class="card stat"><div class="lbl">بهترین دقت</div><div class="num" id="pAcc">0</div><div class="unit">%</div></div>
+        <div class="card stat"><div class="lbl">مجموع تمرین</div><div class="num" id="pMin">0</div><div class="unit">دقیقه</div></div>
+      </div>
+      <h2 class="sec">دستاوردها</h2>
+      <div class="row" id="achRow"></div>
+      <button class="btn mt" onclick="go('settings')">⚙️ تنظیمات و تم‌ها</button>
+    </section>
+
+    <!-- SETTINGS -->
+    <section class="screen" id="s-settings">
+      <h2 class="sec">تنظیمات</h2>
+      <h2 class="sec">🎨 تم‌های ظاهری</h2>
+      <div id="themeList"></div>
+      <h2 class="sec">🌐 زبان</h2>
+      <div class="chips">
+        <button class="chip" id="langFa" onclick="setLang('fa')">فارسی 🇮🇷</button>
+        <button class="chip" id="langEn" onclick="setLang('en')">English 🇬🇧</button>
+      </div>
+      <div class="card">
+        <div style="display:flex;justify-content:space-between">
+          <b>هدف روزانه (دقیقه)</b><b style="color:var(--primary)" id="goalLbl">10</b>
+        </div>
+        <input type="range" min="5" max="60" step="1" value="10" id="goalRange" oninput="setGoal(this.value)">
+      </div>
+      <div class="card">
+        <div class="switch-row"><b>🔊 صدا</b><label class="switch"><input type="checkbox" id="swSound" checked onchange="setSound(this.checked)"><span class="track"></span></label></div>
+        <div class="switch-row"><b>📳 لرزش</b><label class="switch"><input type="checkbox" id="swVib" checked onchange="setVib(this.checked)"><span class="track"></span></label></div>
+      </div>
+      <button class="btn ghost" id="resetBtn" onclick="resetAll()">🗑 حذف همه داده‌ها</button>
+      <div class="card center">
+        <div class="holo" style="font-size:22px;font-weight:900">TYPFLOW</div>
+        <div class="small mt">نسخه ۱.۰.۰ — ساخته‌شده توسط mrsad</div>
+        <div class="small">تمرین تایپ و تندخوانی با طراحی سینمایی</div>
+      </div>
+    </section>
+  </main>
+
+  <nav id="nav">
+    <button data-s="home" class="on" onclick="go('home')"><span class="ic">🏠</span>خانه</button>
+    <button data-s="typing" onclick="go('typing')"><span class="ic">⌨️</span>تایپ</button>
+    <button data-s="reading" onclick="go('reading')"><span class="ic">📖</span>خواندن</button>
+    <button data-s="analytics" onclick="go('analytics')"><span class="ic">📊</span>آمار</button>
+    <button data-s="profile" onclick="go('profile')"><span class="ic">👤</span>پروفایل</button>
+  </nav>
+</div>
+
+<script>
+/* ============ THEMES ============ */
+const THEMES = {
+  cyber:   {name:'سایبر فیوژن', en:'CYBER FUSION', desc:'مشکی، فیروزه‌ای و جلوه‌های هولوگرافیک', p:'#00F5D4',s:'#00B4D8',a:'#B537F2',bg:'#04070E',sf:'#0A1220',sf2:'#101B30',ob:'#F2FBFA',os:'#D7E6E4',ok:'#2EE6A8',er:'#FF5C7A',g:['#00F5D4','#00B4D8','#B537F2','#FF5C8A'],gl:.65},
+  obsidian:{name:'ابسیدین', en:'OBSIDIAN', desc:'مشکی، نقره‌ای و طراحی لوکس', p:'#E8E8EC',s:'#9AA0A6',a:'#C9CFD8',bg:'#0A0A0B',sf:'#141416',sf2:'#1E1E22',ob:'#F5F5F7',os:'#D8D8DE',ok:'#7FD8A4',er:'#FF6B81',g:['#F5F5F7','#C9CFD8','#8E939E'],gl:.6},
+  nebula:  {name:'نبولا', en:'NEBULA', desc:'بنفش، آبی نئونی و فضای آینده‌نگر', p:'#A855F7',s:'#3B82F6',a:'#EC4899',bg:'#0B0518',sf:'#160B2E',sf2:'#20123F',ob:'#F5F0FF',os:'#D9CCF5',ok:'#34D399',er:'#FB7185',g:['#A855F7','#3B82F6','#EC4899'],gl:.65},
+  monolith:{name:'مونولیت', en:'MONOLITH', desc:'مینیمال، مونوکروم و تایپوگرافی حرفه‌ای', p:'#FFFFFF',s:'#8A8A8A',a:'#FFFFFF',bg:'#0A0A0A',sf:'#161616',sf2:'#1F1F1F',ob:'#F5F5F5',os:'#D9D9D9',ok:'#4ADE80',er:'#FF5252',g:['#FFFFFF','#9E9E9E'],gl:.55}
+};
+const $ = id => document.getElementById(id);
+const today = () => new Date().toISOString().slice(0,10);
+const def = {theme:'cyber',lang:'fa',goal:10,sound:true,vib:true,bestWpm:0,bestAcc:0,bestRead:0,sessions:0,minutes:0,history:[]};
+let S = {...def, ...(JSON.parse(localStorage.getItem('typflow')||'{}'))};
+function save(){ localStorage.setItem('typflow', JSON.stringify(S)); }
+function applyTheme(){
+  const t = THEMES[S.theme]||THEMES.cyber, r=document.documentElement.style;
+  r.setProperty('--primary',t.p); r.setProperty('--secondary',t.s); r.setProperty('--accent',t.a);
+  r.setProperty('--bg',t.bg); r.setProperty('--surface',t.sf); r.setProperty('--surface2',t.sf2);
+  r.setProperty('--on-bg',t.ob); r.setProperty('--on-surface',t.os);
+  r.setProperty('--success',t.ok); r.setProperty('--error',t.er);
+  r.setProperty('--g1',t.g[0]); r.setProperty('--g2',t.g[1]||t.g[0]); r.setProperty('--g3',t.g[2]||t.g[0]); r.setProperty('--g4',t.g[3]||t.g[0]);
+  r.setProperty('--glass',t.gl);
+  $('curTheme').textContent = t.name;
+  document.documentElement.lang = S.lang; document.documentElement.dir = S.lang==='fa'?'rtl':'ltr';
+  $('langFa').classList.toggle('on',S.lang==='fa'); $('langEn').classList.toggle('on',S.lang==='en');
+  $('goalLbl').textContent = S.goal; $('goalRange').value = S.goal;
+  $('swSound').checked = S.sound; $('swVib').checked = S.vib;
+  renderThemes();
+}
+function renderThemes(){
+  $('themeList').innerHTML = Object.entries(THEMES).map(([id,t])=>`
+    <div class="card theme-card ${S.theme===id?'sel':''}" onclick="setTheme('${id}')">
+      <div class="preview" style="background:linear-gradient(90deg,${t.g.join(',')})">
+        <div class="inner"><div class="b1" style="background:${t.p}"></div><div class="b2" style="background:${t.s}"></div></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div><b>${t.name}</b><div class="small">${t.desc}</div></div>
+        ${S.theme===id?'<b style="color:var(--primary);font-size:22px">✓</b>':''}
+      </div>
+    </div>`).join('');
+}
+function setTheme(id){ S.theme=id; save(); applyTheme(); }
+function setLang(l){ S.lang=l; save(); applyTheme(); refreshAll(); }
+function setGoal(v){ S.goal=+v; save(); $('goalLbl').textContent=v; refreshHome(); }
+function setSound(v){ S.sound=v; save(); }
+function setVib(v){ S.vib=v; save(); }
+function resetAll(){
+  if($('resetBtn').dataset.arm){ S={...def}; save(); $('resetBtn').dataset.arm=''; $('resetBtn').textContent='🗑 حذف همه داده‌ها'; applyTheme(); refreshAll(); newText(); resetPlayer(); }
+  else { $('resetBtn').dataset.arm='1'; $('resetBtn').textContent='⚠️ مطمئن هستید؟ برای تأیید بزنید'; }
+}
+
+/* ============ NAV ============ */
+function go(s){
+  document.querySelectorAll('.screen').forEach(x=>x.classList.remove('active'));
+  $('s-'+s).classList.add('active');
+  document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.s===s));
+  if(s==='home') refreshHome();
+  if(s==='analytics') refreshAnalytics();
+  if(s==='profile') refreshProfile();
+  if(s==='reading') refreshReading();
+}
+function refreshAll(){ refreshHome(); refreshAnalytics(); refreshProfile(); refreshReading(); }
+
+/* ============ DATA ============ */
+const typingFa=[
+ "تایپ سریع مهارتی است که با تمرین روزانه به دست می آید. هر روز چند دقیقه تمرین کنید تا سرعت و دقت شما بیشتر شود. تمرکز و آرامش دو عامل مهم در یادگیری تایپ هستند.",
+ "خواندن سریع به شما کمک می کند در زمان کمتر اطلاعات بیشتری کسب کنید. با تمرین مداوم می توانید سرعت مطالعه خود را به طرز چشمگیری افزایش دهید و درک مطلب بهتری داشته باشید.",
+ "فناوری هر روز در حال پیشرفت است و ابزارهای جدیدی برای یادگیری ساخته می شوند. استفاده درست از این ابزارها می تواند مسیر پیشرفت شما را بسیار هموارتر کند و زمان را برای شما ذخیره کند.",
+ "هدف گذاری درست اولین قدم برای رسیدن به موفقیت است. وقتی هدف شما مشخص باشد مسیر حرکت نیز روشن می شود. هر روز یک قدم کوچک بردارید و به خودتان اعتماد کنید."
+];
+const typingEn=[
+ "Fast typing is a skill that grows with daily practice. Spend a few minutes every day to improve your speed and accuracy. Focus and calm are the two keys to learning.",
+ "Speed reading helps you gain more information in less time. With steady practice you can dramatically increase your reading speed and improve your comprehension.",
+ "Technology improves every single day and new learning tools appear. Using these tools wisely can make your path much smoother and save you a lot of time.",
+ "Setting clear goals is the first step toward success. When your goal is clear the path becomes visible. Take one small step every day and trust yourself."
+];
+const readingFa=[
+ {title:'هنر تمرکز',body:'تمرکز یعنی توانایی نگه داشتن ذهن روی یک کار مشخص بدون پرت شدن به سمت حواس پرتی ها. در دنیای امروز که هر لحظه اعلان جدیدی از گوشی و شبکه های اجتماعی می رسد حفظ تمرکز سخت تر از همیشه شده است. پژوهش ها نشان می دهند افرادی که تمرین تمرکز انجام می دهند در کارهای شناختی عملکرد بهتری دارند. یکی از ساده ترین روش ها تمرین تنفس عمیق و مدیتیشن کوتاه روزانه است. حتی پنج دقیقه سکوت در روز می تواند کیفیت توجه شما را به شکل محسوسی بالا ببرد و خستگی ذهنی را کم کند.',q:[
+  {q:'تمرکز چه کمکی به عملکرد شناختی می کند؟',o:['هیچ اثری ندارد','عملکرد را بهتر می کند','فقط خستگی را زیاد می کند','باعث خواب آلودگی می شود'],a:1},
+  {q:'یکی از روش های ساده تقویت تمرکز چیست؟',o:['تماشای بیشتر گوشی','تنفس عمیق و مدیتیشن کوتاه','کار کردن همزمان چند کار','شنیدن موسیقی بلند'],a:1},
+  {q:'چند دقیقه سکوت در روز کافی است؟',o:['یک ساعت','پنج دقیقه','یک دقیقه','اصلاً لازم نیست'],a:1}]},
+ {title:'قدرت عادت های کوچک',body:'موفقیت معمولاً نتیجه یک تصمیم بزرگ نیست بلکه حاصل عادت های کوچک و تکرارشونده روزانه است. وقتی کاری را هر روز در ساعت مشخصی انجام می دهید مغز آن را به صورت خودکار درمی آورد و انرژی ذهنی کمتری مصرف می شود. برای ساختن یک عادت جدید اول آن را بسیار کوچک کنید تا شروع کردن آسان شود. سپس به تدریج اندازه آن را بزرگ تر کنید. مهم ترین نکته استمرار است نه شدت. کسی که هر روز کمی پیش می رود در پایان سال از کسی که گاهی خیلی زیاد تلاش می کند جلو می زند.',q:[
+  {q:'موفقیت بیشتر نتیجه چیست؟',o:['یک تصمیم بزرگ','عادت های کوچک روزانه','شانس','کمک دیگران'],a:1},
+  {q:'برای ساختن عادت جدید اول باید چه کرد؟',o:['آن را خیلی بزرگ شروع کرد','آن را بسیار کوچک کرد','صبر کرد تا انگیزه بیاید','همه کارها را یکجا انجام داد'],a:1},
+  {q:'مهم ترین نکته در ساختن عادت چیست؟',o:['شدت','استمرار','سرعت','هزینه'],a:1}]}
+];
+const readingEn=[
+ {title:'The Art of Focus',body:'Focus is the ability to keep your mind on one task without drifting toward distractions. In a world where a new notification arrives every moment keeping focus is harder than ever. Research shows that people who practice focus perform better in cognitive tasks. One of the simplest methods is deep breathing and short daily meditation. Even five minutes of silence a day can noticeably improve the quality of your attention and reduce mental fatigue.',q:[
+  {q:'What does focus practice improve?',o:['Nothing','Cognitive performance','Only fatigue','Sleepiness'],a:1},
+  {q:'Which is a simple way to strengthen focus?',o:['More phone time','Deep breathing and short meditation','Multitasking','Loud music'],a:1},
+  {q:'How much silence per day is enough?',o:['One hour','Five minutes','One minute','None'],a:1}]},
+ {title:'The Power of Small Habits',body:'Success is usually not the result of one big decision but of small repeated daily habits. When you do something at the same time every day your brain turns it into an automatic routine and uses less mental energy. To build a new habit first make it very small so starting is easy. Then gradually make it bigger. The most important thing is consistency not intensity. Someone who moves a little every day will pass someone who tries very hard only sometimes.',q:[
+  {q:'Success is mostly the result of what?',o:['One big decision','Small daily habits','Luck','Other people'],a:1},
+  {q:'To build a new habit you should first:',o:['Start very big','Make it very small','Wait for motivation','Do everything at once'],a:1},
+  {q:'The most important thing is:',o:['Intensity','Consistency','Speed','Cost'],a:1}]}
+];
+
+/* ============ HOME ============ */
+function minutesToday(){ return S.history.filter(h=>h.date===today()).length*2; }
+function refreshHome(){
+  $('hWpm').textContent=S.bestWpm; $('hRead').textContent=S.bestRead;
+  $('hAcc').textContent=S.bestAcc; $('hSes').textContent=S.sessions;
+  const mt=minutesToday(), p=Math.min(1, mt/S.goal);
+  $('goalPct').textContent=Math.round(p*100)+'%';
+  $('goalRing').style.strokeDashoffset = 201*(1-p);
+  $('dailyTxt').textContent=`امروز ${mt} دقیقه از ${S.goal} دقیقه هدف`;
+  $('dailyBar').style.width=(p*100)+'%';
+  $('totalTxt').textContent=`مجموع زمان تمرین: ${S.minutes} دقیقه`;
+}
+
+/* ============ TYPING ============ */
+let mode='prac', target='', elapsed=0, started=false, finished=false, timer=null;
+function pool(){ return S.lang==='fa'?typingFa:typingEn; }
+function newText(){
+  target = pool()[Math.floor(Math.random()*pool().length)];
+  $('typeInput').value=''; elapsed=0; started=false; finished=false;
+  clearInterval(timer); $('tResult').style.display='none';
+  $('finishBtn').style.display = mode==='timed'?'inline-block':'none';
+  $('tTimeLbl').textContent = mode==='timed'?'زمان باقی‌مانده':'زمان';
+  $('tTime').textContent = mode==='timed'?60:0;
+  renderTarget(); updateLive();
+}
+function setMode(m){ mode=m; $('chipPrac').classList.toggle('on',m==='prac'); $('chipTimed').classList.toggle('on',m==='timed'); newText(); }
+function renderTarget(){
+  const inp=$('typeInput').value;
+  $('targetText').innerHTML = [...target].map((ch,i)=>{
+    let cls='todo';
+    if(i<inp.length) cls = inp[i]===ch?'ok':'bad';
+    if(i===inp.length) cls='cur';
+    return `<span class="${cls}">${ch===' '?'&nbsp;':ch}</span>`;
+  }).join('');
+}
+function stats(){
+  const inp=$('typeInput').value;
+  let ok=0; for(let i=0;i<inp.length;i++) if(inp[i]===target[i]) ok++;
+  const err=Math.max(0,inp.length-ok);
+  const acc=inp.length?Math.round(ok*100/inp.length):100;
+  const wpm=elapsed>0?Math.round((ok/5)/(elapsed/60)):0;
+  return {ok,err,acc,wpm};
+}
+function updateLive(){
+  const s=stats();
+  $('tWpm').textContent=s.wpm; $('tAcc').textContent=s.acc; $('tErr').textContent=s.err;
+  $('tTime').textContent = mode==='timed'?Math.max(0,60-elapsed):elapsed;
+}
+function onType(){
+  if(finished) return;
+  if(!started && $('typeInput').value.length){ started=true; timer=setInterval(tick,1000); }
+  renderTarget(); updateLive();
+  if(mode==='prac' && $('typeInput').value.length>=target.length) finishTest();
+}
+function tick(){
+  elapsed++; updateLive();
+  if(mode==='timed' && elapsed>=60) finishTest();
+}
+function finishTest(){
+  if(finished) return; finished=true; clearInterval(timer);
+  const s=stats();
+  $('rWpm').textContent=s.wpm; $('rAcc').textContent=s.acc; $('rErr').textContent=s.err;
+  S.bestWpm=Math.max(S.bestWpm,s.wpm); S.bestAcc=Math.max(S.bestAcc,s.acc);
+  S.sessions++; S.minutes+=Math.max(1,Math.round(elapsed/60));
+  S.history.unshift({type:'typing',wpm:s.wpm,acc:s.acc,date:today()}); S.history=S.history.slice(0,100);
+  save();
+  $('rBest').textContent='رکورد شما: '+S.bestWpm+' WPM';
+  $('tResult').style.display='block';
+  $('typeInput').disabled=true;
+  setTimeout(()=>$('typeInput').disabled=false,50);
+}
+
+/* ============ READING ============ */
+let rIdx=0, wordIdx=0, playing=false, wpm=250, rTimer=null, answers=[];
+function rPool(){ return S.lang==='fa'?readingFa:readingEn; }
+function words(){ return rPool()[rIdx].body.split(/\s+/).filter(Boolean); }
+function refreshReading(){
+  $('readChips').innerHTML = rPool().map((t,i)=>`<button class="chip ${i===rIdx?'on':''}" onclick="pickText(${i})">${t.title}</button>`).join('');
+  $('readBest').textContent='رکورد مطالعه شما: '+S.bestRead+' WPM';
+  $('fullText').textContent=rPool()[rIdx].body;
+  showWord();
+}
+function pickText(i){ rIdx=i; resetPlayer(); refreshReading(); }
+function showWord(){
+  const w=words(), cur=w[wordIdx]||'—';
+  $('wordCnt').textContent=`کلمه ${Math.min(wordIdx+1,w.length)} از ${w.length}`;
+  const orp=cur.length?Math.min(cur.length-1,Math.floor(cur.length*0.35)):0;
+  $('rsvpWord').innerHTML = cur? `${cur.slice(0,orp)}<span class="orp">${cur[orp]}</span>${cur.slice(orp+1)}` : '—';
+  $('rsvpBar').style.width=(w.length?wordIdx/w.length*100:0)+'%';
+}
+function togglePlay(){
+  if(wordIdx>=words().length) wordIdx=0;
+  playing=!playing;
+  $('playBtn').textContent = playing?'⏸ توقف':'▶ پخش';
+  clearInterval(rTimer);
+  if(playing) rTimer=setInterval(()=>{
+    wordIdx++; showWord();
+    if(wordIdx>=words().length){ playing=false; clearInterval(rTimer); $('playBtn').textContent='▶ پخش'; goQuiz(); }
+  }, Math.max(40,60000/wpm));
+}
+function resetPlayer(){ playing=false; clearInterval(rTimer); wordIdx=0; $('playBtn').textContent='▶ پخش'; $('rsvpBox').style.display='block'; $('quizBox').style.display='none'; $('readResult').style.display='none'; showWord(); }
+function setWpm(v){ wpm=+v; $('wpmLbl').textContent=v+' WPM'; if(playing) togglePlay(),togglePlay(); }
+function toggleFull(){ const el=$('fullText'); const open=el.style.display!=='none'; el.style.display=open?'none':'block'; $('fullBtn').textContent=open?'نمایش متن کامل':'پنهان کردن متن کامل'; }
+function goQuiz(){
+  playing=false; clearInterval(rTimer);
+  $('rsvpBox').style.display='none'; $('readResult').style.display='none';
+  $('quizBox').style.display='block';
+  answers=rPool()[rIdx].q.map(()=>-1);
+  $('quizList').innerHTML=rPool()[rIdx].q.map((q,qi)=>`
+    <div class="card"><b>${qi+1}. ${q.q}</b><div class="mt">
+    ${q.o.map((o,oi)=>`<button class="opt" id="opt-${qi}-${oi}" onclick="pick(${qi},${oi})">${o}</button>`).join('')}
+    </div></div>`).join('');
+}
+function pick(qi,oi){ answers[qi]=oi; rPool()[rIdx].q[qi].o.forEach((_,i)=>$('opt-'+qi+'-'+i).classList.toggle('on',i===oi)); }
+function submitQuiz(){
+  const qs=rPool()[rIdx].q; let c=0; qs.forEach((q,i)=>{ if(answers[i]===q.a) c++; });
+  const score=Math.round(c*100/qs.length);
+  S.bestRead=Math.max(S.bestRead,wpm); S.sessions++; S.minutes+=2;
+  S.history.unshift({type:'reading',wpm,acc:score,date:today()}); S.history=S.history.slice(0,100); save();
+  $('quizBox').style.display='none';
+  $('rrWpm').textContent=wpm; $('rrScore').textContent=score;
+  $('readResult').style.display='block';
+}
+function nextText(){ rIdx=(rIdx+1)%rPool().length; resetPlayer(); refreshReading(); }
+
+/* ============ ANALYTICS ============ */
+function refreshAnalytics(){
+  const th=S.history.filter(h=>h.type==='typing').slice().reverse();
+  const rh=S.history.filter(h=>h.type==='reading');
+  $('aType').textContent=th.length; $('aRead').textContent=rh.length;
+  const cv=$('lineChart'), ctx=cv.getContext('2d');
+  ctx.clearRect(0,0,cv.width,cv.height);
+  if(th.length>=2){
+    $('chartHint').style.display='none';
+    const vals=th.map(h=>h.wpm), max=Math.max(...vals,10);
+    const t=THEMES[S.theme];
+    const grad=ctx.createLinearGradient(0,0,cv.width,0);
+    t.g.forEach((c,i)=>grad.addColorStop(i/(t.g.length-1||1),c));
+    ctx.beginPath();
+    vals.forEach((v,i)=>{
+      const x=vals.length>1? i/(vals.length-1)*cv.width : cv.width/2;
+      const y=cv.height-8-(v/max)*(cv.height-24);
+      i?ctx.lineTo(x,y):ctx.moveTo(x,y);
+    });
+    ctx.strokeStyle=grad; ctx.lineWidth=3.5; ctx.stroke();
+    ctx.lineTo(cv.width,cv.height); ctx.lineTo(0,cv.height); ctx.closePath();
+    const fg=ctx.createLinearGradient(0,0,0,cv.height);
+    fg.addColorStop(0,t.p+'55'); fg.addColorStop(1,'transparent');
+    ctx.fillStyle=fg; ctx.fill();
+    vals.forEach((v,i)=>{
+      const x=vals.length>1? i/(vals.length-1)*cv.width : cv.width/2;
+      const y=cv.height-8-(v/max)*(cv.height-24);
+      ctx.beginPath(); ctx.arc(x,y,5,0,7); ctx.fillStyle=t.p; ctx.fill();
+      ctx.beginPath(); ctx.arc(x,y,2.2,0,7); ctx.fillStyle=t.bg; ctx.fill();
+    });
+  } else $('chartHint').style.display='block';
+  const days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const counts=[],labels=[];
+  for(let i=6;i>=0;i--){
+    const d=new Date(); d.setDate(d.getDate()-i);
+    const key=d.toISOString().slice(0,10);
+    counts.push(S.history.filter(h=>h.date===key).length);
+    labels.push(days[d.getDay()]);
+  }
+  const maxC=Math.max(...counts,1);
+  $('bars').innerHTML=counts.map((c,i)=>`
+    <div class="bar-col"><span class="c">${c}</span><div class="bar" style="height:${Math.max(4,c/maxC*58)}px"></div><span class="d">${labels[i]}</span></div>`).join('');
+  $('histList').innerHTML = S.history.length? S.history.slice(0,10).map(h=>`
+    <div class="card hist-row">
+      <div><b>${h.type==='typing'?'⌨️ تمرین تایپ':'📖 تندخوانی'}</b><div class="small">${h.date}</div></div>
+      <div style="text-align:end"><div class="w">${h.wpm} WPM</div><div class="small">${h.acc}%</div></div>
+    </div>`).join('') :
+    '<div class="card">هنوز فعالیتی ثبت نشده است. اولین تمرین را شروع کنید!</div>';
+}
+
+/* ============ PROFILE ============ */
+function refreshProfile(){
+  const lvl=Math.floor(S.sessions/5)+1;
+  $('lvlTxt').textContent='سطح '+lvl;
+  $('lvlBar').style.width=((S.sessions%5)/5*100)+'%';
+  $('pWpm').textContent=S.bestWpm; $('pRead').textContent=S.bestRead;
+  $('pAcc').textContent=S.bestAcc; $('pMin').textContent=S.minutes;
+  const ach=[
+    ['🚀','اولین قدم',S.sessions>=1],['⚡','سرعت ۳۰ WPM',S.bestWpm>=30],
+    ['🔥','سرعت ۵۰ WPM',S.bestWpm>=50],['💎','سرعت ۷۰ WPM',S.bestWpm>=70],
+    ['🎯','دقت ۹۰٪',S.bestAcc>=90],['📚','تندخوان ۳۰۰ WPM',S.bestRead>=300],
+    ['🏅','۱۰ جلسه تمرین',S.sessions>=10],['👑','۵۰ جلسه تمرین',S.sessions>=50]
+  ];
+  $('achRow').innerHTML=ach.slice(0,2).map(a=>achHtml(a)).join('')+
+    '<div style="flex:1;display:flex;flex-direction:column;gap:10px">'+
+    ach.slice(2).map(a=>achHtml(a)).join('')+'</div>';
+  function achHtml(a){ return `<div class="card ach" style="flex:1;${a[2]?'':'opacity:.45'}"><div class="ic">${a[0]}</div><div class="t">${a[1]}</div><div class="s" style="color:${a[2]?'var(--success)':'var(--on-surface)'}">${a[2]?'باز شده ✅':'قفل 🔒'}</div></div>`; }
+}
+
+/* ============ INIT ============ */
+$('brand').innerHTML=[...'mrsad'].map((c,i)=>`<span style="animation-delay:${0.25+i*0.15}s">${c}</span>`).join('');
+applyTheme(); refreshAll(); newText(); resetPlayer();
+go('home');
+setTimeout(()=>$('splash').classList.add('hide'), 3400);
+</script>
+</body>
+</html>

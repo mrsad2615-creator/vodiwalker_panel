@@ -124,7 +124,6 @@ tap_text_scroll d07 "SIGNAL" theme-signal
 shot 08-theme-signal
 
 # ---- settings scrolled: language switch ----
-swipe_up 1
 tap_text_scroll d08 "ENGLISH" lang-en
 sleep 3
 shot 09-english
@@ -155,7 +154,6 @@ tap_text_scroll d13 "SETTINGS" settings-en
 shot 13-settings-en
 
 # ---- back to Persian and finish on the dashboard ----
-swipe_up 2
 tap_text_scroll d14 "فارسی" lang-fa
 sleep 3
 adb shell input keyevent 4 > /dev/null 2>&1 || true

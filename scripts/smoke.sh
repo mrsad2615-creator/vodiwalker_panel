@@ -43,6 +43,19 @@ tap_text() {
   return 0
 }
 
+tap_text_scroll() {
+  # $1 = dump base name, $2 = needle, $3 = label
+  local i=0
+  while [ "$i" -lt 4 ]; do
+    dump "$1-$i"
+    if tap_text "$1-$i" "$2" "$3"; then return 0; fi
+    swipe_up 1
+    i=$((i + 1))
+  done
+  echo "SCROLL TAP MISS: $2" >> "$OUT/notes.txt"
+  return 1
+}
+
 tap_nav() {
   local xy x y
   xy=$(python3 scripts/ui_click.py "$OUT/$1.xml" --nav "$2" 2>/dev/null)
@@ -93,17 +106,14 @@ shot 06-profile
 
 # ---- settings: theme switch ----
 swipe_up 2
-dump d06
-tap_text d06 "تنظیمات" settings
+tap_text_scroll d06 "تنظیمات" settings
 shot 07-settings
-dump d07
-tap_text d07 "SIGNAL" theme-signal
+tap_text_scroll d07 "SIGNAL" theme-signal
 shot 08-theme-signal
 
 # ---- settings scrolled: language switch ----
-swipe_up 2
-dump d08
-tap_text d08 "ENGLISH" lang-en
+swipe_up 1
+tap_text_scroll d08 "ENGLISH" lang-en
 shot 09-english
 
 # ---- English (LTR) typing session with real key input ----
@@ -127,12 +137,10 @@ shot 12-analytics-en
 dump d12
 tap_nav d12 4 home-en
 swipe_up 1
-dump d13
-tap_text d13 "SETTINGS" settings-en
+tap_text_scroll d13 "SETTINGS" settings-en
 shot 13-settings-en
 swipe_up 2
-dump d14
-tap_text d14 "فارسی" lang-fa
+tap_text_scroll d14 "فارسی" lang-fa
 shot 14-back-to-fa
 
 # ---- restore the default theme and finish on the dashboard ----
@@ -142,8 +150,7 @@ for _ in 1 2 3; do
     > /dev/null 2>&1 || true
   sleep 1
 done
-dump d16
-tap_text d16 "VOID" theme-void
+tap_text_scroll d16 "VOID" theme-void
 shot 15-final-settings
 
 echo "== crash scan ==" >> "$OUT/notes.txt"

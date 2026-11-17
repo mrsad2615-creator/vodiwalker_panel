@@ -49,6 +49,22 @@ jobs:
           path: typflow/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
 
+      - name: Publish APK to GitHub Release
+        if: success()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cp typflow/app/build/outputs/apk/debug/app-debug.apk TYPFLOW-1.0.0.apk
+          ls -lh TYPFLOW-1.0.0.apk
+          gh release view typflow-latest > /dev/null 2>&1 || \
+            gh release create typflow-latest \
+              --title "TYPFLOW 1.0.0 — APK" \
+              --notes "اپلیکیشن TYPFLOW: تمرین تایپ و تندخوانی | نسخه اندروید 8+ (minSdk 26)
+
+          **نصب:** فایل TYPFLOW-1.0.0.apk زیر را دانلود کنید و روی گوشی اندروید نصب کنید (اجازه نصب از منابع نامشخص لازم است)." \
+              --prerelease
+          gh release upload typflow-latest TYPFLOW-1.0.0.apk --clobber
+
       - name: Publish build log into repo (on failure)
         if: failure()
         env:

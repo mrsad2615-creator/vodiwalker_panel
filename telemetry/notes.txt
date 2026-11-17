@@ -3,10 +3,10 @@ Performing Streamed Install
 Success
 == launch ==
 Starting: Intent { cmp=com.typflow.app/.MainActivity }
-TAP typing -> 219,596
-TAP reading -> 162,596
-TAP analytics -> 104,596
-TAP profile -> 47,596
+TAP typing -> 0,0
+TAP reading -> 0,0
+TAP analytics -> 0,0
+TAP profile -> 0,0
 TAP MISS: تنظیمات
-TAP home -> 276,596
+TAP home -> 0,0
 == crash scan ==

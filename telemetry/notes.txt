@@ -7,6 +7,9 @@ NAV typing -> 735,2045
 NAV reading -> 546,2045
 NAV analytics -> 546,2045
 NAV profile -> 353,2045
+NAV profile -> 163,2045
+TAP settings -> 540,1842
+TAP MISS: NEBULA
 NAV home -> 922,2045
 TAP typing-start -> 540,1276
 == crash scan ==

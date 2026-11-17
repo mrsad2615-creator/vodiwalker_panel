@@ -97,13 +97,13 @@ dump d06
 tap_text d06 "تنظیمات" settings
 shot 07-settings
 dump d07
-tap_text d07 "NEBULA" theme-nebula
-shot 08-theme-nebula
+tap_text d07 "SIGNAL" theme-signal
+shot 08-theme-signal
 
 # ---- settings scrolled: language switch ----
 swipe_up 2
 dump d08
-tap_text d08 "English" lang-en
+tap_text d08 "ENGLISH" lang-en
 shot 09-english
 
 # ---- English (LTR) typing session with real key input ----
@@ -111,7 +111,7 @@ dump d09
 tap_nav d09 3 typing-en
 shot 10-typing-en
 dump d10
-tap_text d10 "Type here" typing-field
+tap_text d10 "TYPE HERE" typing-field
 adb shell input text "the%squick%sbrown%sfox" > /dev/null 2>&1 || true
 sleep 2
 shot 11-typing-input
@@ -128,7 +128,7 @@ dump d12
 tap_nav d12 4 home-en
 swipe_up 1
 dump d13
-tap_text d13 "Change theme" settings-en
+tap_text d13 "SETTINGS" settings-en
 shot 13-settings-en
 swipe_up 2
 dump d14
@@ -143,7 +143,7 @@ for _ in 1 2 3; do
   sleep 1
 done
 dump d16
-tap_text d16 "CYBER FUSION" theme-cyber
+tap_text d16 "VOID" theme-void
 shot 15-final-settings
 
 echo "== crash scan ==" >> "$OUT/notes.txt"

@@ -127,14 +127,25 @@ fun ProfileScreen(
             Spacer(Modifier.height(8.dp))
             Bar(theme, store.levelProgress, height = 3.dp)
             Spacer(Modifier.height(8.dp))
-            MicroLabel(
-                theme,
-                "${store.xp} XP · " + tr(
-                    lang,
-                    "${(250 - store.xp % 250)} تا سطح بعد",
-                    "${250 - store.xp % 250} to next level"
-                )
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row {
+                    MicroLabel(theme, "XP")
+                    Spacer(Modifier.width(6.dp))
+                    MicroLabel(theme, store.xp.toString(), color = theme.ink)
+                }
+                Row {
+                    MicroLabel(theme, tr(lang, "تا سطح بعد", "TO NEXT"))
+                    Spacer(Modifier.width(6.dp))
+                    MicroLabel(
+                        theme,
+                        (250 - store.xp % 250).toString(),
+                        color = theme.ink
+                    )
+                }
+            }
         }
 
         Spacer(Modifier.height(12.dp))

@@ -38,10 +38,32 @@ def main() -> int:
     def label(n):
         return (n["text"] or "").strip() or (n["desc"] or "").strip()
 
+    # --nav INDEX : tap the INDEX-th bottom-bar item counted from the right
+    if needle == "--nav":
+        idx = int(sys.argv[3]) if len(sys.argv) > 3 else 0
+        clickable = [n for n in nodes if n["clickable"] and n["box"] != (0, 0, 0, 0)]
+        if not clickable:
+            print("NOTFOUND nav", file=sys.stderr)
+            return 2
+        bottom = max(n["box"][3] for n in clickable)
+        band = [
+            n
+            for n in clickable
+            if (n["box"][1] + n["box"][3]) // 2 > bottom * 0.8
+        ]
+        band.sort(key=lambda n: n["box"][0], reverse=True)
+        if idx >= len(band):
+            print("NOTFOUND nav index", file=sys.stderr)
+            return 2
+        x1, y1, x2, y2 = band[idx]["box"]
+        print(f"{(x1 + x2) // 2} {(y1 + y2) // 2}")
+        return 0
+
     hits = [
         n
         for n in nodes
         if label(n)
+        and n["box"] != (0, 0, 0, 0)
         and (needle == label(n) or needle in label(n) or label(n) in needle)
     ]
     # prefer exact label match

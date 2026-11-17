@@ -44,7 +44,7 @@ import kotlinx.coroutines.delay
 @Composable
 fun SplashScreen(theme: TypflowTheme, onDone: () -> Unit) {
     LaunchedEffect(Unit) {
-        delay(3400)
+        delay(2900)
         onDone()
     }
 
@@ -107,16 +107,34 @@ fun SplashScreen(theme: TypflowTheme, onDone: () -> Unit) {
                     // soft holographic halo behind the wordmark
                     Box(
                         modifier = Modifier
-                            .size(230.dp)
+                            .size(280.dp)
                             .background(
                                 Brush.radialGradient(
                                     colors = listOf(
-                                        theme.primary.copy(alpha = 0.16f * glow),
+                                        theme.primary.copy(alpha = 0.26f * glow),
+                                        theme.accent.copy(alpha = 0.12f * glow),
                                         Color.Transparent
                                     )
                                 )
                             )
                     )
+                    // slow orbiting halo ring
+                    androidx.compose.foundation.Canvas(Modifier.size(252.dp)) {
+                        drawCircle(
+                            brush = Brush.sweepGradient(
+                                listOf(
+                                    Color.Transparent,
+                                    theme.primary.copy(alpha = 0.35f),
+                                    theme.accent.copy(alpha = 0.35f),
+                                    Color.Transparent
+                                )
+                            ),
+                            radius = size.minDimension / 2f,
+                            style = androidx.compose.ui.graphics.drawscope.Stroke(
+                                width = 1.6.dp.toPx()
+                            )
+                        )
+                    }
                     androidx.compose.foundation.layout.Row(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -130,15 +148,15 @@ fun SplashScreen(theme: TypflowTheme, onDone: () -> Unit) {
                                             theme.primary, theme.secondary, theme.accent
                                         ),
                                         start = androidx.compose.ui.geometry.Offset(
-                                            -260f + sweep * 620f, 0f
+                                            index * 46f - 150f + sweep * 40f, 0f
                                         ),
                                         end = androidx.compose.ui.geometry.Offset(
-                                            360f + sweep * 620f, 120f
+                                            index * 46f + 10f + sweep * 40f, 90f
                                         )
                                     ),
-                                    fontSize = 62.sp,
+                                    fontSize = 66.sp,
                                     fontWeight = FontWeight.Black,
-                                    letterSpacing = (-2).sp
+                                    letterSpacing = (-1).sp
                                 ),
                                 modifier = Modifier.graphicsLayer {
                                     alpha = p
@@ -170,7 +188,7 @@ fun SplashScreen(theme: TypflowTheme, onDone: () -> Unit) {
             // ---- TYPFLOW wordmark ----
             var flowVisible by remember { mutableStateOf(false) }
             LaunchedEffect(Unit) {
-                delay(1100)
+                delay(900)
                 flowVisible = true
             }
             Text(
@@ -188,7 +206,7 @@ fun SplashScreen(theme: TypflowTheme, onDone: () -> Unit) {
 
             var tagVisible by remember { mutableStateOf(false) }
             LaunchedEffect(Unit) {
-                delay(1500)
+                delay(1150)
                 tagVisible = true
             }
             Text(

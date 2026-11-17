@@ -17,12 +17,27 @@ dump() {
   adb pull "/sdcard/$1.xml" "$OUT/$1.xml" > /dev/null 2>&1 || true
 }
 
+tap_nav() {
+  # $1 = dump name, $2 = index from the right (0 = home), $3 = label
+  local xy x y
+  xy=$(python3 scripts/ui_click.py "$OUT/$1.xml" --nav "$2" 2>/dev/null)
+  x=${xy%% *}; y=${xy##* }
+  if [ -z "${xy:-}" ]; then
+    echo "NAV MISS: $3" >> "$OUT/notes.txt"
+    return 1
+  fi
+  echo "NAV $3 -> $x,$y" >> "$OUT/notes.txt"
+  adb shell input tap "$x" "$y" > /dev/null 2>&1
+  sleep 3
+  return 0
+}
+
 tap_text() {
   # $1 = dump name, $2 = needle, $3 = label
-  local x y
-  x=$(python3 scripts/ui_click.py "$OUT/$1.xml" "$2" 2>"$OUT/click-$3.err" | cut -d' ' -f1)
-  y=$(python3 scripts/ui_click.py "$OUT/$1.xml" "$2" 2>/dev/null | cut -d' ' -f2)
-  if [ -z "${x:-}" ] || [ -z "${y:-}" ]; then
+  local xy x y
+  xy=$(python3 scripts/ui_click.py "$OUT/$1.xml" "$2" 2>/dev/null)
+  x=${xy%% *}; y=${xy##* }
+  if [ -z "${xy:-}" ]; then
     echo "TAP MISS: $2" >> "$OUT/notes.txt"
     return 1
   fi
@@ -43,30 +58,28 @@ shot 01-splash
 sleep 6
 shot 02-home
 dump d02
-tap_text d02 "تایپ" typing
+tap_nav d02 1 typing
 shot 03-typing
 
 dump d03
-tap_text d03 "خواندن" reading
+tap_nav d03 2 reading
 shot 04-reading
 
 dump d04
-tap_text d04 "آمار" analytics
+tap_nav d04 3 analytics
 shot 05-analytics
 
 dump d05
-tap_text d05 "پروفایل" profile
+tap_nav d05 4 profile
 shot 06-profile
 
-# settings is reachable from the profile header button
+# start a typing session from the home quick-access button
 dump d06
-tap_text d06 "تنظیمات" settings
-shot 07-settings
-
-# back home and start a typing session (typing area interaction)
+tap_nav d06 0 home
 dump d07
-tap_text d07 "خانه" home
-shot 08-home-again
+tap_text d07 "شروع تمرین تایپ" typing-start
+shot 07-typing-session
+adb shell input keyevent 4 > /dev/null 2>&1 || true
 
 echo "== crash scan ==" >> "$OUT/notes.txt"
 adb logcat -d > emu-logcat.txt 2>/dev/null || true

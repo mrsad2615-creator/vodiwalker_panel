@@ -1,0 +1,12 @@
+== install ==
+Performing Streamed Install
+Success
+== launch ==
+Starting: Intent { cmp=com.typflow.app/.MainActivity }
+TAP typing -> 160,320
+TAP reading -> 160,320
+TAP analytics -> 160,320
+TAP profile -> 160,320
+TAP settings -> 160,320
+TAP home -> 160,320
+== crash scan ==

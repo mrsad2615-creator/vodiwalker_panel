@@ -33,11 +33,21 @@ def main() -> int:
             }
         )
 
+    needle = needle.strip()
+
+    def label(n):
+        return (n["text"] or "").strip() or (n["desc"] or "").strip()
+
     hits = [
         n
         for n in nodes
-        if needle in n["text"] or needle in n["desc"] or n["text"] in needle
+        if label(n)
+        and (needle == label(n) or needle in label(n) or label(n) in needle)
     ]
+    # prefer exact label match
+    exact = [n for n in hits if label(n) == needle]
+    if exact:
+        hits = exact
     if not hits:
         print(f"NOTFOUND {needle}", file=sys.stderr)
         return 2

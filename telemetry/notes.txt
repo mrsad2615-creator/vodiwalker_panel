@@ -10,7 +10,7 @@ NAV analytics -> 330,2060
 NAV profile -> 121,2060
 TAP settings -> 540,1881
 TAP theme-signal -> 540,913
-TAP lang-en -> 740,893
+TAP lang-en -> 740,290
 NAV home-en -> 750,2063
 NAV typing-en -> 331,2063
 TAP MISS: TYPE HERE
@@ -19,7 +19,11 @@ NAV MISS: analytics-en
 NAV MISS: analytics-en
 NAV MISS: analytics-en
 NAV MISS: analytics-en
-NAV home-en -> 339,1975
+NAV MISS: profile-en
+NAV MISS: profile-en
+NAV MISS: profile-en
+NAV MISS: profile-en
+NAV MISS: profile-en
 TAP MISS: SETTINGS
 TAP MISS: SETTINGS
 TAP MISS: SETTINGS

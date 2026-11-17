@@ -126,6 +126,7 @@ shot 12-analytics-en
 
 dump d12
 tap_nav d12 4 home-en
+swipe_up 1
 dump d13
 tap_text d13 "Change theme" settings-en
 shot 13-settings-en

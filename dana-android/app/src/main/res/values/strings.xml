@@ -87,7 +87,7 @@
     <string name="error_engine_quota">ارائه‌دهنده محدودیت سهمیه یا تعداد درخواست گزارش کرد. بعداً دوباره تلاش کنید.</string>
     <string name="error_engine_network">ارتباط با این مقصد برقرار نماند. شبکه و آدرس موتور را بررسی کنید.</string>
     <string name="error_engine_timeout">زمان پاسخ این موتور به پایان رسید. دوباره تلاش کنید.</string>
-    <string name="error_engine_tls">گواهی HTTPS مقصد مورد اعتماد نیست. آدرس و گواهی سرور را بررسی کنید.</string>
+    <string name="error_engine_tls">ارتباط امن با مقصد برقرار نشد. آدرس، گواهی و تنظیمات TLS سرور را بررسی کنید.</string>
     <string name="error_engine_server">این موتور نتوانست درخواست را پردازش کند. وضعیت سرویس را بررسی کنید.</string>
     <string name="error_engine_protocol">پاسخ استریم ناقص یا ناسازگار بود. قالب API و آدرس پایه را بررسی کنید.</string>
     <string name="error_engine_filtered">ارائه‌دهنده بخشی از پاسخ یا پرسش را محدود کرد.</string>

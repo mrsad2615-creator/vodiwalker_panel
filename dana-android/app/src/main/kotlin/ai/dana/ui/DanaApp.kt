@@ -274,7 +274,7 @@ internal fun protocolLabel(protocol: ProviderProtocol): Int = when (protocol) {
 }
 
 @Composable
-internal fun TechnicalText(value: String) {
+internal fun TechnicalText(value: String, maxLines: Int = 2) {
     Text(
         value,
         modifier = Modifier.fillMaxWidth(),
@@ -283,7 +283,7 @@ internal fun TechnicalText(value: String) {
             fontFamily = FontFamily.Monospace,
             fontFeatureSettings = "tnum",
         ),
-        maxLines = 2,
+        maxLines = maxLines,
         overflow = TextOverflow.Ellipsis,
         color = Titanium,
     )

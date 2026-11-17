@@ -22,6 +22,8 @@ jobs:
   build:
     runs-on: ubuntu-24.04
     timeout-minutes: 35
+    outputs:
+      sha256: ${{ steps.verify.outputs.sha256 }}
     defaults:
       run:
         working-directory: dana-android
@@ -41,7 +43,7 @@ jobs:
         run: |
           sdk="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
           if [[ ! -f "$sdk/platforms/android-36/android.jar" || ! -x "$sdk/build-tools/36.0.0/apksigner" ]]; then
-            manager="$(find "$sdk/cmdline-tools" -name sdkmanager -type f | sort -V | tail -n 1)"
+            manager="$(find "$sdk/cmdline-tools" -name sdkmanager -type f 2>/dev/null | sort -V | tail -n 1 || true)"
             if [[ ! -x "$manager" ]]; then
               echo '::error title=Android SDK::API 36 or Build Tools 36.0.0 is missing and sdkmanager was not found.'
               exit 1
@@ -61,6 +63,9 @@ jobs:
           lines = Path(sys.argv[1]).read_text(errors='replace').splitlines()
           diagnostics = [line for line in lines if line.lstrip().startswith(('e:', 'Caused by:', '* What went wrong'))
                          or 'Error:' in line or 'FAILED' in line or line.startswith(('> Lint', '> Could not', '> Execution failed'))]
+          for index, line in enumerate(lines):
+              if ' > ' in line and 'FAILED' in line:
+                  diagnostics.extend(lines[index:index + 4])
           for report in Path('.').glob('**/build/reports/lint-results-debug.txt'):
               diagnostics.extend(line for line in report.read_text(errors='replace').splitlines() if 'Error:' in line)
           message = '\n'.join(dict.fromkeys(diagnostics or lines[-30:]))[:6200]
@@ -83,12 +88,49 @@ jobs:
             echo '::error title=Room schema::Room did not export the v1 schema.'
             exit 1
           fi
-      - name: Verify the installable APK
+      - name: Verify JVM test counts and APK signature
+        id: verify
+        shell: bash
         run: |
+          python3 - <<'PYTHON'
+          from pathlib import Path
+          from xml.etree import ElementTree as ET
+          import os
+
+          for module, task, minimum in [('core/domain', 'test', 20), ('core/data', 'testDebugUnitTest', 6)]:
+              reports = list((Path(module) / 'build/test-results' / task).glob('TEST-*.xml'))
+              tests = [case for report in reports for case in ET.parse(report).iter('testcase')]
+              if len(tests) < minimum or any(case.find('skipped') is not None or case.find('failure') is not None or case.find('error') is not None for case in tests):
+                  raise SystemExit(f'::error title=Dana JVM tests::{module} did not execute at least {minimum} passing tests.')
+              with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as out:
+                  print(f'- {module}: {len(tests)} JVM tests passed.', file=out)
+          PYTHON
           mkdir -p "$RUNNER_TEMP/dana-verified"
-          cp app/build/outputs/apk/debug/app-debug.apk "$RUNNER_TEMP/dana-verified/DANA-AI-preview.apk"
-          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$RUNNER_TEMP/dana-verified/DANA-AI-preview.apk"
-          sha256sum "$RUNNER_TEMP/dana-verified/DANA-AI-preview.apk" | tee -a "$GITHUB_STEP_SUMMARY"
+          apk="$RUNNER_TEMP/dana-verified/DANA-AI-preview.apk"
+          cp app/build/outputs/apk/debug/app-debug.apk "$apk"
+          tools="$ANDROID_HOME/build-tools/36.0.0"
+          "$tools/apksigner" verify --verbose --print-certs "$apk"
+          "$tools/zipalign" -c -P 16 4 "$apk"
+          badging=$("$tools/aapt" dump badging "$apk")
+          grep -Fq "package: name='ai.dana.preview'" <<< "$badging"
+          digest=$(sha256sum "$apk" | cut -d' ' -f1)
+          printf 'sha256=%s\n' "$digest" >> "$GITHUB_OUTPUT"
+          printf '\nSHA-256: `%s`\n' "$digest" >> "$GITHUB_STEP_SUMMARY"
+      - name: Enable hardware acceleration for the Android emulator
+        shell: bash
+        run: |
+          test -c /dev/kvm || { echo '::error title=Android emulator::KVM is unavailable on the runner.'; exit 1; }
+          sudo chmod a+rw /dev/kvm
+      - name: Test storage and smoke-test the installed app on Android
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          profile: pixel_6
+          working-directory: dana-android
+          disable-animations: true
+          script: bash ci/test-emulator.sh
       - name: Upload the APK without a ZIP wrapper
         id: apk
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
@@ -101,3 +143,34 @@ jobs:
         env:
           APK_URL: ${{ steps.apk.outputs.artifact-url }}
         run: printf '\n[Download DANA AI APK](%s)\n' "$APK_URL" >> "$GITHUB_STEP_SUMMARY"
+
+  publish:
+    name: Publish the tested preview APK
+    if: github.event_name == 'push' && github.ref == 'refs/heads/arena/13014174-vodiwalker-panel' && contains(github.event.head_commit.message, '[dana-apk]')
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: DANA-AI-preview.apk
+          path: ${{ runner.temp }}/dana-publish
+          skip-decompress: true
+      - name: Publish with a direct download link
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERIFIED_SHA256: ${{ needs.build.outputs.sha256 }}
+        run: |
+          cd "$RUNNER_TEMP/dana-publish"
+          printf '%s  DANA-AI-preview.apk\n' "$VERIFIED_SHA256" > SHA256SUMS.txt
+          sha256sum -c SHA256SUMS.txt
+          tag="dana-preview-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          gh release create "$tag" DANA-AI-preview.apk SHA256SUMS.txt \
+            --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+            --title "DANA AI 0.2 preview (${GITHUB_SHA:0:8})" --prerelease --latest=false \
+            --notes "Tested Android preview for commit $GITHUB_SHA. Debug-signed (ai.dana.preview), not a production or Play Store build. Includes concurrent, opt-in OpenAI-compatible and Gemini-native requests. Build and test evidence: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID."
+          printf '\n[Download DANA AI APK](%s/%s/releases/download/%s/DANA-AI-preview.apk)\n' \
+            "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$tag" >> "$GITHUB_STEP_SUMMARY"

@@ -57,7 +57,7 @@ internal fun DanaEditor(editor: Editor, busy: Boolean, error: Int?, dispatch: (D
             Text(stringResource(R.string.compare_confirm_body))
             for (profile in editor.request.targets) {
                 Text(profile.config.name, style = MaterialTheme.typography.titleSmall)
-                TechnicalText(profile.config.baseUrl)
+                TechnicalText(profile.config.baseUrl, maxLines = Int.MAX_VALUE)
             }
         }
         is Editor.DeleteNote, is Editor.DeleteProvider -> {

@@ -53,12 +53,12 @@ class TypflowStore(context: Context) {
         prefs.edit().putString("theme_id", id).apply()
     }
 
-    fun setLang(l: String) {
+    fun updateLang(l: String) {
         lang = l
         prefs.edit().putString("lang", l).apply()
     }
 
-    fun setDailyGoal(g: Int) {
+    fun updateDailyGoal(g: Int) {
         dailyGoal = g
         prefs.edit().putInt("daily_goal", g).apply()
     }

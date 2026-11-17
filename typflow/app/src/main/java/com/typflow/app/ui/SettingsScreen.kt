@@ -140,8 +140,8 @@ fun SettingsScreen(theme: TypflowTheme, store: TypflowStore) {
         // ---- Language ----
         SectionTitle(theme, tr(lang, "🌐 زبان", "🌐 Language"))
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Chip(theme, "فارسی 🇮🇷", lang == "fa") { store.setLang("fa") }
-            Chip(theme, "English 🇬🇧", lang == "en") { store.setLang("en") }
+            Chip(theme, "فارسی 🇮🇷", lang == "fa") { store.updateLang("fa") }
+            Chip(theme, "English 🇬🇧", lang == "en") { store.updateLang("en") }
         }
 
         // ---- Daily goal ----
@@ -165,7 +165,7 @@ fun SettingsScreen(theme: TypflowTheme, store: TypflowStore) {
                 }
                 Slider(
                     value = store.dailyGoal.toFloat(),
-                    onValueChange = { store.setDailyGoal(it.toInt()) },
+                    onValueChange = { store.updateDailyGoal(it.toInt()) },
                     valueRange = 5f..60f,
                     steps = 10,
                     colors = SliderDefaults.colors(

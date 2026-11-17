@@ -3,17 +3,17 @@ Performing Streamed Install
 Success
 == launch ==
 Starting: Intent { cmp=com.typflow.app/.MainActivity }
-size=1080 2072
-NAV typing -> 748,2060
-NAV reading -> 539,2060
-NAV analytics -> 330,2060
-NAV profile -> 121,2060
+size=1080 2208
+NAV typing -> 748,2117
+NAV reading -> 539,2117
+NAV analytics -> 330,2117
+NAV profile -> 121,2117
 TAP settings -> 540,1881
 TAP theme-signal -> 540,913
 TAP lang-en -> 740,1616
-NAV home-en -> 750,2063
-NAV typing-en -> 331,2063
-TAP MISS: TYPE HERE
+NAV home-en -> 750,2121
+NAV typing-en -> 331,2121
+TAP typing-field -> 331,2121
 NAV MISS: analytics-en
 NAV MISS: analytics-en
 NAV MISS: analytics-en

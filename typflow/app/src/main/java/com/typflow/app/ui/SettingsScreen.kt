@@ -112,6 +112,15 @@ fun SettingsScreen(theme: TypflowTheme, store: TypflowStore) {
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column {
+                            if (lang == "fa") {
+                                Text(
+                                    text = t.name,
+                                    color = t.primary.copy(alpha = 0.85f),
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 10.sp,
+                                    letterSpacing = 2.sp
+                                )
+                            }
                             Text(
                                 text = if (lang == "fa") t.nameFa else t.name,
                                 color = t.onBackground,

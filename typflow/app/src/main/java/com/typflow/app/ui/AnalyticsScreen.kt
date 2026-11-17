@@ -107,21 +107,20 @@ fun AnalyticsScreen(theme: TypflowTheme, store: TypflowStore) {
         // Last 7 days bar chart
         GlassCard(theme, Modifier.fillMaxWidth()) {
             Column {
-                SectionTitle(theme, tr(lang, "فعالیت ۷ روز اخیر", "Last 7 days activity"))
+                SectionTitle(theme, tr(lang, "فعالیت 7 روز اخیر", "Last 7 days activity"))
                 Spacer(Modifier.height(12.dp))
                 val dayLabels = mutableListOf<String>()
                 val dayCounts = mutableListOf<Int>()
-                val cal = Calendar.getInstance()
                 val fmt = SimpleDateFormat("yyyy-MM-dd", Locale.US)
                 val dayFmt = SimpleDateFormat("EEE", Locale.US)
-                repeat(7) { offset ->
-                    cal.add(Calendar.DAY_OF_YEAR, -1)
+                // oldest -> newest, today included
+                for (offset in 6 downTo 0) {
+                    val cal = Calendar.getInstance()
+                    cal.add(Calendar.DAY_OF_YEAR, -offset)
                     val d = fmt.format(cal.time)
                     dayLabels.add(dayFmt.format(cal.time))
                     dayCounts.add(store.history.count { it.date == d })
                 }
-                dayLabels.reverse()
-                dayCounts.reverse()
                 val maxC = (dayCounts.maxOrNull() ?: 0).coerceAtLeast(1)
                 Row(
                     modifier = Modifier.fillMaxWidth().height(120.dp),

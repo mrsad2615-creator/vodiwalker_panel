@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# TYPFLOW emulator smoke test — launches the APK, walks through the screens with
-# real taps and captures screenshots for visual verification.
+# TYPFLOW emulator smoke test — installs the APK, walks every screen with real
+# taps, exercises theme + language switching and a typing session, then captures
+# screenshots for visual verification.
 set -u
 
 PKG="com.typflow.app"
@@ -17,31 +18,40 @@ dump() {
   adb pull "/sdcard/$1.xml" "$OUT/$1.xml" > /dev/null 2>&1 || true
 }
 
-tap_nav() {
-  # $1 = dump name, $2 = index from the right (0 = home), $3 = label
+swipe_up() {
+  local n=${1:-1} i=0
+  while [ "$i" -lt "$n" ]; do
+    adb shell input swipe $((W / 2)) $((H * 3 / 4)) $((W / 2)) $((H / 3)) 320 \
+      > /dev/null 2>&1 || true
+    sleep 1
+    i=$((i + 1))
+  done
+  sleep 1
+}
+
+tap_text() {
   local xy x y
-  xy=$(python3 scripts/ui_click.py "$OUT/$1.xml" --nav "$2" 2>/dev/null)
-  x=${xy%% *}; y=${xy##* }
+  xy=$(python3 scripts/ui_click.py "$OUT/$1.xml" "$2" 2>/dev/null)
   if [ -z "${xy:-}" ]; then
-    echo "NAV MISS: $3" >> "$OUT/notes.txt"
+    echo "TAP MISS: $2" >> "$OUT/notes.txt"
     return 1
   fi
-  echo "NAV $3 -> $x,$y" >> "$OUT/notes.txt"
+  x=${xy%% *}; y=${xy##* }
+  echo "TAP $3 -> $x,$y" >> "$OUT/notes.txt"
   adb shell input tap "$x" "$y" > /dev/null 2>&1
   sleep 3
   return 0
 }
 
-tap_text() {
-  # $1 = dump name, $2 = needle, $3 = label
+tap_nav() {
   local xy x y
-  xy=$(python3 scripts/ui_click.py "$OUT/$1.xml" "$2" 2>/dev/null)
-  x=${xy%% *}; y=${xy##* }
+  xy=$(python3 scripts/ui_click.py "$OUT/$1.xml" --nav "$2" 2>/dev/null)
   if [ -z "${xy:-}" ]; then
-    echo "TAP MISS: $2" >> "$OUT/notes.txt"
+    echo "NAV MISS: $3" >> "$OUT/notes.txt"
     return 1
   fi
-  echo "TAP $3 -> $x,$y" >> "$OUT/notes.txt"
+  x=${xy%% *}; y=${xy##* }
+  echo "NAV $3 -> $x,$y" >> "$OUT/notes.txt"
   adb shell input tap "$x" "$y" > /dev/null 2>&1
   sleep 3
   return 0
@@ -49,6 +59,7 @@ tap_text() {
 
 echo "== install ==" >> "$OUT/notes.txt"
 adb install -r "$APK" >> "$OUT/notes.txt" 2>&1 || { echo "INSTALL FAILED"; exit 1; }
+adb shell pm clear "$PKG" > /dev/null 2>&1 || true
 adb logcat -c > /dev/null 2>&1
 
 echo "== launch ==" >> "$OUT/notes.txt"
@@ -60,6 +71,11 @@ shot 01b-splash
 sleep 4
 shot 02-home
 dump d02
+SIZE=$(python3 scripts/ui_click.py "$OUT/d02.xml" --size 2>/dev/null)
+W=${SIZE%% *}; H=${SIZE##* }
+echo "size=$SIZE" >> "$OUT/notes.txt"
+
+# ---- main navigation (RTL) ----
 tap_nav d02 1 typing
 shot 03-typing
 
@@ -75,57 +91,55 @@ dump d05
 tap_nav d05 4 profile
 shot 06-profile
 
-# settings: scroll the profile screen and open it
+# ---- settings: theme switch ----
+swipe_up 2
+dump d06
+tap_text d06 "تنظیمات" settings
+shot 07-settings
 dump d07
-tap_nav d07 4 profile
-SIZE=$(python3 scripts/ui_click.py "$OUT/d07.xml" --size 2>/dev/null)
-W=${SIZE%% *}; H=${SIZE##* }
-adb shell input swipe $((W / 2)) $((H * 3 / 4)) $((W / 2)) $((H / 3)) 350 > /dev/null 2>&1 || true
-sleep 1
-adb shell input swipe $((W / 2)) $((H * 3 / 4)) $((W / 2)) $((H / 3)) 350 > /dev/null 2>&1 || true
-sleep 2
-dump d08
-tap_text d08 "تنظیمات" settings
-shot 08-settings
-dump d09
-tap_text d09 "NEBULA" theme-nebula
-shot 09-theme-nebula
+tap_text d07 "NEBULA" theme-nebula
+shot 08-theme-nebula
 
-# language switch to English (LTR) and a real typing session
+# ---- settings scrolled: language switch ----
+swipe_up 2
+dump d08
+tap_text d08 "English" lang-en
+shot 09-english
+
+# ---- English (LTR) typing session with real key input ----
+dump d09
+tap_nav d09 3 typing-en
+shot 10-typing-en
 dump d10
-tap_text d10 "English" lang-en
-shot 10-english
-dump d11
-tap_nav d11 3 typing-en
-shot 11-typing-en
-dump d12
-tap_text d12 "Type here" typing-field
+tap_text d10 "Type here" typing-field
 adb shell input text "the%squick%sbrown%sfox" > /dev/null 2>&1 || true
 sleep 2
-shot 12-typing-input
-adb shell input keyevent 111 > /dev/null 2>&1 || true
+shot 11-typing-input
+
+dump d11
+tap_nav d11 1 analytics-en
+shot 12-analytics-en
+
+dump d12
+tap_nav d12 4 profile-en
+swipe_up 2
 dump d13
-tap_nav d13 1 analytics-en
-shot 13-analytics-en
-
-# back to Persian
+tap_text d13 "Settings" settings-en
+swipe_up 2
 dump d14
-tap_nav d14 4 profile-en
-adb shell input swipe $((W / 2)) $((H * 3 / 4)) $((W / 2)) $((H / 3)) 350 > /dev/null 2>&1 || true
-sleep 1
-dump d15
-tap_text d15 "Settings" settings-en
-dump d16
-tap_text d16 "فارسی" lang-fa
-shot 14-back-to-fa
+tap_text d14 "فارسی" lang-fa
+shot 13-back-to-fa
 
-# start a typing session from the home quick-access button
-dump d06
-tap_nav d06 0 home
-dump d07
-tap_text d07 "شروع تمرین تایپ" typing-start
-shot 07-typing-session
-adb shell input keyevent 4 > /dev/null 2>&1 || true
+# ---- restore the default theme and finish on the dashboard ----
+dump d15
+for _ in 1 2 3; do
+  adb shell input swipe $((W / 2)) $((H / 3)) $((W / 2)) $((H * 3 / 4)) 300 \
+    > /dev/null 2>&1 || true
+  sleep 1
+done
+dump d16
+tap_text d16 "CYBER FUSION" theme-cyber
+shot 14-final-settings
 
 echo "== crash scan ==" >> "$OUT/notes.txt"
 adb logcat -d > emu-logcat.txt 2>/dev/null || true

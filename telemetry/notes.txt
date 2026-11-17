@@ -10,11 +10,24 @@ NAV analytics -> 330,2060
 NAV profile -> 121,2060
 TAP settings -> 540,1881
 TAP theme-signal -> 540,913
-TAP lang-en -> 740,796
+TAP lang-en -> 740,812
+NAV MISS: home-en
+NAV MISS: home-en
+NAV MISS: home-en
+NAV MISS: home-en
+NAV MISS: home-en
+NAV MISS: typing-en
+NAV MISS: typing-en
+NAV MISS: typing-en
+NAV MISS: typing-en
 NAV MISS: typing-en
 TAP MISS: TYPE HERE
-NAV analytics-en -> 339,1975
-NAV MISS: home-en
+NAV MISS: analytics-en
+NAV MISS: analytics-en
+NAV MISS: analytics-en
+NAV MISS: analytics-en
+NAV MISS: analytics-en
+NAV home-en -> 339,1975
 TAP MISS: SETTINGS
 TAP MISS: SETTINGS
 TAP MISS: SETTINGS
@@ -25,9 +38,29 @@ TAP MISS: فارسی
 TAP MISS: فارسی
 TAP MISS: فارسی
 SCROLL TAP MISS: فارسی
+NAV MISS: home-fa
+NAV MISS: home-fa
+NAV MISS: home-fa
+NAV MISS: home-fa
+NAV MISS: home-fa
+NAV MISS: profile-again
+NAV MISS: profile-again
+NAV MISS: profile-again
+NAV MISS: profile-again
+NAV MISS: profile-again
+TAP MISS: تنظیمات
+TAP MISS: تنظیمات
+TAP MISS: تنظیمات
+TAP MISS: تنظیمات
+SCROLL TAP MISS: تنظیمات
 TAP MISS: VOID
 TAP MISS: VOID
 TAP MISS: VOID
 TAP MISS: VOID
 SCROLL TAP MISS: VOID
+NAV MISS: home-final
+NAV MISS: home-final
+NAV MISS: home-final
+NAV MISS: home-final
+NAV MISS: home-final
 == crash scan ==

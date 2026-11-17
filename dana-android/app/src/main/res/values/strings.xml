@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">دانا</string>
+    <string name="app_wordmark" translatable="false">DANA AI</string>
+    <string name="tab_home">خانه</string>
+    <string name="tab_notes">یادداشت‌ها</string>
+    <string name="tab_settings">تنظیمات</string>
+    <string name="hub_heading">یک فضای آرام، برای فکرهای شما</string>
+    <string name="hub_description">یادداشت‌هایتان را ثبت کنید و تنظیمات دانا را بدون نیاز به اینترنت مدیریت کنید.</string>
+    <string name="hub_local">نسخهٔ محلی · بدون ارسال داده</string>
+    <string name="status_heading">وضعیت دستگاه</string>
+    <string name="status_checking">در حال بررسی شبکهٔ پیش‌فرض</string>
+    <string name="status_no_network">شبکهٔ پیش‌فرض در دسترس نیست</string>
+    <string name="status_unvalidated">اتصال برقرار است؛ اینترنت تأیید نشده</string>
+    <string name="status_validated">اینترنت از دید اندروید در دسترس است</string>
+    <string name="status_unavailable">بررسی وضعیت شبکه در دسترس نیست</string>
+    <string name="status_disclaimer">این نشانگر نتیجهٔ بررسی دسترسی به ارائه‌دهنده نیست.</string>
+    <string name="offline_title">حالت کاملاً آفلاین</string>
+    <string name="offline_active">حالت آفلاین فعال است</string>
+    <string name="offline_description">این ترجیح پس از بستن برنامه حفظ می‌شود. این نسخه حتی با خاموش بودن این گزینه داده‌ای به شبکه نمی‌فرستد.</string>
+    <string name="notes_description">یادداشت‌ها فقط در فضای خصوصی برنامه روی همین دستگاه ذخیره می‌شوند.</string>
+    <string name="notes_empty">هنوز یادداشتی ندارید. اولین یادداشتتان را اضافه کنید.</string>
+    <string name="note_add">یادداشت تازه</string>
+    <string name="note_edit">ویرایش یادداشت</string>
+    <string name="note_input">متن یادداشت</string>
+    <string name="note_delete_title">این یادداشت حذف شود؟</string>
+    <string name="note_delete_body">حذف یادداشت قابل بازگشت نیست.</string>
+    <string name="engines_title">پروفایل موتورهای هوش مصنوعی</string>
+    <string name="engines_description">تنظیمات BYOK را روی گوشی ذخیره کنید. اتصال به موتور و تست سلامت در این نسخه انجام نمی‌شود.</string>
+    <string name="engines_empty">هنوز پروفایلی ذخیره نشده است.</string>
+    <string name="engine_add">افزودن پروفایل</string>
+    <string name="engine_edit">ویرایش پروفایل</string>
+    <string name="engine_name">نام نمایشی</string>
+    <string name="engine_protocol">قالب API</string>
+    <string name="engine_openai" translatable="false">OpenAI-compatible</string>
+    <string name="engine_gemini" translatable="false">Gemini native</string>
+    <string name="engine_lan">میزبان در شبکهٔ محلی</string>
+    <string name="engine_internet">میزبان اینترنتی</string>
+    <string name="engine_base_url">آدرس پایهٔ HTTPS</string>
+    <string name="engine_url_tip">از نشانی مستند سرویس استفاده کنید؛ کلید، Query و Fragment را در آدرس نگذارید.</string>
+    <string name="engine_model">شناسهٔ مدل</string>
+    <string name="engine_key">کلید API (اختیاری)</string>
+    <string name="engine_key_hint">در کنسول سرویس‌دهنده کلید خودتان را بسازید و اینجا وارد کنید. شرایط و هزینه با ارائه‌دهنده است.</string>
+    <string name="engine_keep_key">اگر خالی بماند، کلید فعلی حفظ می‌شود؛ تغییر مقصد به کلید تازه یا حذف کلید فعلی نیاز دارد.</string>
+    <string name="engine_remove_key">کلید فعلی حذف شود</string>
+    <string name="engine_has_key">دارای کلید ذخیره‌شده</string>
+    <string name="engine_no_key">بدون کلید ذخیره‌شده</string>
+    <string name="engine_delete_title">این پروفایل حذف شود؟</string>
+    <string name="engine_delete_body">پروفایل و دسترسی به کلید ذخیره‌شدهٔ آن از دانا حذف می‌شوند. کلید در سرویس‌دهنده لغو نمی‌شود.</string>
+    <string name="edit">ویرایش</string>
+    <string name="delete">حذف</string>
+    <string name="cancel">انصراف</string>
+    <string name="save">ذخیره</string>
+    <string name="saving">در حال ذخیره</string>
+    <string name="retry">تلاش دوباره</string>
+    <string name="error_note_empty">متن یادداشت را بنویسید.</string>
+    <string name="error_note_long">یادداشت از ۱۰٬۰۰۰ نویسه بیشتر است.</string>
+    <string name="error_invalid_local_text">متن واردشده را بررسی کنید؛ خالی یا بیش از حد طولانی است.</string>
+    <string name="error_provider_name">نام معتبر، حداکثر ۸۰ نویسه وارد کنید.</string>
+    <string name="error_model">شناسهٔ مدل را بدون فاصله وارد کنید.</string>
+    <string name="error_url">آدرس پایهٔ HTTPS معتبر بنویسید؛ بدون نام کاربری، کلید، Query یا Fragment.</string>
+    <string name="error_api_key">کلید API را بدون فاصله یا نویسه‌های نامعتبر وارد کنید.</string>
+    <string name="error_credential_destination">مقصد تغییر کرده است. کلید تازه را وارد یا کلید قبلی را حذف کنید.</string>
+    <string name="error_record_missing">این مورد دیگر در وضعیت قبلی نیست. فهرست را دوباره بررسی کنید.</string>
+    <string name="error_vault">ذخیره‌ساز امن کلید در دسترس نیست. قفل دستگاه را باز کنید یا کلید را دوباره وارد کنید.</string>
+    <string name="error_local_io">خواندن یا نوشتن دادهٔ محلی انجام نشد. فضای دستگاه را بررسی کنید و دوباره تلاش کنید.</string>
+    <string name="error_generic">عملیات انجام نشد. دوباره تلاش کنید.</string>
+</resources>

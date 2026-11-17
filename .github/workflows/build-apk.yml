@@ -8,6 +8,10 @@ on:
       - ".github/workflows/build-apk.yml"
   workflow_dispatch:
 
+permissions:
+  contents: read
+  issues: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -26,24 +30,39 @@ jobs:
         with:
           gradle-version: '8.7'
 
-      - name: Accept Android SDK licenses
-        run: yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
-
       - name: Install Android SDK packages
         run: |
-          export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH"
-          sdkmanager "platforms;android-34" "build-tools;34.0.0" "platform-tools"
-
-      - name: Write local.properties
-        run: echo "sdk.dir=$ANDROID_HOME" > typflow/local.properties
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null 2>&1 || true
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-34" "build-tools;34.0.0" "platform-tools" 2>&1 | tail -5
+          echo "sdk.dir=$ANDROID_HOME" > typflow/local.properties
 
       - name: Build Debug APK
         working-directory: typflow
-        run: gradle :app:assembleDebug --stacktrace
+        run: |
+          set -o pipefail
+          gradle :app:assembleDebug --stacktrace --console=plain 2>&1 | tee /tmp/build.log
 
       - name: Upload APK artifact
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: typflow-apk
           path: typflow/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
+
+      - name: Publish build log to issue (on failure)
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          {
+            echo "### compile errors"
+            echo '```'
+            grep -E "^(e:|w: .*error)|error:|FAILURE:|Execution failed" /tmp/build.log | head -60 || true
+            echo '```'
+            echo "### tail"
+            echo '```'
+            tail -c 40000 /tmp/build.log || true
+            echo '```'
+          } > /tmp/body.md
+          gh api "repos/${{ github.repository }}/issues" -F "title=CI log run ${{ github.run_number }}" -F "body=@/tmp/body.md" > /dev/null 2>&1 || echo "log publish failed"

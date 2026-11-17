@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
@@ -27,6 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -87,34 +89,67 @@ fun SplashScreen(theme: TypflowTheme, onDone: () -> Unit) {
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier.padding(24.dp)
         ) {
-            // ---- mrsad logo motion ----
+            // ---- mrsad logo motion (always LTR, staggered reveal) ----
             val brand = "mrsad"
-            androidx.compose.foundation.layout.Row {
-                brand.forEachIndexed { index, ch ->
-                    var visible by remember { mutableStateOf(false) }
-                    LaunchedEffect(Unit) {
-                        delay(250L + index * 150L)
-                        visible = true
-                    }
-                    Text(
-                        text = ch.toString(),
-                        style = TextStyle(
-                            brush = Brush.horizontalGradient(
-                                colors = theme.gradient,
-                                startX = -300f + sweep * 600f,
-                                endX = 300f + sweep * 600f
-                            ),
-                            fontSize = 64.sp,
-                            fontWeight = FontWeight.Black
-                        ),
+            var reveal by remember { mutableStateOf(0f) }
+            LaunchedEffect(Unit) {
+                androidx.compose.animation.core.animate(
+                    initialValue = 0f,
+                    targetValue = 1f,
+                    animationSpec = tween(1400, easing = androidx.compose.animation.core.FastOutSlowInEasing)
+                ) { value, _ -> reveal = value }
+            }
+            androidx.compose.runtime.CompositionLocalProvider(
+                androidx.compose.ui.platform.LocalLayoutDirection provides
+                    androidx.compose.ui.unit.LayoutDirection.Ltr
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    // soft holographic halo behind the wordmark
+                    Box(
                         modifier = Modifier
-                            .alpha(if (visible) 1f else 0f)
-                            .graphicsLayer {
-                                translationY = if (visible) 0f else 46f
-                                scaleX = if (visible) 1f else 0.7f
-                                scaleY = if (visible) 1f else 0.7f
-                            }
+                            .size(230.dp)
+                            .background(
+                                Brush.radialGradient(
+                                    colors = listOf(
+                                        theme.primary.copy(alpha = 0.16f * glow),
+                                        Color.Transparent
+                                    )
+                                )
+                            )
                     )
+                    androidx.compose.foundation.layout.Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        brand.forEachIndexed { index, ch ->
+                            val p = ((reveal - index * 0.11f) / 0.45f).coerceIn(0f, 1f)
+                            Text(
+                                text = ch.toString(),
+                                style = TextStyle(
+                                    brush = Brush.linearGradient(
+                                        colors = listOf(
+                                            theme.primary, theme.secondary, theme.accent
+                                        ),
+                                        start = androidx.compose.ui.geometry.Offset(
+                                            -260f + sweep * 620f, 0f
+                                        ),
+                                        end = androidx.compose.ui.geometry.Offset(
+                                            360f + sweep * 620f, 120f
+                                        )
+                                    ),
+                                    fontSize = 62.sp,
+                                    fontWeight = FontWeight.Black,
+                                    letterSpacing = (-2).sp
+                                ),
+                                modifier = Modifier.graphicsLayer {
+                                    alpha = p
+                                    translationY = (1f - p) * 44f
+                                    val sc = 0.72f + 0.28f * p
+                                    scaleX = sc
+                                    scaleY = sc
+                                }
+                            )
+                        }
+                    }
                 }
             }
 

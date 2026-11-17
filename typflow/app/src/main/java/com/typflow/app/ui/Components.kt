@@ -24,6 +24,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
@@ -113,19 +114,26 @@ fun GradientButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val shape = RoundedCornerShape(18.dp)
     Box(
         modifier = modifier
-            .clip(RoundedCornerShape(18.dp))
-            .background(Brush.horizontalGradient(theme.gradient))
+            .shadow(18.dp, shape, ambientColor = theme.primary, spotColor = theme.primary)
+            .clip(shape)
+            .background(
+                Brush.horizontalGradient(
+                    listOf(theme.primary, theme.secondary, theme.accent)
+                )
+            )
             .clickable { onClick() }
-            .padding(vertical = 15.dp, horizontal = 22.dp),
+            .padding(vertical = 16.dp, horizontal = 22.dp),
         contentAlignment = Alignment.Center
     ) {
         Text(
             text = text,
-            color = Color.Black,
-            fontWeight = FontWeight.Bold,
-            fontSize = 16.sp
+            color = Color(0xFF050B12),
+            fontWeight = FontWeight.Black,
+            fontSize = 15.sp,
+            letterSpacing = 0.3.sp
         )
     }
 }
@@ -185,17 +193,23 @@ fun StatCard(
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Medium
             )
-            Spacer(Modifier.height(6.dp))
-            Row(verticalAlignment = Alignment.Bottom) {
-                AnimatedNumber(value = value, theme = theme, fontSize = 32)
-                Spacer(Modifier.width(5.dp))
-                Text(
-                    text = unit,
-                    color = theme.primary,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(bottom = 5.dp)
-                )
+            Spacer(Modifier.height(8.dp))
+            androidx.compose.runtime.CompositionLocalProvider(
+                androidx.compose.ui.platform.LocalLayoutDirection provides
+                    androidx.compose.ui.unit.LayoutDirection.Ltr
+            ) {
+                Row(verticalAlignment = Alignment.Bottom) {
+                    AnimatedNumber(value = value, theme = theme, fontSize = 34)
+                    Spacer(Modifier.width(5.dp))
+                    Text(
+                        text = unit,
+                        color = theme.primary.copy(alpha = 0.85f),
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 0.8.sp,
+                        modifier = Modifier.padding(bottom = 7.dp)
+                    )
+                }
             }
         }
     }

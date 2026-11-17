@@ -126,29 +126,25 @@ jobs:
             adb exec-out screencap -p > shot-01-splash.png
             sleep 6
             adb exec-out screencap -p > shot-02-home.png
-            SIZE=$(adb shell wm size | grep -o '[0-9]*x[0-9]*')
+            SIZE=$(adb shell wm size | tr -d '\r' | grep -o '[0-9]\+x[0-9]\+' | head -1)
             W=${SIZE%x*}; H=${SIZE#*x}
-            Y=$((H*94/100))
-            adb shell input tap $((W*30/100)) $Y
+            Y=$((H - 64))
+            nav() { adb shell input tap $((W * $1 / 100)) $Y; sleep 3; }
+            nav 30; adb exec-out screencap -p > shot-03-typing.png
+            nav 50; adb exec-out screencap -p > shot-04-reading.png
+            nav 70; adb exec-out screencap -p > shot-05-analytics.png
+            nav 90; adb exec-out screencap -p > shot-06-profile.png
+            # open settings via profile screen scroll button area (top-right chip) if present
+            adb shell input tap $((W / 2)) $((H * 6 / 100)) > /dev/null 2>&1 || true
             sleep 2
-            adb exec-out screencap -p > shot-03-typing.png
-            adb shell input tap $((W*50/100)) $Y
-            sleep 2
-            adb exec-out screencap -p > shot-04-reading.png
-            adb shell input tap $((W*70/100)) $Y
-            sleep 2
-            adb exec-out screencap -p > shot-05-analytics.png
-            adb shell input tap $((W*90/100)) $Y
-            sleep 2
-            adb exec-out screencap -p > shot-06-profile.png
-            adb shell cmd uimode night yes > /dev/null 2>&1 || true
+            adb exec-out screencap -p > shot-07-extra.png
             adb logcat -d > emu-logcat.txt
-            adb shell pidof com.typflow.app || true
             echo "--- crash check ---"
             if grep -q "FATAL EXCEPTION" emu-logcat.txt; then
               echo "CRASH DETECTED"; grep -A 30 "FATAL EXCEPTION" emu-logcat.txt | head -60; exit 1
             fi
             echo "NO CRASH"
+            exit 0
 
       - name: Commit screenshots to branch
         if: always()

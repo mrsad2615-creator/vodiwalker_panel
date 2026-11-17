@@ -125,14 +125,14 @@ tap_nav d11 1 analytics-en
 shot 12-analytics-en
 
 dump d12
-tap_nav d12 4 profile-en
-swipe_up 2
+tap_nav d12 4 home-en
 dump d13
-tap_text d13 "Settings" settings-en
+tap_text d13 "Change theme" settings-en
+shot 13-settings-en
 swipe_up 2
 dump d14
 tap_text d14 "فارسی" lang-fa
-shot 13-back-to-fa
+shot 14-back-to-fa
 
 # ---- restore the default theme and finish on the dashboard ----
 dump d15
@@ -143,7 +143,7 @@ for _ in 1 2 3; do
 done
 dump d16
 tap_text d16 "CYBER FUSION" theme-cyber
-shot 14-final-settings
+shot 15-final-settings
 
 echo "== crash scan ==" >> "$OUT/notes.txt"
 adb logcat -d > emu-logcat.txt 2>/dev/null || true

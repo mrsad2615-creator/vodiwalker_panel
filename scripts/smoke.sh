@@ -75,6 +75,22 @@ dump d05
 tap_nav d05 4 profile
 shot 06-profile
 
+# settings: scroll the profile screen and open it
+dump d07
+tap_nav d07 4 profile
+SIZE=$(python3 scripts/ui_click.py "$OUT/d07.xml" --size 2>/dev/null)
+W=${SIZE%% *}; H=${SIZE##* }
+adb shell input swipe $((W / 2)) $((H * 3 / 4)) $((W / 2)) $((H / 3)) 350 > /dev/null 2>&1 || true
+sleep 1
+adb shell input swipe $((W / 2)) $((H * 3 / 4)) $((W / 2)) $((H / 3)) 350 > /dev/null 2>&1 || true
+sleep 2
+dump d08
+tap_text d08 "تنظیمات" settings
+shot 08-settings
+dump d09
+tap_text d09 "NEBULA" theme-nebula
+shot 09-theme-nebula
+
 # start a typing session from the home quick-access button
 dump d06
 tap_nav d06 0 home

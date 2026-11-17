@@ -38,6 +38,13 @@ def main() -> int:
     def label(n):
         return (n["text"] or "").strip() or (n["desc"] or "").strip()
 
+    if needle == "--size":
+        boxes = [n["box"] for n in nodes]
+        w = max(b[2] for b in boxes)
+        h = max(b[3] for b in boxes)
+        print(f"{w} {h}")
+        return 0
+
     # --nav INDEX : tap the INDEX-th bottom-bar item counted from the right
     if needle == "--nav":
         idx = int(sys.argv[3]) if len(sys.argv) > 3 else 0

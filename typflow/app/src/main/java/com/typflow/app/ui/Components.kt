@@ -207,6 +207,8 @@ fun StatCard(
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 0.8.sp,
+                        maxLines = 1,
+                        softWrap = false,
                         modifier = Modifier.padding(bottom = 7.dp)
                     )
                 }

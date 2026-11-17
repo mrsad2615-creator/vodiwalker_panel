@@ -27,7 +27,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -113,28 +116,31 @@ fun ReadingScreen(theme: TypflowTheme, store: TypflowStore) {
                     androidx.compose.runtime.CompositionLocalProvider(
                         LocalLayoutDirection provides if (isFa) LayoutDirection.Rtl else LayoutDirection.Ltr
                     ) {
-                        // ORP highlight: middle character in accent color
-                        val orp = if (currentWord.isEmpty()) 0 else (currentWord.length * 0.35).toInt().coerceIn(0, currentWord.length - 1)
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                text = currentWord.take(orp),
-                                fontSize = 44.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = theme.onBackground
-                            )
-                            Text(
-                                text = currentWord.drop(orp).take(1),
-                                fontSize = 52.sp,
-                                fontWeight = FontWeight.Black,
-                                color = theme.primary
-                            )
-                            Text(
-                                text = currentWord.drop(orp + 1),
-                                fontSize = 44.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = theme.onBackground
-                            )
+                        // ORP highlight: single shaped string (keeps Persian
+                        // letters joined) with the focal character emphasised.
+                        val orp = if (currentWord.isEmpty()) 0
+                        else (currentWord.length * 0.35).toInt().coerceIn(0, currentWord.length - 1)
+                        val wordStyle = SpanStyle(
+                            color = theme.onBackground,
+                            fontSize = 42.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        val orpStyle = SpanStyle(
+                            color = theme.primary,
+                            fontSize = 50.sp,
+                            fontWeight = FontWeight.Black
+                        )
+                        val annotatedWord = buildAnnotatedString {
+                            withStyle(wordStyle) { append(currentWord.take(orp)) }
+                            withStyle(orpStyle) { append(currentWord.drop(orp).take(1)) }
+                            withStyle(wordStyle) { append(currentWord.drop(orp + 1)) }
                         }
+                        Text(
+                            text = annotatedWord,
+                            maxLines = 1,
+                            softWrap = false,
+                            lineHeight = 58.sp
+                        )
                     }
                     Spacer(Modifier.height(20.dp))
                     LinearProgressIndicator(
@@ -144,20 +150,35 @@ fun ReadingScreen(theme: TypflowTheme, store: TypflowStore) {
                         trackColor = theme.surfaceVariant
                     )
                     Spacer(Modifier.height(16.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        GradientButton(
+                    GradientButton(
+                        theme,
+                        if (playing) tr(lang, "⏸ توقف", "⏸ Pause") else tr(lang, "▶ پخش", "▶ Play"),
+                        {
+                            if (wordIndex >= words.size) wordIndex = 0
+                            playing = !playing
+                        },
+                        Modifier.fillMaxWidth()
+                    )
+                    Spacer(Modifier.height(10.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        GhostButton(
                             theme,
-                            if (playing) tr(lang, "⏸ توقف", "⏸ Pause") else tr(lang, "▶ پخش", "▶ Play"),
-                            {
-                                if (wordIndex >= words.size) wordIndex = 0
-                                playing = !playing
-                            }
+                            tr(lang, "↺ از اول", "↺ Restart"),
+                            { resetPlayer() },
+                            Modifier.weight(1f)
                         )
-                        GhostButton(theme, tr(lang, "↺ از اول", "↺ Restart"), { resetPlayer() })
-                        GhostButton(theme, tr(lang, "رفتن به آزمون", "Go to quiz"), {
-                            playing = false
-                            phase = ReadPhase.QUIZ
-                        })
+                        GhostButton(
+                            theme,
+                            tr(lang, "آزمون", "Quiz"),
+                            {
+                                playing = false
+                                phase = ReadPhase.QUIZ
+                            },
+                            Modifier.weight(1f)
+                        )
                     }
                 }
             }

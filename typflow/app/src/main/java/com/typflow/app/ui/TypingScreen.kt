@@ -142,7 +142,7 @@ fun TypingScreen(theme: TypflowTheme, store: TypflowStore) {
                 mode = TypingMode.PRACTICE
                 reset()
             }
-            Chip(theme, tr(lang, "آزمون ۶۰ ثانیه‌ای", "60s Test"), mode == TypingMode.TIMED) {
+            Chip(theme, tr(lang, "تست 60 ثانیه‌ای", "60s Test"), mode == TypingMode.TIMED) {
                 mode = TypingMode.TIMED
                 reset()
             }

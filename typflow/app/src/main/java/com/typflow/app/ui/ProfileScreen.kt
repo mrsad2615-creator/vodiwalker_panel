@@ -43,13 +43,13 @@ fun ProfileScreen(
 
     val achievements = listOf(
         Achievement("🚀", "اولین قدم", "First step", store.totalSessions >= 1),
-        Achievement("⚡", "سرعت ۳۰ WPM", "30 WPM speed", store.bestWpm >= 30),
-        Achievement("🔥", "سرعت ۵۰ WPM", "50 WPM speed", store.bestWpm >= 50),
-        Achievement("💎", "سرعت ۷۰ WPM", "70 WPM speed", store.bestWpm >= 70),
-        Achievement("🎯", "دقت ۹۰٪", "90% accuracy", store.bestAccuracy >= 90),
-        Achievement("📚", "تندخوان ۳۰۰ WPM", "300 WPM reading", store.bestReadingWpm >= 300),
-        Achievement("🏅", "۱۰ جلسه تمرین", "10 sessions", store.totalSessions >= 10),
-        Achievement("👑", "۵۰ جلسه تمرین", "50 sessions", store.totalSessions >= 50)
+        Achievement("⚡", "سرعت 30 WPM", "30 WPM speed", store.bestWpm >= 30),
+        Achievement("🔥", "سرعت 50 WPM", "50 WPM speed", store.bestWpm >= 50),
+        Achievement("💎", "سرعت 70 WPM", "70 WPM speed", store.bestWpm >= 70),
+        Achievement("🎯", "دقت 90٪", "90% accuracy", store.bestAccuracy >= 90),
+        Achievement("📚", "تندخوان 300 WPM", "300 WPM reading", store.bestReadingWpm >= 300),
+        Achievement("🏅", "10 جلسه تمرین", "10 sessions", store.totalSessions >= 10),
+        Achievement("👑", "50 جلسه تمرین", "50 sessions", store.totalSessions >= 50)
     )
 
     Column(

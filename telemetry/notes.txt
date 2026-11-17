@@ -3,20 +3,19 @@ Performing Streamed Install
 Success
 == launch ==
 Starting: Intent { cmp=com.typflow.app/.MainActivity }
-NAV typing -> 735,2045
-NAV reading -> 546,2045
-NAV analytics -> 546,2045
-NAV profile -> 353,2045
-NAV profile -> 163,2045
-TAP settings -> 540,1842
-TAP theme-nebula -> 540,1460
+size=1080 2208
+NAV typing -> 735,2088
+NAV reading -> 546,2088
+NAV analytics -> 546,2088
+NAV profile -> 353,2088
+TAP MISS: تنظیمات
+TAP MISS: NEBULA
 TAP MISS: English
-NAV typing-en -> 355,2045
+NAV typing-en -> 355,2088
 TAP MISS: Type here
-NAV analytics-en -> 735,2045
-NAV profile-en -> 163,2045
+NAV analytics-en -> 735,2088
+NAV profile-en -> 163,2088
 TAP MISS: Settings
 TAP MISS: فارسی
-NAV home -> 923,2045
-TAP typing-start -> 540,1276
+TAP MISS: CYBER FUSION
 == crash scan ==

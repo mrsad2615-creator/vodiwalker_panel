@@ -6,6 +6,7 @@ import { lessons } from './lessons.js';
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
 const persianDigits = new Intl.NumberFormat('fa-IR', { maximumFractionDigits: 0 });
+const introStartedAt = performance.now();
 
 const app = $('#app');
 const universe = $('#universe');
@@ -23,6 +24,21 @@ let fallbackRaf = 0;
 let fallbackLastFrame = 0;
 let lastDemoUi = 0;
 let selectedLesson = lessons[0].id;
+let introExitScheduled = false;
+
+function dismissIntroSplash() {
+  if (introExitScheduled) return;
+  const splash = $('#introSplash');
+  if (!splash) return;
+  introExitScheduled = true;
+  const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  const minimumTime = reducedMotion ? 260 : 1450;
+  const wait = Math.max(0, minimumTime - (performance.now() - introStartedAt));
+  window.setTimeout(() => {
+    splash.classList.add('is-leaving');
+    window.setTimeout(() => splash.remove(), reducedMotion ? 80 : 760);
+  }, wait);
+}
 
 const demo = {
   active: false,
@@ -43,6 +59,7 @@ const qualityCopy = {
 function showFallback(error) {
   webglAvailable = false;
   visualFallback.hidden = false;
+  dismissIntroSplash();
   universe.classList.add('is-fallback');
   app.dataset.rendering = 'fallback';
   renderStatus.innerHTML = '<span class="render-dot render-dot--quiet"></span><span>نمای جایگزین فعال است؛ WebGL در این دستگاه در دسترس نیست</span>';
@@ -206,6 +223,25 @@ function setLensing(amount) {
   app.dataset.lensing = active ? 'on' : 'off';
 }
 
+function updateCameraDistanceLabel(value) {
+  const percent = Math.max(0, Math.min(100, Math.round(Number(value) || 0)));
+  $('#cameraDistanceValue').textContent = `${persianDigits.format(percent)}٪`;
+}
+
+function syncCameraDistance() {
+  const value = experience?.getCameraDistancePercent();
+  if (Number.isFinite(value)) {
+    $('#cameraDistanceRange').value = String(value);
+    updateCameraDistanceLabel(value);
+  }
+}
+
+function setFeatureToggle(button, enabled, actionName) {
+  button.classList.toggle('is-on', enabled);
+  button.setAttribute('aria-pressed', String(enabled));
+  button.setAttribute('aria-label', `${enabled ? 'خاموش‌کردن' : 'روشن‌کردن'} ${actionName}`);
+}
+
 function togglePanel(panel, trigger, isOpen) {
   panel.hidden = !isOpen;
   if (trigger) trigger.setAttribute('aria-expanded', String(isOpen));
@@ -220,7 +256,10 @@ function setComparison(open) {
 
 function setSettings(open) {
   togglePanel(settingsPanel, $('#settingsButton'), open);
-  if (open) setComparison(false);
+  if (open) {
+    setComparison(false);
+    syncCameraDistance();
+  }
 }
 
 function setKnowledge(open) {
@@ -311,6 +350,7 @@ renderLesson(selectedLesson);
 try {
   experience = new BlackHoleExperience(universe, {
     onFrame: (delta) => tickDemo(delta),
+    onReady: dismissIntroSplash,
     onUnavailable: showFallback,
   });
   webglAvailable = true;
@@ -332,6 +372,29 @@ $('#lensingRange').addEventListener('input', (event) => setLensing(Number(event.
 
 $('#settingsButton').addEventListener('click', () => setSettings(settingsPanel.hidden));
 $('#closeSettings').addEventListener('click', () => setSettings(false));
+
+$('#cameraDistanceRange').addEventListener('input', (event) => {
+  const value = Number(event.currentTarget.value);
+  experience?.setCameraDistancePercent(value);
+  updateCameraDistanceLabel(value);
+});
+$('#orbitIntensityRange').addEventListener('input', (event) => {
+  const value = Number(event.currentTarget.value);
+  experience?.setOrbitLightIntensity(value / 100);
+  $('#orbitIntensityValue').textContent = `${persianDigits.format(value)}٪`;
+});
+$('#orbitLightToggle').addEventListener('click', (event) => {
+  const button = event.currentTarget;
+  const enabled = button.getAttribute('aria-pressed') !== 'true';
+  experience?.setOrbitLightEnabled(enabled);
+  setFeatureToggle(button, enabled, 'حلقه‌ی نور');
+});
+$('#jetsToggle').addEventListener('click', (event) => {
+  const button = event.currentTarget;
+  const enabled = button.getAttribute('aria-pressed') !== 'true';
+  experience?.setJetsEnabled(enabled);
+  setFeatureToggle(button, enabled, 'جت‌های نسبیتی');
+});
 
 $('#rotationRange').addEventListener('input', (event) => {
   const value = Number(event.currentTarget.value);
@@ -365,10 +428,16 @@ $('#cosmicMode').addEventListener('click', stopDemo);
 $('#disruptionMode').addEventListener('click', () => startDemo(true));
 $('#demoPlayButton').addEventListener('click', toggleDemoPlayback);
 $('#demoReplayButton').addEventListener('click', () => startDemo(true));
-$('#zoomInButton').addEventListener('click', () => experience?.zoom(1));
-$('#zoomOutButton').addEventListener('click', () => experience?.zoom(-1));
-$('#angleButton').addEventListener('click', () => experience?.nextCameraView());
-$('#resetCameraButton').addEventListener('click', () => experience?.resetCamera());
+$('#zoomInButton').addEventListener('click', () => { experience?.zoom(1); syncCameraDistance(); });
+$('#zoomOutButton').addEventListener('click', () => { experience?.zoom(-1); syncCameraDistance(); });
+$('#angleButton').addEventListener('click', () => {
+  experience?.nextCameraView();
+  window.setTimeout(syncCameraDistance, 1200);
+});
+$('#resetCameraButton').addEventListener('click', () => {
+  experience?.resetCamera();
+  window.setTimeout(syncCameraDistance, 1200);
+});
 
 $('#cinematicButton').addEventListener('click', () => setCinematic(!app.classList.contains('cinematic')));
 $('#cinematicExit').addEventListener('click', () => setCinematic(false));
@@ -419,3 +488,7 @@ if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
 experience?.setRotationSpeed(Number($('#rotationRange').value) / 100);
 experience?.setParticleIntensity(Number($('#particleRange').value) / 100);
 experience?.setLensingAmount(1);
+experience?.setOrbitLightIntensity(Number($('#orbitIntensityRange').value) / 100);
+experience?.setOrbitLightEnabled($('#orbitLightToggle').getAttribute('aria-pressed') === 'true');
+experience?.setJetsEnabled($('#jetsToggle').getAttribute('aria-pressed') === 'true');
+syncCameraDistance();

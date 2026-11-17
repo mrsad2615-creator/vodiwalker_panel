@@ -70,9 +70,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          TAG="black-hole-v1.0.0"
+          TAG="black-hole-v1.1.0"
           if gh release view "$TAG" >/dev/null 2>&1; then
             echo "Release $TAG already exists; keeping its published APK."
           else
-            gh release create "$TAG" artifacts/black-hole.apk --target "$GITHUB_SHA" --title "BLACK HOLE v1.0.0 — Android APK" --notes "APK نصب مستقیم اندروید، شامل تجربه‌ی سه‌بعدی و فارسی. برنامه آفلاین اجرا می‌شود. این نسخه با کلید debug امضا شده و برای نصب مستقیم/آزمایش است؛ برای Google Play به کلید انتشار نیاز دارد."
+            gh release create "$TAG" artifacts/black-hole.apk --target "$GITHUB_SHA" --title "BLACK HOLE v1.1.0 — TON 618 Android APK" --notes "نسخه‌ی 1.1.0 با صحنه‌ی الهام‌گرفته از TON 618، حلقه‌ی نورِ در گردش، جت‌های نسبیتی، ستاره‌های درخشان‌تر، آغازگر لوگوموشن و کنترل دقیق فاصله و درخشش. آفلاین و نصب مستقیم؛ با کلید debug امضا شده و برای Google Play به کلید انتشار نیاز دارد."
           fi

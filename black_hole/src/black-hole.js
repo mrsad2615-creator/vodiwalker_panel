@@ -16,11 +16,11 @@ const STAR_VERTEX_SHADER = /* glsl */ `
     vec2 projected = clipPosition.xy / max(clipPosition.w, 0.001);
     float radius = length(projected);
     vec2 radialDirection = projected / max(radius, 0.0001);
-    float lensField = exp(-radius * radius * 18.0);
-    float deflection = uLensing * lensField * (0.012 + 0.17 / (radius + 0.19));
+    float lensField = exp(-radius * radius * 12.0);
+    float deflection = uLensing * lensField * min(0.24, 0.018 + 0.16 / (radius + 0.22));
     clipPosition.xy += radialDirection * deflection * clipPosition.w;
     gl_Position = clipPosition;
-    gl_PointSize = clamp(aSize * uPixelRatio * (52.0 / max(12.0, -viewPosition.z)), 1.0, 7.0);
+    gl_PointSize = clamp(aSize * uPixelRatio * (58.0 / max(12.0, -viewPosition.z)), 1.0, 9.0);
     vTwinkle = aTwinkle;
     vColor = aColor;
   }
@@ -35,10 +35,12 @@ const STAR_FRAGMENT_SHADER = /* glsl */ `
     float r = length(p);
     float core = exp(-r * r * 48.0);
     float halo = exp(-r * r * 13.0);
-    float glint = exp(-abs(p.x * p.y) * 34.0) * exp(-r * 7.0) * 0.17;
-    float pulse = 0.76 + 0.24 * sin(uTime * (0.42 + vTwinkle * 0.5) + vTwinkle * 40.0);
-    float alpha = (core * 0.94 + halo * 0.34 + glint) * pulse;
-    gl_FragColor = vec4(vColor * (0.72 + core * 1.25) * pulse, alpha);
+    float glint = exp(-abs(p.x * p.y) * 34.0) * exp(-r * 7.0) * 0.2;
+    float flareX = exp(-p.y * p.y * 980.0 - abs(p.x) * 10.0);
+    float flareY = exp(-p.x * p.x * 980.0 - abs(p.y) * 10.0);
+    float pulse = 0.68 + 0.32 * sin(uTime * (0.42 + vTwinkle * 0.5) + vTwinkle * 40.0);
+    float alpha = (core * 1.04 + halo * 0.38 + glint + (flareX + flareY) * 0.12) * pulse;
+    gl_FragColor = vec4(vColor * (0.76 + core * 1.45) * pulse, alpha);
     #include <colorspace_fragment>
   }
 `;
@@ -136,8 +138,67 @@ const PHOTON_FRAGMENT_SHADER = /* glsl */ `
     vec3 orange = vec3(1.18, 0.51, 0.20);
     vec3 blue = vec3(0.30, 0.79, 1.16);
     vec3 color = mix(orange, blue, smoothstep(-0.1, 0.72, vLocal.y / max(radius, 0.001)) * 0.30);
-    float alpha = arcs * seam * (0.15 + 0.36 * uLensing);
-    gl_FragColor = vec4(color * alpha * 0.72, alpha);
+    float alpha = arcs * seam * (0.25 + 0.54 * uLensing);
+    gl_FragColor = vec4(color * alpha * 1.08, alpha);
+    #include <colorspace_fragment>
+  }
+`;
+
+const ORBIT_VERTEX_SHADER = /* glsl */ `
+  varying vec2 vLocal;
+  void main() {
+    vLocal = position.xy;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  }
+`;
+
+const ORBIT_FRAGMENT_SHADER = /* glsl */ `
+  uniform float uTime;
+  uniform float uIntensity;
+  uniform float uLensing;
+  uniform float uPhase;
+  varying vec2 vLocal;
+  void main() {
+    float angle = atan(vLocal.y, vLocal.x);
+    float wave = 0.5 + 0.5 * sin(angle * 3.0 - uTime * 1.35 + uPhase);
+    float knot = pow(max(0.0, sin(angle * 2.2 - uTime * 2.1 + uPhase)), 12.0);
+    float shimmer = 0.82 + 0.18 * sin(angle * 17.0 - uTime * 2.8 + uPhase);
+    vec3 amber = vec3(1.65, 0.57, 0.18);
+    vec3 whiteHot = vec3(1.7, 1.45, 1.05);
+    vec3 blue = vec3(0.22, 0.72, 1.5);
+    vec3 color = mix(amber, whiteHot, smoothstep(0.58, 1.0, wave + knot * 0.32));
+    color = mix(color, blue, smoothstep(-0.2, 0.9, vLocal.y / max(length(vLocal), 0.001)) * 0.30);
+    float alpha = (0.20 + wave * 0.28 + knot * 0.80) * shimmer * uIntensity * uLensing;
+    gl_FragColor = vec4(color * alpha * 1.35, alpha);
+    #include <colorspace_fragment>
+  }
+`;
+
+const JET_VERTEX_SHADER = /* glsl */ `
+  varying vec2 vUv;
+  void main() {
+    vUv = uv;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  }
+`;
+
+const JET_FRAGMENT_SHADER = /* glsl */ `
+  uniform float uTime;
+  uniform float uOpacity;
+  uniform float uCore;
+  varying vec2 vUv;
+  void main() {
+    float along = exp(-vUv.y * 1.65) * (1.0 - smoothstep(0.70, 1.0, vUv.y));
+    float rib = 0.78 + 0.22 * sin(vUv.y * 31.0 - uTime * 2.1 + vUv.x * 6.2831);
+    float azimuth = 0.75 + 0.25 * cos(vUv.x * 6.2831 + uTime * 0.24);
+    float core = pow(max(0.0, cos((vUv.x - 0.5) * 6.2831)), 8.0) * uCore;
+    vec3 deepBlue = vec3(0.08, 0.30, 0.92);
+    vec3 electricBlue = vec3(0.26, 0.66, 1.38);
+    vec3 white = vec3(1.18, 1.22, 1.36);
+    vec3 color = mix(deepBlue, electricBlue, along * 0.78);
+    color = mix(color, white, core * 0.48);
+    float alpha = along * rib * azimuth * uOpacity * (0.52 + core * 0.72);
+    gl_FragColor = vec4(color * alpha * 1.5, alpha);
     #include <colorspace_fragment>
   }
 `;
@@ -278,17 +339,22 @@ function randomUnitVector() {
 }
 
 export class BlackHoleExperience {
-  constructor(container, { onFrame = () => {}, onUnavailable = () => {} } = {}) {
+  constructor(container, { onFrame = () => {}, onReady = () => {}, onUnavailable = () => {} } = {}) {
     this.container = container;
     this.onFrame = onFrame;
+    this.onReady = onReady;
     this.onUnavailable = onUnavailable;
+    this.firstFrameRendered = false;
     this.running = false;
     this.raf = 0;
     this.lastFrame = 0;
     this.elapsed = 0;
     this.rotationSpeed = 1;
     this.lensingAmount = 1;
-    this.particleIntensity = 0.7;
+    this.particleIntensity = 0.76;
+    this.orbitLightIntensity = 1.2;
+    this.orbitLightEnabled = true;
+    this.jetsEnabled = true;
     this.demoTime = -1;
     this.viewIndex = 0;
     this.transition = null;
@@ -311,8 +377,10 @@ export class BlackHoleExperience {
   initialize() {
     this.scene = new THREE.Scene();
     this.camera = new THREE.PerspectiveCamera(43, 1, 0.1, 180);
-    this.camera.position.set(0, 1.75, 8.6);
-    this.defaultPosition = this.camera.position.clone();
+    const viewportWidth = this.container.clientWidth || window.innerWidth;
+    const portraitPhone = viewportWidth < 600 && window.innerHeight > viewportWidth;
+    this.defaultPosition = new THREE.Vector3(0, portraitPhone ? 2.55 : 2.35, portraitPhone ? 13.5 : 11.4);
+    this.camera.position.copy(this.defaultPosition);
     this.defaultTarget = new THREE.Vector3(0, 0, 0);
 
     this.renderer = new THREE.WebGLRenderer({
@@ -336,8 +404,8 @@ export class BlackHoleExperience {
     this.controls.enableDamping = true;
     this.controls.dampingFactor = 0.055;
     this.controls.enablePan = false;
-    this.controls.minDistance = 4.8;
-    this.controls.maxDistance = 15.8;
+    this.controls.minDistance = 6.7;
+    this.controls.maxDistance = 24;
     this.controls.minPolarAngle = 0.2;
     this.controls.maxPolarAngle = Math.PI * 0.83;
     this.controls.autoRotate = true;
@@ -347,6 +415,7 @@ export class BlackHoleExperience {
     this.buildStarField();
     this.buildDisk();
     this.buildEventHorizon();
+    this.buildRelativisticJets();
     this.buildDisruptionDemo();
     this.applyQuality();
 
@@ -368,7 +437,7 @@ export class BlackHoleExperience {
   }
 
   buildStarField() {
-    const count = 1550;
+    const count = 2350;
     const positions = new Float32Array(count * 3);
     const sizes = new Float32Array(count);
     const twinkles = new Float32Array(count);
@@ -384,7 +453,7 @@ export class BlackHoleExperience {
       const [x, y, z] = randomUnitVector();
       const distance = 50 + Math.random() * 42;
       positions.set([x * distance, y * distance, z * distance], i * 3);
-      sizes[i] = 0.85 + Math.random() * 2.15;
+      sizes[i] = 1.0 + Math.random() * 2.8;
       twinkles[i] = Math.random();
       const color = palette[Math.random() < 0.74 ? 0 : Math.floor(Math.random() * palette.length)];
       colors.set([color.r, color.g, color.b], i * 3);
@@ -409,6 +478,7 @@ export class BlackHoleExperience {
       blending: THREE.AdditiveBlending,
       toneMapped: false,
     });
+    this.starGeometry = geometry;
     this.starMaterial = material;
     this.starField = new THREE.Points(geometry, material);
     this.starField.frustumCulled = false;
@@ -424,6 +494,7 @@ export class BlackHoleExperience {
     // stays in its own tilted orbital plane.
     this.lensGroup = new THREE.Group();
     this.scene.add(this.lensGroup);
+    this.haloTexture = glowTexture();
 
     const haze = new THREE.Mesh(
       new THREE.PlaneGeometry(12, 12),
@@ -461,7 +532,7 @@ export class BlackHoleExperience {
     this.diskInnerMaterial = innerMaterial;
 
     const photonRing = new THREE.Mesh(
-      new THREE.RingGeometry(1.055, 1.15, 384, 3),
+      new THREE.RingGeometry(1.075, 1.245, 480, 4),
       new THREE.ShaderMaterial({
         uniforms: {
           uTime: { value: 0 },
@@ -480,8 +551,77 @@ export class BlackHoleExperience {
     photonRing.renderOrder = 5;
     this.photonMaterial = photonRing.material;
     this.lensGroup.add(photonRing);
+    this.buildOrbitingLight();
 
     this.buildDust();
+  }
+
+  buildOrbitingLight() {
+    this.orbitLightGroup = new THREE.Group();
+    this.lensGroup.add(this.orbitLightGroup);
+    this.orbitArcMaterials = [];
+
+    const makeArc = ({ radius, thickness, arc, phase }) => {
+      const material = new THREE.ShaderMaterial({
+        uniforms: {
+          uTime: { value: 0 },
+          uIntensity: { value: this.orbitLightIntensity },
+          uLensing: { value: this.lensingAmount },
+          uPhase: { value: phase },
+        },
+        vertexShader: ORBIT_VERTEX_SHADER,
+        fragmentShader: ORBIT_FRAGMENT_SHADER,
+        transparent: true,
+        depthWrite: false,
+        side: THREE.DoubleSide,
+        blending: THREE.AdditiveBlending,
+        toneMapped: false,
+      });
+      const mesh = new THREE.Mesh(
+        new THREE.TorusGeometry(radius, thickness, 8, 192, arc),
+        material,
+      );
+      mesh.rotation.z = phase;
+      mesh.renderOrder = 5.35;
+      this.orbitLightGroup.add(mesh);
+      this.orbitArcMaterials.push(material);
+      return mesh;
+    };
+
+    this.orbitArc = makeArc({
+      radius: 1.51,
+      thickness: 0.037,
+      arc: Math.PI * 1.72,
+      phase: 0.18,
+    });
+    this.orbitArcOuter = makeArc({
+      radius: 1.77,
+      thickness: 0.018,
+      arc: Math.PI * 1.12,
+      phase: Math.PI * 0.74,
+    });
+
+    const createBeacon = (color, size, radius, phase, speed) => {
+      const material = new THREE.SpriteMaterial({
+        map: this.haloTexture,
+        color,
+        opacity: 0.94,
+        transparent: true,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+        toneMapped: false,
+      });
+      const sprite = new THREE.Sprite(material);
+      sprite.scale.set(size, size, 1);
+      sprite.renderOrder = 5.8;
+      this.orbitLightGroup.add(sprite);
+      return { sprite, radius, phase, speed, size };
+    };
+
+    this.orbitBeacons = [
+      createBeacon('#fff0d2', 1.16, 1.53, 0.1, 1.05),
+      createBeacon('#84d8ff', 0.82, 1.78, Math.PI * 1.12, -0.68),
+    ];
   }
 
   createDiskMaterial(layer) {
@@ -554,10 +694,8 @@ export class BlackHoleExperience {
     this.holeGroup = new THREE.Group();
     this.scene.add(this.holeGroup);
 
-    const texture = glowTexture();
-    this.haloTexture = texture;
     const halo = new THREE.Sprite(new THREE.SpriteMaterial({
-      map: texture,
+      map: this.haloTexture,
       color: '#ff8a4a',
       opacity: 0.46,
       transparent: true,
@@ -599,6 +737,57 @@ export class BlackHoleExperience {
     edge.position.z = 0.04;
     edge.renderOrder = 8;
     this.holeGroup.add(edge);
+  }
+
+  buildRelativisticJets() {
+    this.jetGroup = new THREE.Group();
+    this.jetMaterials = [];
+    this.scene.add(this.jetGroup);
+
+    const createLayer = (topRadius, baseRadius, opacity, core) => {
+      const material = new THREE.ShaderMaterial({
+        uniforms: {
+          uTime: { value: 0 },
+          uOpacity: { value: opacity },
+          uCore: { value: core },
+        },
+        vertexShader: JET_VERTEX_SHADER,
+        fragmentShader: JET_FRAGMENT_SHADER,
+        transparent: true,
+        depthWrite: false,
+        side: THREE.DoubleSide,
+        blending: THREE.AdditiveBlending,
+        toneMapped: false,
+      });
+      this.jetMaterials.push(material);
+      const geometry = new THREE.CylinderGeometry(topRadius, baseRadius, 6.4, 32, 24, true);
+      for (const direction of [-1, 1]) {
+        const beam = new THREE.Mesh(geometry, material);
+        beam.position.y = direction * 3.2;
+        if (direction < 0) beam.rotation.x = Math.PI;
+        beam.renderOrder = 0.8;
+        this.jetGroup.add(beam);
+      }
+    };
+
+    createLayer(0.012, 0.72, 0.15, 0.18);
+    createLayer(0.004, 0.32, 0.32, 1.0);
+
+    for (const direction of [-1, 1]) {
+      const glow = new THREE.Sprite(new THREE.SpriteMaterial({
+        map: this.haloTexture,
+        color: '#58b8ff',
+        opacity: 0.24,
+        transparent: true,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+        toneMapped: false,
+      }));
+      glow.scale.set(0.92, 5.8, 1);
+      glow.position.y = direction * 2.65;
+      glow.renderOrder = 0.75;
+      this.jetGroup.add(glow);
+    }
   }
 
   buildDisruptionDemo() {
@@ -722,6 +911,10 @@ export class BlackHoleExperience {
     this.updateDisruption();
     this.onFrame(delta);
     this.renderer.render(this.scene, this.camera);
+    if (!this.firstFrameRendered) {
+      this.firstFrameRendered = true;
+      this.onReady();
+    }
     this.samplePerformance(Math.min(frameTime, 1));
     this.raf = requestAnimationFrame((next) => this.animate(next));
   }
@@ -736,6 +929,23 @@ export class BlackHoleExperience {
     this.photonMaterial.uniforms.uTime.value = time;
     this.debrisMaterial.uniforms.uTime.value = time;
     this.starSurfaceMaterial.uniforms.uTime.value = time;
+    for (const material of this.orbitArcMaterials) {
+      material.uniforms.uTime.value = time;
+      material.uniforms.uIntensity.value = this.orbitLightIntensity;
+      material.uniforms.uLensing.value = this.lensingAmount;
+    }
+    this.orbitArc.rotation.z = time * 0.54;
+    this.orbitArcOuter.rotation.z = -time * 0.29 + Math.PI * 0.74;
+    for (const beacon of this.orbitBeacons) {
+      const angle = beacon.phase + time * beacon.speed;
+      const pulse = 0.88 + Math.sin(time * 3.1 + beacon.phase) * 0.12;
+      beacon.sprite.position.set(Math.cos(angle) * beacon.radius, Math.sin(angle) * beacon.radius, 0.055);
+      beacon.sprite.scale.setScalar(beacon.size * pulse);
+      beacon.sprite.material.opacity = this.orbitLightEnabled
+        ? Math.min(1, this.orbitLightIntensity * 0.78) * this.lensingAmount
+        : 0;
+    }
+    for (const material of this.jetMaterials) material.uniforms.uTime.value = time;
   }
 
   updateDisruption() {
@@ -879,8 +1089,10 @@ export class BlackHoleExperience {
     };
     const ratio = Math.max(0.7, caps[this.qualityMode] || caps.auto);
     this.renderer.setPixelRatio(ratio);
-    const particleCount = { auto: mobile ? 990 : 1450, high: 1850, balanced: 1120, low: 620 }[this.qualityMode] || 1450;
+    const particleCount = { auto: mobile ? 990 : 1450, high: 2100, balanced: 1250, low: 620 }[this.qualityMode] || 1450;
+    const starCount = { auto: mobile ? 1420 : 1950, high: 2350, balanced: 1580, low: 900 }[this.qualityMode] || 1950;
     this.dustGeometry.setDrawRange(0, particleCount);
+    this.starGeometry.setDrawRange(0, starCount);
     this.resize();
   }
 
@@ -907,6 +1119,42 @@ export class BlackHoleExperience {
     this.starMaterial.uniforms.uLensing.value = value;
     this.hazeMaterial.uniforms.uLensing.value = value;
     this.photonMaterial.uniforms.uLensing.value = value;
+    for (const material of this.orbitArcMaterials) material.uniforms.uLensing.value = value;
+  }
+
+  setOrbitLightEnabled(enabled) {
+    this.orbitLightEnabled = Boolean(enabled);
+    if (this.orbitLightGroup) this.orbitLightGroup.visible = this.orbitLightEnabled;
+  }
+
+  setOrbitLightIntensity(amount) {
+    this.orbitLightIntensity = Math.max(0, Math.min(1.5, Number(amount) || 0));
+    for (const material of this.orbitArcMaterials) {
+      material.uniforms.uIntensity.value = this.orbitLightIntensity;
+    }
+  }
+
+  setJetsEnabled(enabled) {
+    this.jetsEnabled = Boolean(enabled);
+    if (this.jetGroup) this.jetGroup.visible = this.jetsEnabled;
+  }
+
+  getCameraDistancePercent() {
+    const distance = this.camera.position.distanceTo(this.controls.target);
+    return Math.round(clamp01(
+      (distance - this.controls.minDistance) / (this.controls.maxDistance - this.controls.minDistance),
+    ) * 100);
+  }
+
+  setCameraDistancePercent(percent) {
+    const value = clamp01(Number(percent) / 100);
+    const distance = THREE.MathUtils.lerp(this.controls.minDistance, this.controls.maxDistance, value);
+    const direction = this.camera.position.clone().sub(this.controls.target).normalize();
+    if (direction.lengthSq() < 0.001) direction.set(0, 0, 1);
+    this.transition = null;
+    this.camera.position.copy(this.controls.target).addScaledVector(direction, distance);
+    this.controls.update();
+    return this.getCameraDistancePercent();
   }
 
   setParticleIntensity(amount) {
@@ -942,11 +1190,15 @@ export class BlackHoleExperience {
   }
 
   nextCameraView() {
-    const presets = [
-      new THREE.Vector3(0, 1.75, 8.6),
-      new THREE.Vector3(5.35, 2.6, 6.6),
-      new THREE.Vector3(-0.35, 6.9, 5.2),
-    ];
+    const wide = this.defaultPosition.clone();
+    const side = new THREE.Vector3(
+      this.defaultPosition.z * 0.48,
+      this.defaultPosition.y + 1.15,
+      this.defaultPosition.z * 0.82,
+    );
+    const faceOn = new THREE.Vector3(0, this.defaultPosition.length() * 0.98, 2.75);
+    const close = this.defaultPosition.clone().setLength(Math.max(8.6, this.defaultPosition.length() * 0.72));
+    const presets = [wide, side, faceOn, close];
     this.viewIndex = (this.viewIndex + 1) % presets.length;
     this.moveCamera(presets[this.viewIndex], this.defaultTarget);
     return this.viewIndex;

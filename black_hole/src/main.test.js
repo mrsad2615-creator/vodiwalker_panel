@@ -17,12 +17,21 @@ vi.mock('./black-hole.js', () => {
       this.zoomCalls = [];
       this.cameraReset = false;
       this.cameraPresetCount = 0;
+      this.cameraDistancePercent = 42;
+      this.orbitLightIntensity = 0;
+      this.orbitLightEnabled = true;
+      this.jetsEnabled = true;
       testEngine.instance = this;
     }
     setLensingAmount(value) { this.lensing = value; }
     setParticleIntensity(value) { this.particleIntensity = value; }
     setRotationSpeed(value) { this.rotationSpeed = value; }
     setDemoTime(value) { this.demoTime = value; }
+    getCameraDistancePercent() { return this.cameraDistancePercent; }
+    setCameraDistancePercent(value) { this.cameraDistancePercent = value; }
+    setOrbitLightIntensity(value) { this.orbitLightIntensity = value; }
+    setOrbitLightEnabled(value) { this.orbitLightEnabled = value; }
+    setJetsEnabled(value) { this.jetsEnabled = value; }
     cycleQuality() {
       this.quality = ({ auto: 'high', high: 'balanced', balanced: 'low', low: 'auto' })[this.quality];
       return this.quality;
@@ -89,6 +98,23 @@ describe('BLACK HOLE interface', () => {
 
   it('applies camera-quality settings, camera actions, fullscreen, and cinematic mode', () => {
     document.querySelector('#settingsButton').click();
+    expect(document.querySelector('#cameraDistanceRange').value).toBe('42');
+    const distance = document.querySelector('#cameraDistanceRange');
+    distance.value = '58';
+    dispatchInput(distance);
+    expect(testEngine.instance.cameraDistancePercent).toBe(58);
+    expect(document.querySelector('#cameraDistanceValue').textContent).toBe('۵۸٪');
+
+    const orbitIntensity = document.querySelector('#orbitIntensityRange');
+    orbitIntensity.value = '145';
+    dispatchInput(orbitIntensity);
+    expect(testEngine.instance.orbitLightIntensity).toBeCloseTo(1.45);
+    document.querySelector('#orbitLightToggle').click();
+    document.querySelector('#jetsToggle').click();
+    expect(testEngine.instance.orbitLightEnabled).toBe(false);
+    expect(testEngine.instance.jetsEnabled).toBe(false);
+    expect(document.querySelector('#jetsToggle').getAttribute('aria-pressed')).toBe('false');
+
     const rotation = document.querySelector('#rotationRange');
     rotation.value = '55';
     dispatchInput(rotation);

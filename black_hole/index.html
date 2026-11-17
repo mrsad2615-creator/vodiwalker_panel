@@ -4,12 +4,27 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#03050b" />
-    <meta name="description" content="یک تجربه‌ی سه‌بعدی و تعاملی از سیاه‌چاله، دیسک برافزایشی و خمیدگی نور؛ با روایت کوتاه علمی به زبان فارسی." />
+    <meta name="description" content="تصویرسازی سه‌بعدی فارسی و تعاملی، الهام‌گرفته از کوازار ابرپرجرم TON 618؛ با حلقه‌ی فوتونی، جت‌های نسبیتی و خمیدگی نور." />
     <meta name="color-scheme" content="dark" />
-    <title>BLACK HOLE — فراتر از افق رویداد</title>
+    <title>BLACK HOLE · TON 618 — فراتر از افق رویداد</title>
     <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
   </head>
   <body>
+    <div id="introSplash" class="intro-splash" aria-hidden="true">
+      <div class="intro-splash__content">
+        <div class="intro-mark" aria-hidden="true">
+          <i class="intro-mark__jet intro-mark__jet--top"></i>
+          <i class="intro-mark__jet intro-mark__jet--bottom"></i>
+          <i class="intro-mark__orbit intro-mark__orbit--outer"></i>
+          <i class="intro-mark__orbit intro-mark__orbit--inner"></i>
+          <i class="intro-mark__horizon"></i>
+          <i class="intro-mark__photon"></i>
+          <i class="intro-mark__beacon"></i>
+        </div>
+        <div class="intro-wordmark"><span>TON 618 · DEEP SPACE</span><strong>BLACK HOLE</strong><small>BEYOND THE EVENT HORIZON</small></div>
+        <div class="intro-progress" aria-hidden="true"><i></i></div>
+      </div>
+    </div>
     <div id="app" class="app-shell">
       <div class="space-backdrop" aria-hidden="true">
         <div class="nebula nebula--amber"></div>
@@ -18,11 +33,14 @@
         <div class="grain"></div>
       </div>
 
-      <div id="universe" class="universe" aria-label="نمای سه‌بعدی تعاملی سیاه‌چاله">
+      <div id="universe" class="universe" aria-label="نمای سه‌بعدی تعاملی الهام‌گرفته از TON 618">
         <div id="visualFallback" class="visual-fallback" hidden aria-hidden="true">
+          <div class="fallback-stars"></div>
           <div class="fallback-halo"></div>
+          <div class="fallback-jets"><i class="fallback-jet fallback-jet--top"></i><i class="fallback-jet fallback-jet--bottom"></i></div>
           <div class="fallback-disk fallback-disk--outer"></div>
           <div class="fallback-disk fallback-disk--inner"></div>
+          <div class="fallback-photon"><i></i></div>
           <div class="fallback-shadow"></div>
           <div class="fallback-core"></div>
           <div class="fallback-stream"></div>
@@ -34,7 +52,7 @@
 
       <header class="topbar" aria-label="نوار ابزار اصلی">
         <a class="brand" href="./" aria-label="BLACK HOLE، بازگشت به نمای کیهانی">
-          <span class="brand-mark" aria-hidden="true"><i></i><b></b></span>
+          <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 44 44"><path class="brand-jet" d="M22 5v7M22 32v7"/><ellipse class="brand-ring brand-ring--outer" cx="22" cy="22" rx="19" ry="7.5" transform="rotate(-18 22 22)"/><ellipse class="brand-ring brand-ring--inner" cx="22" cy="22" rx="13.5" ry="4.8" transform="rotate(-18 22 22)"/><circle class="brand-hole" cx="22" cy="22" r="6.2"/><circle class="brand-glint" cx="34" cy="17" r="1.2"/></svg></span>
           <span class="brand-copy">
             <strong>BLACK HOLE</strong>
             <small>BEYOND THE EVENT HORIZON</small>
@@ -76,15 +94,15 @@
 
       <main class="experience" id="experience">
         <section class="hero-intro" aria-labelledby="heroTitle">
-          <div class="eyebrow"><span class="eyebrow-line"></span><span>نوری از مرزِ بازگشت</span><span class="eyebrow-index">۰۱ / ۰۵</span></div>
-          <h1 id="heroTitle">به <em>مرزِ</em> ناشناخته‌ها نزدیک شو</h1>
-          <p>سیاه‌چاله را بچرخان، نور را دنبال کن و لحظه‌ی ازهم‌گسیختن یک ستاره را ببین.</p>
+          <div class="eyebrow"><span class="eyebrow-line"></span><span>کوازارِ دوردست · TON 618</span><span class="eyebrow-index">۰۱ / ۰۵</span></div>
+          <h1 id="heroTitle"><em dir="ltr">TON 618</em>؛ غولِ تاریکِ کیهان</h1>
+          <p>از فاصله‌ای امن، دیسک درخشان و نورِ خمیده را در نمایی سه‌بعدی تماشا کن.</p>
         </section>
 
         <aside class="science-note" aria-label="اطلاعات سیاه‌چاله">
           <div class="note-heading"><span class="note-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.3"/><circle cx="12" cy="12" r="3.2"/><path d="M2.5 12h3M18.5 12h3"/></svg></span><span>پدیده‌ی پیشِ رو</span></div>
-          <strong>سیاه‌چاله‌ی ابرپرجرم</strong>
-          <p>تصویری هنری از دیسک داغ و نورِ خمیده در نزدیکی افق رویداد.</p>
+          <strong>کوازارِ ابرپرجرم TON 618</strong>
+          <p>تصویرسازی هنری از دیسک برافزایشی، حلقه‌ی فوتونی و جت‌های نسبیتی.</p>
           <button class="text-link" type="button" data-open-lesson="event-horizon">افق رویداد چیست؟ <span aria-hidden="true">←</span></button>
         </aside>
 
@@ -130,8 +148,14 @@
             <div><span class="panel-kicker">کنترل تصویر</span><h2>تنظیم تجربه</h2></div>
             <button class="close-button" id="closeSettings" type="button" aria-label="بستن تنظیمات">×</button>
           </div>
-          <label class="range-row"><span>سرعت گردش</span><input id="rotationRange" type="range" min="0" max="100" value="28" aria-label="سرعت گردش دوربین و دیسک"><span id="rotationValue">۲۸٪</span></label>
-          <label class="range-row"><span>شدت ذرات</span><input id="particleRange" type="range" min="0" max="100" value="70" aria-label="شدت ذرات کیهانی"><span id="particleValue">۷۰٪</span></label>
+          <label class="range-row"><span>فاصله‌ی دوربین</span><input id="cameraDistanceRange" type="range" min="0" max="100" value="35" aria-label="تنظیم فاصله‌ی دوربین از نزدیک تا میدان باز"><span id="cameraDistanceValue">۳۵٪</span></label>
+          <label class="range-row"><span>درخشش حلقه‌ی نور</span><input id="orbitIntensityRange" type="range" min="0" max="150" value="120" aria-label="تنظیم درخشش نورِ در گردش"><span id="orbitIntensityValue">۱۲۰٪</span></label>
+          <label class="range-row"><span>سرعت گردش</span><input id="rotationRange" type="range" min="0" max="100" value="28" aria-label="سرعت گردش دوربین و ماده‌ی دیسک"><span id="rotationValue">۲۸٪</span></label>
+          <label class="range-row"><span>شدت ذرات</span><input id="particleRange" type="range" min="0" max="100" value="76" aria-label="شدت غبار و ذرات کیهانی"><span id="particleValue">۷۶٪</span></label>
+          <div class="feature-toggles" role="group" aria-label="جلوه‌های سیاه‌چاله">
+            <button id="orbitLightToggle" class="feature-toggle is-on" type="button" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><ellipse cx="12" cy="12" rx="10" ry="5" transform="rotate(-24 12 12)"/><circle cx="20" cy="8" r="1.2"/></svg><span>حلقه‌ی نور</span><i></i></button>
+            <button id="jetsToggle" class="feature-toggle is-on" type="button" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5v5M12 16.5v5M9.5 5 12 2.5 14.5 5M9.5 19 12 21.5 14.5 19"/><ellipse cx="12" cy="12" rx="7.5" ry="2.8" transform="rotate(-18 12 12)"/></svg><span>جت‌های نسبیتی</span><i></i></button>
+          </div>
           <div class="quality-row"><div><strong>کیفیت رندر</strong><small id="qualityDescription">تنظیم خودکار با توجه به دستگاه</small></div><button id="qualityButton" class="quality-button" type="button" aria-label="تغییر کیفیت رندر">خودکار</button></div>
           <p class="settings-hint"><span class="tiny-orbit" aria-hidden="true"></span>برای چرخش، تصویر را بکشید؛ برای نزدیک‌شدن، دو انگشت یا چرخ ماوس را به‌کار ببرید.</p>
         </section>

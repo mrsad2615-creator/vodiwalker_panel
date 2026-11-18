@@ -2,7 +2,17 @@
 
 اپ بومی Android با Kotlin و Compose: گفتگو، ساخت تصویر، OCR و فرمان‌های گوشی. کد اپ در این پوشه [با مجوز MIT](LICENSE) است؛ [مجوزهای اجزای ثالث](NOTICE.md) جداگانه‌اند. به پنل Python مخزن وابسته نیست.
 
-## پیش‌نمایش ۰٫۸
+## پیش‌نمایش ۰٫۹ · فقط مدل را انتخاب کنید
+
+**[دانلود مستقیم APK](https://github.com/mrsad2615-creator/vodiwalker_panel/releases/download/mrsad-preview-44366908219-1/mrsad-preview.apk)** · [SHA-256](https://github.com/mrsad2615-creator/vodiwalker_panel/releases/download/mrsad-preview-44366908219-1/SHA256SUMS.txt) · [راهنمای فارسی](docs/09-mrsad-fa.md) · [بیلد و آزمون‌ها](https://github.com/mrsad2615-creator/vodiwalker_panel/actions/runs/44366908219) · [تصاویر](https://github.com/mrsad2615-creator/vodiwalker_panel/actions/runs/44366908219/artifacts/14456988136)
+
+- در اولین باز شدن، **Qwen3 0.6B** و **SmolLM2 135M** در صفحهٔ گفتگو حاضرند. بدون حساب، کلید یا دانلود مدل، حتی در حالت هواپیما. برای فارسی با Qwen شروع کنید.
+- مدل آنلاین رایگان اختیاری است: انتخاب از فهرست رسمی و ورود به OpenRouter در مرورگر، بدون کپی کلید. سهمیه و دسترسی سرویس ممکن است محدود باشد؛ جایگزین پولی ندارد. ساخت تصویر همچنان اتصال مجاز سرویس تصویر می‌خواهد.
+- **فرمان**: باتری، صدا، تایمر، زنگ، فرم تقویم و مرور فرمان تایپی، با کنترل‌های استاندارد اندروید.
+
+Android 8+ **64-bit** · `ai.dana.mrsad.models` / `0.9.0-preview` · حدود ۵۷۰ مگابایت. پیش‌نمایش دیباگ کنار ۰٫۸ نصب می‌شود. هر دو مدل در همان APK با دستگاه مجازی Android 15 در حالت هواپیما پاسخ دادند؛ مسیر آنلاین با پاسخ‌های آزمایشی بررسی شد. سورس `be512573fd5607606fa8940252be0248ccb0321b`.
+
+## پیش‌نمایش قدیمی ۰٫۸
 
 **[دانلود مستقیم APK](https://github.com/mrsad2615-creator/vodiwalker_panel/releases/download/mrsad-preview-44351667548-1/mrsad-preview.apk)** · [SHA-256](https://github.com/mrsad2615-creator/vodiwalker_panel/releases/download/mrsad-preview-44351667548-1/SHA256SUMS.txt) · [راهنمای فارسی](docs/08-mrsad-fa.md) · [بیلد و آزمون‌ها](https://github.com/mrsad2615-creator/vodiwalker_panel/actions/runs/44351667548) · [تصاویر شبیه‌ساز](https://github.com/mrsad2615-creator/vodiwalker_panel/actions/runs/44351667548/artifacts/14448044067)
 
@@ -21,12 +31,13 @@ APK در CI با پاسخ‌های HTTP کنترل‌شده و روی شبیه�
 
 ## ساخت از سورس
 
-JDK کامل ۲۱، Android SDK Platform 36 و Build Tools 36.0.0 لازم است. ساخت از Google Maven، Maven Central و JitPack (Tesseract4Android) استفاده می‌کند. هیچ کلید AI برای بیلد/آزمون fixture لازم نیست.
+Python 3.11 و curl برای وزن‌های مدل، JDK کامل ۲۱، Android SDK Platform 36 و Build Tools 36.0.0 لازم است. ساخت از Google Maven، Maven Central و JitPack (Tesseract4Android) استفاده می‌کند. هیچ کلید AI برای بیلد/آزمون fixture لازم نیست.
 
 ```bash
 cd dana-android
 sdkmanager --licenses
 sdkmanager 'platforms;android-36' 'build-tools;36.0.0' 'platform-tools'
+python3 ci/bundled-models.py  # وزن‌ها با SHA-256 بررسی می‌شوند؛ در Git ذخیره نمی‌شوند
 ./gradlew --no-daemon :core:domain:test :core:data:testDebugUnitTest :core:data:lintDebug :app:lintDebug :app:assembleDebug :app:assembleRelease
 ./gradlew :app:installDebug
 ./gradlew :core:data:connectedDebugAndroidTest :app:connectedDebugAndroidTest

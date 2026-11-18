@@ -136,12 +136,11 @@ jobs:
           target: default
           profile: pixel_2
           emulator-boot-timeout: 210
-          # Skip host GLES/Vulkan after the API 34 fixture lost its adb transport
-          # at Activity launch. Capture emulator
-          # stdout/stderr separately from adb test output for device-loss failures.
+          # ANGLE/SwiftShader avoids the headless emulator's GLES ColorBuffer
+          # failures with the native and guest renderer paths. Keep VM logs for diagnosis.
           emulator-options: >-
-            -no-window -gpu off -feature -Vulkan -no-snapshot -noaudio -no-boot-anim
-            -camera-back none -camera-front none -cores 2 -memory 2816
+            -no-window -gpu swangle -feature -Vulkan -no-snapshot -noaudio -no-boot-anim
+            -camera-back none -camera-front none -cores 2 -memory 3072
             > $RUNNER_TEMP/dana-emulator-host.log 2>&1
           working-directory: dana-android
           disable-animations: true
@@ -175,6 +174,14 @@ jobs:
               kernel = (root / 'dana-emulator-kernel.log').read_text(errors='replace')
               annotate('Dana emulator host trace', kernel + '\n' + '\n'.join(host_lines[-25:]))
           PYTHON
+      - name: Keep the built APK as an explicitly unverified debug artifact on test failure
+        if: failure() && steps.verify.conclusion == 'success'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: Dana-0.5-debug-UI-tests-not-passed
+          path: ${{ runner.temp }}/dana-verified/DANA-AI-preview.apk
+          if-no-files-found: error
+          retention-days: 7
       - name: Upload the APK without a ZIP wrapper
         id: apk
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7

@@ -1,5 +1,6 @@
 package ir.aegis.core.database
 
+import android.annotation.SuppressLint
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
@@ -25,6 +26,7 @@ class SecurityReminderWorker(
     params: WorkerParameters,
 ) : CoroutineWorker(appContext, params) {
 
+    @SuppressLint("MissingPermission")
     override suspend fun doWork(): Result {
         val title = inputData.getString(KEY_TITLE) ?: "Security Check"
         val category = inputData.getString(KEY_CATEGORY) ?: "Preparedness"

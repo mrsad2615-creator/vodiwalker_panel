@@ -296,8 +296,10 @@ object LocalAiEngine {
                 }
 
                 var distMeters: Double? = null
-                if (latitude != null && longitude != null && inc.latitude != null && inc.longitude != null) {
-                    val d = GeoMath.haversineMeters(latitude, longitude, inc.latitude, inc.longitude)
+                val incLat = inc.latitude
+                val incLon = inc.longitude
+                if (latitude != null && longitude != null && incLat != null && incLon != null) {
+                    val d = GeoMath.haversineMeters(latitude, longitude, incLat, incLon)
                     distMeters = d
                     if (d <= 500.0) {
                         combined += 0.18
@@ -444,7 +446,7 @@ object LocalAiEngine {
         val topCategory = incidents.groupingBy { it.category }.eachCount().maxByOrNull { it.value }?.key
 
         val lowStock = inventory.count { it.quantity < it.minimumThreshold }
-        val expiringSoon = inventory.count { it.expiryAtMillis != null && it.expiryAtMillis!! - nowMillis < 30L * 86_400_000L }
+        val expiringSoon = inventory.count { item -> item.expiryAtMillis?.let { exp -> exp - nowMillis < 30L * 86_400_000L } == true }
         val invScore = if (inventory.isEmpty()) 40 else (((inventory.size - lowStock).coerceAtLeast(0).toDouble() / inventory.size) * 35.0).roundToInt()
         val familyScore = if (familyMembers.isEmpty()) 10 else 25
         val academyScore = ((academyProgress.count { it.badgeEarned } / 6.0) * 25.0).roundToInt().coerceAtMost(25)

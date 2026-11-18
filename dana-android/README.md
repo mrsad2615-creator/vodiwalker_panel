@@ -2,7 +2,16 @@
 
 اپ بومی Android با Kotlin و Compose: گفتگو، ساخت تصویر، OCR و فرمان‌های گوشی. کد اپ در این پوشه [با مجوز MIT](LICENSE) است؛ [مجوزهای اجزای ثالث](NOTICE.md) جداگانه‌اند. به پنل Python مخزن وابسته نیست.
 
-## پیش‌نمایش ۰٫۹ · فقط مدل را انتخاب کنید
+## پیش‌نمایش ۰٫۱۰ · خواندن و تحلیل پیام
+
+**[دانلود مستقیم APK](https://github.com/mrsad2615-creator/vodiwalker_panel/releases/download/mrsad-preview-44388268486-1/mrsad-preview.apk)** · [فایل SHA-256](https://github.com/mrsad2615-creator/vodiwalker_panel/releases/download/mrsad-preview-44388268486-1/SHA256SUMS.txt) · [ساخت و آزمون‌ها](https://github.com/mrsad2615-creator/vodiwalker_panel/actions/runs/44388268486) · [راهنمای فارسی](docs/10-mrsad-fa.md)
+
+- **پیام:** متن را از اشتراک‌گذاری Android یا با چسباندن وارد کنید. پس از مرور، آن را با صدای فارسیِ آفلاینِ نصب‌شده گوش دهید یا با Qwen و نشانه‌های محلی تحلیل کنید. ارسال آنلاین اختیاری است و متن دقیق و مقصد هر بار تأیید می‌شوند. این صفحه به صندوق دسترسی ندارد و پاسخی نمی‌فرستد.
+- **تصویر:** Sunburst در AvalAI/OpenAI با تنظیم High و Nano Banana Pro با درخواست 2K قابل انتخاب‌اند. هر ساخت استودیویی جداگانه تأیید می‌شود؛ دسترسی و هزینه تابع حساب خودتان است.
+
+Android 8+ **۶۴ بیتی** · `ai.dana.mrsad.models` / `0.10.0-preview` · حدود ۵۷۰ مگابایت. تحلیل محلی با همان APK در حالت هواپیما اجرا شد؛ مسیرهای سرویس آنلاین با پاسخ‌های آزمایشی بررسی شدند.
+
+## پیش‌نمایش قدیمی ۰٫۹ · فقط مدل را انتخاب کنید
 
 **[دانلود مستقیم APK](https://github.com/mrsad2615-creator/vodiwalker_panel/releases/download/mrsad-preview-44366908219-1/mrsad-preview.apk)** · [SHA-256](https://github.com/mrsad2615-creator/vodiwalker_panel/releases/download/mrsad-preview-44366908219-1/SHA256SUMS.txt) · [راهنمای فارسی](docs/09-mrsad-fa.md) · [بیلد و آزمون‌ها](https://github.com/mrsad2615-creator/vodiwalker_panel/actions/runs/44366908219) · [تصاویر](https://github.com/mrsad2615-creator/vodiwalker_panel/actions/runs/44366908219/artifacts/14456988136)
 
@@ -11,6 +20,8 @@
 - **فرمان**: باتری، صدا، تایمر، زنگ، فرم تقویم و مرور فرمان تایپی، با کنترل‌های استاندارد اندروید.
 
 Android 8+ **64-bit** · `ai.dana.mrsad.models` / `0.9.0-preview` · حدود ۵۷۰ مگابایت. پیش‌نمایش دیباگ کنار ۰٫۸ نصب می‌شود. هر دو مدل در همان APK با دستگاه مجازی Android 15 در حالت هواپیما پاسخ دادند؛ مسیر آنلاین با پاسخ‌های آزمایشی بررسی شد. سورس `be512573fd5607606fa8940252be0248ccb0321b`.
+
+**[طرح فنی نسخهٔ بعد: تصویر حرفه‌ای، صدای فارسی و اجرای امن فرمان](docs/10-architecture-roadmap-fa.md)** — قابلیت‌های پیشنهادی این سند هنوز در APK ۰٫۹ عرضه نشده‌اند.
 
 ## پیش‌نمایش قدیمی ۰٫۸
 

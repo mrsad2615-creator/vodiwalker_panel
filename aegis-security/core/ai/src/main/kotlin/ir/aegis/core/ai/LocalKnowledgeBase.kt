@@ -214,21 +214,37 @@ object LocalKnowledgeBase {
     )
 
     val knowledgeDocs: List<ReviewedKnowledgeDoc> = firstAidGuides.map { g ->
+        val extraFaTags = when (g.id) {
+            "fa-bleeding" -> listOf("bleeding", "tourniquet", "wound", "hemorrhage", "خونریزی", "پانسمان", "تورنیکت", "زخم")
+            "fa-cpr" -> listOf("cpr", "cardiac", "resuscitation", "breathing", "احیا", "قلبی", "تنفس")
+            "fa-choking" -> listOf("choking", "airway", "heimlich", "خفگی", "راه هوایی")
+            "fa-burns" -> listOf("burn", "scald", "thermal", "سوختگی", "حرارتی")
+            "fa-shock" -> listOf("shock", "perfusion", "hypothermia", "شوک", "تروما")
+            "fa-fracture" -> listOf("fracture", "splint", "bone", "شکستگی", "آتل")
+            else -> emptyList()
+        }
         ReviewedKnowledgeDoc(
             id = g.id,
             title = g.title,
             domain = "First Aid · ${g.category}",
-            tags = listOf("first aid", g.category.lowercase(), g.urgency.lowercase(), "کمک های اولیه", "امداد"),
+            tags = (listOf("first aid", g.category.lowercase(), g.urgency.lowercase(), "کمک های اولیه", "امداد") + extraFaTags).distinct(),
             content = "${g.summary} Steps: ${g.steps.joinToString(" ")} Avoid: ${g.doNotDo.joinToString(" ")}",
             actionChecklist = g.steps,
             reviewedSource = g.reviewedSource,
         )
     } + disasterGuides.map { d ->
+        val hazardTags = when (d.id) {
+            "dg-earthquake" -> listOf("earthquake", "seismic", "aftershock", "drop cover hold", "زلزله", "پس لرزه", "آوار")
+            "dg-fire" -> listOf("fire", "smoke", "evacuation", "extinguisher", "آتش", "آتش سوزی", "حریق", "دود")
+            "dg-flood" -> listOf("flood", "inundation", "water", "high ground", "سیل", "آبگرفتگی")
+            "dg-blackout" -> listOf("blackout", "outage", "power", "generator", "قطع برق", "قطعی برق", "تاسیسات")
+            else -> emptyList()
+        }
         ReviewedKnowledgeDoc(
             id = d.id,
             title = d.title,
             domain = "Disaster Guide · ${d.hazardType}",
-            tags = listOf("disaster", d.hazardType.lowercase(), "زلزله", "آتش سوزی", "سیل", "قطع برق", "بحران"),
+            tags = (listOf("disaster", d.hazardType.lowercase(), "بحران") + hazardTags).distinct(),
             content = "Before: ${d.beforeSteps.joinToString(" ")} During: ${d.duringSteps.joinToString(" ")} After: ${d.afterSteps.joinToString(" ")}",
             actionChecklist = d.duringSteps,
             reviewedSource = d.reviewedSource,

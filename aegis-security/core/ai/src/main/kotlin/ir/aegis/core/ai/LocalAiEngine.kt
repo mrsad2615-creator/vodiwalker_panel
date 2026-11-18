@@ -397,7 +397,7 @@ object LocalAiEngine {
 
         if (familyMembers.any { it.medications.isNotBlank() }) {
             baseSteps += "Pack essential medications for: ${
-                familyMembers.filter { it.medications.isNotBlank() }.joinToString(", ") { it.fullName }
+                familyMembers.filter { it.medications.isNotBlank() }.joinToString(", ") { "${it.fullName} (${it.medications})" }
             }"
         }
         if (familyMembers.any { it.specialNeeds.isNotBlank() || it.ageGroup.contains("Child", true) || it.ageGroup.contains("Elder", true) }) {

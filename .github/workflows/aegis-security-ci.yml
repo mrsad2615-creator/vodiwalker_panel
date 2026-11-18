@@ -67,7 +67,7 @@ jobs:
           AEGIS_KEY_PASSWORD: AegisOffline2026!
         run: |
           set -o pipefail
-          if gradle --no-daemon --console=plain --stacktrace \
+          if gradle --no-daemon --console=plain --stacktrace --continue \
             test \
             testDebugUnitTest \
             lintDebug \

@@ -91,4 +91,29 @@ class LocalAiEngineTest {
         assertTrue(items.any { it.label.contains("EpiPen") })
         assertTrue(items.any { it.label.contains("Inventory gap alert") })
     }
+
+    @Test
+    fun assistantAnswerCitesReviewedGuidesAndNormalizationHandlesPersianDigits() {
+        assertEquals("1234 کی ی", LocalAiEngine.normalize("۱۲۳۴ كي ى"))
+        val reply = LocalAiEngine.answerQuery("earthquake", localModelName = "", isPersian = false)
+        assertTrue(reply.suggestedSteps.isNotEmpty())
+        assertTrue(reply.citedSources.any { it.contains("Earthquake", ignoreCase = true) })
+        assertTrue(reply.safetyDisclaimer.contains("Suggestion Only", ignoreCase = true))
+    }
+
+    @Test
+    fun statisticalAnalyzerComputesResolutionRateAndReadinessIndex() {
+        val now = 1763400000000L
+        val incidents = listOf(
+            Incident("1", "Fire", "Kitchen smoke", IncidentCategory.FIRE, IncidentPriority.CRITICAL, IncidentStatus.OPEN, null, null, "", createdAtMillis = now, updatedAtMillis = now),
+            Incident("2", "Power", "Resolved outage", IncidentCategory.UTILITY_OUTAGE, IncidentPriority.LOW, IncidentStatus.RESOLVED, null, null, "", createdAtMillis = now, updatedAtMillis = now),
+        )
+        val stats = LocalAiEngine.analyzeStatistics(incidents, emptyList(), emptyList(), emptyList(), nowMillis = now)
+        assertEquals(2, stats.totalIncidents)
+        assertEquals(1, stats.openCount)
+        assertEquals(1, stats.criticalCount)
+        assertEquals(50, stats.resolutionRatePercent)
+        assertTrue(stats.preparednessIndex in 10..100)
+        assertTrue(stats.insights.isNotEmpty())
+    }
 }

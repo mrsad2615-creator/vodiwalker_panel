@@ -2,6 +2,8 @@
 
 ## نصب و آزمون
 
+**اگر نصب نمی‌شود یا گوشی اندروید ۳۲ بیتی دارد:** [دانلود و راهنمای مرصاد سبک](11-install-fa.md). نسخهٔ سبک جداگانه نصب می‌شود و مدل زبانیِ آفلاین ندارد.
+
 **[دانلود مستقیم APK](https://github.com/mrsad2615-creator/vodiwalker_panel/releases/download/mrsad-preview-44388268486-1/mrsad-preview.apk)** · [فایل SHA-256](https://github.com/mrsad2615-creator/vodiwalker_panel/releases/download/mrsad-preview-44388268486-1/SHA256SUMS.txt) · [ساخت و آزمون‌ها](https://github.com/mrsad2615-creator/vodiwalker_panel/actions/runs/44388268486)
 
 Android 8+ **۶۴ بیتی** · بستهٔ `ai.dana.mrsad.models` · `0.10.0-preview` / کد ۱۰ · `569,973,178` بایت. فایل، پیش‌نمایش دیباگ است نه انتشار Play Store. شناسهٔ بسته با ۰٫۹ یکی است؛ نصب روی نسخهٔ قبلی به سازگاری امضا بستگی دارد. اگر Android به تفاوت امضا ایراد گرفت، پیش از حذف نسخهٔ قبلی از داده‌ها و تنظیمات لازم نسخهٔ پشتیبان بگیرید. برای نصب و استخراج اولیهٔ مدل‌ها حدود ۱٫۵ گیگابایت فضای آزاد در نظر بگیرید.

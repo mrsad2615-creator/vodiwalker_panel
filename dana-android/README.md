@@ -2,6 +2,12 @@
 
 اپ بومی Android با Kotlin و Compose: گفتگو، ساخت تصویر، OCR و فرمان‌های گوشی. کد اپ در این پوشه [با مجوز MIT](LICENSE) است؛ [مجوزهای اجزای ثالث](NOTICE.md) جداگانه‌اند. به پنل Python مخزن وابسته نیست.
 
+## اگر نسخهٔ کامل نصب نمی‌شود: مرصاد سبک
+
+**[دانلود مستقیم مرصاد سبک](https://github.com/mrsad2615-creator/vodiwalker_panel/releases/download/mrsad-lite-44416761230-1/mrsad-lite.apk)** · [SHA-256](https://github.com/mrsad2615-creator/vodiwalker_panel/releases/download/mrsad-lite-44416761230-1/SHA256SUMS.txt) · [آزمون‌ها](https://github.com/mrsad2615-creator/vodiwalker_panel/actions/runs/44416761230) · [راهنمای نصب](docs/11-install-fa.md)
+
+**Android 8.0+، ۳۲ و ۶۴ بیتی** · `46.1 MB` · بستهٔ جداگانهٔ `ai.dana.mrsad.compat`؛ نسخهٔ قبلی را لازم نیست حذف کنید. خواندن پیام با صدای فارسیِ نصب‌شده، بررسی محلی نشانه‌ها، OCR، فرمان و مسیرهای اختیاری آنلاین باقی‌اند. مدل‌های زبانیِ آفلاین Qwen و SmolLM2 در نسخهٔ سبک بسته‌بندی نشده‌اند.
+
 ## پیش‌نمایش ۰٫۱۰ · خواندن و تحلیل پیام
 
 **[دانلود مستقیم APK](https://github.com/mrsad2615-creator/vodiwalker_panel/releases/download/mrsad-preview-44388268486-1/mrsad-preview.apk)** · [فایل SHA-256](https://github.com/mrsad2615-creator/vodiwalker_panel/releases/download/mrsad-preview-44388268486-1/SHA256SUMS.txt) · [ساخت و آزمون‌ها](https://github.com/mrsad2615-creator/vodiwalker_panel/actions/runs/44388268486) · [راهنمای فارسی](docs/10-mrsad-fa.md)
@@ -55,3 +61,5 @@ python3 ci/bundled-models.py  # وزن‌ها با SHA-256 بررسی می‌ش�
 ```
 
 در Windows از `gradlew.bat` استفاده کنید. مسیر فایل دیباگ `app/build/outputs/apk/models/debug/app-models-debug.apk` است. برای `ai.dana` از **Generate Signed Bundle / APK** و کلید خصوصی انتشار خودتان استفاده کنید. `local.properties`، فایل امضا و کلید سرویس را commit نکنید. تنظیم [حساب ایمیلی اختیاری](docs/05-studio-fa.md) به یک پروژهٔ Supabase و SMTP عملیاتی نیاز دارد. هیچ متن یا کلیدی با ایمیل همگام نمی‌شود.
+
+برای ساخت نسخهٔ سبک، دانلود وزن‌ها لازم نیست: `./gradlew :app:assembleCompatDebug`. فایل خروجی آن `app/build/outputs/apk/compat/debug/app-compat-debug.apk` است؛ [آزمون‌های نصب و سازگاری](../.github/workflows/dana-android-compat.yml) جداگانه اجرا می‌شوند.

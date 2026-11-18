@@ -3,7 +3,30 @@ set -Eeuo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 
 fail() {
-  printf '::error title=Dana Android emulator::%s\n' "$1"
+  # This emulator is clean and receives only synthetic fixture text. Include the
+  # last visible nodes and crash buffer so a failure is actionable without job logs.
+  local summary
+  summary=$(python3 - "$snapshot" <<'PYTHON'
+import sys
+from xml.etree import ElementTree as ET
+
+try:
+    nodes = list(ET.parse(sys.argv[1]).iter('node'))
+    print('Packages: ' + ', '.join(sorted({node.get('package', '?') for node in nodes})))
+    labels = dict.fromkeys(text for node in nodes for attr in ('text', 'content-desc') if (text := node.get(attr)))
+    print('Visible: ' + ' | '.join(labels))
+except (OSError, ET.ParseError):
+    print('No current UI hierarchy.')
+PYTHON
+)
+  summary="$1"$'\n'"$summary"$'\n'
+  summary+="$(adb shell dumpsys window | grep -m 2 -E 'mCurrentFocus|mFocusedApp' || true)"$'\n'
+  summary+="$(adb logcat -b crash -d -t 28 | tail -c 2100 || true)"
+  summary=${summary:0:3900}
+  summary=${summary//%/%25}
+  summary=${summary//$'\r'/%0D}
+  summary=${summary//$'\n'/%0A}
+  printf '::error title=Dana Android emulator::%s\n' "$summary"
   exit 1
 }
 
@@ -41,25 +64,32 @@ for module, minimum in [('core/data', 7), ('app', 2)]:
     print(f'{len(cases)} Android tests in {module} executed successfully')
 PYTHON
 
-adb install -r app/build/outputs/apk/debug/app-debug.apk
 package=ai.dana.preview
 activity="$package/ai.dana.MainActivity"
+xml_path=/sdcard/dana-smoke.xml
+snapshot="$RUNNER_TEMP/dana-smoke.xml"
+# Use the precise bytes whose signature, native alignment and hash were checked.
+adb install -r "$RUNNER_TEMP/dana-verified/DANA-AI-preview.apk"
+adb shell input keyevent KEYCODE_WAKEUP
+adb shell wm dismiss-keyguard
 adb shell am force-stop "$package"
-start=$(adb shell am start -W -n "$activity" | tr -d '\r')
+start=$(adb shell am start -W -a android.intent.action.MAIN -c android.intent.category.LAUNCHER -n "$activity" | tr -d '\r')
 printf '%s\n' "$start"
 grep -q '^Status: ok$' <<< "$start" || fail 'The APK did not launch successfully.'
 
-xml_path=/sdcard/dana-smoke.xml
-snapshot="$RUNNER_TEMP/dana-smoke.xml"
-dump_ui() {
-  for attempt in 1 2 3; do
+await_ui() {
+  local expected="$1" message="$2" attempt
+  # am start -W returns after the first window, which can still be the splash
+  # screen. Wait for the required semantic text, not merely any hierarchy.
+  for attempt in 1 2 3 4 5; do
     adb shell rm -f "$xml_path"
-    if timeout 15s adb shell uiautomator dump "$xml_path" >/dev/null 2>&1 &&
-      adb exec-out cat "$xml_path" > "$snapshot" && [[ -s "$snapshot" ]]; then
+    if timeout 9s adb shell uiautomator dump "$xml_path" >/dev/null 2>&1 &&
+      adb exec-out cat "$xml_path" > "$snapshot" && grep -Fq "$expected" "$snapshot"; then
       return 0
     fi
+    sleep 1
   done
-  fail 'Cannot inspect the running Dana activity.'
+  fail "$message"
 }
 
 tap_text() {
@@ -84,33 +114,25 @@ PYTHON
   adb shell input tap "$x" "$y"
 }
 
-dump_ui
-grep -Fq 'میز کار دانا' "$snapshot" || fail 'The Studio home screen is missing.'
+await_ui 'میز کار دانا' 'The Studio home screen is missing.'
 tap_text 'مقایسه'
-dump_ui
-grep -Fq 'یک سؤال، چند پاسخ' "$snapshot" || fail 'The comparison screen did not open.'
-grep -Fq 'حالت کاملاً آفلاین روشن است' "$snapshot" || fail 'A clean install did not display the offline guard.'
+await_ui 'یک سؤال، چند پاسخ' 'The comparison screen did not open.'
+await_ui 'حالت کاملاً آفلاین روشن است' 'A clean install did not display the offline guard.'
 tap_text 'تنظیمات'
-dump_ui
-grep -Fq 'مرکز اتصال موتورها' "$snapshot" || fail 'The Engine Hub did not open.'
+await_ui 'مرکز اتصال موتورها' 'The Engine Hub did not open.'
 tap_text 'راه‌اندازی Gemini'
-dump_ui
-grep -Fq 'نشانی رسمی Gemini آماده است' "$snapshot" || fail 'The Gemini preset did not open.'
+await_ui 'نشانی رسمی Gemini آماده است' 'The Gemini preset did not open.'
 adb shell input keyevent KEYCODE_BACK
 
 # Use an incoming user share to fill the draft exactly as Android does. It must not send or save automatically.
 opened=$(adb shell "am start -W -n $activity -a android.intent.action.SEND -t text/plain --es android.intent.extra.TEXT 'note DANA_SMOKE_LOCAL'" | tr -d '\r')
 grep -q '^Status: ok$' <<< "$opened" || fail 'Shared text did not open Dana.'
-dump_ui
-grep -Fq 'DANA_SMOKE_LOCAL' "$snapshot" || fail 'The shared text did not appear in the editable composer.'
+await_ui 'DANA_SMOKE_LOCAL' 'The shared text did not appear in the editable composer.'
 tap_text 'بازبینی'
-dump_ui
-grep -Fq 'این کار را انجام دهیم؟' "$snapshot" || fail 'Local command bypassed or failed to open the review.'
+await_ui 'این کار را انجام دهیم؟' 'Local command bypassed or failed to open the review.'
 tap_text 'تأیید و اجرا'
-dump_ui
-grep -Fq 'یادداشت روی گوشی ذخیره شد' "$snapshot" || fail 'The approved offline note was not saved.'
+await_ui 'یادداشت روی گوشی ذخیره شد' 'The approved offline note was not saved.'
 tap_text 'یادداشت‌ها'
-dump_ui
-grep -Fq 'DANA_SMOKE_LOCAL' "$snapshot" || fail 'The approved offline note is absent from the notes repository.'
+await_ui 'DANA_SMOKE_LOCAL' 'The approved offline note is absent from the notes repository.'
 adb shell pidof "$package" >/dev/null || fail 'Dana terminated during the smoke test.'
 printf '\nDana APK installed, opened the Studio, showed the default offline guard, opened the Gemini preset, and saved an approved note while offline.\n'

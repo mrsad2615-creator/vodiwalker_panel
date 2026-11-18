@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Android 14/15 (targetSdk 35) Hardened Security & Privacy Manifest.
+    - ZERO android.permission.INTERNET (100% air-gapped on-device ML & automation).
+    - ZERO android.permission.SYSTEM_ALERT_WINDOW (uses scoped TYPE_ACCESSIBILITY_OVERLAY).
+    - ZERO android.permission.QUERY_ALL_PACKAGES (uses scoped <queries> intent filter).
+    - Explicit android:exported on all components + android:enableOnBackInvokedCallback="true".
+    - Cloud backup exclusion for local ML model weights via data_extraction_rules.xml.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- Optional hardware feature declarations so tablets/Chromebooks without flash stay eligible -->
+    <uses-feature
+        android:name="android.hardware.camera.flash"
+        android:required="false" />
+
+    <!-- Android 11–15 privacy-safe package visibility scoped exclusively to launchable apps -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+    </queries>
+
+    <application
+        android:name=".VodiGestureApplication"
+        android:allowBackup="true"
+        android:backupAgent="android.app.backup.BackupAgentHelper"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:enableOnBackInvokedCallback="true"
+        android:fullBackupContent="@xml/backup_rules"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        tools:targetApi="35">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- Protected strictly by signature system permission BIND_ACCESSIBILITY_SERVICE -->
+        <service
+            android:name="com.vodiwalker.gesture.service.accessibility.VodiGestureAccessibilityService"
+            android:description="@string/accessibility_service_description"
+            android:directBootAware="false"
+            android:exported="false"
+            android:label="@string/app_name"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/accessibility_service_config" />
+        </service>
+
+        <!-- Disable default WorkManager initializer in favor of Hilt Configuration.Provider -->
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="${applicationId}.androidx-startup"
+            android:exported="false"
+            tools:node="merge">
+            <meta-data
+                android:name="androidx.work.WorkManagerInitializer"
+                android:value="androidx.startup"
+                tools:node="remove" />
+        </provider>
+    </application>
+
+</manifest>

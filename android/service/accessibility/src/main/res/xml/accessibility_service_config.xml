@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Android 14/15 (API 34–35) Compliant AccessibilityService Configuration.
+    - Declares android:isAccessibilityTool="true" per Google Play Accessibility Policy.
+    - Minimal event scope: typeWindowStateChanged only (never captures keystrokes or text input).
+    - Enables hardware gesture synthesis (canPerformGestures="true") and interactive window awareness.
+-->
+<accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
+    android:accessibilityEventTypes="typeWindowStateChanged"
+    android:accessibilityFeedbackType="feedbackHaptic"
+    android:accessibilityFlags="flagDefault|flagRetrieveInteractiveWindows|flagReportViewIds"
+    android:canPerformGestures="true"
+    android:canRequestTouchExplorationMode="false"
+    android:canRetrieveWindowContent="true"
+    android:description="@string/accessibility_service_description"
+    android:isAccessibilityTool="true"
+    android:notificationTimeout="110"
+    android:settingsActivity="com.vodiwalker.gesture.MainActivity"
+    android:summary="@string/accessibility_service_summary" />

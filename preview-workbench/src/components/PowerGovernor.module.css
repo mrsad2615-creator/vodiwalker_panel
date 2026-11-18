@@ -1,0 +1,144 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 22px;
+  background: rgba(var(--vodi-glass-tint), calc(var(--vodi-glass-strength) * 0.8));
+  backdrop-filter: blur(24px) saturate(160%);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
+  border: 1px solid color-mix(in oklab, var(--md-sys-color-outline-variant) 55%, transparent);
+  border-radius: 28px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.header h2 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.mode {
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--md-sys-color-on-tertiary-container);
+  background: var(--md-sys-color-tertiary-container);
+}
+
+.reason {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  font-size: 0.8rem;
+  background: color-mix(in oklab, var(--md-sys-color-surface-container-high) 60%, transparent);
+  border: 1px solid transparent;
+  transition: border-color 160ms;
+}
+
+.toggle:has(input:checked) {
+  border-color: color-mix(in oklab, var(--md-sys-color-primary) 55%, transparent);
+}
+
+.toggle input {
+  accent-color: var(--md-sys-color-primary);
+}
+
+.sliderRow {
+  display: grid;
+  grid-template-columns: 84px 1fr auto;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.82rem;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.sliderRow input,
+.sliderRow select {
+  accent-color: var(--md-sys-color-primary);
+  width: 100%;
+  padding: 6px 10px;
+  border-radius: 10px;
+  font: inherit;
+  color: var(--md-sys-color-on-surface);
+  background: color-mix(in oklab, var(--md-sys-color-surface-container-high) 70%, transparent);
+  border: 1px solid color-mix(in oklab, var(--md-sys-color-outline-variant) 60%, transparent);
+}
+
+.bars {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.bar {
+  display: grid;
+  grid-template-columns: 150px 1fr 56px;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.78rem;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.track {
+  height: 9px;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--md-sys-color-outline-variant) 45%, transparent);
+  overflow: hidden;
+}
+
+.fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    var(--md-sys-color-primary),
+    var(--md-sys-color-tertiary)
+  );
+}
+
+.flags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.74rem;
+}
+
+.flags li {
+  padding: 6px 12px;
+  border-radius: 999px;
+  color: var(--md-sys-color-on-surface-variant);
+  background: color-mix(in oklab, var(--md-sys-color-surface-container-highest) 70%, transparent);
+  border: 1px dashed color-mix(in oklab, var(--md-sys-color-outline-variant) 70%, transparent);
+}
+
+.flags li[data-active='true'] {
+  border-style: solid;
+  border-color: color-mix(in oklab, var(--vodi-status-active) 65%, transparent);
+  color: var(--vodi-status-active);
+  background: color-mix(in oklab, var(--vodi-status-active) 12%, transparent);
+}

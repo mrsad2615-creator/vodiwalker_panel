@@ -1,0 +1,105 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 22px;
+  background: rgba(var(--vodi-glass-tint), calc(var(--vodi-glass-strength) * 0.8));
+  backdrop-filter: blur(24px) saturate(160%);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
+  border: 1px solid color-mix(in oklab, var(--md-sys-color-outline-variant) 55%, transparent);
+  border-radius: 28px;
+}
+
+.header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.header h2 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.count {
+  font-size: 0.74rem;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(212px, 1fr));
+  gap: 12px;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  border-radius: 20px;
+  background: color-mix(in oklab, var(--md-sys-color-surface-container-low) 76%, transparent);
+  border: 1px solid color-mix(in oklab, var(--md-sys-color-outline-variant) 40%, transparent);
+}
+
+.cardHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cardHead h3 {
+  margin: 0;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--vodi-status-active);
+  box-shadow: 0 0 12px color-mix(in oklab, var(--vodi-status-active) 80%, transparent);
+}
+
+.module {
+  font-family: 'JetBrains Mono', 'SFMono-Regular', ui-monospace, monospace;
+  font-size: 0.7rem;
+  color: var(--md-sys-color-primary);
+}
+
+.role {
+  margin: 0;
+  font-size: 0.76rem;
+  line-height: 1.45;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.metrics {
+  display: flex;
+  gap: 16px;
+  margin: 4px 0 0;
+}
+
+.metrics div {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.metrics dt {
+  font-size: 0.62rem;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.metrics dd {
+  margin: 0;
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--md-sys-color-on-surface);
+}

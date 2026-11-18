@@ -1,0 +1,145 @@
+.surface {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 22px;
+  background: rgba(var(--vodi-glass-tint), calc(var(--vodi-glass-strength) * 0.8));
+  backdrop-filter: blur(26px) saturate(165%);
+  -webkit-backdrop-filter: blur(26px) saturate(165%);
+  border: 1px solid color-mix(in oklab, var(--md-sys-color-outline-variant) 55%, transparent);
+  border-radius: 32px;
+  box-shadow: 0 30px 80px -32px rgba(0, 0, 0, 0.62);
+  overflow: hidden;
+}
+
+.hud {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.hudLabel {
+  margin: 0;
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.hudValue {
+  margin: 4px 0 0;
+  font-size: 1.6rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--md-sys-color-on-surface);
+}
+
+.metrics {
+  display: flex;
+  gap: 22px;
+  margin: 0;
+}
+
+.metrics div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.metrics dt {
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.metrics dd {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--md-sys-color-primary);
+}
+
+.svg {
+  width: 100%;
+  aspect-ratio: 720 / 420;
+  border-radius: 24px;
+  background: color-mix(in oklab, var(--md-sys-color-surface-container-low) 82%, transparent);
+  border: 1px solid color-mix(in oklab, var(--md-sys-color-outline-variant) 40%, transparent);
+  touch-action: none;
+  cursor: crosshair;
+}
+
+.canvasHint {
+  fill: var(--md-sys-color-on-surface-variant);
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.chips {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  min-height: 34px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 14px;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  color: var(--md-sys-color-on-tertiary-container);
+  background: color-mix(in oklab, var(--md-sys-color-tertiary-container) 88%, transparent);
+  border: 1px solid color-mix(in oklab, var(--md-sys-color-tertiary) 42%, transparent);
+}
+
+.chip strong {
+  color: var(--md-sys-color-tertiary);
+}
+
+.prewarm {
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--vodi-status-active);
+}
+
+.hint {
+  font-size: 0.82rem;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+.resetButton {
+  padding: 10px 20px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in oklab, var(--md-sys-color-outline) 55%, transparent);
+  background: transparent;
+  color: var(--md-sys-color-on-surface);
+  font-size: 0.85rem;
+  transition:
+    background 180ms cubic-bezier(0.2, 0, 0, 1),
+    transform 180ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+.resetButton:hover {
+  background: color-mix(in oklab, var(--md-sys-color-primary) 14%, transparent);
+}
+
+.resetButton:active {
+  transform: scale(0.97);
+}

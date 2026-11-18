@@ -1,0 +1,87 @@
+build:
+  maxIssues: 0
+  excludeCorrectable: false
+
+config:
+  validation: true
+  warningsAsErrors: true
+
+complexity:
+  CyclomaticComplexMethod:
+    active: true
+    threshold: 15
+  LongMethod:
+    active: true
+    threshold: 65
+  LongParameterList:
+    active: true
+    functionThreshold: 8
+    constructorThreshold: 10
+    ignoreAnnotated: ['Composable']
+  TooManyFunctions:
+    active: true
+    thresholdInFiles: 20
+    thresholdInClasses: 16
+
+coroutines:
+  active: true
+  GlobalCoroutineUsage:
+    active: true
+  InjectDispatcher:
+    active: true
+  RedundantSuspendModifier:
+    active: true
+  SleepInsteadOfDelay:
+    active: true
+  SuspendFunWithFlowReturnType:
+    active: true
+
+exceptions:
+  active: true
+  SwallowedException:
+    active: true
+  TooGenericExceptionCaught:
+    active: true
+    exceptionNames:
+      - Error
+      - RuntimeException
+      - Throwable
+
+naming:
+  FunctionNaming:
+    active: true
+    ignoreAnnotated: ['Composable']
+
+potential-bugs:
+  active: true
+  AvoidReferentialEquality:
+    active: true
+  CastToNullableType:
+    active: true
+  Deprecation:
+    active: true
+  DontDowncastCollectionTypes:
+    active: true
+  ImplicitUnitReturnType:
+    active: true
+
+style:
+  ForbiddenImport:
+    active: true
+    imports:
+      - value: 'androidx.compose.material.*'
+        reason: 'Strictly enforce Material Design 3 (androidx.compose.material3.*) only.'
+      - value: 'android.os.AsyncTask'
+        reason: 'Deprecated API; use Kotlin Coroutines with injected DispatcherProvider.'
+      - value: 'android.preference.*'
+        reason: 'Deprecated API; use Jetpack DataStore.'
+      - value: 'kotlinx.android.synthetic.*'
+        reason: 'Deprecated API; use Jetpack Compose.'
+  MagicNumber:
+    active: true
+    ignorePropertyDeclaration: true
+    ignoreCompanionObjectPropertyDeclaration: true
+    ignoreAnnotated: ['Composable']
+  MaxLineLength:
+    active: true
+    maxLineLength: 120

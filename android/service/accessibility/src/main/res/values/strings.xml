@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="accessibility_service_summary">One-handed custom gesture shortcuts and privacy-safe automation</string>
+    <string name="accessibility_service_description">VodiGesture helps users trigger system navigation, one-handed shortcuts, and app-specific Smart-Actions by drawing single or multi-stroke gestures from a floating edge handle. VodiGesture checks foreground window changes only to match app-specific rules and automatically pauses over passwords, lock screens, and sensitive Android 14+ views. Zero personal data or screen text is collected, stored, or transmitted.</string>
+</resources>

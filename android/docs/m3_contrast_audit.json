@@ -1,0 +1,390 @@
+{
+  "seed": "#5865F2",
+  "scheme": "SchemeTonalSpot",
+  "audits": [
+    {
+      "name": "Light (Standard)",
+      "allPass": true,
+      "rows": [
+        {
+          "pair": "onPrimary / primary",
+          "ratio": 6.43,
+          "target": 4.5,
+          "pass": true
+        },
+        {
+          "pair": "onPrimaryContainer / primaryContainer",
+          "ratio": 7.22,
+          "target": 4.5,
+          "pass": true
+        },
+        {
+          "pair": "onSecondary / secondary",
+          "ratio": 6.43,
+          "target": 4.5,
+          "pass": true
+        },
+        {
+          "pair": "onSecondaryContainer / secondaryContainer",
+          "ratio": 7.24,
+          "target": 4.5,
+          "pass": true
+        },
+        {
+          "pair": "onTertiary / tertiary",
+          "ratio": 6.47,
+          "target": 4.5,
+          "pass": true
+        },
+        {
+          "pair": "onTertiaryContainer / tertiaryContainer",
+          "ratio": 7.21,
+          "target": 4.5,
+          "pass": true
+        },
+        {
+          "pair": "onError / error",
+          "ratio": 6.46,
+          "target": 4.5,
+          "pass": true
+        },
+        {
+          "pair": "onErrorContainer / errorContainer",
+          "ratio": 7.24,
+          "target": 4.5,
+          "pass": true
+        },
+        {
+          "pair": "onBackground / background",
+          "ratio": 16.3,
+          "target": 4.5,
+          "pass": true
+        },
+        {
+          "pair": "onSurface / surface",
+          "ratio": 16.3,
+          "target": 4.5,
+          "pass": true
+        },
+        {
+          "pair": "onSurface / surfaceContainer",
+          "ratio": 14.76,
+          "target": 4.5,
+          "pass": true
+        },
+        {
+          "pair": "onSurface / surfaceContainerHigh",
+          "ratio": 14.02,
+          "target": 4.5,
+          "pass": true
+        },
+        {
+          "pair": "onSurfaceVariant / surface",
+          "ratio": 8.88,
+          "target": 4.5,
+          "pass": true
+        },
+        {
+          "pair": "outline / surface",
+          "ratio": 4.26,
+          "target": 3,
+          "pass": true
+        },
+        {
+          "pair": "inverseOnSurface / inverseSurface",
+          "ratio": 11.53,
+          "target": 4.5,
+          "pass": true
+        }
+      ]
+    },
+    {
+      "name": "Dark (Obsidian Cinema)",
+      "allPass": true,
+      "rows": [
+        {
+          "pair": "onPrimary / primary",
+          "ratio": 7.72,
+          "target": 4.5,
+          "pass": true
+        },
+        {
+          "pair": "onPrimaryContainer / primaryContainer",
+          "ratio": 7.22,
+          "target": 4.5,
+          "pass": true
+        },
+        {
+          "pair": "onSecondary / secondary",
+          "ratio": 7.69,
+          "target": 4.5,
+          "pass": true
+        },
+        {
+          "pair": "onSecondaryContainer / secondaryContainer",
+          "ratio": 7.24,
+          "target": 4.5,
+          "pass": true
+        },
+        {
+          "pair": "onTertiary / tertiary",
+          "ratio": 7.71,
+          "target": 4.5,
+          "pass": true
+        },
+        {
+          "pair": "onTertiaryContainer / tertiaryContainer",
+          "ratio": 7.21,
+          "target": 4.5,
+          "pass": true
+        },
+        {
+          "pair": "onError / error",
+          "ratio": 7.72,
+          "target": 4.5,
+          "pass": true
+        },
+        {
+          "pair": "onErrorContainer / errorContainer",
+          "ratio": 7.24,
+          "target": 4.5,
+          "pass": true
+        },
+        {
+          "pair": "onBackground / background",
+          "ratio": 14.33,
+          "target": 4.5,
+          "pass": true
+        },
+        {
+          "pair": "onSurface / surface",
+          "ratio": 14.33,
+          "target": 4.5,
+          "pass": true
+        },
+        {
+          "pair": "onSurface / surfaceContainer",
+          "ratio": 12.68,
+          "target": 4.5,
+          "pass": true
+        },
+        {
+          "pair": "onSurface / surfaceContainerHigh",
+          "ratio": 11.15,
+          "target": 4.5,
+          "pass": true
+        },
+        {
+          "pair": "onSurfaceVariant / surface",
+          "ratio": 10.87,
+          "target": 4.5,
+          "pass": true
+        },
+        {
+          "pair": "outline / surface",
+          "ratio": 5.87,
+          "target": 3,
+          "pass": true
+        },
+        {
+          "pair": "inverseOnSurface / inverseSurface",
+          "ratio": 10.14,
+          "target": 4.5,
+          "pass": true
+        }
+      ]
+    },
+    {
+      "name": "Dark (High-Contrast WCAG AAA)",
+      "allPass": true,
+      "rows": [
+        {
+          "pair": "onPrimary / primary",
+          "ratio": 18.38,
+          "target": 6.75,
+          "pass": true
+        },
+        {
+          "pair": "onPrimaryContainer / primaryContainer",
+          "ratio": 11.07,
+          "target": 6.75,
+          "pass": true
+        },
+        {
+          "pair": "onSecondary / secondary",
+          "ratio": 18.38,
+          "target": 6.75,
+          "pass": true
+        },
+        {
+          "pair": "onSecondaryContainer / secondaryContainer",
+          "ratio": 11.12,
+          "target": 6.75,
+          "pass": true
+        },
+        {
+          "pair": "onTertiary / tertiary",
+          "ratio": 18.44,
+          "target": 6.75,
+          "pass": true
+        },
+        {
+          "pair": "onTertiaryContainer / tertiaryContainer",
+          "ratio": 11.1,
+          "target": 6.75,
+          "pass": true
+        },
+        {
+          "pair": "onError / error",
+          "ratio": 18.43,
+          "target": 6.75,
+          "pass": true
+        },
+        {
+          "pair": "onErrorContainer / errorContainer",
+          "ratio": 11.08,
+          "target": 6.75,
+          "pass": true
+        },
+        {
+          "pair": "onBackground / background",
+          "ratio": 14.33,
+          "target": 6.75,
+          "pass": true
+        },
+        {
+          "pair": "onSurface / surface",
+          "ratio": 18.52,
+          "target": 6.75,
+          "pass": true
+        },
+        {
+          "pair": "onSurface / surfaceContainer",
+          "ratio": 13.11,
+          "target": 6.75,
+          "pass": true
+        },
+        {
+          "pair": "onSurface / surfaceContainerHigh",
+          "ratio": 11.12,
+          "target": 6.75,
+          "pass": true
+        },
+        {
+          "pair": "onSurfaceVariant / surface",
+          "ratio": 18.52,
+          "target": 6.75,
+          "pass": true
+        },
+        {
+          "pair": "outline / surface",
+          "ratio": 16.18,
+          "target": 4.5,
+          "pass": true
+        },
+        {
+          "pair": "inverseOnSurface / inverseSurface",
+          "ratio": 16.25,
+          "target": 6.75,
+          "pass": true
+        }
+      ]
+    },
+    {
+      "name": "Light (High-Contrast WCAG AAA)",
+      "allPass": true,
+      "rows": [
+        {
+          "pair": "onPrimary / primary",
+          "ratio": 13.91,
+          "target": 6.75,
+          "pass": true
+        },
+        {
+          "pair": "onPrimaryContainer / primaryContainer",
+          "ratio": 9.04,
+          "target": 6.75,
+          "pass": true
+        },
+        {
+          "pair": "onSecondary / secondary",
+          "ratio": 13.93,
+          "target": 6.75,
+          "pass": true
+        },
+        {
+          "pair": "onSecondaryContainer / secondaryContainer",
+          "ratio": 8.97,
+          "target": 6.75,
+          "pass": true
+        },
+        {
+          "pair": "onTertiary / tertiary",
+          "ratio": 13.92,
+          "target": 6.75,
+          "pass": true
+        },
+        {
+          "pair": "onTertiaryContainer / tertiaryContainer",
+          "ratio": 9.02,
+          "target": 6.75,
+          "pass": true
+        },
+        {
+          "pair": "onError / error",
+          "ratio": 14.01,
+          "target": 6.75,
+          "pass": true
+        },
+        {
+          "pair": "onErrorContainer / errorContainer",
+          "ratio": 8.98,
+          "target": 6.75,
+          "pass": true
+        },
+        {
+          "pair": "onBackground / background",
+          "ratio": 16.3,
+          "target": 6.75,
+          "pass": true
+        },
+        {
+          "pair": "onSurface / surface",
+          "ratio": 19.97,
+          "target": 6.75,
+          "pass": true
+        },
+        {
+          "pair": "onSurface / surfaceContainer",
+          "ratio": 16.25,
+          "target": 6.75,
+          "pass": true
+        },
+        {
+          "pair": "onSurface / surfaceContainerHigh",
+          "ratio": 14.2,
+          "target": 6.75,
+          "pass": true
+        },
+        {
+          "pair": "onSurfaceVariant / surface",
+          "ratio": 19.97,
+          "target": 6.75,
+          "pass": true
+        },
+        {
+          "pair": "outline / surface",
+          "ratio": 13.33,
+          "target": 4.5,
+          "pass": true
+        },
+        {
+          "pair": "inverseOnSurface / inverseSurface",
+          "ratio": 13.11,
+          "target": 6.75,
+          "pass": true
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,54 @@
+{
+  "stats": {
+    "kotlin_files": 39,
+    "main_files": 32,
+    "test_files": 6,
+    "android_test_files": 1,
+    "modules": 18,
+    "lines_of_kotlin": 10659
+  },
+  "byEngine": {
+    "DOC": {
+      "ERROR": 0,
+      "WARN": 0,
+      "INFO": 1
+    },
+    "MANIFEST": {
+      "ERROR": 0,
+      "WARN": 1,
+      "INFO": 1
+    }
+  },
+  "totals": {
+    "ERROR": 0,
+    "WARN": 1,
+    "INFO": 2
+  },
+  "findings": [
+    {
+      "engine": "MANIFEST",
+      "rule": "notification-permission",
+      "severity": "INFO",
+      "path": "android/app/src/main/AndroidManifest.xml",
+      "line": 1,
+      "message": "POST_NOTIFICATIONS declared; runtime flow required on API 33+."
+    },
+    {
+      "engine": "MANIFEST",
+      "rule": "window-content-overreach",
+      "severity": "WARN",
+      "path": "android/service/accessibility/src/main/res/xml/accessibility_service_config.xml",
+      "line": 1,
+      "message": "canRetrieveWindowContent should stay false unless semantic node actions are required."
+    },
+    {
+      "engine": "DOC",
+      "rule": "blocking-sleep",
+      "severity": "INFO",
+      "path": "android/core/common/src/main/kotlin/com/vodiwalker/gesture/core/common/ResiliencePrimitives.kt",
+      "line": 284,
+      "message": "Thread.sleep blocks the accessibility binder thread; use coroutine delay. \u2014 [ALLOW] Sleeper.BLOCKING is the single sanctioned blocking pause in the codebase: the AccessibilityService invokes graph execution on Dispatchers.Default (never main), interruption restores the thread flag, and all engines/tests consume the Sleeper port instead of Thread.sleep directly."
+    }
+  ],
+  "gatePassed": true
+}

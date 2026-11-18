@@ -1,0 +1,30 @@
+# Android / Gradle
+.gradle/
+**/build/
+local.properties
+*.apk
+*.aab
+*.ap_
+*.dex
+*.class
+*.hprof
+*.keystore
+*.jks
+captures/
+.externalNativeBuild/
+.cxx/
+.idea/
+*.iml
+
+# Web Workbench / Node
+node_modules/
+dist/
+.vite/
+coverage/
+
+# Python / Verification caches
+__pycache__/
+.pytest_cache/
+.hypothesis/
+*.pyc
+.DS_Store

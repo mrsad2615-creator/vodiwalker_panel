@@ -1,6 +1,7 @@
 package ai.dana.media
 
 import android.content.Context
+import android.os.Build
 import android.provider.MediaStore
 import androidx.core.content.IntentCompat
 import android.graphics.Bitmap
@@ -61,8 +62,9 @@ class OfflinePhotoTest {
             } finally { image.recycle() }
             assertTrue(output.hasContent())
             val bounded = FrameCodec.fromUri(context, output.uri)
-            assertEquals(1536, bounded.width)
-            assertEquals(1024, bounded.height)
+            // API 26–27 uses the bounded power-of-two BitmapFactory decoder, not ImageDecoder.
+            val expected = if (Build.VERSION.SDK_INT >= 28) 1536 to 1024 else 1050 to 700
+            assertEquals(expected, bounded.width to bounded.height)
         } finally { output.discard(context) }
         assertFalse(output.hasContent())
     }

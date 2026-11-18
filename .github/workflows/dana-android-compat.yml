@@ -88,6 +88,8 @@ jobs:
         with:
           api-level: 26
           arch: x86
+          avd-name: mrsad-compat-26-x86
+          emulator-port: 5554
           target: default
           profile: pixel_2
           emulator-boot-timeout: 240
@@ -104,6 +106,8 @@ jobs:
         with:
           api-level: 35
           arch: x86_64
+          avd-name: mrsad-compat-35-x86-64
+          emulator-port: 5556
           target: default
           profile: pixel_2
           emulator-boot-timeout: 220

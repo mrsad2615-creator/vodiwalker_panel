@@ -35,10 +35,13 @@ adb_run shell input keyevent KEYCODE_WAKEUP || true
 adb_run shell wm dismiss-keyguard || true
 # Install the same signed APK for both API levels, before installing the separate test APK.
 ADB_LIMIT=70s adb_run install -r "$apk" 2>&1 | tee -a "$log" | grep -q '^Success' || fail 'App could not be installed'
+printf '::notice title=mrsad APK installed::Package Manager accepted the signed APK on API %s (%s).\n' "$api" "$abi"
+# Launch the unmodified APK before loading Hilt's test application.
+ADB_LIMIT=50s adb_run shell am start -W -n "$package/ai.dana.MainActivity" 2>&1 | tee -a "$log" | grep -q '^Status: ok' || fail 'MainActivity did not start'
+adb_run shell am force-stop "$package" >> "$log" 2>&1 || fail 'Could not reset process before instrumentation'
 ADB_LIMIT=70s adb_run install -r -t "$test_apk" 2>&1 | tee -a "$log" | grep -q '^Success' || fail 'Test APK could not be installed'
 # Do not rely on shell privileges to change Wi-Fi or airplane mode on Android 8.
 # The message test uses the app's offline mode and asserts zero requests with an isolated transport.
-printf '::notice title=mrsad APK installed::Package Manager accepted the signed APK on API %s (%s).\n' "$api" "$abi"
 classes='ai.dana.ui.CompatibilityInstallTest,ai.dana.media.OfflinePhotoTest'
 if ! ADB_LIMIT=200s adb_run shell am instrument -w -e class "$classes" -e expectedApi "$api" -e expected64Bit "$expected64" \
     "$package.test/ai.dana.WorkspaceTestRunner" 2>&1 | tee -a "$log"; then

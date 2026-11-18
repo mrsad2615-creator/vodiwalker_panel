@@ -118,6 +118,7 @@ class AegisOfflineE2ETest {
         // 4. Phishing Analyzer & Password Lab
         composeRule.onNodeWithText("Phishing").performClick()
         composeRule.waitForIdle()
+        composeRule.onNodeWithTag("ai_tab_lazy_list").performScrollToNode(hasText("MALICIOUS PHISHING", substring = true))
         composeRule.onAllNodesWithText("MALICIOUS PHISHING", substring = true).onFirst().assertIsDisplayed()
         composeRule.onNodeWithContentDescription("Back").performClick()
         composeRule.waitForIdle()

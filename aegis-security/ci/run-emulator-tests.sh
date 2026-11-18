@@ -51,12 +51,16 @@ for mod in ['core/database', 'app']:
     print(f"Verified {len(cases)} passing Android instrumentation test(s) in {mod}")
 PYTHON
 
-mark "Installing app-debug.apk and launching MainActivity in Airplane Mode for screenshot & logcat check"
+mark "Installing signed app-release.apk and launching MainActivity in Airplane Mode for screenshot & logcat check"
 mkdir -p screenshots
-adb install -r app/build/outputs/apk/debug/app-debug.apk
+adb uninstall ir.aegis.security >/dev/null 2>&1 || true
+adb install -r app/build/outputs/apk/release/app-release.apk
 adb shell am start -W -n ir.aegis.security/ir.aegis.app.MainActivity
 sleep 3
 adb exec-out screencap -p > screenshots/home_airplane_mode.png || true
+adb shell input tap 108 1820 || true
+sleep 2
+adb exec-out screencap -p > screenshots/map_airplane_mode.png || true
 adb logcat -d -s AndroidRuntime:E | tee screenshots/crash_log.txt || true
 if grep -q "FATAL EXCEPTION" screenshots/crash_log.txt; then
   mark "FATAL EXCEPTION in logcat"

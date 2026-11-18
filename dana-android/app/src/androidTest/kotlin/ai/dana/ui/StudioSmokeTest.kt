@@ -3,22 +3,19 @@ package ai.dana.ui
 import ai.dana.MainActivity
 import ai.dana.R
 import android.content.Intent
-import android.graphics.Bitmap
 import android.os.Bundle
+import android.os.ParcelFileDescriptor
 import android.view.KeyEvent
 import androidx.annotation.StringRes
-import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
-import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextReplacement
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -63,9 +60,11 @@ class StudioSmokeTest {
         capture("engines")
         click(R.string.engine_add_free)
         visible("openrouter/free")
+        trace("Free editor opened")
         enter(R.string.engine_openrouter_key_label, "sk-or-v1-dana-ci-offline-fixture")
         click(R.string.engine_free_save)
         visible(R.string.engine_saved)
+        trace("Free engine stored offline")
 
         click(R.string.tab_home)
         click(R.string.tab_compare)
@@ -119,10 +118,14 @@ class StudioSmokeTest {
     }
 
     private fun capture(name: String) {
+        compose.waitForIdle()
         trace("Capture $name")
         val directory = File(context.filesDir, "ci-screens").apply { mkdirs() }
-        File(directory, "$name.png").outputStream().use { output ->
-            assertTrue(compose.onRoot().captureToImage().asAndroidBitmap().compress(Bitmap.CompressFormat.PNG, 100, output))
+        val capture = InstrumentationRegistry.getInstrumentation().uiAutomation.executeShellCommand("screencap -p")
+        // Capture the actual screen. PixelCopy on Compose windows destabilized the headless emulator.
+        ParcelFileDescriptor.AutoCloseInputStream(capture).use { input ->
+            File(directory, "$name.png").outputStream().use { output -> assertTrue(input.copyTo(output) > 24) }
         }
+        trace("Captured $name")
     }
 }

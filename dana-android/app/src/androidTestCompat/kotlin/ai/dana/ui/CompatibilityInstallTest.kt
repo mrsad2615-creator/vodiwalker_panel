@@ -9,10 +9,10 @@ import ai.dana.localai.DeviceModels
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.ConnectivityManager
 import android.os.BatteryManager
 import android.os.Build
 import android.os.Process
-import android.provider.Settings
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
@@ -76,7 +76,8 @@ class CompatibilityInstallTest {
     }
 
     @Test fun sharesTextIntoIsolatedLocalReviewWithoutModelsAccountOrMic() {
-        assertEquals(1, Settings.Global.getInt(context.contentResolver, Settings.Global.AIRPLANE_MODE_ON))
+        val connectivity = checkNotNull(context.getSystemService(ConnectivityManager::class.java))
+        compose.waitUntil(timeoutMillis = 15_000) { connectivity.activeNetwork == null }
         val source = "گزارش را فردا ساعت ۱۸:۳۰ آماده کنید."
         val share = Intent(Intent.ACTION_SEND).setType("text/plain").setPackage(context.packageName).putExtra(Intent.EXTRA_TEXT, source)
         val handlers = context.packageManager.queryIntentActivities(share, PackageManager.MATCH_DEFAULT_ONLY)

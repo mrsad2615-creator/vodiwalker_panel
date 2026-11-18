@@ -30,21 +30,16 @@ PY
 [[ "$(adb_run shell getprop ro.product.cpu.abi | tr -d '\r')" == "$abi" ]] || fail 'Unexpected emulator ABI'
 [[ -s "$apk" && -s "$test_apk" ]] || fail "Missing $apk or $test_apk"
 if [[ "$abi" == x86_64 ]]; then expected64=true; else expected64=false; fi
-adb_run shell svc power stayon true
+adb_run shell svc power stayon true >> "$log" 2>&1 || fail 'Could not keep the screen awake'
 adb_run shell input keyevent KEYCODE_WAKEUP || true
 adb_run shell wm dismiss-keyguard || true
-if (( api >= 30 )); then
-  adb_run shell cmd connectivity airplane-mode enable
-else
-  adb_run shell settings put global airplane_mode_on 1
-  adb_run shell am broadcast -a android.intent.action.AIRPLANE_MODE --ez state true >> "$log" 2>&1
-fi
-adb_run shell svc wifi disable
-adb_run shell svc data disable
-[[ "$(adb_run shell settings get global airplane_mode_on | tr -d '\r')" == 1 ]] || fail 'Airplane mode was not enabled'
 # Install the same signed APK for both API levels, before installing the separate test APK.
 ADB_LIMIT=70s adb_run install -r "$apk" 2>&1 | tee -a "$log" | grep -q '^Success' || fail 'App could not be installed'
 ADB_LIMIT=70s adb_run install -r -t "$test_apk" 2>&1 | tee -a "$log" | grep -q '^Success' || fail 'Test APK could not be installed'
+# Older Android rejects the protected AIRPLANE_MODE broadcast made by the shell.
+# Turn off the two radios directly on both versions; the test checks actual connectivity.
+adb_run shell svc wifi disable >> "$log" 2>&1 || fail 'Could not disable Wi-Fi on the test emulator'
+adb_run shell svc data disable >> "$log" 2>&1 || fail 'Could not disable mobile data on the test emulator'
 classes='ai.dana.ui.CompatibilityInstallTest,ai.dana.media.OfflinePhotoTest'
 if ! ADB_LIMIT=200s adb_run shell am instrument -w -e class "$classes" -e expectedApi "$api" -e expected64Bit "$expected64" \
     "$package.test/ai.dana.WorkspaceTestRunner" 2>&1 | tee -a "$log"; then

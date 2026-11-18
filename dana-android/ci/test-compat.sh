@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+cd "$(dirname "${BASH_SOURCE[0]}")/.."
+
+api="$1"
+abi="$2"
+package=ai.dana.mrsad.compat
+apk="$RUNNER_TEMP/dana-compat/mrsad-lite.apk"
+test_apk="$PWD/app/build/outputs/apk/androidTest/compat/debug/app-compat-debug-androidTest.apk"
+log="$RUNNER_TEMP/dana-compat-$api.log"
+
+adb_run() { timeout --kill-after=3s "${ADB_LIMIT:-30s}" adb "$@"; }
+: > "$log"
+fail() {
+  printf '%s\n' "$1" >> "$log"
+  adb_run logcat -b crash -d -t 24 >> "$log" 2>&1 || true
+  python3 - "$log" "$api" <<'PY'
+import sys
+from pathlib import Path
+lines = Path(sys.argv[1]).read_text(errors="replace").splitlines()
+important = [line for line in lines if any(s in line for s in ('Failure [', 'Error', 'Exception', 'ai.dana.', 'FAILURES', 'Tests run', 'OK ('))]
+text = '\n'.join(dict.fromkeys(important[-36:] + lines[-8:]))[:5100]
+text = text.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
+print(f'::error title=Android API {sys.argv[2]} compatibility::{text}')
+PY
+  exit 1
+}
+
+[[ "$(adb_run shell getprop ro.build.version.sdk | tr -d '\r')" == "$api" ]] || fail 'Unexpected Android version'
+[[ "$(adb_run shell getprop ro.product.cpu.abi | tr -d '\r')" == "$abi" ]] || fail 'Unexpected emulator ABI'
+[[ -s "$apk" && -s "$test_apk" ]] || fail "Missing $apk or $test_apk"
+if [[ "$abi" == x86_64 ]]; then expected64=true; else expected64=false; fi
+adb_run shell svc power stayon true
+adb_run shell input keyevent KEYCODE_WAKEUP || true
+adb_run shell wm dismiss-keyguard || true
+if (( api >= 30 )); then
+  adb_run shell cmd connectivity airplane-mode enable
+else
+  adb_run shell settings put global airplane_mode_on 1
+  adb_run shell am broadcast -a android.intent.action.AIRPLANE_MODE --ez state true >> "$log" 2>&1
+fi
+adb_run shell svc wifi disable
+adb_run shell svc data disable
+[[ "$(adb_run shell settings get global airplane_mode_on | tr -d '\r')" == 1 ]] || fail 'Airplane mode was not enabled'
+# Install the same signed APK for both API levels, before installing the separate test APK.
+ADB_LIMIT=70s adb_run install -r "$apk" 2>&1 | tee -a "$log" | grep -q '^Success' || fail 'App could not be installed'
+ADB_LIMIT=70s adb_run install -r -t "$test_apk" 2>&1 | tee -a "$log" | grep -q '^Success' || fail 'Test APK could not be installed'
+classes='ai.dana.ui.CompatibilityInstallTest,ai.dana.media.OfflinePhotoTest'
+if ! ADB_LIMIT=200s adb_run shell am instrument -w -e class "$classes" -e expectedApi "$api" -e expected64Bit "$expected64" \
+    "$package.test/ai.dana.WorkspaceTestRunner" 2>&1 | tee -a "$log"; then
+  fail 'Instrumentation command failed'
+fi
+if ! grep -Eq '^OK \(5 tests\)' "$log" || grep -Eq 'FAILURES!!!|INSTRUMENTATION_(FAILED|ABORTED)' "$log"; then
+  fail 'Expected five passing compatibility tests'
+fi
+printf '::notice title=mrsad compatible APK::Same signed APK installed and passed five tests on Android API %s (%s), including native OCR and offline message review.\n' "$api" "$abi"

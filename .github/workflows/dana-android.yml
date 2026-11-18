@@ -56,7 +56,7 @@ jobs:
       - name: Test, lint and assemble
         shell: bash
         run: |
-          if ./gradlew --no-daemon --console=plain :core:domain:test :core:data:testDebugUnitTest :core:data:lintDebug :core:data:assembleDebugAndroidTest :app:lintDebug :app:assembleDebug :app:assembleDebugAndroidTest :app:assembleRelease 2>&1 | tee "$RUNNER_TEMP/dana-gradle.log"; then
+          if ./gradlew --no-daemon --console=plain :core:domain:test :core:data:testDebugUnitTest :core:data:lintDebug :core:data:assembleDebugAndroidTest :app:lintModelsDebug :app:assembleModelsDebug :app:assembleModelsDebugAndroidTest :app:assembleModelsRelease 2>&1 | tee "$RUNNER_TEMP/dana-gradle.log"; then
             exit 0
           fi
           python3 - "$RUNNER_TEMP/dana-gradle.log" <<'PYTHON'
@@ -70,7 +70,7 @@ jobs:
                   diagnostics.extend(lines[index:index + 13])
               if ' > ' in line and 'FAILED' in line:
                   diagnostics.extend(lines[index:index + 4])
-          for report in Path('.').glob('**/build/reports/lint-results-debug.txt'):
+          for report in Path('.').glob('**/build/reports/lint-results-*.txt'):
               diagnostics.extend(line for line in report.read_text(errors='replace').splitlines() if 'Error:' in line)
           message = '\n'.join(dict.fromkeys(diagnostics or lines[-30:]))[:6200]
           message = message.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
@@ -114,7 +114,7 @@ jobs:
           PYTHON
           mkdir -p "$RUNNER_TEMP/dana-verified"
           apk="$RUNNER_TEMP/dana-verified/mrsad-preview.apk"
-          cp app/build/outputs/apk/debug/app-debug.apk "$apk"
+          cp app/build/outputs/apk/models/debug/app-models-debug.apk "$apk"
           tools="$ANDROID_HOME/build-tools/36.0.0"
           cmp LICENSE app/src/main/assets/licenses/mrsad-MIT.txt
           "$tools/apksigner" verify --verbose --print-certs "$apk"

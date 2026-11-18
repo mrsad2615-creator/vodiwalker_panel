@@ -4,7 +4,7 @@ cd "$(dirname "${BASH_SOURCE[0]}")/.."
 
 package=ai.dana.mrsad.models
 apk="$RUNNER_TEMP/dana-verified/mrsad-preview.apk"
-test_apk="$PWD/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk"
+test_apk="$PWD/app/build/outputs/apk/androidTest/models/debug/app-models-debug-androidTest.apk"
 test_package="$package.test"
 log="$RUNNER_TEMP/dana-instrumentation.log"
 

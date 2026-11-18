@@ -49,9 +49,9 @@ cd dana-android
 sdkmanager --licenses
 sdkmanager 'platforms;android-36' 'build-tools;36.0.0' 'platform-tools'
 python3 ci/bundled-models.py  # وزن‌ها با SHA-256 بررسی می‌شوند؛ در Git ذخیره نمی‌شوند
-./gradlew --no-daemon :core:domain:test :core:data:testDebugUnitTest :core:data:lintDebug :app:lintDebug :app:assembleDebug :app:assembleRelease
-./gradlew :app:installDebug
-./gradlew :core:data:connectedDebugAndroidTest :app:connectedDebugAndroidTest
+./gradlew --no-daemon :core:domain:test :core:data:testDebugUnitTest :core:data:lintDebug :app:lintModelsDebug :app:assembleModelsDebug :app:assembleModelsRelease
+./gradlew :app:installModelsDebug
+./gradlew :core:data:connectedDebugAndroidTest :app:connectedModelsDebugAndroidTest
 ```
 
-در Windows از `gradlew.bat` استفاده کنید. مسیر فایل دیباگ `app/build/outputs/apk/debug/app-debug.apk` است. برای `ai.dana` از **Generate Signed Bundle / APK** و کلید خصوصی انتشار خودتان استفاده کنید. `local.properties`، فایل امضا و کلید سرویس را commit نکنید. تنظیم [حساب ایمیلی اختیاری](docs/05-studio-fa.md) به یک پروژهٔ Supabase و SMTP عملیاتی نیاز دارد. هیچ متن یا کلیدی با ایمیل همگام نمی‌شود.
+در Windows از `gradlew.bat` استفاده کنید. مسیر فایل دیباگ `app/build/outputs/apk/models/debug/app-models-debug.apk` است. برای `ai.dana` از **Generate Signed Bundle / APK** و کلید خصوصی انتشار خودتان استفاده کنید. `local.properties`، فایل امضا و کلید سرویس را commit نکنید. تنظیم [حساب ایمیلی اختیاری](docs/05-studio-fa.md) به یک پروژهٔ Supabase و SMTP عملیاتی نیاز دارد. هیچ متن یا کلیدی با ایمیل همگام نمی‌شود.

@@ -9,7 +9,7 @@ import subprocess
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
-CATALOG = ROOT / 'app/src/main/assets/models/catalog.json'
+CATALOG = ROOT / 'app/src/models/assets/models/catalog.json'
 DEST = ROOT / 'app/build/bundled-assets/models'
 
 

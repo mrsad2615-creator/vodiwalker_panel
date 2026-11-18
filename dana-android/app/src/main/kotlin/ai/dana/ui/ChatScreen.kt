@@ -146,7 +146,7 @@ private fun Dialogue(
     val isTeam = chat.teamIds.isNotEmpty()
     val deviceModel = (chat.destination as? ChatDestination.Local)?.model?.takeUnless { isTeam }
     val profileId = when (val destination = chat.destination) {
-        is ChatDestination.Local -> null
+        is ChatDestination.Local, ChatDestination.Unselected -> null
         is ChatDestination.Saved -> destination.profileId
         is ChatDestination.OnlineFree -> destination.profileId
     }

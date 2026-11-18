@@ -648,4 +648,8 @@
     <string name="message_outbound">متن دقیق ارسالی</string>
     <string name="message_instruction">دستور ثابت تحلیل</string>
     <string name="message_send_once">ارسال همین متن، یک‌بار</string>
+    <string name="models_compat_summary">این نسخهٔ سبک مدل زبانیِ آفلاین ندارد. برای گفتگو، یک موتور آنلاین انتخاب کنید. بررسی متن، خواندن با صدای نصب‌شده و ابزارهای گوشی جداگانه کار می‌کنند.</string>
+    <string name="models_compat_pick">انتخاب مدل آنلاین برای گفتگو</string>
+    <string name="message_compat_scan">بررسی نشانه‌های پیام روی گوشی</string>
+    <string name="message_compat_explain">ساعت، پیوند و اشاره به رمز با الگوهای روی گوشی بررسی شدند. نسخهٔ سبک مدل زبانیِ آفلاین ندارد؛ هیچ متنی ارسال نشد.</string>
 </resources>

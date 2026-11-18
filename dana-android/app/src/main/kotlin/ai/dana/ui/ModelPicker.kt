@@ -6,6 +6,7 @@ import ai.dana.domain.ProviderProtocol
 import ai.dana.domain.RouterFreeModel
 import ai.dana.domain.acceptsCredential
 import ai.dana.localai.DeviceModel
+import ai.dana.localai.DeviceModels
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -41,14 +42,15 @@ internal fun ReadyModels(
 ) {
     GlassCard(Modifier.fillMaxWidth()) {
         Text(stringResource(R.string.workspace_chat_title), style = MaterialTheme.typography.headlineSmall)
-        Text(stringResource(R.string.models_first_launch), style = MaterialTheme.typography.bodyMedium, color = Titanium)
-        Column(Modifier.fillMaxWidth().selectableGroup()) {
+        Text(stringResource(if (DeviceModels.BUNDLED) R.string.models_first_launch else R.string.models_compat_summary),
+            style = MaterialTheme.typography.bodyMedium, color = Titanium)
+        if (DeviceModels.BUNDLED) Column(Modifier.fillMaxWidth().selectableGroup()) {
             DeviceModel.entries.forEach { model ->
                 LocalModelRow(model, bundled, selected == ChatDestination.Local(model), enabled, onSelect)
             }
         }
         OutlinedButton(onClick = onMore, enabled = enabled, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
-            Text(stringResource(R.string.models_online_browse))
+            Text(stringResource(if (DeviceModels.BUNDLED) R.string.models_online_browse else R.string.models_compat_pick))
         }
     }
 }
@@ -65,12 +67,14 @@ internal fun ModelPicker(
     val models = listOf(RouterFreeModel.Automatic) + (catalog as? Reading.Ready)?.value.orEmpty()
     AlertDialog(onDismissRequest = dismiss, title = { Text(stringResource(R.string.models_picker)) }, text = {
         LazyColumn(Modifier.fillMaxWidth().heightIn(max = 474.dp).testTag("model-picker-list").selectableGroup(), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-            item { GroupTitle(R.string.models_device) }
-            items(DeviceModel.entries, key = { it.id }) { model ->
-                LocalModelRow(model, bundled, selected == ChatDestination.Local(model), true) { choose(ChatDestination.Local(it)) }
+            if (DeviceModels.BUNDLED) {
+                item { GroupTitle(R.string.models_device) }
+                items(DeviceModel.entries, key = { it.id }) { model ->
+                    LocalModelRow(model, bundled, selected == ChatDestination.Local(model), true) { choose(ChatDestination.Local(it)) }
+                }
+                item { HorizontalDivider(Modifier.padding(vertical = 5.dp)) }
             }
             item {
-                HorizontalDivider(Modifier.padding(vertical = 5.dp))
                 GroupTitle(R.string.models_online_title)
                 Text(stringResource(R.string.models_online_help), style = MaterialTheme.typography.bodySmall, color = Titanium)
             }

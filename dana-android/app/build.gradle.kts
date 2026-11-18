@@ -13,10 +13,26 @@ android {
         applicationId = "ai.dana"
         minSdk = libs.versions.min.sdk.get().toInt()
         targetSdk = libs.versions.compile.sdk.get().toInt()
-        ndk { abiFilters.addAll(listOf("arm64-v8a", "x86_64")) }
         testInstrumentationRunner = "ai.dana.WorkspaceTestRunner"
-        versionCode = 10
-        versionName = "0.10.0"
+    }
+
+    flavorDimensions += "edition"
+    productFlavors {
+        create("models") {
+            dimension = "edition"
+            versionCode = 10
+            versionName = "0.10.0"
+            ndk { abiFilters.addAll(listOf("arm64-v8a", "x86_64")) }
+            proguardFiles("proguard-models.pro")
+        }
+        create("compat") {
+            dimension = "edition"
+            // A new app ID can install alongside older, differently signed previews.
+            applicationId = "ai.dana.mrsad.compat"
+            versionCode = 11
+            versionName = "0.10.1-compat"
+            ndk { abiFilters.addAll(listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")) }
+        }
     }
 
     compileOptions {
@@ -24,7 +40,7 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    sourceSets.getByName("main").assets.srcDir(layout.buildDirectory.dir("bundled-assets").get().asFile)
+    sourceSets.getByName("models").assets.srcDir(layout.buildDirectory.dir("bundled-assets").get().asFile)
     androidResources { noCompress.add("litertlm") }
 
     buildFeatures {
@@ -33,8 +49,6 @@ android {
 
     buildTypes {
         debug {
-            // Side-by-side with older debug APKs, whose signing key may differ.
-            applicationIdSuffix = ".mrsad.models"
             versionNameSuffix = "-preview"
         }
         release {
@@ -43,6 +57,11 @@ android {
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
+}
+
+androidComponents.onVariants(androidComponents.selector().withBuildType("debug").withFlavor("edition" to "models")) { variant ->
+    // Preserve both the previously published models preview ID and the signed release ID.
+    variant.applicationId.set("ai.dana.mrsad.models")
 }
 
 hilt {
@@ -64,7 +83,7 @@ dependencies {
     implementation(libs.coroutines.android)
     implementation(libs.hilt.android)
     implementation(libs.tesseract.android)
-    implementation(libs.litertlm.android)
+    add("modelsImplementation", libs.litertlm.android)
     androidTestImplementation(libs.androidx.test.core)
     androidTestImplementation(libs.okhttp.client)
     androidTestImplementation(libs.hilt.android.testing)

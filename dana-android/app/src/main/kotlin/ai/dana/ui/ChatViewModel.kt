@@ -110,7 +110,7 @@ internal data class ChatState(
     val running: Boolean = false,
     val writing: Boolean = false,
     val options: ChatOptions = ChatOptions(),
-    val destination: ChatDestination = ChatDestination.Local(DeviceModel.QWEN),
+    val destination: ChatDestination = if (DeviceModels.BUNDLED) ChatDestination.Local(DeviceModel.QWEN) else ChatDestination.Unselected,
     val teamIds: Set<String> = emptySet(),
     val team: TeamTurn? = null,
     @StringRes val preparation: Int? = null,
@@ -272,7 +272,7 @@ internal class ChatViewModel @Inject constructor(
                 is ChatDestination.Saved -> ChatRoute.direct(input, profiles, selected.profileId, null)
                 is ChatDestination.OnlineFree -> profiles.singleOrNull { it.id == selected.profileId }
                     ?.let { ChatRoute.routerFree(input, it, selected.model) }
-                is ChatDestination.Local -> null
+                is ChatDestination.Local, ChatDestination.Unselected -> null
             }
             if (route == null) {
                 error(when {

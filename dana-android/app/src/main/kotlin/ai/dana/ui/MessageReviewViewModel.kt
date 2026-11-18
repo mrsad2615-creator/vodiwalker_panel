@@ -101,6 +101,7 @@ internal class MessageReviewViewModel @Inject constructor(
     @MainThread fun local() {
         val message = currentMessage() ?: return
         val notice = when {
+            !DeviceModels.BUNDLED -> R.string.message_compat_explain
             !message.fitsLocalModel -> R.string.message_model_limit
             !localReady.value -> R.string.message_model_unavailable
             else -> null

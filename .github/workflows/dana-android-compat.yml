@@ -1,0 +1,162 @@
+name: mrsad Android compatibility
+
+on:
+  push:
+    paths:
+      - 'dana-android/**'
+      - '.github/workflows/dana-android-compat.yml'
+  pull_request:
+    paths:
+      - 'dana-android/**'
+      - '.github/workflows/dana-android-compat.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dana-android-compat-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    outputs:
+      sha256: ${{ steps.verify.outputs.sha256 }}
+    defaults:
+      run:
+        working-directory: dana-android
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@7296c772c13d12d9871528814b51fb2143c138ef # v6.4.1
+        with:
+          cache-read-only: ${{ github.event_name != 'push' }}
+      - name: Verify platform and build tools
+        shell: bash
+        run: |
+          sdk="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
+          if [[ ! -f "$sdk/platforms/android-36/android.jar" || ! -x "$sdk/build-tools/36.0.0/apksigner" ]]; then
+            manager="$(find "$sdk/cmdline-tools" -name sdkmanager -type f 2>/dev/null | sort -V | tail -n 1)"
+            "$manager" --sdk_root="$sdk" 'platforms;android-36' 'build-tools;36.0.0'
+          fi
+          printf 'ANDROID_HOME=%s\n' "$sdk" >> "$GITHUB_ENV"
+      - name: Build and lint the light APK without downloading model weights
+        shell: bash
+        run: |
+          if ./gradlew --no-daemon --console=plain :app:lintCompatDebug :app:assembleCompatDebug :app:assembleCompatDebugAndroidTest 2>&1 | tee "$RUNNER_TEMP/dana-compat-gradle.log"; then
+            exit 0
+          fi
+          python3 - "$RUNNER_TEMP/dana-compat-gradle.log" <<'PY'
+          import sys
+          from pathlib import Path
+          lines = Path(sys.argv[1]).read_text(errors='replace').splitlines()
+          diagnostics = [line for line in lines if line.lstrip().startswith(('e:', 'Caused by:', '* What went wrong')) or 'Error:' in line or 'FAILED' in line]
+          for index, line in enumerate(lines):
+              if line.startswith(('* What went wrong:', '* Where:')):
+                  diagnostics.extend(lines[index:index + 12])
+          message = '\n'.join(dict.fromkeys(diagnostics or lines[-24:]))[:5300]
+          print('::error title=Compatibility Gradle build::' + message.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A'))
+          PY
+          exit 1
+      - name: Verify Android 8 SDK floor, APK signatures, size and four ABIs
+        id: verify
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/dana-compat"
+          apk="$RUNNER_TEMP/dana-compat/mrsad-lite.apk"
+          cp app/build/outputs/apk/compat/debug/app-compat-debug.apk "$apk"
+          tools="$ANDROID_HOME/build-tools/36.0.0"
+          "$tools/apksigner" verify --min-sdk-version 26 --verbose --print-certs "$apk"
+          "$tools/zipalign" -c -P 16 4 "$apk"
+          python3 ci/check-native-alignment.py "$apk" --edition compat
+          badging=$("$tools/aapt" dump badging "$apk")
+          grep -Fq "package: name='ai.dana.mrsad.compat' versionCode='11' versionName='0.10.1-compat-preview'" <<< "$badging"
+          grep -Fxq "sdkVersion:'26'" <<< "$badging"
+          printf 'sha256=%s\n' "$(sha256sum "$apk" | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+      - name: Enable KVM for compatibility tests
+        run: test -c /dev/kvm && sudo chmod a+rw /dev/kvm
+      - name: Install and run the exact APK on Android 8 (32-bit x86)
+        timeout-minutes: 8
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
+        with:
+          api-level: 26
+          arch: x86
+          target: default
+          profile: pixel_2
+          emulator-boot-timeout: 240
+          emulator-options: >-
+            -no-window -gpu swangle -feature -Vulkan -no-snapshot -noaudio -no-boot-anim
+            -camera-back none -camera-front none -cores 2 -memory 2048
+            > $RUNNER_TEMP/dana-compat-emulator-26.log 2>&1
+          working-directory: dana-android
+          disable-animations: true
+          script: bash "$GITHUB_WORKSPACE/dana-android/ci/test-compat.sh" 26 x86
+      - name: Install and run the same APK on Android 15 (64-bit x86)
+        timeout-minutes: 8
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
+        with:
+          api-level: 35
+          arch: x86_64
+          target: default
+          profile: pixel_2
+          emulator-boot-timeout: 220
+          emulator-options: >-
+            -no-window -gpu swangle -feature -Vulkan -no-snapshot -noaudio -no-boot-anim
+            -camera-back none -camera-front none -cores 2 -memory 3072
+            > $RUNNER_TEMP/dana-compat-emulator-35.log 2>&1
+          working-directory: dana-android
+          disable-animations: true
+          script: bash "$GITHUB_WORKSPACE/dana-android/ci/test-compat.sh" 35 x86_64
+      - name: Report emulator startup failures
+        if: failure()
+        shell: bash
+        run: |
+          for file in "$RUNNER_TEMP"/dana-compat-emulator-*.log; do
+            [[ -f "$file" ]] || continue
+            printf '::error title=%s::%s\n' "$(basename "$file")" "$(tail -22 "$file" | cut -c1-210 | sed -e 's/%/%25/g' -e 's/\r/%0D/g' | awk '{printf "%s%%0A",$0}')"
+          done
+      - name: Upload only the tested compatibility APK
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          path: ${{ runner.temp }}/dana-compat/mrsad-lite.apk
+          archive: false
+          if-no-files-found: error
+          retention-days: 90
+
+  publish:
+    name: Publish tested mrsad Lite APK
+    if: github.event_name == 'push' && github.ref == 'refs/heads/arena/13014174-vodiwalker-panel' && contains(github.event.head_commit.message, '[dana-compat]')
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: mrsad-lite.apk
+          path: ${{ runner.temp }}/dana-compat-publish
+          skip-decompress: true
+      - name: Publish a direct APK download with checksum
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERIFIED_SHA256: ${{ needs.build.outputs.sha256 }}
+        run: |
+          cd "$RUNNER_TEMP/dana-compat-publish"
+          printf '%s  mrsad-lite.apk\n' "$VERIFIED_SHA256" > SHA256SUMS.txt
+          sha256sum -c SHA256SUMS.txt
+          tag="mrsad-lite-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          gh release create "$tag" mrsad-lite.apk SHA256SUMS.txt \
+            --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+            --title "mrsad Lite 0.10.1 · Android 8+ compatibility" --prerelease --latest=false \
+            --notes "Single debug-signed APK for Android 8+ (API 26), with armeabi-v7a, arm64-v8a, x86 and x86_64 native code. Separate package ai.dana.mrsad.compat; does not replace older variants or copy their data. No bundled Qwen/SmolLM2 or LiteRT-LM runtime. Local message cues, installed Persian TTS, OCR, Phone and the optional online chat/image routes remain. The exact APK installed and passed compatibility tests on API 26 x86 and API 35 x86_64; physical phones, Persian TTS availability and live provider accounts were not tested. Evidence: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID."
+          printf '\n[Download mrsad Lite APK](%s/%s/releases/download/%s/mrsad-lite.apk)\n' \
+            "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$tag" >> "$GITHUB_STEP_SUMMARY"

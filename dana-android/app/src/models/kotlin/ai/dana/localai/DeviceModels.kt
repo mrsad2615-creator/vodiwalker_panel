@@ -8,7 +8,6 @@ import ai.dana.domain.MessageRole
 import ai.dana.domain.ReviewMessage
 import android.content.Context
 import android.os.Process
-import androidx.annotation.StringRes
 import com.google.ai.edge.litertlm.Backend
 import com.google.ai.edge.litertlm.Contents
 import com.google.ai.edge.litertlm.ConversationConfig
@@ -35,21 +34,6 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-
-internal enum class DeviceModel(val id: String, val title: String, @StringRes val blurb: Int) {
-    QWEN("qwen3-0.6b", "Qwen3 0.6B", R.string.models_qwen),
-    SMOL("smollm2-135m", "SmolLM2 135M", R.string.models_smol),
-    ;
-    val asset: String get() = "models/$id.litertlm"
-}
-
-internal sealed interface DeviceText {
-    data object Preparing : DeviceText
-    data object Generating : DeviceText
-    data class Delta(val value: String) : DeviceText
-}
-
-internal class DeviceModelProblem(@StringRes val messageRes: Int) : Exception()
 
 /** CPU-only runtime. It has no credentials, URLs, network transport, or tools. Only one native session at a time. */
 @Singleton
@@ -173,5 +157,8 @@ internal class DeviceModels @Inject constructor(@ApplicationContext private val 
 
     private data class Pin(val bytes: Long, val sha: String)
 
-    companion object { const val PROMPT_BYTES = ReviewMessage.LOCAL_BYTES }
+    companion object {
+        const val BUNDLED = true
+        const val PROMPT_BYTES = ReviewMessage.LOCAL_BYTES
+    }
 }

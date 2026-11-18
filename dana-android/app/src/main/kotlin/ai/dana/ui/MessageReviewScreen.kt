@@ -4,6 +4,7 @@ import ai.dana.R
 import ai.dana.domain.MessageReviewPlan
 import ai.dana.domain.ProviderProfile
 import ai.dana.domain.ReviewMessage
+import ai.dana.localai.DeviceModels
 import ai.dana.voice.VoiceStatus
 import ai.dana.voice.rememberDanaVoice
 import android.content.ClipboardManager
@@ -126,7 +127,9 @@ internal fun MessageReviewScreen(model: MessageReviewViewModel, onClose: () -> U
                         }
                         VoiceStatus(voice.state)
                         Button(onClick = { voice.close(); hideKeyboard(); model.local() }, enabled = playingAllowed,
-                            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text(stringResource(R.string.message_local)) }
+                            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
+                            Text(stringResource(if (DeviceModels.BUNDLED) R.string.message_local else R.string.message_compat_scan))
+                        }
                         TextButton(onClick = { voice.close(); hideKeyboard(); choosingEngine = true },
                             enabled = playingAllowed && !offline && profiles.isNotEmpty(), modifier = Modifier.heightIn(min = 48.dp)) {
                             Text(stringResource(R.string.message_online))

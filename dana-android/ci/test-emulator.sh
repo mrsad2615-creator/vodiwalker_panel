@@ -9,14 +9,14 @@ fail() {
 
 trap 'code=$?; printf "::error title=Dana emulator script::Failed at line %s (exit %s).\n" "$LINENO" "$code"' ERR
 printf '::notice title=Dana emulator booted::Android API %s is visible to adb.\n' "$(adb shell getprop ro.build.version.sdk | tr -d '\r')"
-if ! ./gradlew --no-daemon --console=plain :core:data:connectedDebugAndroidTest 2>&1 | tee "$RUNNER_TEMP/dana-device.log"; then
+if ! ./gradlew --no-daemon --console=plain :core:data:connectedDebugAndroidTest :app:connectedDebugAndroidTest 2>&1 | tee "$RUNNER_TEMP/dana-device.log"; then
   python3 - "$RUNNER_TEMP/dana-device.log" <<'PYTHON'
 import sys
 from pathlib import Path
 from xml.etree import ElementTree as ET
 
 messages = []
-for report in Path('core/data/build/outputs/androidTest-results').rglob('TEST-*.xml'):
+for report in sorted(Path('.').glob('**/build/outputs/androidTest-results/**/TEST-*.xml')):
     for case in ET.parse(report).iter('testcase'):
         for node in case.findall('failure') + case.findall('error'):
             messages.append(f"{case.get('name')}: {node.get('message', '')}\n{(node.text or '')[:1000]}")
@@ -27,18 +27,18 @@ print('::error title=Dana device test failed::' + message.replace('%', '%25').re
 PYTHON
   exit 1
 fi
-printf '::notice title=Dana device test execution::Storage instrumentation finished successfully.\n'
+printf '::notice title=Dana device test execution::Storage and native OCR instrumentation finished successfully.\n'
 python3 - <<'PYTHON'
 from pathlib import Path
 from xml.etree import ElementTree as ET
 
-reports = list(Path('core/data/build/outputs/androidTest-results/connected/debug').rglob('TEST-*.xml'))
-if not reports:
-    reports = list(Path('core/data/build/outputs/androidTest-results').rglob('TEST-*.xml'))
-cases = [case for report in reports for case in ET.parse(report).iter('testcase')]
-if len(cases) < 6 or any(case.find('skipped') is not None or case.find('failure') is not None or case.find('error') is not None for case in cases):
-    raise SystemExit('::error title=Dana device tests::Expected at least six executed Android storage tests with no failures/skips.')
-print(f'{len(cases)} Android storage tests executed successfully')
+for module, minimum in [('core/data', 7), ('app', 2)]:
+    path = Path(module) / 'build/outputs/androidTest-results'
+    reports = list((path / 'connected/debug').rglob('TEST-*.xml')) or list(path.rglob('TEST-*.xml'))
+    cases = [case for report in reports for case in ET.parse(report).iter('testcase')]
+    if len(cases) < minimum or any(case.find('skipped') is not None or case.find('failure') is not None or case.find('error') is not None for case in cases):
+        raise SystemExit(f'::error title=Dana device tests::{module}: expected at least {minimum} passing tests with no failures/skips.')
+    print(f'{len(cases)} Android tests in {module} executed successfully')
 PYTHON
 
 adb install -r app/build/outputs/apk/debug/app-debug.apk
@@ -97,5 +97,20 @@ tap_text 'راه‌اندازی Gemini'
 dump_ui
 grep -Fq 'نشانی رسمی Gemini آماده است' "$snapshot" || fail 'The Gemini preset did not open.'
 adb shell input keyevent KEYCODE_BACK
+
+# Use an incoming user share to fill the draft exactly as Android does. It must not send or save automatically.
+opened=$(adb shell "am start -W -n $activity -a android.intent.action.SEND -t text/plain --es android.intent.extra.TEXT 'note DANA_SMOKE_LOCAL'" | tr -d '\r')
+grep -q '^Status: ok$' <<< "$opened" || fail 'Shared text did not open Dana.'
+dump_ui
+grep -Fq 'DANA_SMOKE_LOCAL' "$snapshot" || fail 'The shared text did not appear in the editable composer.'
+tap_text 'بازبینی'
+dump_ui
+grep -Fq 'این کار را انجام دهیم؟' "$snapshot" || fail 'Local command bypassed or failed to open the review.'
+tap_text 'تأیید و اجرا'
+dump_ui
+grep -Fq 'یادداشت روی گوشی ذخیره شد' "$snapshot" || fail 'The approved offline note was not saved.'
+tap_text 'یادداشت‌ها'
+dump_ui
+grep -Fq 'DANA_SMOKE_LOCAL' "$snapshot" || fail 'The approved offline note is absent from the notes repository.'
 adb shell pidof "$package" >/dev/null || fail 'Dana terminated during the smoke test.'
-printf '\nDana APK installed, opened the Studio, showed the default offline guard, and opened the Gemini preset.\n'
+printf '\nDana APK installed, opened the Studio, showed the default offline guard, opened the Gemini preset, and saved an approved note while offline.\n'

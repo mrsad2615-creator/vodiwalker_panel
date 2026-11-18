@@ -13,8 +13,9 @@ android {
         applicationId = "ai.dana"
         minSdk = libs.versions.min.sdk.get().toInt()
         targetSdk = libs.versions.compile.sdk.get().toInt()
-        versionCode = 3
-        versionName = "0.3.0"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        versionCode = 4
+        versionName = "0.4.0"
     }
 
     compileOptions {
@@ -56,5 +57,9 @@ dependencies {
     implementation(libs.androidx.compose.ui)
     implementation(libs.coroutines.android)
     implementation(libs.hilt.android)
+    implementation(libs.tesseract.android)
+    androidTestImplementation(libs.androidx.test.core)
+    androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.androidx.test.junit)
     ksp(libs.hilt.compiler)
 }

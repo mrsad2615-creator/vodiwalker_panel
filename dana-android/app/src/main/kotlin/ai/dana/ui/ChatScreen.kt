@@ -1,6 +1,11 @@
 package ai.dana.ui
 
 import ai.dana.R
+import ai.dana.media.MediaReview
+import ai.dana.media.MediaViewModel
+import ai.dana.voice.VoiceButton
+import ai.dana.voice.VoiceStatus
+import ai.dana.voice.rememberDanaVoice
 import ai.dana.domain.AssistantStyle
 import ai.dana.domain.AssistantTask
 import ai.dana.domain.LocalAction
@@ -58,6 +63,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 @Composable
 internal fun ChatScreen(
     model: ChatViewModel,
+    media: MediaViewModel,
     dashboard: DashboardState,
     onSettings: () -> Unit,
     modifier: Modifier = Modifier,
@@ -89,12 +95,13 @@ internal fun ChatScreen(
             chat.notice?.let { Text(stringResource(it), color = Mint, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }) }
         }
         when (chat.page) {
-            ChatPage.CONVERSATION -> Dialogue(chat, model, profiles, offline, onSettings)
+            ChatPage.CONVERSATION -> Dialogue(chat, model, media::open, profiles, offline, onSettings)
             ChatPage.HISTORY -> Archive(chat, model)
             ChatPage.MEMORY -> MemoryVault(chat, model)
-            ChatPage.TOOLS -> ToolPanel(chat, model)
+            ChatPage.TOOLS -> ToolPanel(chat, model, media::open)
         }
     }
+    MediaReview(media, chat.busy, model::importText, model::photo)
     chat.dialog?.let { dialog -> key(dialog) { ChatOverlay(dialog, chat, model, offline) } }
 }
 
@@ -102,10 +109,12 @@ internal fun ChatScreen(
 private fun Dialogue(
     chat: ChatState,
     model: ChatViewModel,
+    onMedia: () -> Unit,
     profiles: List<ProviderProfile>,
     offline: Boolean,
     onSettings: () -> Unit,
 ) {
+    val voice = rememberDanaVoice()
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
@@ -136,7 +145,7 @@ private fun Dialogue(
             }
             items(chat.turns, key = { it.index }) { turn ->
                 DialogueTurn(turn, chat.running && chat.turns.lastOrNull()?.index == turn.index, !chat.busy,
-                    onMemory = { model.memoryFromReply(turn.answer) }, onShare = { model.dialog(ChatDialog.Action(LocalAction.Share(turn.answer), false)) })
+                    onRead = { voice.read(turn.answer) }, onMemory = { model.memoryFromReply(turn.answer) }, onShare = { model.dialog(ChatDialog.Action(LocalAction.Share(turn.answer), false)) })
             }
         }
         HorizontalDivider(color = Titanium.copy(alpha = 0.28f))
@@ -144,6 +153,7 @@ private fun Dialogue(
             EngineChooser(chat, profiles, model::engine)
             TaskChooser(chat, model::task)
         }
+        VoiceStatus(voice.state)
         if (chat.photo != null) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text(stringResource(R.string.chat_image_attached), Modifier.weight(1f), color = Amber)
@@ -153,8 +163,10 @@ private fun Dialogue(
         OutlinedTextField(chat.draft, model::draft, modifier = Modifier.fillMaxWidth(), enabled = !chat.busy,
             label = { Text(stringResource(R.string.chat_prompt)) }, maxLines = 4)
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
+            TextButton(onClick = { voice.close(); onMedia() }, enabled = !chat.busy) { Text(stringResource(R.string.media_short)) }
+            VoiceButton(voice, enabled = !chat.busy, onText = { model.importText(listOf(chat.draft, it).filter { part -> part.isNotBlank() }.joinToString(" ")) })
             if (chat.running) OutlinedButton(model::stop) { Text(stringResource(R.string.compare_stop)) }
-            else Button(onClick = { model.review(profiles, offline) }, enabled = !chat.busy && chat.draft.isNotBlank()) {
+            else Button(onClick = { voice.stopPlayback(); model.review(profiles, offline) }, enabled = !chat.busy && !voice.state.listening && chat.draft.isNotBlank()) {
                 Text(stringResource(R.string.chat_review))
             }
         }
@@ -189,7 +201,7 @@ private fun TaskChooser(chat: ChatState, choose: (AssistantTask) -> Unit) {
 }
 
 @Composable
-private fun DialogueTurn(turn: ChatTurn, running: Boolean, actionsEnabled: Boolean, onMemory: () -> Unit, onShare: () -> Unit) {
+private fun DialogueTurn(turn: ChatTurn, running: Boolean, actionsEnabled: Boolean, onRead: () -> Unit, onMemory: () -> Unit, onShare: () -> Unit) {
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         GlassCard(Modifier.fillMaxWidth()) {
             Text(stringResource(R.string.chat_you), color = Ice, style = MaterialTheme.typography.labelMedium)
@@ -216,6 +228,7 @@ private fun DialogueTurn(turn: ChatTurn, running: Boolean, actionsEnabled: Boole
             if (!running && turn.answer.isNotBlank()) {
                 Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())) {
                     CopyReply(turn.answer)
+                    TextButton(onClick = onRead, enabled = actionsEnabled) { Text(stringResource(R.string.voice_read)) }
                     TextButton(onClick = onShare, enabled = actionsEnabled) { Text(stringResource(R.string.chat_share)) }
                     if (turn.answer.length <= LocalText.MEMORY_LIMIT) TextButton(onClick = onMemory, enabled = actionsEnabled) {
                         Text(stringResource(R.string.chat_remember_reply))
@@ -286,10 +299,11 @@ private fun MemoryVault(chat: ChatState, model: ChatViewModel) {
 }
 
 @Composable
-private fun ToolPanel(chat: ChatState, model: ChatViewModel) {
+private fun ToolPanel(chat: ChatState, model: ChatViewModel, onMedia: () -> Unit) {
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(stringResource(R.string.chat_tools_title), style = MaterialTheme.typography.headlineSmall)
         Text(stringResource(R.string.chat_tools_help), color = Titanium)
+        Button(onClick = onMedia, enabled = !chat.busy) { Text(stringResource(R.string.media_title)) }
         GlassCard(Modifier.fillMaxWidth()) {
             listOf(LocalAction.Wifi, LocalAction.Bluetooth, LocalAction.Sound, LocalAction.Clock).forEach { action ->
                 TextButton(onClick = { model.dialog(ChatDialog.Action(action, false)) }, enabled = !chat.busy) {

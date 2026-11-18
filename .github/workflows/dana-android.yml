@@ -54,7 +54,7 @@ jobs:
       - name: Test, lint and assemble
         shell: bash
         run: |
-          if ./gradlew --no-daemon --console=plain :core:domain:test :core:data:testDebugUnitTest :core:data:lintDebug :core:data:assembleDebugAndroidTest :app:lintDebug :app:assembleDebug :app:assembleRelease 2>&1 | tee "$RUNNER_TEMP/dana-gradle.log"; then
+          if ./gradlew --no-daemon --console=plain :core:domain:test :core:data:testDebugUnitTest :core:data:lintDebug :core:data:assembleDebugAndroidTest :app:lintDebug :app:assembleDebug :app:assembleDebugAndroidTest :app:assembleRelease 2>&1 | tee "$RUNNER_TEMP/dana-gradle.log"; then
             exit 0
           fi
           python3 - "$RUNNER_TEMP/dana-gradle.log" <<'PYTHON'
@@ -100,7 +100,7 @@ jobs:
           from xml.etree import ElementTree as ET
           import os
 
-          for module, task, minimum in [('core/domain', 'test', 25), ('core/data', 'testDebugUnitTest', 11)]:
+          for module, task, minimum in [('core/domain', 'test', 31), ('core/data', 'testDebugUnitTest', 12)]:
               reports = list((Path(module) / 'build/test-results' / task).glob('TEST-*.xml'))
               tests = [case for report in reports for case in ET.parse(report).iter('testcase')]
               if len(tests) < minimum or any(case.find('skipped') is not None or case.find('failure') is not None or case.find('error') is not None for case in tests):
@@ -114,8 +114,9 @@ jobs:
           tools="$ANDROID_HOME/build-tools/36.0.0"
           "$tools/apksigner" verify --verbose --print-certs "$apk"
           "$tools/zipalign" -c -P 16 4 "$apk"
+          python3 ci/check-native-alignment.py "$apk"
           badging=$("$tools/aapt" dump badging "$apk")
-          grep -Fq "package: name='ai.dana.preview' versionCode='3' versionName='0.3.0-preview'" <<< "$badging"
+          grep -Fq "package: name='ai.dana.preview' versionCode='4' versionName='0.4.0-preview'" <<< "$badging"
           digest=$(sha256sum "$apk" | cut -d' ' -f1)
           printf 'sha256=%s\n' "$digest" >> "$GITHUB_OUTPUT"
           printf '\nSHA-256: `%s`\n' "$digest" >> "$GITHUB_STEP_SUMMARY"
@@ -124,7 +125,7 @@ jobs:
         run: |
           test -c /dev/kvm || { echo '::error title=Android emulator::KVM is unavailable on the runner.'; exit 1; }
           sudo chmod a+rw /dev/kvm
-      - name: Test storage and smoke-test the installed app on Android
+      - name: Test storage, native OCR and the installed app on Android
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
         with:
           api-level: 34
@@ -193,7 +194,7 @@ jobs:
           tag="dana-preview-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
           gh release create "$tag" DANA-AI-preview.apk SHA256SUMS.txt \
             --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
-            --title "DANA AI 0.3 Studio preview (${GITHUB_SHA:0:8})" --prerelease --latest=false \
-            --notes "Tested Android preview for commit $GITHUB_SHA. Debug-signed (ai.dana.preview), not a production or Play Store build. Includes a text workspace, opt-in model discovery, and independent Gemini/OpenAI-compatible/Mac bridge streams. Gemini needs a personal API key; Apple needs the separate bridge on a compatible Mac. CI checks transport and Android behavior, not live provider access. Build and test evidence: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID."
+            --title "DANA AI 0.4 Assistant preview (${GITHUB_SHA:0:8})" --prerelease --latest=false \
+            --notes "Tested Android preview for commit $GITHUB_SHA. Debug-signed (ai.dana.preview), not a production or Play Store build. Includes automatic routing with explicit approval, multi-turn chat and private history, local actions, and offline Persian/Latin OCR. Gemini needs a personal key; Apple needs the separate bridge on a compatible Mac. CI does not check live account access or microphone/screen behavior on physical devices. Build and test evidence: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID."
           printf '\n[Download DANA AI APK](%s/%s/releases/download/%s/DANA-AI-preview.apk)\n' \
             "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$tag" >> "$GITHUB_STEP_SUMMARY"

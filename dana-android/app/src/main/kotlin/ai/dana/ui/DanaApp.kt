@@ -1,6 +1,7 @@
 package ai.dana.ui
 
 import ai.dana.R
+import ai.dana.media.MediaViewModel
 import ai.dana.domain.NetworkStatus
 import ai.dana.domain.ProviderNetwork
 import ai.dana.domain.ProviderProfile
@@ -66,11 +67,11 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @Composable
-internal fun DanaApp(model: DanaViewModel, chat: ChatViewModel) {
+internal fun DanaApp(model: DanaViewModel, chat: ChatViewModel, media: MediaViewModel) {
     val state by model.uiState.collectAsStateWithLifecycle()
     val session = state.session
     val dispatch: (DanaIntent) -> Unit = { intent ->
-        if (intent is DanaIntent.Navigate && intent.tab != DashboardTab.CHAT) chat.background()
+        if (intent is DanaIntent.Navigate && intent.tab != DashboardTab.CHAT) { chat.background(); media.close() }
         model.dispatch(intent)
     }
 
@@ -105,7 +106,7 @@ internal fun DanaApp(model: DanaViewModel, chat: ChatViewModel) {
         ) {
             key(session.tab) {
                 if (session.tab == DashboardTab.CHAT) {
-                    ChatScreen(chat, state, onSettings = { dispatch(DanaIntent.Navigate(DashboardTab.SETTINGS)) },
+                    ChatScreen(chat, media, state, onSettings = { dispatch(DanaIntent.Navigate(DashboardTab.SETTINGS)) },
                         modifier = Modifier.widthIn(max = 720.dp).imePadding())
                 } else LazyColumn(
                     modifier = Modifier.widthIn(max = 640.dp).fillMaxSize(),

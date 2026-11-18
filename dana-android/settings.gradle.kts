@@ -11,6 +11,10 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        exclusiveContent {
+            forRepository { maven("https://jitpack.io") { name = "Tesseract4Android releases" } }
+            filter { includeModule("cz.adaptech.tesseract4android", "tesseract4android") }
+        }
     }
 }
 

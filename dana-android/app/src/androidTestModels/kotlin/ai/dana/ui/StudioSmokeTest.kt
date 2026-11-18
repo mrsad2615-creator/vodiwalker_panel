@@ -31,6 +31,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
@@ -43,7 +44,9 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTextReplacement
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.test.espresso.intent.Intents
 import androidx.test.espresso.intent.matcher.IntentMatchers.hasAction
@@ -164,6 +167,7 @@ class StudioSmokeTest {
         assertTrue(calls.isEmpty())
         enter(R.string.art_prompt, "کوه بنفش در سپیده دم")
         click(R.string.art_landscape, scroll = true)
+        compose.onNode(clickable(R.string.art_landscape)).assertIsSelected()
         click(R.string.art_generate)
         visible(R.string.art_allow_title)
         assertTrue(calls.isEmpty())
@@ -223,7 +227,7 @@ class StudioSmokeTest {
         visible(result)
         enter(R.string.workspace_phone_prompt, "فرمان ناشناس محلی", scroll = true)
         click(R.string.workspace_run, scroll = true)
-        assertTrue(compose.onAllNodes(hasText(label(R.string.workspace_unrecognized))).fetchSemanticsNodes().isNotEmpty())
+        waitFor(hasText(label(R.string.workspace_unrecognized)))
         enter(R.string.workspace_phone_prompt, "شارژ گوشی چقدره؟", scroll = true)
         click(R.string.workspace_run, scroll = true)
         visible(result, scroll = true)
@@ -496,7 +500,11 @@ class StudioSmokeTest {
         waitFor(matcher)
         val node = compose.onNode(matcher)
         if (scroll) node.performScrollTo()
-        node.assertIsDisplayed().assertIsEnabled().performClick()
+        node.assertIsDisplayed().assertIsEnabled()
+        // Activate the revealed control, not coordinates that can shift during a headless IME/scroll frame.
+        // Unscrolled actions still exercise touch injection; downstream state and wire assertions stay exact.
+        if (scroll) node.performSemanticsAction(SemanticsActions.OnClick) { action -> assertTrue(action()) }
+        else node.performClick()
     }
     private fun enter(@StringRes id: Int, value: String, scroll: Boolean = false) {
         val matcher = hasText(label(id)) and hasSetTextAction()

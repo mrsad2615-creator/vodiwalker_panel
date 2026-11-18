@@ -23,7 +23,7 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    sourceSets.getByName("main").assets.srcDir(layout.buildDirectory.dir("bundled-assets"))
+    sourceSets.getByName("main").assets.srcDir(layout.buildDirectory.dir("bundled-assets").get().asFile)
     androidResources { noCompress.add("litertlm") }
 
     buildFeatures {

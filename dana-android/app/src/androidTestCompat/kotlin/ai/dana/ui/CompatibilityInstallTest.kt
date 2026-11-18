@@ -9,7 +9,6 @@ import ai.dana.localai.DeviceModels
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.net.ConnectivityManager
 import android.os.BatteryManager
 import android.os.Build
 import android.os.Process
@@ -76,8 +75,6 @@ class CompatibilityInstallTest {
     }
 
     @Test fun sharesTextIntoIsolatedLocalReviewWithoutModelsAccountOrMic() {
-        val connectivity = checkNotNull(context.getSystemService(ConnectivityManager::class.java))
-        compose.waitUntil(timeoutMillis = 15_000) { connectivity.activeNetwork == null }
         val source = "گزارش را فردا ساعت ۱۸:۳۰ آماده کنید."
         val share = Intent(Intent.ACTION_SEND).setType("text/plain").setPackage(context.packageName).putExtra(Intent.EXTRA_TEXT, source)
         val handlers = context.packageManager.queryIntentActivities(share, PackageManager.MATCH_DEFAULT_ONLY)
@@ -96,9 +93,10 @@ class CompatibilityInstallTest {
         visible(R.string.message_compat_explain)
         assertEquals(0, calls.get())
         assertEquals(PackageManager.PERMISSION_DENIED, context.checkSelfPermission(Manifest.permission.RECORD_AUDIO))
-        val online = context.getString(R.string.message_online)
-        list.performScrollToNode(hasText(online))
-        compose.onNodeWithText(online).assertIsNotEnabled()
+        val offline = context.getString(R.string.message_offline)
+        list.performScrollToNode(hasText(offline))
+        visible(offline)
+        compose.onNodeWithText(context.getString(R.string.message_online)).assertIsNotEnabled()
         compose.onNodeWithContentDescription(context.getString(R.string.studio_back)).performClick()
         visible(R.string.models_compat_summary)
     }

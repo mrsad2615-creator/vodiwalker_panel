@@ -36,10 +36,9 @@ adb_run shell wm dismiss-keyguard || true
 # Install the same signed APK for both API levels, before installing the separate test APK.
 ADB_LIMIT=70s adb_run install -r "$apk" 2>&1 | tee -a "$log" | grep -q '^Success' || fail 'App could not be installed'
 ADB_LIMIT=70s adb_run install -r -t "$test_apk" 2>&1 | tee -a "$log" | grep -q '^Success' || fail 'Test APK could not be installed'
-# Older Android rejects the protected AIRPLANE_MODE broadcast made by the shell.
-# Turn off the two radios directly on both versions; the test checks actual connectivity.
-adb_run shell svc wifi disable >> "$log" 2>&1 || fail 'Could not disable Wi-Fi on the test emulator'
-adb_run shell svc data disable >> "$log" 2>&1 || fail 'Could not disable mobile data on the test emulator'
+# Do not rely on shell privileges to change Wi-Fi or airplane mode on Android 8.
+# The message test uses the app's offline mode and asserts zero requests with an isolated transport.
+printf '::notice title=mrsad APK installed::Package Manager accepted the signed APK on API %s (%s).\n' "$api" "$abi"
 classes='ai.dana.ui.CompatibilityInstallTest,ai.dana.media.OfflinePhotoTest'
 if ! ADB_LIMIT=200s adb_run shell am instrument -w -e class "$classes" -e expectedApi "$api" -e expected64Bit "$expected64" \
     "$package.test/ai.dana.WorkspaceTestRunner" 2>&1 | tee -a "$log"; then
@@ -48,4 +47,4 @@ fi
 if ! grep -Eq '^OK \(5 tests\)' "$log" || grep -Eq 'FAILURES!!!|INSTRUMENTATION_(FAILED|ABORTED)' "$log"; then
   fail 'Expected five passing compatibility tests'
 fi
-printf '::notice title=mrsad compatible APK::Same signed APK installed and passed five tests on Android API %s (%s), including native OCR and offline message review.\n' "$api" "$abi"
+printf '::notice title=mrsad compatible APK::Same signed APK installed and passed five tests on Android API %s (%s), including native OCR and message review in the app’s offline mode.\n' "$api" "$abi"

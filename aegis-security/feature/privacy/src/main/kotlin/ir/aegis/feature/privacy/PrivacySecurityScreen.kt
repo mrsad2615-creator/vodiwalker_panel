@@ -107,6 +107,8 @@ fun PrivacySecurityScreen(
                             Spacer(Modifier.height(6.dp))
                             GlassTextField(newPin, { newPin = it }, tr("Set 4–8 Digit App Lock PIN", "تعیین پین ۴ تا ۸ رقمی"))
                             Spacer(Modifier.height(8.dp))
+                            val pinEnabledText = tr("PIN protection enabled offline.", "قفل پین فعال شد.")
+                            val pinDisabledText = tr("PIN lock disabled.", "قفل پین غیرفعال شد.")
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 GlassButton(
                                     label = tr("Enable / Update PIN", "فعال‌سازی پین"),
@@ -118,7 +120,7 @@ fun PrivacySecurityScreen(
                                             preferencesRepository.setPinCredential(saltBase64 = salt, hashBase64 = hash)
                                             repository.logActivity("PIN_SET", "Privacy & Security", "Configured PBKDF2-SHA256 app lock PIN")
                                             newPin = ""
-                                            pinFeedback = tr("PIN protection enabled offline.", "قفل پین فعال شد.")
+                                            pinFeedback = pinEnabledText
                                         }
                                     },
                                 )
@@ -135,7 +137,7 @@ fun PrivacySecurityScreen(
                                     onClick = {
                                         scope.launch {
                                             preferencesRepository.clearPinCredential()
-                                            pinFeedback = tr("PIN lock disabled.", "قفل پین غیرفعال شد.")
+                                            pinFeedback = pinDisabledText
                                         }
                                     },
                                 ) { Text(tr("Disable PIN Lock", "حذف قفل پین"), color = colors.accentCrimson) }
@@ -194,6 +196,7 @@ fun PrivacySecurityScreen(
                     }
 
                     item {
+                        val wipedText = tr("Sensitive vault & private journal wiped.", "گاوصندوق و یادداشت‌های حساس پاک شدند.")
                         ObsidianGlassCard(accentBorderColor = colors.accentCrimson) {
                             Text(tr("Emergency Sensitive Wipe (Vault + Journal)", "پاکسازی اضطراری داده‌های حساس"), style = MaterialTheme.typography.titleMedium, color = colors.accentCrimson)
                             Spacer(Modifier.height(6.dp))
@@ -203,7 +206,7 @@ fun PrivacySecurityScreen(
                                 onClick = {
                                     scope.launch {
                                         repository.panicWipeSensitiveData()
-                                        backupStatus = tr("Sensitive vault & private journal wiped.", "گاوصندوق و یادداشت‌های حساس پاک شدند.")
+                                        backupStatus = wipedText
                                     }
                                 },
                             )

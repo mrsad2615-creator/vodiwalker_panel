@@ -77,6 +77,7 @@ fun LockGateOverlay(
                         Text(errorMsg!!, style = MaterialTheme.typography.labelMedium, color = colors.accentCrimson)
                     }
                     Spacer(Modifier.height(14.dp))
+                    val incorrectPinMsg = tr("Incorrect PIN", "پین اشتباه است")
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         GlassButton(
                             label = tr("Unlock", "باز کردن"),
@@ -84,7 +85,7 @@ fun LockGateOverlay(
                                 if (CryptoEngine.verifyPin(pinInput, preferences.pinSaltBase64, preferences.pinHashBase64)) {
                                     onUnlocked()
                                 } else {
-                                    errorMsg = tr("Incorrect PIN", "پین اشتباه است")
+                                    errorMsg = incorrectPinMsg
                                 }
                             },
                         )

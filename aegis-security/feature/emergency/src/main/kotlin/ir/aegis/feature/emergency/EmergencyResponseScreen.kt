@@ -218,13 +218,14 @@ fun EmergencyResponseScreen(
                                 Text(generatedMsg, modifier = Modifier.padding(10.dp), style = MaterialTheme.typography.bodyMedium, color = colors.textPrimary)
                             }
                             Spacer(Modifier.height(8.dp))
+                            val copiedText = tr("Copied to clipboard offline.", "در حافظه موقت کپی شد.")
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 GlassButton(
                                     label = tr("Copy Message", "کپی پیام"),
                                     onClick = {
                                         val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                                         cm.setPrimaryClip(ClipData.newPlainText("Aegis SOS", generatedMsg))
-                                        clipboardFeedback = tr("Copied to clipboard offline.", "در حافظه موقت کپی شد.")
+                                        clipboardFeedback = copiedText
                                     },
                                 )
                                 GlassButton(

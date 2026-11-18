@@ -4,3 +4,9 @@
 # JNI resolves these implementation and callback names in the pinned Tesseract AAR.
 -keep class com.googlecode.tesseract.android.** { *; }
 -keep class com.googlecode.leptonica.android.** { *; }
+
+# The official LiteRT-LM bridge resolves its JNI owner and message callback by class name.
+-keep class com.google.ai.edge.litertlm.LiteRtLmJni { *; }
+-keep class com.google.ai.edge.litertlm.LiteRtLmJni$* { *; }
+-keep class com.google.ai.edge.litertlm.NativeLibraryLoader { *; }
+-keepclassmembers class * implements com.google.ai.edge.litertlm.LiteRtLmJni$JniMessageCallback { *; }

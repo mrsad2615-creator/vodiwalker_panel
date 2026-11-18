@@ -9,7 +9,6 @@ import ai.dana.domain.ConversationInput
 import ai.dana.domain.ConversationMessage
 import ai.dana.domain.CredentialChange
 import ai.dana.domain.DanaAiRouter
-import ai.dana.domain.DanaNote
 import ai.dana.domain.DirectSendSettings
 import ai.dana.domain.EngineText
 import ai.dana.domain.EngineTransport
@@ -19,7 +18,6 @@ import ai.dana.domain.ImageTransport
 import ai.dana.domain.LocalAction
 import ai.dana.domain.MemoryRepository
 import ai.dana.domain.MessageRole
-import ai.dana.domain.NotesRepository
 import ai.dana.domain.PrivacyPreferences
 import ai.dana.domain.ProviderConfig
 import ai.dana.domain.ProviderNetwork
@@ -29,6 +27,10 @@ import ai.dana.domain.QuickService
 import ai.dana.domain.SendGrant
 import ai.dana.domain.UserMemory
 import ai.dana.domain.VisionPhoto
+import ai.dana.localai.DeviceModels
+import android.content.ActivityNotFoundException
+import android.content.ContextWrapper
+import android.provider.AlarmClock
 import android.content.ContentValues
 import android.content.Intent
 import android.graphics.Bitmap
@@ -86,10 +88,11 @@ class InstalledWorkflowsTest {
                 return flowOf(EngineText("پاسخ آزمایشی"))
             }
         })
-        val vm = ChatViewModel(router, unusedHistory, unusedMemory, unusedNotes, settings)
+        val vm = ChatViewModel(router, unusedHistory, unusedMemory, settings, DeviceModels(InstrumentationRegistry.getInstrumentation().targetContext))
+        onMain { vm.select(ChatDestination.Saved(profile.id)) }
         fun send(text: String) = onMain {
             vm.draft(text)
-            vm.submit(listOf(profile), offline = false, preferred = profile.id) { error("Not a local command") }
+            vm.submit(listOf(profile), offline = false)
         }
         send("پرسش اول")
         vm.state.first { !it.busy && it.dialog is ChatDialog.Send }
@@ -107,6 +110,32 @@ class InstalledWorkflowsTest {
         assertEquals(2, sent.size)
         onMain { vm.background() }
         assertNull(vm.state.value.dialog)
+    }
+
+    @Test fun restoredLocalArchiveNeverBecomesCloudContext() = deviceTest {
+        val local = Conversation(7, "ذخیرهٔ محلی", 10L)
+        val archive = object : HistoryRepository by unusedHistory {
+            override fun messages(id: Long) = flowOf(listOf(
+                ConversationMessage(1, local.id, MessageRole.USER, "PRIVATE_ON_DEVICE", 1L),
+                ConversationMessage(2, local.id, MessageRole.ASSISTANT, "LOCAL_ONLY", 2L),
+            ))
+        }
+        val transport = object : EngineTransport {
+            override fun stream(config: ProviderConfig, key: ApiCredential?, input: ConversationInput): Flow<EngineText> =
+                error("Should not send without approval")
+        }
+        val vm = ChatViewModel(DanaAiRouter(prefs, repo, transport), archive, unusedMemory, settings,
+            DeviceModels(InstrumentationRegistry.getInstrumentation().targetContext))
+        onMain { vm.open(local) }
+        vm.state.first { !it.busy && it.turns.size == 1 }
+        onMain {
+            vm.select(ChatDestination.Saved(profile.id))
+            vm.draft("پرسش آنلاین")
+            vm.submit(listOf(profile), offline = false)
+        }
+        val review = vm.state.first { !it.busy && it.dialog is ChatDialog.Send }.dialog as ChatDialog.Send
+        assertEquals("پرسش آنلاین", review.route.input.prompt)
+        assertTrue(review.route.input.history.isEmpty())
     }
 
     @SdkSuppress(minSdkVersion = 29)
@@ -150,6 +179,27 @@ class InstalledWorkflowsTest {
         assertEquals(2, sent)
     }
 
+    @Test fun clockIntentsAreTypedBoundedAndMissingClockReturnsHelpfulStatus() {
+        val timer = checkNotNull(DeviceActions.clockIntent(LocalAction.Timer(120)))
+        assertEquals(AlarmClock.ACTION_SET_TIMER, timer.action)
+        assertEquals(120, timer.getIntExtra(AlarmClock.EXTRA_LENGTH, -1))
+        assertEquals(false, timer.getBooleanExtra(AlarmClock.EXTRA_SKIP_UI, true))
+        val alarm = checkNotNull(DeviceActions.clockIntent(LocalAction.Alarm(7, 30)))
+        assertEquals(AlarmClock.ACTION_SET_ALARM, alarm.action)
+        assertEquals(7, alarm.getIntExtra(AlarmClock.EXTRA_HOUR, -1))
+        assertEquals(30, alarm.getIntExtra(AlarmClock.EXTRA_MINUTES, -1))
+        assertEquals(false, alarm.getBooleanExtra(AlarmClock.EXTRA_SKIP_UI, true))
+        assertNull(DeviceActions.clockIntent(LocalAction.Timer(0)))
+        assertNull(DeviceActions.clockIntent(LocalAction.Timer(86_401)))
+        assertNull(DeviceActions.clockIntent(LocalAction.Alarm(24, 0)))
+        val noClock = object : ContextWrapper(InstrumentationRegistry.getInstrumentation().targetContext) {
+            override fun startActivity(intent: Intent) { throw ActivityNotFoundException() }
+        }
+        val failed = DeviceActions.execute(noClock, LocalAction.Timer(60))
+        assertEquals(false, failed.ok)
+        assertEquals(ai.dana.R.string.phone_clock_unavailable, failed.message)
+    }
+
     @Test fun scheduledCalendarUsesAndroidInsertFormAndReportContainsOriginalPromptAndLaneMetrics() {
         val form = checkNotNull(DeviceActions.calendarIntent(LocalAction.CalendarDraft("جلسه", LocalAction.CalendarStart(1, 18, 30))))
         assertEquals(Intent.ACTION_INSERT, form.action)
@@ -167,11 +217,6 @@ class InstalledWorkflowsTest {
     private fun onMain(block: () -> Unit) = InstrumentationRegistry.getInstrumentation().runOnMainSync { block() }
     private fun deviceTest(test: suspend () -> Unit) { runBlocking { withTimeout(10_000) { test() } } }
 
-    private val unusedNotes = object : NotesRepository {
-        override val notes = flowOf(emptyList<DanaNote>())
-        override suspend fun save(id: Long?, text: String): Long = error("No note write")
-        override suspend fun delete(id: Long) = error("No note write")
-    }
     private val unusedMemory = object : MemoryRepository {
         override val facts = flowOf(emptyList<UserMemory>())
         override suspend fun save(id: Long?, fact: String): Long = error("No memory write")

@@ -104,7 +104,7 @@ jobs:
           from xml.etree import ElementTree as ET
           import os
 
-          for module, task, minimum in [('core/domain', 'test', 46), ('core/data', 'testDebugUnitTest', 29)]:
+          for module, task, minimum in [('core/domain', 'test', 48), ('core/data', 'testDebugUnitTest', 30)]:
               reports = list((Path(module) / 'build/test-results' / task).glob('TEST-*.xml'))
               tests = [case for report in reports for case in ET.parse(report).iter('testcase')]
               if len(tests) < minimum or any(case.find('skipped') is not None or case.find('failure') is not None or case.find('error') is not None for case in tests):
@@ -122,7 +122,7 @@ jobs:
           python3 ci/check-native-alignment.py "$apk"
           python3 ci/bundled-models.py --apk "$apk"
           badging=$("$tools/aapt" dump badging "$apk")
-          grep -Fq "package: name='ai.dana.mrsad.workspace' versionCode='8' versionName='0.8.0-preview'" <<< "$badging"
+          grep -Fq "package: name='ai.dana.mrsad.models' versionCode='9' versionName='0.9.0-preview'" <<< "$badging"
           digest=$(sha256sum "$apk" | cut -d' ' -f1)
           printf 'sha256=%s\n' "$digest" >> "$GITHUB_OUTPUT"
           printf '\nSHA-256: `%s`\n' "$digest" >> "$GITHUB_STEP_SUMMARY"
@@ -132,7 +132,7 @@ jobs:
           test -c /dev/kvm || { echo '::error title=Android emulator::KVM is unavailable on the runner.'; exit 1; }
           sudo chmod a+rw /dev/kvm
       - name: Test storage, native OCR and the installed app on Android
-        timeout-minutes: 12
+        timeout-minutes: 17
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
         with:
           api-level: 35
@@ -184,7 +184,7 @@ jobs:
         if: failure() && steps.verify.conclusion == 'success'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
-          name: mrsad-0.8-debug-device-tests-not-passed
+          name: mrsad-0.9-debug-device-tests-not-passed
           path: ${{ runner.temp }}/dana-verified/mrsad-preview.apk
           if-no-files-found: error
           retention-days: 7
@@ -199,7 +199,7 @@ jobs:
       - name: Save emulator screenshots of the new UI
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
-          name: mrsad-0.8-Android-screens
+          name: mrsad-0.9-Android-screens
           path: ${{ runner.temp }}/dana-screens/*.png
           if-no-files-found: error
           retention-days: 30
@@ -245,7 +245,7 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/arena/13014174-vodiwalker-panel' && contains(github.event.head_commit.message, '[dana-apk]')
     needs: [build, apple-bridge, email-otp]
     runs-on: ubuntu-24.04
-    timeout-minutes: 5
+    timeout-minutes: 12
     permissions:
       contents: write
     steps:
@@ -266,7 +266,7 @@ jobs:
           tag="mrsad-preview-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
           gh release create "$tag" mrsad-preview.apk SHA256SUMS.txt \
             --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
-            --title "mrsad 0.8 Android preview (${GITHUB_SHA:0:8})" --prerelease --latest=false \
-            --notes "Tested Android preview for $GITHUB_SHA. Debug-signed (ai.dana.mrsad.workspace), separate from 0.7, not a production or Play Store build. A Persian workspace with Chat, Image and offline Phone commands, optional Android permissions, AvalAI setup alongside other personal-key providers, and an optional fast text mode. OpenRouter Free has zero price caps and no paid fallback. Based on public Hoosha workflows; does not use a Hoosha account or backend. The emulator tests provider requests with isolated HTTP fixtures and tests PNG export with an Android content URI after a simulated picker result. Live accounts, regional access, external email delivery and physical hardware are not verified. Evidence: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID."
+            --title "mrsad 0.9 Android preview (${GITHUB_SHA:0:8})" --prerelease --latest=false \
+            --notes "Tested Android preview for $GITHUB_SHA. Debug-signed (ai.dana.mrsad.models), installs beside 0.8, not a production or Play Store build. Includes real Qwen3 and SmolLM2 weights (64-bit devices, extra storage for local initialization) and no shared credentials. The exact APK runs both models in airplane mode on x86_64 Android 35. Optional OpenRouter browser sign-in and free catalog have no paid fallback. Native Phone uses standard Android intents. Account exchange, online text/image responses and external activity/picker results are fixture-tested; live accounts, regional access, external email delivery and physical hardware are not verified. Evidence: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID."
           printf '\n[Download mrsad APK](%s/%s/releases/download/%s/mrsad-preview.apk)\n' \
             "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$tag" >> "$GITHUB_STEP_SUMMARY"

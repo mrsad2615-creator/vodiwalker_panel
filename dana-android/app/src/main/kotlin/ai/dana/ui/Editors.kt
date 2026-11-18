@@ -69,6 +69,7 @@ internal fun DanaEditor(editor: Editor, session: DashboardSession, offline: Bool
             OpenRouterEditor(editor, session, offline, dismiss, dispatch)
         } else ProviderEditor(editor, busy, error, session.directory, offline, dismiss, dispatch)
         is Editor.Quick -> QuickEditor(editor, session, dismiss, dispatch)
+        is Editor.RouterSignIn -> RouterSignInEditor(editor, session, dispatch)
         is Editor.Test -> ProbeEditor(editor, session, dismiss, dispatch)
         is Editor.ConfirmComparison -> EditorDialog(
             title = R.string.compare_confirm_title,
@@ -107,6 +108,31 @@ internal fun DanaEditor(editor: Editor, session: DashboardSession, offline: Bool
             }
         }
     }
+}
+
+@Composable
+private fun RouterSignInEditor(editor: Editor.RouterSignIn, session: DashboardSession, dispatch: (DanaIntent) -> Unit) {
+    val browser = LocalUriHandler.current
+    val cancel = { dispatch(if (session.busy) DanaIntent.StopSetup else DanaIntent.DismissEditor) }
+    AlertDialog(
+        onDismissRequest = cancel,
+        title = { Text(stringResource(R.string.models_sign_in)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(editor.model.name, style = MaterialTheme.typography.titleSmall)
+                Text(stringResource(R.string.models_sign_in_help))
+                if (session.busy) {
+                    LinearProgressIndicator(Modifier.fillMaxWidth())
+                    Text(stringResource(R.string.models_sign_in_wait), color = Mint)
+                }
+                session.error?.let { ReadError(it) }
+            }
+        },
+        dismissButton = { TextButton(onClick = cancel) { Text(stringResource(R.string.cancel)) } },
+        confirmButton = { TextButton(enabled = !session.busy, onClick = {
+            dispatch(DanaIntent.StartRouterSignIn { url -> runCatching { browser.openUri(url) }.isSuccess })
+        }) { Text(stringResource(R.string.models_open_browser)) } },
+    )
 }
 
 @Composable

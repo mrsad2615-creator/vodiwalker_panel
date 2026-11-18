@@ -14,6 +14,9 @@ import android.graphics.Bitmap
 import android.os.BatteryManager
 import android.os.Bundle
 import android.os.ParcelFileDescriptor
+import android.net.Uri
+import android.provider.AlarmClock
+import android.provider.Settings
 import android.provider.MediaStore
 import android.util.Base64
 import androidx.annotation.StringRes
@@ -25,12 +28,17 @@ import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextReplacement
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.test.espresso.intent.Intents
 import androidx.test.espresso.intent.matcher.IntentMatchers.hasAction
 import androidx.test.espresso.intent.matcher.IntentMatchers.hasExtra
@@ -44,6 +52,10 @@ import dagger.hilt.android.testing.HiltAndroidTest
 import dagger.hilt.android.testing.UninstallModules
 import java.io.ByteArrayOutputStream
 import java.io.File
+import java.net.InetAddress
+import java.net.Socket
+import java.security.MessageDigest
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.LinkedBlockingQueue
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -86,13 +98,10 @@ class StudioSmokeTest {
     @SdkSuppress(minSdkVersion = 29)
     fun aFreshInstallRejectsBadKeyThenConnectsChatsAndSavesImageThroughUi() {
         visible(R.string.workspace_chat_title)
-        waitFor(clickable(R.string.workspace_connect))
-        capture("home")
         compose.onNodeWithContentDescription(label(R.string.workspace_settings)).performClick()
         visible(R.string.workspace_connection)
         capture("connection")
-        compose.onNodeWithContentDescription(label(R.string.studio_back)).performClick()
-        click(R.string.workspace_connect)
+        click(R.string.quick_title)
         visible(R.string.quick_key)
         compose.onNodeWithText(label(R.string.quick_connect)).assertIsNotEnabled()
         enter(R.string.quick_key, BAD_KEY)
@@ -106,9 +115,13 @@ class StudioSmokeTest {
         enter(R.string.quick_key, KEY)
         replies.add(WireReply(200, completion("OK")))
         click(R.string.quick_connect)
-        visible(R.string.workspace_ai_ready)
+        visible(R.string.hub_begin_chat, scroll = true)
         checkCall("/chat/completions", KEY, "Reply with one short word: OK.", "\"max_completion_tokens\":256")
         assertTrue(calls.isEmpty())
+        click(R.string.hub_begin_chat, scroll = true)
+        click(R.string.models_picker)
+        modelRow("saved-OPENAI_COMPATIBLE-gpt-5.4-nano").performClick()
+        visible(R.string.workspace_ai_ready)
         click(R.string.workspace_fast)
         enter(R.string.chat_prompt, "پاسخ سریع آزمایشی")
         replies.add(WireReply(200, "data: {\"choices\":[{\"delta\":{\"content\":\"پاسخ دریافت شد.\"}}]}\n\ndata: [DONE]\n\n", "text/event-stream"))
@@ -172,12 +185,12 @@ class StudioSmokeTest {
         val result = context.getString(if (battery.isCharging) R.string.phone_battery_charging else R.string.phone_battery_result, faDigits(percent))
         click(R.string.phone_battery)
         visible(result)
-        enter(R.string.workspace_phone_prompt, "فرمان ناشناس محلی")
-        click(R.string.workspace_run)
-        visible(R.string.workspace_unrecognized)
-        enter(R.string.workspace_phone_prompt, "شارژ گوشی چقدره؟")
-        click(R.string.workspace_run)
-        visible(result)
+        enter(R.string.workspace_phone_prompt, "فرمان ناشناس محلی", scroll = true)
+        click(R.string.workspace_run, scroll = true)
+        assertTrue(compose.onAllNodes(hasText(label(R.string.workspace_unrecognized))).fetchSemanticsNodes().isNotEmpty())
+        enter(R.string.workspace_phone_prompt, "شارژ گوشی چقدره؟", scroll = true)
+        click(R.string.workspace_run, scroll = true)
+        visible(result, scroll = true)
         capture("phone")
         click(R.string.workspace_access, scroll = true)
         visible(R.string.workspace_mic_off, scroll = true)
@@ -188,7 +201,7 @@ class StudioSmokeTest {
     }
 
     @Test
-    fun sharedTextRemainsDraftUntilUserExecutesIt() {
+    fun sharedTextIsOnlyADraftAndPhoneRequiresReviewForTypedNotes() {
         compose.activityRule.scenario.onActivity { activity ->
             activity.startActivity(Intent(activity, MainActivity::class.java).apply {
                 action = Intent.ACTION_SEND
@@ -199,11 +212,148 @@ class StudioSmokeTest {
         }
         visible("note DANA_SMOKE_LOCAL")
         compose.onNodeWithText(label(R.string.chat_note_saved)).assertDoesNotExist()
-        click(R.string.workspace_send)
+        click(R.string.tab_phone)
+        enter(R.string.workspace_phone_prompt, "note DANA_SMOKE_LOCAL", scroll = true)
+        click(R.string.workspace_run, scroll = true)
         visible(R.string.chat_confirm_action)
         click(R.string.chat_execute)
-        visible(R.string.chat_note_saved)
+        visible(R.string.chat_note_saved, scroll = true)
         assertTrue(calls.isEmpty())
+    }
+
+    @Test
+    fun aBundledModelsGenerateWithoutNetworkAndWithoutAnAccount() {
+        assertEquals(1, Settings.Global.getInt(context.contentResolver, Settings.Global.AIRPLANE_MODE_ON))
+        visible(R.string.workspace_chat_title)
+        waitFor(hasTestTag("local-qwen3-0.6b"))
+        compose.onNodeWithTag("local-qwen3-0.6b").assertIsDisplayed().assertIsEnabled()
+        compose.onNodeWithTag("local-smollm2-135m").assertIsDisplayed().assertIsEnabled()
+        compose.onNodeWithText(label(R.string.quick_key)).assertDoesNotExist()
+        capture("home")
+        val persian = "سلام، به فارسی با یک جمله سلام کن."
+        enter(R.string.chat_prompt, persian)
+        click(R.string.workspace_send)
+        val first = completedReply()
+        assertTrue("Qwen reply did not contain Persian script", first.any { it in '\u0600'..'\u06ff' } && first.trim() != persian)
+        assertTrue(calls.isEmpty())
+        trace("Real Qwen inference returned text in airplane mode, no HTTP calls")
+        capture("offline-chat")
+
+        click(R.string.chat_new)
+        val smol = compose.onNodeWithTag("local-smollm2-135m")
+        smol.assertIsDisplayed().performClick()
+        val english = "How many legs does a cat have? Answer in one short sentence."
+        enter(R.string.chat_prompt, english)
+        click(R.string.workspace_send)
+        val second = completedReply()
+        assertTrue("SmolLM2 reply was empty or an echo", second.any { it in 'a'..'z' } && second.trim() != english)
+        assertTrue(calls.isEmpty())
+        assertNoMic()
+        trace("Real SmolLM2 inference returned text in airplane mode, no HTTP calls")
+    }
+
+    @Test
+    fun browserSignInLinksChosenFreeModelWithoutPaidFallback() {
+        val variant = "fixture/checked-text:free"
+        val id = "free-$variant"
+        click(R.string.models_picker)
+        modelPickerScroll(hasText(label(R.string.models_fetch_online)))
+        replies.add(WireReply(200, """{"data":[
+            {"id":"$variant","name":"Checked Text","architecture":{"input_modalities":["text"],"output_modalities":["text"]},"pricing":{"prompt":"0","completion":"0"}},
+            {"id":"fixture/paid","name":"Paid Test","architecture":{"input_modalities":["text"],"output_modalities":["text"]},"pricing":{"prompt":"0.1","completion":"0"}}
+        ]}"""))
+        click(R.string.models_fetch_online)
+        val listing = checkNotNull(calls.poll(10, TimeUnit.SECONDS))
+        assertTrue(listing.url.startsWith("https://openrouter.ai/api/v1/models?"))
+        assertEquals(null, listing.auth)
+        assertTrue(listing.body.isEmpty())
+        compose.waitForIdle()
+        modelRow(id).performClick()
+        visible(R.string.models_sign_in)
+        assertTrue(calls.isEmpty())
+        val browser = hasAction(Intent.ACTION_VIEW)
+        Intents.init()
+        try {
+            Intents.intending(browser).respondWith(android.app.Instrumentation.ActivityResult(Activity.RESULT_OK, null))
+            click(R.string.models_open_browser)
+            visible(R.string.models_sign_in_wait)
+            compose.waitUntil(timeoutMillis = 10_000) { Intents.getIntents().any { it.action == Intent.ACTION_VIEW } }
+            val uri = checkNotNull(Intents.getIntents().single { it.action == Intent.ACTION_VIEW }.data)
+            assertEquals("openrouter.ai", uri.host)
+            assertEquals("S256", uri.getQueryParameter("code_challenge_method"))
+            val callback = Uri.parse(checkNotNull(uri.getQueryParameter("callback_url")))
+            assertEquals("localhost", callback.host)
+            assertEquals("/callback", callback.path)
+            assertTrue(callbackResult(callback.port, "wrong-state").startsWith("HTTP/1.1 400"))
+            assertTrue(calls.isEmpty())
+            replies.add(WireReply(200, """{"key":"sk-or-v1-ui-fixture"}"""))
+            assertTrue(callbackResult(callback.port, checkNotNull(uri.getQueryParameter("state"))).startsWith("HTTP/1.1 200"))
+            visible(R.string.models_signed_in)
+            val exchange = checkNotNull(calls.poll(10, TimeUnit.SECONDS))
+            assertEquals("https://openrouter.ai/api/v1/auth/keys", exchange.url)
+            assertEquals(null, exchange.auth)
+            val json = org.json.JSONObject(exchange.body)
+            val digest = MessageDigest.getInstance("SHA-256").digest(json.getString("code_verifier").toByteArray())
+            assertEquals(uri.getQueryParameter("code_challenge"), Base64.encodeToString(digest, Base64.URL_SAFE or Base64.NO_WRAP or Base64.NO_PADDING))
+            assertEquals("fixture-auth-code", json.getString("code"))
+        } finally { Intents.release() }
+        assertTrue(calls.isEmpty())
+        enter(R.string.chat_prompt, "پیام فقط برای مدل انتخابی")
+        click(R.string.workspace_send)
+        visible(R.string.chat_destinations)
+        assertTrue(calls.isEmpty())
+        replies.add(WireReply(200, completion("جواب آزمایشی مدل انتخابی")))
+        click(R.string.send_allow)
+        visible("جواب آزمایشی مدل انتخابی")
+        val sent = checkNotNull(calls.poll(10, TimeUnit.SECONDS))
+        assertEquals("https://openrouter.ai/api/v1/chat/completions", sent.url)
+        assertEquals("Bearer sk-or-v1-ui-fixture", sent.auth)
+        val request = org.json.JSONObject(sent.body)
+        assertEquals(variant, request.getString("model"))
+        assertFalse(request.has("models"))
+        val caps = request.getJSONObject("provider").getJSONObject("max_price")
+        assertEquals(setOf("prompt", "completion", "request", "image"), caps.keys().asSequence().toSet())
+        assertTrue(caps.keys().asSequence().all { caps.getInt(it) == 0 })
+        assertTrue(calls.isEmpty())
+        trace("Public catalog, actual loopback state validation, PKCE exchange fixture and selected zero-price model passed")
+    }
+
+    @Test
+    fun timerFormValidatesPersianNumbersAndHandsOffToAndroidClock() {
+        click(R.string.tab_phone)
+        click(R.string.phone_timer_button)
+        enter(R.string.phone_duration, "۱۴۴۱")
+        compose.onNodeWithText(label(R.string.phone_submit_clock)).assertIsNotEnabled()
+        enter(R.string.phone_duration, "۲")
+        val timer = allOf(hasAction(AlarmClock.ACTION_SET_TIMER), hasExtra(AlarmClock.EXTRA_LENGTH, 120), hasExtra(AlarmClock.EXTRA_SKIP_UI, false))
+        Intents.init()
+        try {
+            Intents.intending(timer).respondWith(android.app.Instrumentation.ActivityResult(Activity.RESULT_OK, null))
+            click(R.string.phone_submit_clock)
+            Intents.intended(timer)
+            visible(R.string.phone_clock_opened)
+        } finally { Intents.release() }
+        assertTrue(calls.isEmpty())
+        assertNoMic()
+        trace("Timer form rejected out-of-range duration and sent 120 seconds with Clock UI requested")
+    }
+
+    private fun completedReply(): String {
+        val tag = hasTestTag("completed-reply")
+        compose.waitUntilAtLeastOneExists(tag, timeoutMillis = 150_000)
+        return compose.onAllNodes(hasAnyAncestor(tag), useUnmergedTree = true).fetchSemanticsNodes()
+            .flatMap { it.config.getOrElse(SemanticsProperties.Text) { emptyList() } }.joinToString(" ") { it.text }
+    }
+
+    private fun modelPickerScroll(matcher: SemanticsMatcher) = compose.onNodeWithTag("model-picker-list").performScrollToNode(matcher)
+    private fun modelRow(tag: String) = compose.onNodeWithTag(tag).also {
+        modelPickerScroll(hasTestTag(tag))
+        it.assertIsDisplayed().assertIsEnabled()
+    }
+    private fun callbackResult(port: Int, state: String): String = Socket(InetAddress.getByAddress(byteArrayOf(127, 0, 0, 1)), port).use { socket ->
+        socket.soTimeout = 5_000
+        socket.getOutputStream().write(("GET /callback?code=fixture-auth-code&state=$state HTTP/1.1\r\nHost: localhost:$port\r\n\r\n").toByteArray())
+        socket.getInputStream().bufferedReader().readLine()
     }
 
     private fun checkCall(path: String, key: String, vararg fragments: String) {
@@ -231,10 +381,12 @@ class StudioSmokeTest {
         if (scroll) node.performScrollTo()
         node.assertIsDisplayed().assertIsEnabled().performClick()
     }
-    private fun enter(@StringRes id: Int, value: String) {
+    private fun enter(@StringRes id: Int, value: String, scroll: Boolean = false) {
         val matcher = hasText(label(id)) and hasSetTextAction()
         waitFor(matcher)
-        compose.onNode(matcher).assertIsDisplayed().performTextReplacement(value)
+        val node = compose.onNode(matcher)
+        if (scroll) node.performScrollTo()
+        node.assertIsDisplayed().performTextReplacement(value)
     }
     private fun trace(message: String) = inst.sendStatus(2, Bundle().apply { putString("stream", "\nmrsad: $message\n") })
     private fun assertNoMic() = assertTrue(context.checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED)

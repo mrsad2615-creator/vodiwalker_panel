@@ -7,8 +7,9 @@ from zipfile import ZipFile
 with ZipFile(sys.argv[1]) as apk:
     for abi in ("arm64-v8a", "x86_64"):
         names = [name for name in apk.namelist() if name.startswith(f"lib/{abi}/") and name.endswith(".so")]
-        if not any(name.endswith("/libtesseract.so") for name in names):
-            raise SystemExit(f"Missing native OCR library for {abi}")
+        for required in ("libtesseract.so", "liblitertlm_jni.so"):
+            if f"lib/{abi}/{required}" not in names:
+                raise SystemExit(f"Missing {required} for {abi}")
         for lib in names:
             data = apk.read(lib)
             if data[:6] != b"\x7fELF\x02\x01":

@@ -135,6 +135,33 @@ class AccountAndFreeTransportTest {
         assertEquals(1, server.requestCount)
     }
 
+    @Test
+    fun publicPickerCatalogFiltersPaidAndNonChatRowsAndNeverBearsAKey() = fixture("openrouter.ai") { server, http ->
+        fun row(id: String, prompt: String = "0", output: String = "text", input: String = "text", request: String = "0") =
+            """{"id":"$id","name":"Official $id","architecture":{"input_modalities":["$input"],"output_modalities":["$output"]},
+               "pricing":{"prompt":"$prompt","completion":"0","request":"$request"}}"""
+        val rows = listOf(row("catalog/free-a:free"), row("catalog/free-a:free"), row("catalog/paid-z"),
+            row("catalog/surcharge:free", request = "0.002"), row("catalog/not-zero:free", prompt = "0.5"),
+            row("catalog/image:free", output = "image"), row("catalog/audio:free", input = "audio"), row("catalog/free-b:free", prompt = "0.0000"))
+        server.enqueue(json("""{"data":[${rows.joinToString(",")}]}"""))
+        val listing = OpenRouterDirectory(http).freeTextModels()
+        assertEquals(listOf("catalog/free-a:free", "catalog/free-b:free"), listing.map { it.id })
+        val get = next(server)
+        assertEquals("/api/v1/models", get.url.encodedPath)
+        assertEquals("text", get.url.queryParameter("output_modalities"))
+        assertNull(get.headers["Authorization"])
+        val free = ProviderConfig.create("Free catalog", ProviderProtocol.OPENROUTER_FREE, ProviderNetwork.INTERNET, OPENROUTER_BASE_URL, listing.last().id)
+        server.enqueue(json("""{"error":{"code":429}}""", 429))
+        try {
+            OkHttpEngineTransport(http).stream(free, ApiCredential.parse("sk-or-v1-fixture"), "private fixture").toList()
+            throw AssertionError("Expected rate limit")
+        } catch (e: EngineFailure) { assertEquals(EngineProblem.RATE_LIMIT, e.problem) }
+        val send = data(next(server))
+        assertEquals(JsonPrimitive("catalog/free-b:free"), send["model"])
+        assertNull(send["models"])
+        assertEquals(2, server.requestCount)
+    }
+
     private fun fixture(host: String, verify: suspend (MockWebServer, OkHttpClient) -> Unit) {
         runBlocking {
             withTimeout(15_000) {

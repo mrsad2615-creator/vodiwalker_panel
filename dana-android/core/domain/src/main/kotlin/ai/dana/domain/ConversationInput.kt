@@ -166,8 +166,20 @@ class ChatRoute private constructor(
     val input: ConversationInput,
     val candidates: List<ProviderProfile>,
     val parallel: Boolean,
+    val freeModel: RouterFreeModel? = null,
 ) {
+    // Display/consent use the actual requested model; the original record still gates credential access.
+    val destinations: List<ProviderProfile> get() = freeModel?.let { choice ->
+        val account = candidates.single()
+        val config = account.config
+        listOf(account.copy(config = ProviderConfig.create(config.name, config.protocol, config.network, config.baseUrl, choice.id)))
+    } ?: candidates
+
     companion object {
+        fun routerFree(input: ConversationInput, account: ProviderProfile, model: RouterFreeModel): ChatRoute? =
+            if (account.config.protocol == ProviderProtocol.OPENROUTER_FREE && input.photo == null && input.fits(account))
+                ChatRoute(input, listOf(account), parallel = false, freeModel = model) else null
+
         /** All reviewed destinations must still exist and be eligible. Never silently shrink/replace a team. */
         fun parallel(input: ConversationInput, profiles: List<ProviderProfile>, selected: Set<String>): ChatRoute? {
             if (selected.size !in 2..ComparisonLimits.ENGINE_COUNT) return null

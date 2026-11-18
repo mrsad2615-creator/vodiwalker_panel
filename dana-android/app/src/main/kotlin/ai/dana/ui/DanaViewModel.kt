@@ -1,6 +1,9 @@
 package ai.dana.ui
 
 import ai.dana.R
+import ai.dana.data.network.EngineClients
+import ai.dana.data.network.RouterLoopback
+import ai.dana.domain.RouterFreeModel
 import ai.dana.domain.ApiCredential
 import ai.dana.domain.CloudEngine
 import ai.dana.domain.ConversationInput
@@ -45,6 +48,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
@@ -79,6 +83,7 @@ internal sealed interface Editor {
     data class DeleteProvider(val id: String) : Editor
     data class Quick(val initial: QuickService, val after: DashboardTab) : Editor
     data class Test(val profile: ProviderProfile) : Editor
+    data class RouterSignIn(val model: RouterFreeModel) : Editor
     class ConfirmComparison(val request: ComparisonRequest) : Editor
 }
 
@@ -99,6 +104,7 @@ internal data class DashboardSession(
     val probeMillis: Long? = null,
     val approval: RouterApproval? = null,
     val newImageProfile: String? = null,
+    val newChatDestination: ChatDestination? = null,
 )
 
 internal data class DashboardState(
@@ -121,6 +127,11 @@ internal sealed interface DanaIntent {
     data class OpenQuick(val service: QuickService = QuickService.FREE, val after: DashboardTab? = null) : DanaIntent
     class Connect(val service: QuickService, val secret: String, val approval: RouterApproval?, val imageOnly: Boolean) : DanaIntent
     data class SetupApproval(val value: RouterApproval?) : DanaIntent
+    data object ReadFreeModels : DanaIntent
+    data object CancelFreeModels : DanaIntent
+    data class OpenRouterSignIn(val model: RouterFreeModel) : DanaIntent
+    class StartRouterSignIn(val openBrowser: (String) -> Boolean) : DanaIntent
+    data object ConsumeChatDestination : DanaIntent
     data class TestProfile(val profile: ProviderProfile) : DanaIntent
     data class ActivateProfile(val direct: Boolean) : DanaIntent
     data object StopSetup : DanaIntent
@@ -170,12 +181,16 @@ internal class DanaViewModel @Inject constructor(
     private val discovery: EngineDiscovery,
     private val quickConnect: QuickConnect,
     private val directSend: DirectSendSettings,
+    private val clients: EngineClients,
 ) : ViewModel() {
     private val session = MutableStateFlow(DashboardSession())
     private val reloadGeneration = MutableStateFlow(0L)
     private val comparison = MutableStateFlow(ComparisonState())
     private var comparisonJob: Job? = null
     private var directoryJob: Job? = null
+    private val freeModels = MutableStateFlow<Reading<List<RouterFreeModel>>?>(null)
+    val routerModels = freeModels.asStateFlow()
+    private var freeModelsJob: Job? = null
     private var setup: Job? = null
     private var comparisonPreparation: Job? = null
 
@@ -196,8 +211,10 @@ internal class DanaViewModel @Inject constructor(
     fun dispatch(intent: DanaIntent) {
         val current = session.value
         if (intent == DanaIntent.StopRemoteRequests || intent == DanaIntent.StopSetup) {
-            setup?.cancel()
+            // Closing the Activity for the system browser is part of the approval, not a canceled sign-in.
+            if (intent == DanaIntent.StopSetup || current.editor !is Editor.RouterSignIn) setup?.cancel()
             if (intent == DanaIntent.StopRemoteRequests) {
+                cancelFreeModels()
                 comparisonJob?.cancel()
                 comparisonPreparation?.cancel()
                 if (current.directory == DirectoryState.Loading) clearDirectory()
@@ -207,6 +224,7 @@ internal class DanaViewModel @Inject constructor(
         if (current.busy && intent != DanaIntent.StopComparison) return
         when (intent) {
             is DanaIntent.Navigate -> {
+                if (intent.tab != DashboardTab.CHAT) cancelFreeModels()
                 if (intent.tab != DashboardTab.COMPARE) comparisonJob?.cancel()
                 clearDirectory()
                 session.value = DashboardSession(tab = intent.tab)
@@ -235,6 +253,11 @@ internal class DanaViewModel @Inject constructor(
             DanaIntent.SendComparison -> (current.editor as? Editor.ConfirmComparison)?.let { prepareComparison(it.request, remember = true) }
             is DanaIntent.OpenQuick -> show(Editor.Quick(intent.service, intent.after ?: current.tab))
             is DanaIntent.Connect -> connect(intent)
+            DanaIntent.ReadFreeModels -> readFreeModels()
+            DanaIntent.CancelFreeModels -> cancelFreeModels()
+            is DanaIntent.OpenRouterSignIn -> show(Editor.RouterSignIn(intent.model))
+            is DanaIntent.StartRouterSignIn -> signInRouter(intent.openBrowser)
+            DanaIntent.ConsumeChatDestination -> session.update { it.copy(newChatDestination = null) }
             is DanaIntent.SetupApproval -> if (current.editor is Editor.Quick) session.update { it.copy(approval = intent.value, error = null, httpStatus = null) }
             is DanaIntent.TestProfile -> show(Editor.Test(intent.profile))
             is DanaIntent.ActivateProfile -> activate(intent.direct)
@@ -352,9 +375,50 @@ internal class DanaViewModel @Inject constructor(
             session.value = DashboardSession(tab = editor.after,
                 notice = if (intent.imageOnly) R.string.workspace_image_key_ok else R.string.quick_connected,
                 probeMillis = started.elapsedNow().inWholeMilliseconds,
-                newImageProfile = id.takeIf { editor.after == DashboardTab.ART && intent.service.supportsImage })
+                newImageProfile = id.takeIf { editor.after == DashboardTab.ART && intent.service.supportsImage },
+                newChatDestination = ChatDestination.Saved(id).takeIf { editor.after == DashboardTab.CHAT && !intent.imageOnly })
         }
     }
+
+    private fun signInRouter(openBrowser: (String) -> Boolean) {
+        val editor = session.value.editor as? Editor.RouterSignIn ?: return
+        runSetup {
+            val code = RouterLoopback.receive { url ->
+                if (!openBrowser(url)) throw BrowserUnavailable()
+                true
+            } ?: throw EngineFailure(EngineProblem.TIMEOUT)
+            val tested = quickConnect.signInRouter(code)
+            val existing = providers.profiles.first().firstOrNull { it.config == tested.config }
+            val id = providers.save(existing?.id, tested.config, CredentialChange.Replace(tested.credential))
+            val saved = providers.profiles.first().single { it.id == id }
+            // First real online message still requires scope-specific consent. Nothing is sent automatically.
+            directSend.activate(saved, allowDirectText = false)
+            session.value = DashboardSession(tab = DashboardTab.CHAT, notice = R.string.models_signed_in,
+                newChatDestination = ChatDestination.OnlineFree(id, editor.model))
+        }
+    }
+
+    private fun readFreeModels() {
+        if (session.value.tab != DashboardTab.CHAT || freeModels.value == Reading.Loading) return
+        freeModels.value = Reading.Loading
+        freeModelsJob = viewModelScope.launch {
+            try {
+                freeModels.value = Reading.Ready(clients.routerModels.freeTextModels())
+            } catch (canceled: CancellationException) {
+                throw canceled
+            } catch (error: Exception) {
+                freeModels.value = Reading.Failed(DanaErrorHandler.messageFor(error))
+            }
+        }
+    }
+
+    private fun cancelFreeModels() {
+        if (freeModels.value != Reading.Loading) return
+        freeModelsJob?.cancel()
+        freeModels.value = null
+    }
+
+    private class BrowserUnavailable : Exception()
 
     private fun activate(direct: Boolean) {
         val editor = session.value.editor as? Editor.Test ?: return
@@ -378,7 +442,8 @@ internal class DanaViewModel @Inject constructor(
             } catch (canceled: CancellationException) {
                 throw canceled
             } catch (error: Exception) {
-                session.update { it.copy(error = DanaErrorHandler.messageFor(error), httpStatus = (error as? EngineFailure)?.httpStatus) }
+                session.update { it.copy(error = if (error is BrowserUnavailable) R.string.quick_no_browser else DanaErrorHandler.messageFor(error),
+                    httpStatus = (error as? EngineFailure)?.httpStatus) }
             } finally {
                 session.update { it.copy(busy = false) }
             }

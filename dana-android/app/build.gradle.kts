@@ -13,9 +13,10 @@ android {
         applicationId = "ai.dana"
         minSdk = libs.versions.min.sdk.get().toInt()
         targetSdk = libs.versions.compile.sdk.get().toInt()
+        ndk { abiFilters.addAll(listOf("arm64-v8a", "x86_64")) }
         testInstrumentationRunner = "ai.dana.WorkspaceTestRunner"
-        versionCode = 8
-        versionName = "0.8.0"
+        versionCode = 9
+        versionName = "0.9.0"
     }
 
     compileOptions {
@@ -33,7 +34,7 @@ android {
     buildTypes {
         debug {
             // Side-by-side with older debug APKs, whose signing key may differ.
-            applicationIdSuffix = ".mrsad.workspace"
+            applicationIdSuffix = ".mrsad.models"
             versionNameSuffix = "-preview"
         }
         release {

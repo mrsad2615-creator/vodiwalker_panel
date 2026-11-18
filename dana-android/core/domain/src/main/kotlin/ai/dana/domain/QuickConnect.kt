@@ -1,5 +1,7 @@
 package ai.dana.domain
 
+import java.net.URI
+import java.net.URLDecoder
 import java.security.MessageDigest
 import java.security.SecureRandom
 import java.util.Base64
@@ -25,11 +27,32 @@ enum class QuickService(val title: String, val protocol: ProviderProtocol, val a
     val supportsImage: Boolean get() = ArtModel.entries.any { it.service == this }
 }
 
-/** Official OpenRouter browser flow without a callback URI. Verifier lives only in memory and is never shown or logged. */
-class RouterApproval private constructor(internal val verifier: String, val challenge: String) {
+/** Official OpenRouter S256 flow. Verifier lives only in memory and is never shown or logged. */
+class RouterApproval private constructor(internal val verifier: String, val challenge: String, private val state: String) {
     private val created = TimeSource.Monotonic.markNow()
     val expired: Boolean get() = created.elapsedNow() >= 10.minutes
     val browserUrl: String get() = "https://openrouter.ai/auth?code_challenge=$challenge&code_challenge_method=S256&key_label=mrsad%20Free"
+    fun loopbackUrl(port: Int): String {
+        require(port in 1..65535)
+        return "$browserUrl&callback_url=http%3A%2F%2Flocalhost%3A$port%2Fcallback&state=$state"
+    }
+
+    fun acceptCallback(target: String): RouterCode? {
+        if (expired || target.length > 4_096) return null
+        return runCatching {
+            val uri = URI(target)
+            require(uri.rawPath == "/callback" && uri.rawAuthority == null && uri.scheme == null && uri.rawFragment == null)
+            val query = requireNotNull(uri.rawQuery).split('&')
+            val fields = query.associate { entry ->
+                require('=' in entry)
+                entry.substringBefore('=') to URLDecoder.decode(entry.substringAfter('='), Charsets.UTF_8.name())
+            }
+            require(fields.size == query.size && "error" !in fields)
+            require(MessageDigest.isEqual(state.toByteArray(), fields["state"].orEmpty().toByteArray()))
+            RouterCode.create(requireNotNull(fields["code"]), this)
+        }.getOrNull()
+    }
+
     override fun toString(): String = "RouterApproval([redacted])"
 
     companion object {
@@ -39,7 +62,10 @@ class RouterApproval private constructor(internal val verifier: String, val chal
             val verifier = encoder.encodeToString(bytes)
             bytes.fill(0)
             val challenge = encoder.encodeToString(MessageDigest.getInstance("SHA-256").digest(verifier.toByteArray(Charsets.US_ASCII)))
-            return RouterApproval(verifier, challenge)
+            SecureRandom().nextBytes(bytes)
+            val state = encoder.encodeToString(bytes)
+            bytes.fill(0)
+            return RouterApproval(verifier, challenge, state)
         }
     }
 }
@@ -83,6 +109,14 @@ class QuickConnect(
             } else probe(config, key)
             TestedEngine(config, key)
         } ?: throw EngineFailure(EngineProblem.TIMEOUT)
+
+    /** Exchange only. Do not spend a generation or send user content during browser sign-in. */
+    suspend fun signInRouter(code: RouterCode): TestedEngine = withTimeoutOrNull(30_000L) {
+        val key = exchanger.exchange(code)
+        if (!key.value.startsWith("sk-or-v1-")) reject(InputIssue.INVALID_API_KEY)
+        val service = QuickService.FREE
+        TestedEngine(ProviderConfig.create(service.title, service.protocol, ProviderNetwork.INTERNET, service.api, OPENROUTER_FREE_MODEL), key)
+    } ?: throw EngineFailure(EngineProblem.TIMEOUT)
 
     suspend fun probe(config: ProviderConfig, key: ApiCredential?): Long = withTimeoutOrNull(40_000L) {
         if (!config.acceptsChat) throw EngineFailure(EngineProblem.CONFIGURATION)

@@ -83,6 +83,7 @@ internal fun DanaApp(
     account: () -> AccountViewModel, art: () -> ArtViewModel, phone: () -> PhoneViewModel,
 ) {
     val state by model.uiState.collectAsStateWithLifecycle()
+    val catalog by model.routerModels.collectAsStateWithLifecycle()
     val session = state.session
     val offline = (state.offline as? Reading.Ready)?.value != false
     val ime = WindowInsets.ime.getBottom(LocalDensity.current) > 0
@@ -127,7 +128,7 @@ internal fun DanaApp(
             key(session.tab) {
                 if (session.tab == DashboardTab.CHAT) {
                     ChatScreen(chat, media, state, onSettings = openSettings,
-                        onConnect = { dispatch(DanaIntent.OpenQuick(ai.dana.domain.QuickService.AVALAI, DashboardTab.CHAT)) },
+                        catalog = catalog, dispatch = dispatch,
                         onEnableNetwork = allowNetwork, modifier = Modifier.widthIn(max = 740.dp).imePadding())
                 } else if (session.tab == DashboardTab.ART) {
                     ArtScreen(art(), state, dispatch, Modifier.widthIn(max = 680.dp).imePadding())

@@ -10,6 +10,7 @@ import okhttp3.OkHttpClient
 class EngineClients(client: OkHttpClient = danaHttpClient()) {
     private val lan = client.privateLanClient()
     val catalog: ModelDirectory = OkHttpModelDirectory(client, lan)
+    val routerModels = OpenRouterDirectory(client)
     val chat: EngineTransport = OkHttpEngineTransport(client, lan)
     val art: ImageTransport = OkHttpArtTransport(client)
     val setup = QuickConnect(catalog, chat, OkHttpRouterKeyExchange(client))

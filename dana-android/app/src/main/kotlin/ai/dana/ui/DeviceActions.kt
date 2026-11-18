@@ -38,12 +38,10 @@ internal object DeviceActions {
         is LocalAction.VolumeStep -> mediaVolume(context, null,
             if (action == LocalAction.VolumeStep.RAISE) AudioManager.ADJUST_RAISE else AudioManager.ADJUST_LOWER)
         is LocalAction.Torch -> torch(context, action.on)
-        is LocalAction.Timer -> if (action.seconds in 1..86_400) open(context, Intent(AlarmClock.ACTION_SET_TIMER)
-            .putExtra(AlarmClock.EXTRA_LENGTH, action.seconds).putExtra(AlarmClock.EXTRA_SKIP_UI, false)) else failure()
-        is LocalAction.Alarm -> if (action.hour in 0..23 && action.minute in 0..59) open(context, Intent(AlarmClock.ACTION_SET_ALARM)
-            .putExtra(AlarmClock.EXTRA_HOUR, action.hour).putExtra(AlarmClock.EXTRA_MINUTES, action.minute)
-            .putExtra(AlarmClock.EXTRA_SKIP_UI, false)) else failure()
-        LocalAction.Clock -> open(context, Intent(AlarmClock.ACTION_SHOW_ALARMS))
+        is LocalAction.Timer, is LocalAction.Alarm -> clockIntent(action)?.let {
+            open(context, it, unavailable = R.string.phone_clock_unavailable, success = R.string.phone_clock_opened)
+        } ?: failure(R.string.phone_invalid_time)
+        LocalAction.Clock -> open(context, Intent(AlarmClock.ACTION_SHOW_ALARMS), unavailable = R.string.phone_clock_unavailable)
         LocalAction.Wifi -> settingsPanel(context, if (Build.VERSION.SDK_INT >= 29) Settings.Panel.ACTION_WIFI else null, Settings.ACTION_WIFI_SETTINGS)
         LocalAction.Internet -> settingsPanel(context, if (Build.VERSION.SDK_INT >= 29) Settings.Panel.ACTION_INTERNET_CONNECTIVITY else null, Settings.ACTION_WIRELESS_SETTINGS)
         LocalAction.Sound -> settingsPanel(context, if (Build.VERSION.SDK_INT >= 29) Settings.Panel.ACTION_VOLUME else null, Settings.ACTION_SOUND_SETTINGS)
@@ -56,16 +54,29 @@ internal object DeviceActions {
             LocalAction.Panel.CALCULATOR -> Intent.makeMainSelectorActivity(Intent.ACTION_MAIN, Intent.CATEGORY_APP_CALCULATOR)
         })
         is LocalAction.Dial -> if (dialable.matches(action.number)) open(context,
-            Intent(Intent.ACTION_DIAL, Uri.fromParts("tel", action.number, null))) else failure()
-        is LocalAction.CalendarDraft -> calendarIntent(action)?.let { open(context, it) } ?: failure()
+            Intent(Intent.ACTION_DIAL, Uri.fromParts("tel", action.number, null)), unavailable = R.string.phone_dial_unavailable) else failure()
+        is LocalAction.CalendarDraft -> calendarIntent(action)?.let {
+            open(context, it, unavailable = R.string.phone_calendar_unavailable, success = R.string.phone_calendar_opened)
+        } ?: failure(R.string.phone_invalid_time)
         is LocalAction.LaunchApp -> launchApp(context, action.label)
         is LocalAction.SmsDraft -> if (dialable.matches(action.number) && action.text.length in 1..500) open(context,
-            Intent(Intent.ACTION_SENDTO, Uri.fromParts("smsto", action.number, null)).putExtra("sms_body", action.text)) else failure()
+            Intent(Intent.ACTION_SENDTO, Uri.fromParts("smsto", action.number, null)).putExtra("sms_body", action.text),
+            unavailable = R.string.phone_sms_unavailable) else failure()
         is LocalAction.Share -> open(context, Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain")
             .putExtra(Intent.EXTRA_TEXT, action.text), null))
         is LocalAction.WebSearch -> if (action.query.length in 1..240) open(context, Intent(Intent.ACTION_VIEW,
             Uri.Builder().scheme("https").authority("www.google.com").path("search").appendQueryParameter("q", action.query).build())
             .addCategory(Intent.CATEGORY_BROWSABLE)) else failure()
+    }
+
+    /** Official Android Clock intents. Let the receiving clock display its UI, never request silent setup. */
+    internal fun clockIntent(action: LocalAction): Intent? = when (action) {
+        is LocalAction.Timer -> if (action.seconds in 1..86_400) Intent(AlarmClock.ACTION_SET_TIMER)
+            .putExtra(AlarmClock.EXTRA_LENGTH, action.seconds).putExtra(AlarmClock.EXTRA_SKIP_UI, false) else null
+        is LocalAction.Alarm -> if (action.hour in 0..23 && action.minute in 0..59) Intent(AlarmClock.ACTION_SET_ALARM)
+            .putExtra(AlarmClock.EXTRA_HOUR, action.hour).putExtra(AlarmClock.EXTRA_MINUTES, action.minute)
+            .putExtra(AlarmClock.EXTRA_SKIP_UI, false) else null
+        else -> null
     }
 
     internal fun calendarIntent(action: LocalAction.CalendarDraft): Intent? {
@@ -138,11 +149,12 @@ internal object DeviceActions {
         catch (_: RuntimeException) { failure(R.string.phone_torch_unavailable) }
     }
 
-    private fun open(context: Context, intent: Intent): DeviceOutcome = try {
+    private fun open(context: Context, intent: Intent, @StringRes unavailable: Int = R.string.chat_action_unavailable,
+        @StringRes success: Int = R.string.chat_action_opened): DeviceOutcome = try {
         context.startActivity(intent)
-        DeviceOutcome(R.string.chat_action_opened)
-    } catch (_: ActivityNotFoundException) { failure() }
-    catch (_: SecurityException) { failure() }
+        DeviceOutcome(success)
+    } catch (_: ActivityNotFoundException) { failure(unavailable) }
+    catch (_: SecurityException) { failure(unavailable) }
 
     private fun failure(@StringRes message: Int = R.string.chat_action_unavailable) = DeviceOutcome(message, ok = false)
 }

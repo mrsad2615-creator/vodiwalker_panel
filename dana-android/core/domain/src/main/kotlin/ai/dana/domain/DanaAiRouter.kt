@@ -92,11 +92,12 @@ class DanaAiRouter(
 
     fun chat(route: ChatRoute): Flow<EngineEvent> = whenOnline {
         if (route.parallel) parallel(route.input, route.candidates) else flow {
-            for (profile in route.candidates) {
+            val destinations = route.destinations
+            for ((index, profile) in route.candidates.withIndex()) {
                 emit(EngineEvent.Started(profile.id))
                 var textReceived = false
                 var failure: EngineProblem? = null
-                runEngine(profile, route.input) { event ->
+                runEngine(profile, route.input, destinations[index].config) { event ->
                     if (event is EngineEvent.Text) textReceived = true
                     if (event is EngineEvent.Failed) failure = event.problem
                     emit(event)
@@ -140,6 +141,7 @@ class DanaAiRouter(
     private suspend fun runEngine(
         profile: ProviderProfile,
         input: ConversationInput,
+        requestConfig: ProviderConfig = profile.config,
         emit: suspend (EngineEvent) -> Unit,
     ) {
         try {
@@ -150,7 +152,7 @@ class DanaAiRouter(
             var length = 0
             var hasVisibleText = false
             var firstTextMillis: Long? = null
-            transport.stream(profile.config, key, input).collect { chunk ->
+            transport.stream(requestConfig, key, input).collect { chunk ->
                 val previouslyWritten = if (chunk.replaces) 0 else length
                 if (chunk.value.length > ComparisonLimits.ANSWER_CHARS - previouslyWritten) {
                     throw EngineFailure(EngineProblem.OUTPUT_LIMIT)

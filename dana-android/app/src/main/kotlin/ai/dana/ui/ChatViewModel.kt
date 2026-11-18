@@ -13,18 +13,21 @@ import ai.dana.domain.DanaAiRouter
 import ai.dana.domain.DirectSendSettings
 import ai.dana.domain.SendGrant
 import ai.dana.domain.SendLane
+import ai.dana.domain.EngineFailure
 import ai.dana.domain.EngineEvent
 import ai.dana.domain.EngineProblem
 import ai.dana.domain.HistoryRepository
-import ai.dana.domain.LocalAction
-import ai.dana.domain.LocalCommands
 import ai.dana.domain.LocalText
 import ai.dana.domain.MemoryRepository
 import ai.dana.domain.MessageRole
-import ai.dana.domain.NotesRepository
 import ai.dana.domain.ProviderProfile
 import ai.dana.domain.UserMemory
 import ai.dana.domain.VisionPhoto
+import ai.dana.localai.DeviceModel
+import ai.dana.localai.DeviceModelProblem
+import ai.dana.localai.DeviceModels
+import ai.dana.localai.DeviceText
+import kotlin.time.TimeSource
 import androidx.annotation.MainThread
 import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
@@ -47,6 +50,7 @@ import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 
 internal enum class ChatPage { CONVERSATION, HISTORY, MEMORY }
 
@@ -72,6 +76,7 @@ internal data class ChatTurn(
     val complete: Boolean = false,
     val interrupted: Boolean = false,
     val includedImage: Boolean = false,
+    val privateOnDevice: Boolean = false,
     val readWhenDone: Boolean = false,
     val errors: List<ChatAttempt> = emptyList(),
 )
@@ -90,7 +95,7 @@ internal sealed interface ChatDialog {
     data object Options : ChatDialog
     data object PickTeam : ChatDialog
     class Send(val route: ChatRoute, val question: String, val historyId: Long?, val store: Boolean, val grant: SendGrant) : ChatDialog
-    data class Action(val command: LocalAction, val fromText: Boolean) : ChatDialog
+    data class ShareReply(val text: String) : ChatDialog
     data class EditMemory(val previous: UserMemory?, val draft: String = previous?.fact.orEmpty()) : ChatDialog
     data class RemoveMemory(val id: Long?) : ChatDialog
     data class RenameConversation(val item: Conversation) : ChatDialog
@@ -105,18 +110,16 @@ internal data class ChatState(
     val running: Boolean = false,
     val writing: Boolean = false,
     val options: ChatOptions = ChatOptions(),
-    val manualId: String? = null,
+    val destination: ChatDestination = ChatDestination.Local(DeviceModel.QWEN),
     val teamIds: Set<String> = emptySet(),
     val team: TeamTurn? = null,
-    val localOnly: Boolean = false,
+    @StringRes val preparation: Int? = null,
     val voiceOpen: Boolean = false,
     val task: AssistantTask = AssistantTask.ASK,
     val photo: VisionPhoto? = null,
     val dialog: ChatDialog? = null,
     @StringRes val error: Int? = null,
     @StringRes val notice: Int? = null,
-    val noticePercent: Int? = null,
-    val speakNotice: Boolean = false,
 ) {
     val busy get() = running || writing
 }
@@ -126,11 +129,15 @@ internal class ChatViewModel @Inject constructor(
     private val router: DanaAiRouter,
     private val history: HistoryRepository,
     private val memory: MemoryRepository,
-    private val notes: NotesRepository,
     private val directSend: DirectSendSettings,
+    private val deviceModels: DeviceModels,
 ) : ViewModel() {
     private val mutable = MutableStateFlow(ChatState())
     val state = mutable.asStateFlow()
+    private val bundled = MutableStateFlow<Set<DeviceModel>?>(null)
+    val deviceChoices = bundled.asStateFlow()
+
+    init { viewModelScope.launch { bundled.value = deviceModels.available() } }
     private val search = MutableStateFlow("")
     val query = search.asStateFlow()
     private var generation: Job? = null
@@ -175,25 +182,19 @@ internal class ChatViewModel @Inject constructor(
 
     @MainThread
     fun photo(photo: VisionPhoto?) {
-        if (!mutable.value.busy) mutable.update { it.copy(photo = photo, page = ChatPage.CONVERSATION, error = null, dialog = null,
-            localOnly = if (photo != null) false else it.localOnly) }
+        if (!mutable.value.busy) mutable.update { it.copy(photo = photo, page = ChatPage.CONVERSATION, error = null, dialog = null) }
     }
 
     @MainThread
-    fun engine(id: String?) {
-        if (!mutable.value.busy) mutable.update { it.copy(manualId = id, teamIds = emptySet(), error = null) }
+    fun select(destination: ChatDestination) {
+        if (!mutable.value.busy) mutable.update { it.copy(destination = destination, teamIds = emptySet(), error = null, notice = null) }
     }
 
     @MainThread
     fun chooseTeam(ids: Set<String>) {
         if (!mutable.value.busy && ids.size in 2..ComparisonLimits.ENGINE_COUNT) {
-            mutable.update { it.copy(manualId = null, teamIds = ids.toSet(), dialog = null, error = null) }
+            mutable.update { it.copy(teamIds = ids.toSet(), dialog = null, error = null) }
         }
-    }
-
-    @MainThread
-    fun localMode(enabled: Boolean) {
-        if (!mutable.value.busy) mutable.update { it.copy(localOnly = enabled, error = null, notice = null, dialog = null) }
     }
 
     @MainThread
@@ -202,26 +203,7 @@ internal class ChatViewModel @Inject constructor(
     }
 
     @MainThread
-    fun assistant(local: Boolean = false) {
-        if (!mutable.value.busy) mutable.update {
-            it.copy(page = ChatPage.CONVERSATION, voiceOpen = true, localOnly = local, error = null, notice = null, dialog = null,
-                options = it.options.copy(readReplies = true))
-        }
-    }
-
-    @MainThread
-    fun commandExample(text: String) {
-        if (!mutable.value.busy) {
-            importText(text)
-            mutable.update { it.copy(localOnly = true, photo = null) }
-        }
-    }
-
-    @MainThread
     fun speechConsumed(index: Long) = reviseTurn(index) { it.copy(readWhenDone = false) }
-
-    @MainThread
-    fun noticeSpoken() { mutable.update { it.copy(speakNotice = false) } }
 
     @MainThread
     fun task(value: AssistantTask) {
@@ -249,7 +231,7 @@ internal class ChatViewModel @Inject constructor(
             val stored = history.messages(item.id).first().map { ContextMessage(it.role, it.body) }
             val turns = stored.zipWithNext().mapNotNull { (user, answer) ->
                 if (user.role == MessageRole.USER && answer.role == MessageRole.ASSISTANT) {
-                    ChatTurn(++counter, user.body, answer.body, complete = true)
+                    ChatTurn(++counter, user.body, answer.body, complete = true, privateOnDevice = true)
                 } else null
             }
             resetConversation(ChatPage.CONVERSATION)
@@ -258,24 +240,19 @@ internal class ChatViewModel @Inject constructor(
     }
 
     @MainThread
-    fun submit(profiles: List<ProviderProfile>, offline: Boolean, preferred: String?, execute: (LocalAction) -> DeviceOutcome) {
+    fun submit(profiles: List<ProviderProfile>, offline: Boolean) {
         val chat = mutable.value
         if (chat.busy || chat.dialog != null || chat.draft.isBlank()) return
-        if (chat.photo == null) LocalCommands.parse(chat.draft)?.let { command ->
-            when {
-                offline && command is LocalAction.WebSearch -> error(R.string.phone_web_offline)
-                command == LocalAction.Battery || command == LocalAction.MediaVolume ->
-                    actionResult(ChatDialog.Action(command, fromText = true), execute(command))
-                else -> dialog(ChatDialog.Action(command, fromText = true))
-            }
-            return
-        }
-        if (chat.localOnly) {
-            error(if (chat.photo == null) R.string.phone_unrecognized else R.string.phone_detach_first)
-            return
-        }
         if (chat.team != null) {
             error(R.string.chat_team_pick_or_clear)
+            return
+        }
+        val selected = chat.destination
+        if (chat.teamIds.isEmpty() && selected is ChatDestination.Local) {
+            if (chat.photo != null) error(R.string.models_local_text_only)
+            else if (selected.model !in bundled.value.orEmpty()) error(R.string.models_device_unsupported)
+            else if (chat.draft.trim().toByteArray(Charsets.UTF_8).size > DeviceModels.PROMPT_BYTES) error(R.string.models_prompt_length)
+            else startDevice(chat, selected.model)
             return
         }
         if (offline) {
@@ -284,17 +261,19 @@ internal class ChatViewModel @Inject constructor(
         }
         prepare {
             // Only completed, opted-in context can leave the phone. No input is sent while making the snapshot.
-            val context = if (!chat.options.includeContext) emptyList() else chat.turns.filter { it.complete }.flatMap { t ->
-                listOf(ContextMessage(MessageRole.USER, t.question), ContextMessage(MessageRole.ASSISTANT, t.answer))
-            }
+            val context = if (chat.options.includeContext) chat.context(local = false) else emptyList()
             val included = if (chat.options.useMemory) memory.facts.first() else emptyList()
             val input = ConversationInput.prepare(chat.draft, context, included, chat.options.style, chat.task, chat.photo, chat.options.mask, chat.options.lane)
             if (input == null) {
                 error(R.string.chat_payload_invalid)
                 return@prepare
             }
-            val route = if (chat.teamIds.isEmpty()) ChatRoute.direct(input, profiles, chat.manualId, preferred)
-                else ChatRoute.parallel(input, profiles, chat.teamIds)
+            val route = if (chat.teamIds.isNotEmpty()) ChatRoute.parallel(input, profiles, chat.teamIds) else when (selected) {
+                is ChatDestination.Saved -> ChatRoute.direct(input, profiles, selected.profileId, null)
+                is ChatDestination.OnlineFree -> profiles.singleOrNull { it.id == selected.profileId }
+                    ?.let { ChatRoute.routerFree(input, it, selected.model) }
+                is ChatDestination.Local -> null
+            }
             if (route == null) {
                 error(when {
                     chat.teamIds.isNotEmpty() -> R.string.chat_team_unavailable
@@ -303,7 +282,7 @@ internal class ChatViewModel @Inject constructor(
                 })
                 return@prepare
             }
-            val grant = SendGrant.chat(route.candidates, route.parallel, chat.options.includeContext,
+            val grant = SendGrant.chat(route.destinations, route.parallel, chat.options.includeContext,
                 chat.options.useMemory, input.photo != null, chat.options.mask)
             val plan = ChatDialog.Send(route, chat.draft.trim(), chat.current?.id, chat.options.autoHistory, grant)
             if (directSend.permits(grant)) start(plan)
@@ -325,6 +304,68 @@ internal class ChatViewModel @Inject constructor(
         }
     }
 
+    private fun ChatState.context(local: Boolean): List<ContextMessage> = turns.asSequence()
+        // Loaded archives have no provenance in the v1 schema and are private by default as well.
+        .filter { it.complete && (local || !it.privateOnDevice) }
+        .flatMap { sequenceOf(ContextMessage(MessageRole.USER, it.question), ContextMessage(MessageRole.ASSISTANT, it.answer)) }
+        .toList()
+
+    private fun startDevice(chat: ChatState, model: DeviceModel) {
+        val question = chat.draft.trim()
+        val turn = ChatTurn(++counter, question, engine = model.title, privateOnDevice = true,
+            readWhenDone = chat.options.readReplies)
+        val recent = if (chat.options.includeContext) chat.context(local = true).takeLast(2) else emptyList()
+        mutable.value = chat.copy(draft = "", running = true, error = null, notice = null,
+            preparation = R.string.models_preparing, turns = (chat.turns + turn).takeLast(ChatLimits.RETAINED_MESSAGES / 2))
+        generation = viewModelScope.launch {
+            val started = TimeSource.Monotonic.markNow()
+            try {
+                withTimeoutOrNull(160_000L) {
+                    deviceModels.complete(model, question, recent).collect { event ->
+                        when (event) {
+                            DeviceText.Preparing -> Unit
+                            DeviceText.Generating -> mutable.update { it.copy(preparation = R.string.models_answering) }
+                            is DeviceText.Delta -> reviseTurn(turn.index) {
+                                it.copy(answer = it.answer + event.value, firstMillis = it.firstMillis ?: started.elapsedNow().inWholeMilliseconds)
+                            }
+                        }
+                    }
+                    true
+                } ?: throw EngineFailure(EngineProblem.TIMEOUT)
+                reviseTurn(turn.index) { it.copy(complete = true, elapsedMillis = started.elapsedNow().inWholeMilliseconds) }
+                if (chat.options.autoHistory) saveTurn(turn.index, chat.current?.id)
+            } catch (canceled: CancellationException) {
+                reviseTurn(turn.index) { if (it.complete) it else it.copy(interrupted = true) }
+                throw canceled
+            } catch (problem: DeviceModelProblem) {
+                error(problem.message)
+            } catch (_: LinkageError) {
+                error(R.string.models_device_unsupported)
+            } catch (problem: Exception) {
+                error(if (problem is EngineFailure) DanaErrorHandler.messageFor(problem) else R.string.models_runtime_failed)
+            } finally {
+                finishTurn(turn, null)
+            }
+        }
+    }
+
+    private suspend fun saveTurn(index: Long, historyId: Long?) {
+        val done = mutable.value.turns.lastOrNull()?.takeIf { it.index == index && it.complete } ?: return
+        val title = done.question.lineSequence().first().take(LocalText.TITLE_LIMIT).trimEnd().ifBlank { "گفتگو" }
+        val id = history.saveExchange(historyId, title, done.question, done.answer)
+        mutable.update { it.copy(current = it.current?.takeIf { active -> active.id == id } ?: Conversation(id, title, System.currentTimeMillis())) }
+    }
+
+    private fun finishTurn(turn: ChatTurn, attached: VisionPhoto?) {
+        mutable.update { state ->
+            val result = state.turns.lastOrNull()?.takeIf { it.index == turn.index }
+            // Retain unanswered drafts. Never send them a second time without a new press.
+            if (result != null && !result.complete && result.answer.isBlank() && state.draft.isEmpty())
+                state.copy(running = false, preparation = null, draft = turn.question, photo = attached)
+            else state.copy(running = false, preparation = null)
+        }
+    }
+
     private fun start(approved: ChatDialog.Send) {
         val chat = mutable.value
         if (chat.running) return
@@ -338,7 +379,7 @@ internal class ChatViewModel @Inject constructor(
         mutable.value = chat.copy(draft = "", photo = null, running = true, dialog = null, error = null, notice = null,
             turns = (chat.turns + turn).takeLast(ChatLimits.RETAINED_MESSAGES / 2))
         generation = viewModelScope.launch {
-            val names = approved.route.candidates.associate { it.id to it.config.name }
+            val names = approved.route.destinations.associate { it.id to (approved.route.freeModel?.name ?: it.config.name) }
             try {
                 router.chat(approved.route).collect { event ->
                     when (event) {
@@ -355,25 +396,14 @@ internal class ChatViewModel @Inject constructor(
                         EngineEvent.Finished -> Unit
                     }
                 }
-                val done = mutable.value.turns.lastOrNull()?.takeIf { it.index == turn.index && it.complete }
-                if (done != null && approved.store) {
-                    val title = approved.question.lineSequence().first().take(LocalText.TITLE_LIMIT).trimEnd().ifBlank { "گفتگو" }
-                    val id = history.saveExchange(approved.historyId, title, done.question, done.answer)
-                    mutable.update { it.copy(current = it.current?.takeIf { active -> active.id == id } ?: Conversation(id, title, System.currentTimeMillis())) }
-                }
+                if (approved.store) saveTurn(turn.index, approved.historyId)
             } catch (canceled: CancellationException) {
                 reviseTurn(turn.index) { if (it.complete) it else it.copy(interrupted = true) }
                 throw canceled
             } catch (failure: Exception) {
                 error(DanaErrorHandler.messageFor(failure))
             } finally {
-                mutable.update { state ->
-                    val result = state.turns.lastOrNull()?.takeIf { it.index == turn.index }
-                    // Retain an unsatisfied prompt for editing/explicit retry. Never send again automatically.
-                    if (result != null && !result.complete && result.answer.isBlank() && state.draft.isEmpty())
-                        state.copy(running = false, draft = turn.question, photo = attached)
-                    else state.copy(running = false)
-                }
+                finishTurn(turn, attached)
             }
         }
     }
@@ -438,30 +468,19 @@ internal class ChatViewModel @Inject constructor(
     fun background() {
         stop()
         mutable.update { st ->
-            st.copy(dialog = st.dialog.takeUnless { it is ChatDialog.Send || it is ChatDialog.Action },
-                speakNotice = false, turns = st.turns.map { if (it.readWhenDone) it.copy(readWhenDone = false) else it },
+            st.copy(dialog = st.dialog.takeUnless { it is ChatDialog.Send || it is ChatDialog.ShareReply },
+                turns = st.turns.map { if (it.readWhenDone) it.copy(readWhenDone = false) else it },
                 team = st.team?.copy(readWhenPicked = false))
         }
     }
 
     @MainThread
-    fun executeAction(offline: Boolean, execute: (LocalAction) -> DeviceOutcome) {
-        val dialog = mutable.value.dialog as? ChatDialog.Action ?: return
+    fun shareReply(share: (String) -> DeviceOutcome) {
+        val reply = mutable.value.dialog as? ChatDialog.ShareReply ?: return
         if (mutable.value.busy) return
-        if (offline && dialog.command is LocalAction.WebSearch) {
-            actionResult(dialog, DeviceOutcome(R.string.phone_web_offline, ok = false))
-            return
-        }
-        if (dialog.command is LocalAction.Note) {
-            write {
-                notes.save(null, dialog.command.text)
-                actionResult(dialog, DeviceOutcome(R.string.chat_note_saved))
-            }
-        } else {
-            // Consume the approval first. Repeated button events cannot perform it twice.
-            mutable.update { it.copy(dialog = null) }
-            actionResult(dialog, execute(dialog.command))
-        }
+        mutable.update { it.copy(dialog = null) }
+        val outcome = share(reply.text)
+        mutable.update { it.copy(notice = outcome.message.takeIf { outcome.ok }, error = outcome.message.takeUnless { outcome.ok }) }
     }
 
     @MainThread
@@ -503,15 +522,8 @@ internal class ChatViewModel @Inject constructor(
         }
     }
 
-    private fun actionResult(editor: ChatDialog.Action, outcome: DeviceOutcome) {
-        mutable.update { it.copy(draft = if (editor.fromText && outcome.ok) "" else it.draft, dialog = null,
-            notice = outcome.message.takeIf { outcome.ok }, noticePercent = outcome.percent,
-            speakNotice = outcome.ok && it.voiceOpen && it.options.readReplies && it.page == ChatPage.CONVERSATION,
-            error = outcome.message.takeUnless { outcome.ok }) }
-    }
-
     private fun resetConversation(page: ChatPage) {
-        mutable.update { ChatState(page = page, options = it.options.copy(autoHistory = false), voiceOpen = it.voiceOpen, localOnly = it.localOnly, manualId = it.manualId, teamIds = it.teamIds) }
+        mutable.update { ChatState(page = page, options = it.options.copy(autoHistory = false), voiceOpen = it.voiceOpen, destination = it.destination, teamIds = it.teamIds) }
     }
 
     private fun error(@StringRes message: Int) { mutable.update { it.copy(error = message, notice = null) } }

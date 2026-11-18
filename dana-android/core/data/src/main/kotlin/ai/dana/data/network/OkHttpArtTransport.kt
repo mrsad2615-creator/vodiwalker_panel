@@ -124,7 +124,7 @@ internal class OkHttpRouterKeyExchange(private val client: OkHttpClient) : Route
 }
 
 /** Cancel the socket (including response-body read) when the foreground operation stops. */
-private suspend fun <T> OkHttpClient.json(request: Request, protocol: ProviderProtocol, limit: Long, parse: (JsonObject) -> T): T =
+internal suspend fun <T> OkHttpClient.json(request: Request, protocol: ProviderProtocol, limit: Long, parse: (JsonObject) -> T): T =
     suspendCancellableCoroutine { continuation ->
         val call = newCall(request)
         continuation.invokeOnCancellation { call.cancel() }

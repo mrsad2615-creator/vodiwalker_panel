@@ -113,7 +113,7 @@ data class ProviderConfig private constructor(
             if (protocol == ProviderProtocol.APPLE_MAC && cleanModel != APPLE_MAC_MODEL) {
                 reject(InputIssue.INVALID_MODEL)
             }
-            if (protocol == ProviderProtocol.OPENROUTER_FREE && cleanModel != OPENROUTER_FREE_MODEL) {
+            if (protocol == ProviderProtocol.OPENROUTER_FREE && !isRouterFreeId(cleanModel)) {
                 reject(InputIssue.INVALID_MODEL)
             }
             val endpoint = ProviderEndpoint.create(protocol, network, baseUrl)

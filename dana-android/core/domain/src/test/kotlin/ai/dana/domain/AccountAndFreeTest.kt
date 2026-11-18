@@ -32,7 +32,7 @@ class AccountAndFreeTest {
     }
 
     @Test
-    fun freeProfileRejectsOtherHostsAndAnyOtherModel() {
+    fun freeProfileRejectsOtherHostsAndNonFreeModels() {
         val protocol = ProviderProtocol.OPENROUTER_FREE
         val network = ProviderNetwork.INTERNET
         assertNotNull(ProviderConfig.create("رایگان", protocol, network, OPENROUTER_BASE_URL, OPENROUTER_FREE_MODEL))
@@ -45,6 +45,43 @@ class AccountAndFreeTest {
         assertThrows(InputRejected::class.java) {
             ProviderConfig.create("رایگان", protocol, ProviderNetwork.LOCAL_NETWORK, OPENROUTER_BASE_URL, OPENROUTER_FREE_MODEL)
         }
+    }
+
+    @Test
+    fun browserCodeRequiresSameStateAndAnExactLoopbackPath() {
+        val approval = RouterApproval.create()
+        val url = approval.loopbackUrl(54_321)
+        val state = url.substringAfter("&state=")
+        assertEquals(43, state.length)
+        val code = "fixture-validation-code"
+        val good = "/callback?code=$code&state=$state"
+        assertEquals(code, approval.acceptCallback(good)?.code)
+        assertNull(RouterApproval.create().acceptCallback(good))
+        for (bad in listOf("/other?code=$code&state=$state", "http://localhost:54321$good",
+            "$good&code=duplicate-code", "$good&state=$state", "$good&error=access_denied", "$good#fragment",
+            "/callback?code=fixture-%0A-invalid&state=$state", "/callback?code=$code", "$good${"a".repeat(4096)}")) {
+            assertNull(approval.acceptCallback(bad))
+        }
+    }
+
+    @Test
+    fun exactFreeVariantKeepsRealAccountButScopesConsentToTheRequestedModel() {
+        val free = ProviderProfile("account", QuickService.FREE.run {
+            ProviderConfig.create(title, protocol, ProviderNetwork.INTERNET, api, OPENROUTER_FREE_MODEL)
+        }, true, "revision")
+        val input = ConversationInput.single("سلام")
+        assertNull(RouterFreeModel.fromCatalog("openai/gpt-6", "Paid"))
+        assertNull(RouterFreeModel.fromCatalog("bad/suffix:free:paid", "Invalid"))
+        assertNull(RouterFreeModel.fromCatalog("a/b:free", "Bad\u202eName"))
+        val model = checkNotNull(RouterFreeModel.fromCatalog("a/b:free", "Specific"))
+        val selected = checkNotNull(ChatRoute.routerFree(input, free, model))
+        assertEquals(listOf(free), selected.candidates)
+        assertEquals(model.id, selected.destinations.single().config.model)
+        assertEquals(free.config.credentialScope, selected.destinations.single().config.credentialScope)
+        assertNull(ChatRoute.routerFree(input, free.copy(hasCredential = false), model))
+        val autoGrant = SendGrant.chat(listOf(free), false, true, false, false, true)
+        val exactGrant = SendGrant.chat(selected.destinations, false, true, false, false, true)
+        org.junit.Assert.assertNotEquals(autoGrant, exactGrant)
     }
 
     @Test

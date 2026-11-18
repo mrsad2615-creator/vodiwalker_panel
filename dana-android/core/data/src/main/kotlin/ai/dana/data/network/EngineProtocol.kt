@@ -98,6 +98,7 @@ internal object EngineProtocol {
                         cloud == CloudEngine.CEREBRAS && config.model == "gpt-oss-120b" -> put("reasoning_effort", "low")
                     }
                     if (config.protocol == ProviderProtocol.OPENROUTER_FREE) putJsonObject("provider") {
+                        // No model fallback list. Provider fallback within the chosen model must still satisfy all zero caps.
                         putJsonObject("max_price") {
                             put("prompt", 0); put("completion", 0); put("request", 0); put("image", 0)
                         }

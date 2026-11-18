@@ -10,6 +10,13 @@ import ai.dana.voice.VoiceStatus
 import ai.dana.voice.rememberDanaVoice
 import android.content.Context
 import android.Manifest
+import android.app.TimePickerDialog
+import java.time.LocalTime
+import androidx.annotation.StringRes
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.AlertDialog
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.Alignment
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -55,7 +62,12 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-internal data class PhoneState(val draft: String = "", val status: DeviceOutcome? = null, val busy: Boolean = false)
+internal data class PhoneState(
+    val draft: String = "",
+    val status: DeviceOutcome? = null,
+    val pending: LocalAction? = null,
+    val busy: Boolean = false,
+)
 
 @HiltViewModel
 internal class PhoneViewModel @Inject constructor(private val notes: NotesRepository) : ViewModel() {
@@ -67,11 +79,20 @@ internal class PhoneViewModel @Inject constructor(private val notes: NotesReposi
     }
 
     @MainThread fun submit(execute: (LocalAction) -> DeviceOutcome) {
-        if (mutable.value.busy) return
+        if (mutable.value.busy || mutable.value.pending != null) return
         val action = LocalCommands.parse(mutable.value.draft)
         if (action == null || action is LocalAction.WebSearch || action is LocalAction.Share) {
             result(DeviceOutcome(R.string.workspace_unrecognized, ok = false), false)
-        } else run(action, execute, clear = true)
+        } else if (action == LocalAction.Battery || action == LocalAction.MediaVolume) run(action, execute, clear = true)
+        else mutable.update { it.copy(pending = action, status = null) }
+    }
+
+    @MainThread fun cancel() { mutable.update { it.copy(pending = null) } }
+
+    @MainThread fun confirm(execute: (LocalAction) -> DeviceOutcome) {
+        val action = mutable.value.pending ?: return
+        cancel()
+        run(action, execute, clear = true)
     }
 
     @MainThread fun run(action: LocalAction, execute: (LocalAction) -> DeviceOutcome, clear: Boolean = false) {
@@ -100,67 +121,131 @@ internal fun PhoneScreen(model: PhoneViewModel) {
     val context = LocalContext.current
     val focus = LocalFocusManager.current
     val voice = rememberDanaVoice()
-    val run = { action: LocalAction -> DeviceActions.execute(context, action) }
+    val execute = { action: LocalAction -> DeviceActions.execute(context, action) }
+    val run: (LocalAction) -> Unit = { action ->
+        focus.clearFocus()
+        voice.close()
+        model.run(action, execute)
+    }
     var access by remember { mutableStateOf(false) }
+    var timer by remember { mutableStateOf(false) }
+    var examples by remember { mutableStateOf(false) }
     val flash = remember(context) { context.packageManager.hasSystemFeature(PackageManager.FEATURE_CAMERA_FLASH) }
-    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+
+    state.pending?.let { action ->
+        AlertDialog(onDismissRequest = model::cancel, title = { Text(stringResource(R.string.chat_confirm_action)) }, text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(actionText(action))
+                Text(stringResource(when (action) {
+                    is LocalAction.Timer, is LocalAction.Alarm -> R.string.phone_clock_review
+                    is LocalAction.Dial -> R.string.phone_dial_review
+                    is LocalAction.SmsDraft -> R.string.phone_sms_review
+                    is LocalAction.CalendarDraft -> R.string.phone_calendar_review
+                    is LocalAction.Note -> R.string.chat_note_private
+                    else -> R.string.phone_command_review
+                }), color = Titanium)
+            }
+        }, dismissButton = { TextButton(model::cancel) { Text(stringResource(R.string.cancel)) } },
+            confirmButton = { TextButton(onClick = { model.confirm(execute) }) { Text(stringResource(R.string.chat_execute)) } })
+    }
+    DisposableEffect(model) { onDispose { model.cancel() } }
+    if (timer) TimerForm(dismiss = { timer = false }, submit = { timer = false; run(it) })
+
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         SectionIntro(R.string.workspace_phone_title, R.string.workspace_phone_intro)
         GlassCard(Modifier.fillMaxWidth()) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick = { model.run(LocalAction.Battery, run) }, enabled = !state.busy, modifier = Modifier.weight(1f).heightIn(min = 48.dp)) {
-                    Text(stringResource(R.string.phone_battery))
-                }
-                OutlinedButton(onClick = { model.run(LocalAction.MediaVolume, run) }, enabled = !state.busy, modifier = Modifier.weight(1f).heightIn(min = 48.dp)) {
-                    Text(stringResource(R.string.phone_media_volume))
-                }
-            }
-            state.status?.let { outcome ->
+            Text(stringResource(R.string.phone_quick_title), style = MaterialTheme.typography.titleMedium)
+            PhoneRow(R.string.phone_battery, R.string.phone_media_volume, !state.busy,
+                { run(LocalAction.Battery) }, { run(LocalAction.MediaVolume) })
+            state.status?.takeUnless { !it.ok && state.draft.isNotBlank() }?.let { outcome ->
                 if (!outcome.ok) ReadError(outcome.message) else Text(
                     outcome.percent?.let { stringResource(outcome.message, faDigits(it)) } ?: stringResource(outcome.message),
                     color = Mint, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
                 )
             }
+            PhoneRow(R.string.phone_timer_button, R.string.phone_alarm_button, !state.busy,
+                { focus.clearFocus(); voice.close(); timer = true },
+                {
+                    focus.clearFocus(); voice.close()
+                    val now = LocalTime.now().plusMinutes(5)
+                    TimePickerDialog(context, { _, hour, minute -> run(LocalAction.Alarm(hour, minute)) },
+                        now.hour, now.minute, android.text.format.DateFormat.is24HourFormat(context)).show()
+                })
+            val newEvent = stringResource(R.string.phone_new_event)
+            PhoneRow(R.string.phone_new_event, R.string.phone_open_clock, !state.busy,
+                { run(LocalAction.CalendarDraft(newEvent)) }, { run(LocalAction.Clock) })
+        }
+        GlassCard(Modifier.fillMaxWidth()) {
+            Text(stringResource(R.string.phone_command_title), style = MaterialTheme.typography.titleMedium)
             OutlinedTextField(state.draft, model::draft, Modifier.fillMaxWidth(), enabled = !state.busy, maxLines = 3,
                 label = { Text(stringResource(R.string.workspace_phone_prompt)) })
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                Button(onClick = { focus.clearFocus(); model.submit(run) }, enabled = !state.busy && !voice.state.listening && state.draft.isNotBlank(),
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Button(onClick = { focus.clearFocus(); voice.close(); model.submit(execute) },
+                    enabled = !state.busy && !voice.state.listening && state.draft.isNotBlank(),
                     modifier = Modifier.weight(1f).heightIn(min = 48.dp)) { Text(stringResource(R.string.workspace_run)) }
                 VoiceButton(voice, !state.busy, useSystemSpeech = false, turnMode = false, compact = true, onText = model::draft)
             }
             VoiceStatus(voice.state)
-            Column(Modifier.fillMaxWidth()) {
-                Text(stringResource(R.string.workspace_examples), style = MaterialTheme.typography.labelLarge, color = Titanium)
-                listOf(R.string.cmd_timer, R.string.workspace_settings_example, R.string.cmd_event_timed).forEach { label ->
-                    val example = stringResource(label)
-                    FilterChip(selected = false, onClick = { model.draft(example) }, enabled = !state.busy, label = { Text(example) })
-                }
+            // Keep typed results close to the field as well; the first status card may have scrolled away.
+            state.status?.takeIf { state.draft.isNotBlank() && !it.ok }?.let { ReadError(it.message) }
+            TextButton(onClick = { examples = !examples }, modifier = Modifier.heightIn(min = 48.dp)) {
+                Text(stringResource(R.string.workspace_examples))
+            }
+            if (examples) listOf(R.string.cmd_timer, R.string.workspace_settings_example, R.string.cmd_event_timed,
+                R.string.phone_sms_example, R.string.phone_dial_example).forEach { label ->
+                val example = stringResource(label)
+                FilterChip(selected = false, onClick = { model.draft(example) }, enabled = !state.busy,
+                    modifier = Modifier.heightIn(min = 48.dp), label = { Text(example) })
             }
         }
         GlassCard(Modifier.fillMaxWidth()) {
             Text(stringResource(R.string.workspace_controls), style = MaterialTheme.typography.titleMedium)
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick = { model.run(LocalAction.VolumeStep.LOWER, run) }, modifier = Modifier.weight(1f).heightIn(min = 48.dp)) {
-                    Text(stringResource(R.string.workspace_quieter))
-                }
-                OutlinedButton(onClick = { model.run(LocalAction.VolumeStep.RAISE, run) }, modifier = Modifier.weight(1f).heightIn(min = 48.dp)) {
-                    Text(stringResource(R.string.workspace_louder))
-                }
-            }
-            if (flash) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick = { model.run(LocalAction.Torch(true), run) }, modifier = Modifier.weight(1f).heightIn(min = 48.dp)) {
-                    Text(stringResource(R.string.phone_torch_on))
-                }
-                OutlinedButton(onClick = { model.run(LocalAction.Torch(false), run) }, modifier = Modifier.weight(1f).heightIn(min = 48.dp)) {
-                    Text(stringResource(R.string.phone_torch_off))
-                }
-            } else Text(stringResource(R.string.workspace_no_flash), style = MaterialTheme.typography.bodySmall, color = Titanium)
-            TextButton(onClick = { model.run(LocalAction.Internet, run) }, modifier = Modifier.heightIn(min = 48.dp)) {
-                Text(stringResource(R.string.phone_internet))
-            }
+            PhoneRow(R.string.workspace_quieter, R.string.workspace_louder, !state.busy,
+                { run(LocalAction.VolumeStep.LOWER) }, { run(LocalAction.VolumeStep.RAISE) })
+            if (flash) PhoneRow(R.string.phone_torch_on, R.string.phone_torch_off, !state.busy,
+                { run(LocalAction.Torch(true)) }, { run(LocalAction.Torch(false)) })
+            else Text(stringResource(R.string.workspace_no_flash), style = MaterialTheme.typography.bodySmall, color = Titanium)
+            PhoneRow(R.string.phone_internet, R.string.chat_action_bluetooth, !state.busy,
+                { run(LocalAction.Internet) }, { run(LocalAction.Bluetooth) })
+            PhoneRow(R.string.chat_action_sound, R.string.phone_settings, !state.busy,
+                { run(LocalAction.Sound) }, { run(LocalAction.Panel.SETTINGS) })
         }
-        TextButton(onClick = { access = !access }, modifier = Modifier.heightIn(min = 48.dp)) { Text(stringResource(R.string.workspace_access)) }
+        TextButton(onClick = { access = !access }, modifier = Modifier.heightIn(min = 48.dp)) {
+            Text(stringResource(R.string.workspace_access))
+        }
         if (access) PhoneAccess()
     }
+}
+
+@Composable
+private fun PhoneRow(@StringRes first: Int, @StringRes second: Int, enabled: Boolean, left: () -> Unit, right: () -> Unit) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        OutlinedButton(onClick = left, enabled = enabled, modifier = Modifier.weight(1f).heightIn(min = 48.dp)) { Text(stringResource(first)) }
+        OutlinedButton(onClick = right, enabled = enabled, modifier = Modifier.weight(1f).heightIn(min = 48.dp)) { Text(stringResource(second)) }
+    }
+}
+
+@Composable
+private fun TimerForm(dismiss: () -> Unit, submit: (LocalAction.Timer) -> Unit) {
+    var amount by remember { mutableStateOf("") }
+    var minutes by remember { mutableStateOf(true) }
+    val command = LocalCommands.parse("تایمر $amount ${if (minutes) "دقیقه" else "ثانیه"}") as? LocalAction.Timer
+    AlertDialog(onDismissRequest = dismiss, title = { Text(stringResource(R.string.phone_timer_button)) }, text = {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(stringResource(R.string.phone_clock_review))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FilterChip(minutes, onClick = { minutes = true }, label = { Text(stringResource(R.string.phone_minutes)) },
+                    modifier = Modifier.heightIn(min = 48.dp))
+                FilterChip(!minutes, onClick = { minutes = false }, label = { Text(stringResource(R.string.phone_seconds)) },
+                    modifier = Modifier.heightIn(min = 48.dp))
+            }
+            OutlinedTextField(amount, { if (it.length <= 5 && it.all { c -> c in '0'..'9' || c in '۰'..'۹' || c in '٠'..'٩' }) amount = it },
+                Modifier.fillMaxWidth(), singleLine = true, label = { Text(stringResource(R.string.phone_duration)) },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), isError = amount.isNotEmpty() && command == null,
+                supportingText = { Text(stringResource(R.string.phone_timer_limit)) })
+        }
+    }, dismissButton = { TextButton(dismiss) { Text(stringResource(R.string.cancel)) } },
+        confirmButton = { TextButton(enabled = command != null, onClick = { command?.let(submit) }) { Text(stringResource(R.string.phone_submit_clock)) } })
 }
 
 @Composable

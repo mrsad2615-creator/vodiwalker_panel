@@ -1,0 +1,14 @@
+LiteRT-LM 0.19.1 — Google LLC, Apache License 2.0.
+Source and upstream notices: https://github.com/google-ai-edge/LiteRT-LM/tree/v0.19.1
+
+Qwen3-0.6B — Qwen Team, Alibaba Cloud, Apache License 2.0.
+Original model: https://huggingface.co/Qwen/Qwen3-0.6B
+This APK redistributes the LiteRT community dynamic INT4 conversion, unmodified:
+https://huggingface.co/litert-community/Qwen3-0.6B/tree/2670e142a0d16a1b685be6604e5b4f2b31a826d7
+
+SmolLM2-135M-Instruct — Hugging Face, Apache License 2.0.
+Original model: https://huggingface.co/HuggingFaceTB/SmolLM2-135M-Instruct
+This APK redistributes the LiteRT community conversion, unmodified:
+https://huggingface.co/litert-community/SmolLM2-135M-Instruct/tree/749fc23bc8d7ef89db031d075004289c88f41c2f
+
+Both on-device models are text-only in mrsad. The Apache License accompanies this notice.

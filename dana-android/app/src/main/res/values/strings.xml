@@ -315,7 +315,7 @@
     <string name="account_project_url">نشانی پروژهٔ Supabase</string>
     <string name="account_public_key">کلید عمومی پروژه</string>
     <string name="account_host">سرویس تأیید ایمیل</string>
-    <string name="account_send_help">اگر حسابی ندارید، بعد از تأیید ایمیل حساب ساخته می‌شود. ارسال کد فقط بعد از لمس دکمه انجام می‌شود.</string>
+    <string name="account_send_help">با تأیید ایمیل تازه ثبت‌نام می‌کنید؛ ایمیل‌های موجود وارد همان حساب می‌شوند. ارسال کد فقط بعد از لمس دکمه انجام می‌شود.</string>
     <string name="account_email">نشانی ایمیل</string>
     <string name="account_send">ارسال کد تأیید</string>
     <string name="account_verify_prompt">کد ایمیل را وارد کنید</string>

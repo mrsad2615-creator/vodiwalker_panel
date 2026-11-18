@@ -50,6 +50,7 @@ internal fun AccountScreen(model: AccountViewModel, offline: Boolean, canAllow: 
     var signOut by remember { mutableStateOf(false) }
     var email by remember { mutableStateOf("") }
     val setup = (status as? Reading.Ready)?.value
+    val host = setup?.host
 
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         SectionIntro(R.string.account_title, R.string.account_blurb)
@@ -60,7 +61,7 @@ internal fun AccountScreen(model: AccountViewModel, offline: Boolean, canAllow: 
         when {
             status == Reading.Loading -> Loading()
             status is Reading.Failed -> ReadError(R.string.account_error_local)
-            setup?.host == null -> GlassCard(Modifier.fillMaxWidth()) {
+            setup == null || host == null -> GlassCard(Modifier.fillMaxWidth()) {
                 Text(stringResource(R.string.account_email_title), style = MaterialTheme.typography.titleLarge)
                 Text(stringResource(R.string.account_unconfigured), color = Titanium)
                 if (setup?.editable == true) Button(onClick = { model.clearProblem(); configure = true },
@@ -73,7 +74,7 @@ internal fun AccountScreen(model: AccountViewModel, offline: Boolean, canAllow: 
                 val pending = account.pending
                 GlassCard(Modifier.fillMaxWidth()) {
                     Text(stringResource(R.string.account_host), style = MaterialTheme.typography.labelMedium, color = Titanium)
-                    TechnicalText(setup.host)
+                    TechnicalText(host)
                     when {
                         current != null -> {
                             Text(stringResource(R.string.account_verified), style = MaterialTheme.typography.titleLarge, color = Mint)

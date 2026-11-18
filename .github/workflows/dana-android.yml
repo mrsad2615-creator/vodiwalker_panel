@@ -177,10 +177,22 @@ jobs:
           "$python" -m unittest discover -s tests -v
           printf '\nMac bridge transport and protocol passed on Linux; Apple inference needs a compatible Mac.\n' >> "$GITHUB_STEP_SUMMARY"
 
+  email-otp:
+    name: Verify email OTP against local Supabase Auth and SMTP sink
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Exercise real email registration, verification and revocation with synthetic data
+        shell: bash
+        run: bash dana-android/ci/email-otp/run.sh
+
   publish:
     name: Publish the tested preview APK
     if: github.event_name == 'push' && github.ref == 'refs/heads/arena/13014174-vodiwalker-panel' && contains(github.event.head_commit.message, '[dana-apk]')
-    needs: [build, apple-bridge]
+    needs: [build, apple-bridge, email-otp]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:

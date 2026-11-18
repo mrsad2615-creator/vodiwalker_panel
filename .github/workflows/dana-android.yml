@@ -129,17 +129,18 @@ jobs:
         timeout-minutes: 12
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
         with:
-          api-level: 34
+          api-level: 35
           arch: x86_64
           # The app and tests do not depend on Play services. The Google APIs image
           # produced a Pixel Launcher ANR overlay that blocked the UI smoke test.
           target: default
-          profile: pixel_6
+          profile: pixel_2
           emulator-boot-timeout: 210
-          # Software GLES and no host Vulkan on nested KVM. Capture emulator
+          # Skip host GLES/Vulkan after the API 34 fixture lost its adb transport
+          # at Activity launch. Capture emulator
           # stdout/stderr separately from adb test output for device-loss failures.
           emulator-options: >-
-            -no-window -gpu swiftshader -feature -Vulkan -no-snapshot -noaudio -no-boot-anim
+            -no-window -gpu off -feature -Vulkan -no-snapshot -noaudio -no-boot-anim
             -camera-back none -camera-front none -cores 2 -memory 2816
             > $RUNNER_TEMP/dana-emulator-host.log 2>&1
           working-directory: dana-android
@@ -165,6 +166,10 @@ jobs:
           def annotate(title, report):
               print(f'::error title={title}::' + report[:3900].replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A'))
           annotate('Dana Android test trace', report)
+          guest = root / 'dana-emulator-guest.log'
+          if guest.exists():
+              guest_lines = guest.read_text(errors='replace').splitlines()
+              annotate('Dana Android guest trace', '\n'.join(guest_lines[-32:]))
           if host.exists():
               host_lines = host.read_text(errors='replace').splitlines()
               kernel = (root / 'dana-emulator-kernel.log').read_text(errors='replace')

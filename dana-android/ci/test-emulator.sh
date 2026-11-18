@@ -56,6 +56,10 @@ DANA_ADB_TIMEOUT=60s device install -r "$apk" >> "$log" 2>&1 || report_failure '
 mark 'Install the instrumentation APK.'
 DANA_ADB_TIMEOUT=60s device install -r -t "$test_apk" >> "$log" 2>&1 || report_failure 'Could not install the test APK.'
 mark 'Run Studio and OCR tests on the exact installed APK.'
+# Stream only lifecycle and crash tags so a VM transport loss doesn't erase what led to it.
+adb logcat -T 1 -v brief 'ActivityTaskManager:I' 'WindowManager:E' 'AndroidRuntime:E' 'Watchdog:E' 'libc:F' '*:S' > "$RUNNER_TEMP/dana-emulator-guest.log" 2>&1 &
+logcat_pid=$!
+trap 'kill "$logcat_pid" 2>/dev/null || true' EXIT
 if ! DANA_ADB_TIMEOUT=235s device shell am instrument -w "$test_package/androidx.test.runner.AndroidJUnitRunner" 2>&1 | tee "$log"; then
   report_failure 'Could not run Android instrumentation on the verified APK.'
 fi

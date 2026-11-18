@@ -166,49 +166,7 @@ jobs:
             -camera-back none -camera-front none -cores 2 -memory 2816
             > $RUNNER_TEMP/aegis-emulator-host.log 2>&1
           disable-animations: true
-          script: |
-            adb wait-for-device
-            adb shell svc power stayon true || true
-            adb shell input keyevent KEYCODE_WAKEUP || true
-            adb shell wm dismiss-keyguard || true
-            adb shell cmd connectivity airplane-mode enable || true
-            adb shell settings put global airplane_mode_on 1 || true
-            adb shell svc wifi disable || true
-            adb shell svc data disable || true
-            echo "Android API: $(adb shell getprop ro.build.version.sdk | tr -d '\r') | Airplane mode: $(adb shell settings get global airplane_mode_on | tr -d '\r')"
-
-            adb logcat -T 1 -v brief 'ActivityTaskManager:I' 'WindowManager:E' 'AndroidRuntime:E' 'Watchdog:E' 'libc:F' '*:S' > "$RUNNER_TEMP/aegis-emulator-guest.log" 2>&1 &
-            logcat_pid=$!
-            trap 'kill "$logcat_pid" 2>/dev/null || true' EXIT
-
-            set -o pipefail
-            cd aegis-security
-            if ! timeout --kill-after=10s 540s gradle --no-daemon --console=plain --stacktrace \
-              :core:database:connectedDebugAndroidTest \
-              :app:connectedDebugAndroidTest 2>&1 | tee "$RUNNER_TEMP/aegis-e2e.log"; then
-              exit 1
-            fi
-
-            python3 - <<'PYTHON'
-            from pathlib import Path
-            from xml.etree import ElementTree as ET
-            for mod in ['core/database', 'app']:
-                reports = list((Path(mod) / 'build/outputs/androidTest-results').rglob('TEST-*.xml'))
-                cases = [c for r in reports for c in ET.parse(r).iter('testcase')]
-                if not cases or any(c.find('failure') is not None or c.find('error') is not None for c in cases):
-                    raise SystemExit(f"::error title=AndroidTest::{mod} instrumentation had 0 or failed tests")
-                print(f"Verified {len(cases)} passing Android instrumentation test(s) in {mod}")
-            PYTHON
-
-            mkdir -p screenshots
-            adb shell am start -n ir.aegis.security/ir.aegis.app.MainActivity
-            sleep 3
-            adb exec-out screencap -p > screenshots/home_airplane_mode.png || true
-            adb logcat -d -s AndroidRuntime:E | tee screenshots/crash_log.txt || true
-            if grep -q "FATAL EXCEPTION" screenshots/crash_log.txt; then
-              echo "::error title=Logcat Crash::FATAL crash detected in logcat!"
-              exit 1
-            fi
+          script: bash "$GITHUB_WORKSPACE/aegis-security/ci/run-emulator-tests.sh"
 
       - name: Report Emulator Diagnostics on Failure
         if: failure()
@@ -218,14 +176,15 @@ jobs:
           from pathlib import Path
           import sys
           root = Path(sys.argv[1])
-          for label, fname in [('Aegis E2E log', 'aegis-e2e.log'), ('Aegis guest logcat', 'aegis-emulator-guest.log'), ('Aegis host emulator log', 'aegis-emulator-host.log')]:
+          for label, fname in [('Aegis progress', 'aegis-device-progress.txt'), ('Aegis E2E log', 'aegis-e2e.log'), ('Aegis guest logcat', 'aegis-emulator-guest.log'), ('Aegis host emulator log', 'aegis-emulator-host.log')]:
               p = root / fname
               if p.exists():
                   lines = p.read_text(errors='replace').splitlines()
                   interesting = [l for l in lines if any(k in l for k in ('FAILED', 'Exception', 'Error', 'Caused by:', 'FATAL', 'at ir.aegis'))]
                   snippet = '\n'.join(dict.fromkeys((interesting[:20] + lines[-25:])))[:3600]
-                  snippet = snippet.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
-                  print(f'::error title={label}::{snippet}')
+                  if snippet.strip():
+                      snippet = snippet.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
+                      print(f'::error title={label}::{snippet}')
           PYTHON
 
       - name: Upload Build APKs

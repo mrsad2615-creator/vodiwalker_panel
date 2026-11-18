@@ -1,6 +1,7 @@
 package ai.dana.ui
 
 import ai.dana.R
+import ai.dana.domain.ArtModel
 import ai.dana.domain.APPLE_MAC_MODEL
 import ai.dana.domain.GOOGLE_GEMINI_BASE_URL
 import ai.dana.domain.OPENROUTER_BASE_URL
@@ -143,7 +144,9 @@ private fun QuickEditor(editor: Editor.Quick, session: DashboardSession, dismiss
     var service by remember { mutableStateOf(editor.initial.takeIf { it in options } ?: options.first()) }
     var expanded by remember { mutableStateOf(false) }
     var secret by remember(service) { mutableStateOf("") }
-    var imageOnly by remember { mutableStateOf(false) }
+    val imageOptions = if (forImage) ArtModel.forService(service) else emptyList()
+    var imageModel by remember(service) { mutableStateOf(editor.initialImage?.takeIf { it in imageOptions } ?: imageOptions.firstOrNull()) }
+    var imageMenu by remember(service) { mutableStateOf(false) }
     var browserError by remember { mutableStateOf(false) }
     val browser = LocalUriHandler.current
     val focus = LocalFocusManager.current
@@ -151,13 +154,13 @@ private fun QuickEditor(editor: Editor.Quick, session: DashboardSession, dismiss
     val busy = session.busy
     val selected = service
     val code = session.approval.takeIf { selected == QuickService.FREE }
-    val valid = secret.isNotBlank() && (code == null || secret.length >= 8) &&
+    val valid = (!forImage || imageModel != null) && secret.isNotBlank() && (code == null || secret.length >= 8) &&
         (selected != QuickService.FREE || code != null || secret.startsWith("sk-or-v1-"))
     EditorDialog(R.string.workspace_connect, R.string.quick_connect, valid, busy, session.error, secure = true, onDismiss = dismiss,
         onConfirm = {
             focus.clearFocus()
             keyboard?.hide()
-            if (service == selected) dispatch(DanaIntent.Connect(selected, secret, code, imageOnly))
+            if (service == selected) dispatch(DanaIntent.Connect(selected, secret, code, imageModel))
         }) {
         session.httpStatus?.let { TechnicalText("HTTP $it") }
         Column {
@@ -169,7 +172,6 @@ private fun QuickEditor(editor: Editor.Quick, session: DashboardSession, dismiss
                     DropdownMenuItem(text = { Text(candidate.title) }, onClick = {
                         service = candidate
                         expanded = false
-                        imageOnly = false
                         browserError = false
                         dispatch(DanaIntent.SetupApproval(null))
                     })
@@ -200,9 +202,21 @@ private fun QuickEditor(editor: Editor.Quick, session: DashboardSession, dismiss
             textStyle = MaterialTheme.typography.bodyMedium.copy(textDirection = TextDirection.Ltr),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, autoCorrectEnabled = false),
             visualTransformation = PasswordVisualTransformation())
-        if (forImage) ToggleLine(R.string.workspace_image_only, imageOnly, !busy, { imageOnly = it })
-        if (!imageOnly) TechnicalText(selected.models.first())
-        Text(stringResource(if (imageOnly) R.string.workspace_image_probe else R.string.workspace_connect_consent),
+        if (forImage) imageModel?.let { picked ->
+            Column {
+                OutlinedButton(onClick = { imageMenu = true }, enabled = !busy, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
+                    Text(stringResource(R.string.art_select_named, picked.title))
+                }
+                DropdownMenu(expanded = imageMenu, onDismissRequest = { imageMenu = false }) {
+                    imageOptions.forEach { candidate ->
+                        DropdownMenuItem(text = { Text(candidate.title) }, onClick = { imageModel = candidate; imageMenu = false })
+                    }
+                }
+            }
+            TechnicalText(picked.id)
+            Text(stringResource(picked.qualityLabel), color = Titanium, style = MaterialTheme.typography.bodySmall)
+        } else TechnicalText(selected.models.first())
+        Text(stringResource(if (forImage) R.string.workspace_image_probe else R.string.workspace_connect_consent),
             style = MaterialTheme.typography.bodySmall, color = Titanium)
         if (busy) {
             LinearProgressIndicator(Modifier.fillMaxWidth())

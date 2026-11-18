@@ -1,12 +1,17 @@
 package ai.dana.ui
 
 import ai.dana.MainActivity
+import ai.dana.MessageReviewActivity
 import ai.dana.R
 import ai.dana.data.di.EngineClientModule
 import ai.dana.data.network.EngineClients
+import ai.dana.domain.ArtModel
 import ai.dana.domain.QuickService
+import ai.dana.domain.ReviewMessage
 import android.Manifest
 import android.app.Activity
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.ContentValues
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -23,6 +28,7 @@ import androidx.annotation.StringRes
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasClickAction
@@ -135,6 +141,27 @@ class StudioSmokeTest {
         capture("chat")
 
         click(R.string.tab_image)
+        val draftModel = "${QuickService.AVALAI.title} · ${ArtModel.AVAL_IMAGE.title}"
+        waitFor(hasText(draftModel) and hasClickAction())
+        compose.onNodeWithText(draftModel).performClick()
+        click(R.string.art_connect)
+        val chooseDraft = context.getString(R.string.art_select_named, ArtModel.AVAL_IMAGE.title)
+        visible(chooseDraft, scroll = true)
+        compose.onNodeWithText(chooseDraft).performClick()
+        visible(ArtModel.AVAL_STUDIO.title)
+        compose.onNodeWithText(ArtModel.AVAL_STUDIO.title).performClick()
+        enter(R.string.quick_key, KEY, scroll = true)
+        // A listed Flare does not validate a Sunburst selection. No generation request is made during setup.
+        replies.add(WireReply(200, """{"data":[{"id":"${ArtModel.AVAL_IMAGE.id}"}]}"""))
+        click(R.string.quick_connect)
+        visible(R.string.error_engine_config)
+        checkCall("/models", KEY)
+        replies.add(WireReply(200, """{"data":[{"id":"${ArtModel.AVAL_STUDIO.id}"}]}"""))
+        click(R.string.quick_connect)
+        visible(R.string.workspace_image_key_ok)
+        checkCall("/models", KEY)
+        visible("${QuickService.AVALAI.title} · ${ArtModel.AVAL_STUDIO.title}")
+        assertTrue(calls.isEmpty())
         enter(R.string.art_prompt, "کوه بنفش در سپیده دم")
         click(R.string.art_landscape, scroll = true)
         click(R.string.art_generate)
@@ -145,7 +172,7 @@ class StudioSmokeTest {
         click(R.string.send_allow)
         visible(R.string.art_ready)
         compose.onNodeWithContentDescription(label(R.string.art_preview)).assertIsDisplayed()
-        checkCall("/images/generations", KEY, "کوه بنفش در سپیده دم", "gpt-image-2.6-flare", "1536x1024")
+        checkCall("/images/generations", KEY, "کوه بنفش در سپیده دم", ArtModel.AVAL_STUDIO.id, "1536x1024", "\"quality\":\"high\"")
         capture("art")
 
         // Stub only the picker result (not the click or write). Android writes the original bytes to a real content URI.
@@ -167,8 +194,13 @@ class StudioSmokeTest {
             resolver.delete(uri, null, null)
         }
         assertTrue(calls.isEmpty())
+        click(R.string.art_generate)
+        visible(R.string.art_allow_title) // Studio never reuses a previous generation approval.
+        click(R.string.cancel)
+        assertTrue(calls.isEmpty())
         assertNoMic()
-        trace("UI passed: 401 recovery, real saved key / fast SSE, image approval / original PNG content-URI export")
+        trace("UI passed: saved key / fast SSE, exact Sunburst catalog, high-quality PNG consent and original export")
+        reviewPastedMessageOnline()
     }
 
     @Test
@@ -206,16 +238,32 @@ class StudioSmokeTest {
 
     @Test
     fun sharedTextIsOnlyADraftAndPhoneRequiresReviewForTypedNotes() {
-        compose.activityRule.scenario.onActivity { activity ->
-            activity.startActivity(Intent(activity, MainActivity::class.java).apply {
-                action = Intent.ACTION_SEND
-                type = "text/plain"
-                addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
-                putExtra(Intent.EXTRA_TEXT, "note DANA_SMOKE_LOCAL")
-            })
-        }
-        visible("note DANA_SMOKE_LOCAL")
+        assertEquals(1, Settings.Global.getInt(context.contentResolver, Settings.Global.AIRPLANE_MODE_ON))
+        val source = "لطفاً گزارش جلسه را فردا ساعت ۱۸:۳۰ آماده کنید. note DANA_SMOKE_LOCAL"
+        val share = Intent(Intent.ACTION_SEND).setType("text/plain").setPackage(context.packageName)
+            .putExtra(Intent.EXTRA_TEXT, source)
+        val shareTargets = context.packageManager.queryIntentActivities(share, PackageManager.MATCH_DEFAULT_ONLY)
+        assertEquals(listOf(MessageReviewActivity::class.java.name), shareTargets.map { it.activityInfo.name })
+        compose.activityRule.scenario.onActivity { it.startActivity(share) }
+        visible(R.string.message_title)
+        visible(source)
         compose.onNodeWithText(label(R.string.chat_note_saved)).assertDoesNotExist()
+        compose.onNodeWithText(label(R.string.message_result)).assertDoesNotExist()
+        compose.onNodeWithText(label(R.string.voice_playing)).assertDoesNotExist()
+        assertTrue(calls.isEmpty())
+        messageClick(R.string.message_local)
+        messageScroll(hasText(context.getString(R.string.message_clock, "۱۸:۳۰")))
+        visible(context.getString(R.string.message_clock, "۱۸:۳۰"))
+        val answer = hasTestTag("message-review-answer")
+        compose.waitUntilAtLeastOneExists(answer, timeoutMillis = 170_000)
+        val text = compose.onNode(answer).fetchSemanticsNode().config.getOrElse(SemanticsProperties.Text) { emptyList() }
+            .joinToString(" ") { it.text }
+        assertTrue("Review must contain generated text, not echo the shared source", text.isNotBlank() && text != source)
+        assertTrue(calls.isEmpty())
+        assertNoMic()
+        compose.onNodeWithContentDescription(label(R.string.studio_back)).performClick()
+        visible(R.string.workspace_chat_title)
+        compose.onNodeWithText(source).assertDoesNotExist()
         click(R.string.tab_phone)
         enter(R.string.workspace_phone_prompt, "note DANA_SMOKE_LOCAL", scroll = true)
         click(R.string.workspace_run, scroll = true)
@@ -223,7 +271,7 @@ class StudioSmokeTest {
         click(R.string.chat_execute)
         visible(R.string.chat_note_saved, scroll = true)
         assertTrue(calls.isEmpty())
-        trace("Share remains a draft; typed note requires explicit review and is saved locally")
+        trace("Share opens isolated review; explicitly requested Qwen analysis ran in airplane mode. Only typed Phone note reached action review.")
     }
 
     @Test
@@ -341,6 +389,60 @@ class StudioSmokeTest {
         assertTrue(calls.isEmpty())
         assertNoMic()
         trace("Timer form rejected out-of-range duration and sent 120 seconds with Clock UI requested")
+    }
+
+    private fun reviewPastedMessageOnline() {
+        click(R.string.tab_message)
+        visible(R.string.message_title)
+        val raw = "کد ورود ۱۲۳-۴۵۶؛ https://example.test/private-token"
+        val clipboard = checkNotNull(context.getSystemService(ClipboardManager::class.java))
+        compose.runOnIdle { clipboard.setPrimaryClip(ClipData.newPlainText("fixture", raw)) }
+        try {
+            compose.onNodeWithText(raw).assertDoesNotExist()
+            messageClick(R.string.message_paste)
+            visible(raw)
+            assertTrue(calls.isEmpty())
+            fun review() {
+                messageClick(R.string.message_online)
+                val engine = "${QuickService.AVALAI.title} · ${QuickService.AVALAI.models.first()}"
+                waitFor(hasText(engine) and hasClickAction())
+                compose.onNodeWithText(engine).performClick()
+                visible(R.string.message_send_title)
+                compose.onNodeWithTag("message-outbound").assertTextEquals("کد ورود [محفوظ]؛ [پیوند]")
+                assertTrue(calls.isEmpty())
+            }
+            review()
+            click(R.string.cancel)
+            assertTrue(calls.isEmpty())
+            review()
+            replies.add(WireReply(200, completion("برای این پیام اصالت فرستنده تأیید نشده است.")))
+            click(R.string.message_send_once)
+            val result = "برای این پیام اصالت فرستنده تأیید نشده است."
+            messageScroll(hasText(result))
+            visible(result)
+            val request = checkNotNull(calls.poll(10, TimeUnit.SECONDS))
+            assertEquals("${QuickService.AVALAI.api}/chat/completions", request.url)
+            assertEquals("Bearer $KEY", request.auth)
+            val body = org.json.JSONObject(request.body)
+            val messages = body.getJSONArray("messages")
+            assertEquals(2, messages.length())
+            assertEquals(ReviewMessage.INSTRUCTIONS, messages.getJSONObject(0).getString("content"))
+            assertEquals("کد ورود [محفوظ]؛ [پیوند]", messages.getJSONObject(1).getString("content"))
+            assertFalse(request.body.contains("۱۲۳-۴۵۶") || request.body.contains("private-token"))
+            review()
+            click(R.string.cancel)
+            assertTrue(calls.isEmpty())
+            assertNoMic()
+            trace("Explicit clipboard paste, exact masked preview, cancel and fresh approval for one isolated text request passed")
+        } finally { compose.runOnIdle { clipboard.clearPrimaryClip() } }
+        compose.onNodeWithContentDescription(label(R.string.studio_back)).performClick()
+        visible(R.string.art_generate)
+    }
+
+    private fun messageScroll(matcher: SemanticsMatcher) = compose.onNodeWithTag("message-review-list").performScrollToNode(matcher)
+    private fun messageClick(@StringRes id: Int) {
+        messageScroll(clickable(id))
+        click(id)
     }
 
     private fun completedReply(): String {

@@ -43,6 +43,7 @@ class ConversationInput private constructor(
     val omittedPairs: Int,
     val probe: Boolean = false,
     val lane: SendLane = SendLane.STANDARD,
+    val forMessageReview: Boolean = false,
 ) {
     fun fits(profile: ProviderProfile): Boolean {
         val cfg = profile.config
@@ -69,6 +70,13 @@ class ConversationInput private constructor(
     }
 
     companion object {
+        /** No chat history, attachments, memory, or remembered consent for shared content. */
+        internal fun reviewMessage(message: ReviewMessage): ConversationInput {
+            val protected = message.protectedForNetwork()
+            return ConversationInput(protected.text, emptyList(), emptyList(), AssistantStyle.CONCISE,
+                AssistantTask.ASK, null, protected.count, 0, forMessageReview = true)
+        }
+
         fun connectionProbe(): ConversationInput = ConversationInput("Reply with one short word: OK.", emptyList(), emptyList(),
             AssistantStyle.CONCISE, AssistantTask.ASK, null, 0, 0, probe = true)
 

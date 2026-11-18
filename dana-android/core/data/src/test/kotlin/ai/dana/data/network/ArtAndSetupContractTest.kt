@@ -7,14 +7,20 @@ import ai.dana.domain.ArtShape
 import ai.dana.domain.ConversationInput
 import ai.dana.domain.EngineFailure
 import ai.dana.domain.EngineProblem
+import ai.dana.domain.MessageReviewPlan
 import ai.dana.domain.ProviderConfig
 import ai.dana.domain.ProviderNetwork
 import ai.dana.domain.ProviderProfile
 import ai.dana.domain.QuickService
+import ai.dana.domain.ReviewMessage
 import ai.dana.domain.RouterApproval
 import ai.dana.domain.RouterCode
 import java.util.Base64
 import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Protocol
@@ -59,6 +65,7 @@ class ArtAndSetupContractTest {
             val json = body(request)
             assertTrue("\"responseModalities\":[\"TEXT\",\"IMAGE\"]" in json)
             assertTrue("\"aspectRatio\":\"3:2\"" in json)
+            assertTrue("\"imageSize\":\"1K\"" in json)
             assertTrue("نمونهٔ تصویر" in json)
             assertFalse(key.value in json)
         })
@@ -67,7 +74,7 @@ class ArtAndSetupContractTest {
 
     @Test fun imageOnlySetupFindsExactModelWithoutExposingItInTextCatalog() = runBlocking {
         val service = QuickService.AVALAI
-        val response = """{"data":[{"id":"gpt-5.4-nano"},{"id":"gpt-image-2.6-flare"}]}"""
+        val response = """{"data":[{"id":"gpt-5.4-nano"},{"id":"gpt-image-2.6-flare"},{"id":"gpt-image-2.6-sunburst"}]}"""
         val http = client(response = response) { request ->
             assertEquals("${service.api}/models", request.url.toString())
             assertEquals("GET", request.method)
@@ -75,7 +82,7 @@ class ArtAndSetupContractTest {
         }
         val engines = EngineClients(http)
         assertEquals(listOf("gpt-5.4-nano"), engines.catalog.list(service.endpoint, key).map { it.id })
-        assertEquals(ArtModel.AVAL_IMAGE.id, engines.setup.test(service, key.value, imageOnly = true).config.model)
+        assertEquals(ArtModel.AVAL_STUDIO.id, engines.setup.test(service, key.value, imageModel = ArtModel.AVAL_STUDIO).config.model)
     }
 
     @Test fun avalaiUsesTheSameCredentialForTheDocumentedImageRoute() = runBlocking {
@@ -84,6 +91,7 @@ class ArtAndSetupContractTest {
             assertEquals("Bearer ${key.value}", request.header("Authorization"))
             val json = body(request)
             assertTrue("\"model\":\"gpt-image-2.6-flare\"" in json)
+            assertTrue("\"quality\":\"low\"" in json)
             assertTrue("\"size\":\"1536x1024\"" in json)
             assertTrue("\"n\":1" in json)
         })
@@ -101,6 +109,54 @@ class ArtAndSetupContractTest {
             assertFalse(listOf("messages", "response_format", key.value).any { it in json })
         })
         assertEquals("image/png", transport.generate(request(ArtModel.GPT_IMAGE), key).mime)
+    }
+
+    @Test fun studioSunburstHasOneHighQualityPngOnTheExplicitProviderOnly() = runBlocking {
+        for (model in listOf(ArtModel.AVAL_STUDIO, ArtModel.GPT_STUDIO)) {
+            var count = 0
+            val transport = OkHttpArtTransport(client(response = """{"data":[{"b64_json":"$png"}]}""") { request ->
+                count++
+                assertEquals("${model.service.api}/images/generations", request.url.toString())
+                assertEquals("Bearer ${key.value}", request.header("Authorization"))
+                val json = Json.parseToJsonElement(body(request)).jsonObject
+                assertEquals(setOf("model", "prompt", "size", "quality", "output_format", "n"), json.keys)
+                assertEquals("gpt-image-2.6-sunburst", json.getValue("model").jsonPrimitive.content)
+                assertEquals("high", json.getValue("quality").jsonPrimitive.content)
+                assertEquals("png", json.getValue("output_format").jsonPrimitive.content)
+                assertEquals("1", json.getValue("n").jsonPrimitive.content)
+            })
+            assertArrayEquals(Base64.getDecoder().decode(png), transport.generate(request(model), key).data())
+            assertEquals(1, count)
+        }
+    }
+
+    @Test fun bananaProUsesTheExactNativeStudioResolutionAndRatio() = runBlocking {
+        val response = """{"candidates":[{"content":{"parts":[{"inlineData":{"mimeType":"image/png","data":"$png"}}]},"finishReason":"STOP"}]}"""
+        val transport = OkHttpArtTransport(client(response = response) { call ->
+            assertEquals("${QuickService.GOOGLE.api}/models/gemini-3-pro-image:generateContent", call.url.toString())
+            assertEquals(key.value, call.header("x-goog-api-key"))
+            val json = Json.parseToJsonElement(body(call)).jsonObject
+            assertEquals(setOf("contents", "generationConfig"), json.keys)
+            val image = json.getValue("generationConfig").jsonObject.getValue("imageConfig").jsonObject
+            assertEquals("2K", image.getValue("imageSize").jsonPrimitive.content)
+            assertEquals("3:2", image.getValue("aspectRatio").jsonPrimitive.content)
+        })
+        assertArrayEquals(Base64.getDecoder().decode(png), transport.generate(request(ArtModel.NANO_PRO), key).data())
+    }
+
+    @Test fun messageReviewSendsPreciselyTheReviewedTextAndFixedSystemInstruction() {
+        val profile = ProviderProfile("review", config(QuickService.AVALAI), true)
+        val text = checkNotNull(ReviewMessage.create("verification code: 123456; https://example.test/session"))
+        val plan = checkNotNull(MessageReviewPlan.create(profile, text))
+        val request = EngineProtocol.request(profile.config, key, plan.input)
+        assertEquals("${QuickService.AVALAI.api}/chat/completions", request.url.toString())
+        val raw = body(request)
+        val json = Json.parseToJsonElement(raw).jsonObject
+        assertFalse(listOf("123456", "https://example.test", key.value, "tools", "image_url", "inlineData").any { it in raw })
+        assertEquals(profile.config.model, json.getValue("model").jsonPrimitive.content)
+        val messages = json.getValue("messages").jsonArray.map { it.jsonObject }
+        assertEquals(listOf("system", "user"), messages.map { it.getValue("role").jsonPrimitive.content })
+        assertEquals(listOf(ReviewMessage.INSTRUCTIONS, plan.input.prompt), messages.map { it.getValue("content").jsonPrimitive.content })
     }
 
     @Test fun aTextOnlyResponseOrExternalUrlIsNotAnImageAndBlockIsNotRetried() {

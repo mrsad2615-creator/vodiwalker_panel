@@ -24,6 +24,7 @@ import ai.dana.domain.ProviderNetwork
 import ai.dana.domain.ProviderProfile
 import ai.dana.domain.ProviderRepository
 import ai.dana.domain.QuickService
+import ai.dana.domain.ReviewMessage
 import ai.dana.domain.SendGrant
 import ai.dana.domain.UserMemory
 import ai.dana.domain.VisionPhoto
@@ -42,7 +43,10 @@ import androidx.test.platform.app.InstrumentationRegistry
 import java.io.ByteArrayOutputStream
 import java.time.Instant
 import java.time.ZoneId
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
@@ -212,6 +216,48 @@ class InstalledWorkflowsTest {
             listOf(EngineLane(profile, answer = "پاسخ آزمون", status = LaneStatus.COMPLETE, firstTextMillis = 41, elapsedMillis = 52)))
         assertTrue(listOf("پرامپت اصلی", "پاسخ آزمون", profile.config.model, "41 ms", "52 ms").all { it in report })
         assertTrue("fixture-iv" !in report)
+    }
+
+    @Test fun messageReviewRevokesOldApprovalAndDiscardsStoppedOutput() = deviceTest {
+        val started = CompletableDeferred<Unit>()
+        val stopped = CompletableDeferred<Unit>()
+        var calls = 0
+        val router = DanaAiRouter(prefs, repo, object : EngineTransport {
+            override fun stream(config: ProviderConfig, key: ApiCredential?, input: ConversationInput): Flow<EngineText> = flow {
+                calls++
+                assertTrue(input.forMessageReview)
+                emit(EngineText("ناقص"))
+                started.complete(Unit)
+                try { awaitCancellation() } finally { stopped.complete(Unit) }
+            }
+        })
+        val vm = MessageReviewViewModel(prefs, repo, DeviceModels(InstrumentationRegistry.getInstrumentation().targetContext), router)
+        vm.profiles.first { it == listOf(profile) }
+        vm.offline.first { !it }
+        onMain { vm.receive("متن نخست"); vm.reviewOnline(profile) }
+        val old = checkNotNull(vm.state.value.pending)
+        onMain {
+            vm.stop() // The same path as Activity.onStop; an unapproved payload cannot survive it.
+            vm.approve(old)
+            vm.receive("متن دوم")
+            vm.reviewOnline(profile)
+            vm.approve(old)
+        }
+        assertEquals(0, calls)
+        val active = checkNotNull(vm.state.value.pending)
+        assertEquals("متن دوم", active.input.prompt)
+        onMain { vm.approve(active) }
+        started.await()
+        onMain { vm.stop() }
+        stopped.await()
+        assertEquals(1, calls)
+        assertNull(vm.state.value.result)
+        assertNull(vm.state.value.pending)
+        assertNull(vm.state.value.active)
+        assertEquals("متن دوم", vm.state.value.draft)
+        onMain { vm.receive("x".repeat(ReviewMessage.MAX_CHARS + 1)) }
+        assertEquals("", vm.state.value.draft)
+        assertEquals(ai.dana.R.string.message_too_long, vm.state.value.inputProblem)
     }
 
     private fun onMain(block: () -> Unit) = InstrumentationRegistry.getInstrumentation().runOnMainSync { block() }

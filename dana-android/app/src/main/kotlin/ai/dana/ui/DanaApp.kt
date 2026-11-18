@@ -81,6 +81,7 @@ private val rootTabs = listOf(
 internal fun DanaApp(
     model: DanaViewModel, chat: ChatViewModel, media: MediaViewModel,
     account: () -> AccountViewModel, art: () -> ArtViewModel, phone: () -> PhoneViewModel,
+    openMessageReview: () -> Unit,
 ) {
     val state by model.uiState.collectAsStateWithLifecycle()
     val catalog by model.routerModels.collectAsStateWithLifecycle()
@@ -121,6 +122,12 @@ internal fun DanaApp(
                             indicatorColor = MaterialTheme.colorScheme.primaryContainer),
                     )
                 }
+                NavigationBarItem(
+                    selected = false, enabled = !session.busy, onClick = openMessageReview,
+                    icon = { StudioMark(Mark.MESSAGE, Titanium) },
+                    label = { Text(stringResource(R.string.tab_message), maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                    colors = NavigationBarItemDefaults.colors(unselectedTextColor = Titanium),
+                )
             }
         },
     ) { insets ->

@@ -93,18 +93,17 @@ class QuickConnect(
     private val transport: EngineTransport,
     private val exchanger: RouterKeyExchange,
 ) {
-    suspend fun test(service: QuickService, raw: String, approval: RouterApproval? = null, imageOnly: Boolean = false): TestedEngine =
+    suspend fun test(service: QuickService, raw: String, approval: RouterApproval? = null, imageModel: ArtModel? = null): TestedEngine =
         withTimeoutOrNull(50_000L) {
+            if (imageModel != null && imageModel.service != service) throw EngineFailure(EngineProblem.CONFIGURATION)
             val key = if (approval != null && service == QuickService.FREE) exchanger.exchange(RouterCode.create(raw, approval))
                 else ApiCredential.parse(raw)
             if (service == QuickService.FREE && !key.value.startsWith("sk-or-v1-")) reject(InputIssue.INVALID_API_KEY)
-            val model = if (!imageOnly) service.models.first() else {
-                ArtModel.entries.firstOrNull { it.service == service }?.id ?: throw EngineFailure(EngineProblem.CONFIGURATION)
-            }
+            val model = imageModel?.id ?: service.models.first()
             val config = ProviderConfig.create(service.title, service.protocol, ProviderNetwork.INTERNET, service.api, model)
             // No required catalog lookup or model guessing for a text request. Some per-project keys cannot list models.
             // Image setup checks the key/catalog; it does not make a billable image request or promise that quota exists.
-            if (imageOnly) {
+            if (imageModel != null) {
                 if (!directory.hasImageModel(service.endpoint, key, model)) throw EngineFailure(EngineProblem.CONFIGURATION)
             } else probe(config, key)
             TestedEngine(config, key)

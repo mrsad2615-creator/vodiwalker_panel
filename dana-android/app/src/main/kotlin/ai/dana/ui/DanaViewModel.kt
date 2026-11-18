@@ -1,6 +1,7 @@
 package ai.dana.ui
 
 import ai.dana.R
+import ai.dana.domain.ArtModel
 import ai.dana.data.network.EngineClients
 import ai.dana.data.network.RouterLoopback
 import ai.dana.domain.RouterFreeModel
@@ -81,7 +82,7 @@ internal sealed interface Editor {
         val cloud: CloudEngine? = previous?.config?.cloudEngine) : Editor
     data class DeleteNote(val id: Long) : Editor
     data class DeleteProvider(val id: String) : Editor
-    data class Quick(val initial: QuickService, val after: DashboardTab) : Editor
+    data class Quick(val initial: QuickService, val after: DashboardTab, val initialImage: ArtModel?) : Editor
     data class Test(val profile: ProviderProfile) : Editor
     data class RouterSignIn(val model: RouterFreeModel) : Editor
     class ConfirmComparison(val request: ComparisonRequest) : Editor
@@ -124,8 +125,8 @@ internal sealed interface DanaIntent {
         val lanPreset: Boolean = false, val cloud: CloudEngine? = profile?.config?.cloudEngine) : DanaIntent
     data class ChooseTask(val task: AssistantTask, val openWorkspace: Boolean = false) : DanaIntent
     data class NoteFromAnswer(val profileId: String) : DanaIntent
-    data class OpenQuick(val service: QuickService = QuickService.FREE, val after: DashboardTab? = null) : DanaIntent
-    class Connect(val service: QuickService, val secret: String, val approval: RouterApproval?, val imageOnly: Boolean) : DanaIntent
+    data class OpenQuick(val service: QuickService = QuickService.FREE, val after: DashboardTab? = null, val imageModel: ArtModel? = null) : DanaIntent
+    class Connect(val service: QuickService, val secret: String, val approval: RouterApproval?, val imageModel: ArtModel?) : DanaIntent
     data class SetupApproval(val value: RouterApproval?) : DanaIntent
     data object ReadFreeModels : DanaIntent
     data object CancelFreeModels : DanaIntent
@@ -251,7 +252,7 @@ internal class DanaViewModel @Inject constructor(
             is DanaIntent.ToggleEngine -> toggleEngine(intent.profileId)
             DanaIntent.ReviewComparison -> reviewComparison()
             DanaIntent.SendComparison -> (current.editor as? Editor.ConfirmComparison)?.let { prepareComparison(it.request, remember = true) }
-            is DanaIntent.OpenQuick -> show(Editor.Quick(intent.service, intent.after ?: current.tab))
+            is DanaIntent.OpenQuick -> show(Editor.Quick(intent.service, intent.after ?: current.tab, intent.imageModel))
             is DanaIntent.Connect -> connect(intent)
             DanaIntent.ReadFreeModels -> readFreeModels()
             DanaIntent.CancelFreeModels -> cancelFreeModels()
@@ -365,18 +366,20 @@ internal class DanaViewModel @Inject constructor(
 
     private fun connect(intent: DanaIntent.Connect) {
         val editor = session.value.editor as? Editor.Quick ?: return
+        val imageOnly = intent.imageModel != null
+        if (imageOnly != (editor.after == DashboardTab.ART)) return
         runSetup {
             val started = kotlin.time.TimeSource.Monotonic.markNow()
-            val tested = quickConnect.test(intent.service, intent.secret, intent.approval, intent.imageOnly)
+            val tested = quickConnect.test(intent.service, intent.secret, intent.approval, intent.imageModel)
             val existing = providers.profiles.first().singleOrNull { it.config == tested.config }
             val id = providers.save(existing?.id, tested.config, CredentialChange.Replace(tested.credential))
             val saved = providers.profiles.first().single { it.id == id }
-            if (intent.imageOnly) preferences.setOfflineMode(false) else directSend.activate(saved, allowDirectText = true)
+            if (imageOnly) preferences.setOfflineMode(false) else directSend.activate(saved, allowDirectText = true)
             session.value = DashboardSession(tab = editor.after,
-                notice = if (intent.imageOnly) R.string.workspace_image_key_ok else R.string.quick_connected,
+                notice = if (imageOnly) R.string.workspace_image_key_ok else R.string.quick_connected,
                 probeMillis = started.elapsedNow().inWholeMilliseconds,
                 newImageProfile = id.takeIf { editor.after == DashboardTab.ART && intent.service.supportsImage },
-                newChatDestination = ChatDestination.Saved(id).takeIf { editor.after == DashboardTab.CHAT && !intent.imageOnly })
+                newChatDestination = ChatDestination.Saved(id).takeIf { editor.after == DashboardTab.CHAT && !imageOnly })
         }
     }
 

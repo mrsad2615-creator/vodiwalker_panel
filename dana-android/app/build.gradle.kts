@@ -15,8 +15,8 @@ android {
         targetSdk = libs.versions.compile.sdk.get().toInt()
         ndk { abiFilters.addAll(listOf("arm64-v8a", "x86_64")) }
         testInstrumentationRunner = "ai.dana.WorkspaceTestRunner"
-        versionCode = 9
-        versionName = "0.9.0"
+        versionCode = 10
+        versionName = "0.10.0"
     }
 
     compileOptions {

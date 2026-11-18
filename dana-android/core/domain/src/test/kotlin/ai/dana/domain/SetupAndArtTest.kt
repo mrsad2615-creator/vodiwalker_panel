@@ -72,8 +72,8 @@ class SetupAndArtTest {
 
     @Test fun imageConnectionChecksCatalogWithoutTextProbeAndNeverBecomesChatRoute() = runBlocking {
         val preset = QuickService.AVALAI
-        val selected = ArtModel.AVAL_IMAGE
-        var models = emptyList<DirectoryModel>()
+        val selected = ArtModel.AVAL_STUDIO
+        var models = listOf(DirectoryModel(ArtModel.AVAL_IMAGE.id, ArtModel.AVAL_IMAGE.title))
         var requests = 0
         val service = QuickConnect(object : ModelDirectory {
             override suspend fun list(endpoint: ProviderEndpoint, key: ApiCredential?): List<DirectoryModel> {
@@ -86,12 +86,18 @@ class SetupAndArtTest {
                 error("No billable completion for image-only setup")
         }, object : RouterKeyExchange { override suspend fun exchange(code: RouterCode): ApiCredential = error("No code exchange") })
         assertEquals(EngineProblem.CONFIGURATION,
-            (runCatching { service.test(preset, "fixture", imageOnly = true) }.exceptionOrNull() as EngineFailure).problem)
+            (runCatching { service.test(preset, "fixture", imageModel = selected) }.exceptionOrNull() as EngineFailure).problem)
         models = listOf(DirectoryModel(selected.id, selected.title))
-        val imageOnly = ProviderProfile("image-profile", service.test(preset, "fixture", imageOnly = true).config, true)
+        val imageOnly = ProviderProfile("image-profile", service.test(preset, "fixture", imageModel = selected).config, true)
         assertTrue(selected.matches(imageOnly))
+        assertFalse(ArtModel.AVAL_IMAGE.matches(imageOnly))
+        assertFalse(ArtModel.GPT_STUDIO.matches(imageOnly))
+        assertNotEquals(SendGrant.image(profile(preset), selected.id), SendGrant.image(profile(preset), ArtModel.AVAL_IMAGE.id))
         assertEquals(selected.id, imageOnly.config.model)
         assertNull(ChatRoute.direct(ConversationInput.single("hello"), listOf(imageOnly), null, null))
+        assertEquals(EngineProblem.CONFIGURATION, (runCatching {
+            service.test(QuickService.OPENAI, "fixture", imageModel = selected)
+        }.exceptionOrNull() as EngineFailure).problem)
         assertEquals(2, requests)
     }
 

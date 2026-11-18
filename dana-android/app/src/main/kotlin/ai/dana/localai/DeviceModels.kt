@@ -5,6 +5,7 @@ import ai.dana.domain.ContextMessage
 import ai.dana.domain.EngineFailure
 import ai.dana.domain.EngineProblem
 import ai.dana.domain.MessageRole
+import ai.dana.domain.ReviewMessage
 import android.content.Context
 import android.os.Process
 import androidx.annotation.StringRes
@@ -68,7 +69,13 @@ internal class DeviceModels @Inject constructor(@ApplicationContext private val 
         }.toSet()
     }
 
-    fun complete(model: DeviceModel, prompt: String, previous: List<ContextMessage>): Flow<DeviceText> = flow {
+    fun complete(model: DeviceModel, prompt: String, previous: List<ContextMessage>): Flow<DeviceText> =
+        generate(model, prompt, previous, review = false)
+
+    fun review(message: ReviewMessage): Flow<DeviceText> =
+        generate(DeviceModel.QWEN, message.text, emptyList(), review = true)
+
+    private fun generate(model: DeviceModel, prompt: String, previous: List<ContextMessage>, review: Boolean): Flow<DeviceText> = flow {
         if (!Process.is64Bit()) throw DeviceModelProblem(R.string.models_device_unsupported)
         if (prompt.toByteArray(Charsets.UTF_8).size !in 1..PROMPT_BYTES) throw DeviceModelProblem(R.string.models_prompt_length)
         emit(DeviceText.Preparing)
@@ -88,11 +95,15 @@ internal class DeviceModels @Inject constructor(@ApplicationContext private val 
             engine.use {
                 currentCoroutineContext().ensureActive()
                 engine.createConversation(ConversationConfig(
-                    systemInstruction = Contents.of(if (qwen) "Answer briefly in the language used by the user. If you are unsure, say so." else "Answer briefly in English."),
+                    systemInstruction = Contents.of(when {
+                        review -> ReviewMessage.INSTRUCTIONS
+                        qwen -> "Answer briefly in the language used by the user. If you are unsure, say so."
+                        else -> "Answer briefly in English."
+                    }),
                     initialMessages = recent.map { if (it.role == MessageRole.USER) Message.user(it.body) else Message.model(it.body) },
-                    samplerConfig = SamplerConfig(topK = 20, topP = 0.8, temperature = 0.7, seed = 42),
+                    samplerConfig = SamplerConfig(topK = 20, topP = 0.8, temperature = if (review) 0.3 else 0.7, seed = 42),
                     automaticToolCalling = false,
-                    maxOutputToken = 112,
+                    maxOutputToken = if (review) 192 else 112,
                     thinkingConfig = ThinkingConfig(enableThinking = false).takeIf { qwen },
                 )).use { conversation ->
                     emit(DeviceText.Generating)
@@ -162,5 +173,5 @@ internal class DeviceModels @Inject constructor(@ApplicationContext private val 
 
     private data class Pin(val bytes: Long, val sha: String)
 
-    companion object { const val PROMPT_BYTES = 1050 }
+    companion object { const val PROMPT_BYTES = ReviewMessage.LOCAL_BYTES }
 }

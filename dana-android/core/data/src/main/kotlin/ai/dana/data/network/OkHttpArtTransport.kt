@@ -46,7 +46,7 @@ internal class OkHttpArtTransport(client: OkHttpClient) : ImageTransport {
                     putJsonArray("responseModalities") { add(JsonPrimitive("TEXT")); add(JsonPrimitive("IMAGE")) }
                     putJsonObject("imageConfig") {
                         put("aspectRatio", request.shape.ratio)
-                        put("imageSize", "1K")
+                        put("imageSize", request.model.geminiSize)
                     }
                 }
             }
@@ -56,7 +56,7 @@ internal class OkHttpArtTransport(client: OkHttpClient) : ImageTransport {
                 put("model", request.model.id)
                 put("prompt", request.prompt)
                 put("size", request.shape.openAiSize)
-                put("quality", "low")
+                put("quality", request.model.openAiQuality)
                 put("output_format", "png")
                 put("n", 1)
             }

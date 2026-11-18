@@ -43,7 +43,11 @@ class MainActivity : ComponentActivity() {
         )
         if (savedInstanceState == null) handleExternal(intent)
         setContent {
-            DanaTheme { DanaApp(model, chat, media, { account }, { art }, { phone }) }
+            DanaTheme {
+                DanaApp(model, chat, media, { account }, { art }, { phone }) {
+                    startActivity(Intent(this, MessageReviewActivity::class.java))
+                }
+            }
         }
     }
 
@@ -61,12 +65,6 @@ class MainActivity : ComponentActivity() {
             OneFrameCaptureService.ACTION_OPEN_MEDIA -> {
                 model.dispatch(DanaIntent.Navigate(DashboardTab.CHAT))
                 media.open()
-            }
-            Intent.ACTION_SEND -> if (received.type == "text/plain") {
-                val text = runCatching { received.getCharSequenceExtra(Intent.EXTRA_TEXT)?.toString() }.getOrNull() ?: return
-                // Treat external content as an editable draft. Do not resolve intents, submit it, or run actions.
-                model.dispatch(DanaIntent.Navigate(DashboardTab.CHAT))
-                chat.importText(text)
             }
         }
     }

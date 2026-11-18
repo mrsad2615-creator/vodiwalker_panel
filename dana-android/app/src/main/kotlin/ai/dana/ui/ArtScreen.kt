@@ -16,6 +16,8 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -56,7 +58,7 @@ internal fun ArtScreen(model: ArtViewModel, dashboard: DashboardState, dispatch:
         ArtModel.entries.flatMap { m -> profiles.filter(m::matches).map { p -> m to p } }
             .sortedBy { (_, p) -> p.id != dashboard.preferredEngine }
     }
-    val chosen = engines.firstOrNull { (m, p) -> m == art.model && p.id == art.engineId } ?: engines.firstOrNull()
+    val chosen = if (art.model == null) engines.firstOrNull() else engines.firstOrNull { (m, p) -> m == art.model && p.id == art.engineId }
     val newlyConnected = engines.firstOrNull { (_, p) -> p.id == dashboard.session.newImageProfile }
     LaunchedEffect(newlyConnected) {
         if (newlyConnected != null) model.select(newlyConnected.first, newlyConnected.second)
@@ -65,7 +67,11 @@ internal fun ArtScreen(model: ArtViewModel, dashboard: DashboardState, dispatch:
     val focus = LocalFocusManager.current
     val keyboard = LocalSoftwareKeyboardController.current
     val finishInput = { focus.clearFocus(); keyboard?.hide() }
-    val connect = { finishInput(); dispatch(DanaIntent.OpenQuick(chosen?.first?.service ?: QuickService.AVALAI, DashboardTab.ART)) }
+    val connect = {
+        finishInput()
+        val existing = chosen?.first ?: art.model
+        dispatch(DanaIntent.OpenQuick(existing?.service ?: QuickService.AVALAI, DashboardTab.ART, existing))
+    }
     val list = rememberLazyListState()
     LaunchedEffect(art.preview?.id) {
         if (art.preview != null) list.requestScrollToItem(0)
@@ -106,11 +112,13 @@ internal fun ArtScreen(model: ArtViewModel, dashboard: DashboardState, dispatch:
                                 })) })
                         }
                     }
-                    if (chosen != null) {
+                    if (engines.isNotEmpty()) {
                         Column {
                             TextButton(onClick = { menu = true }, enabled = !art.running, modifier = Modifier.heightIn(min = 48.dp)) {
-                                Text("${chosen.second.config.name} · ${chosen.first.title}", style = MaterialTheme.typography.labelLarge)
+                                Text(chosen?.let { (m, p) -> "${p.config.name} · ${m.title}" } ?: stringResource(R.string.art_select_engine),
+                                    style = MaterialTheme.typography.labelLarge)
                             }
+                            chosen?.let { (m, _) -> Text(stringResource(m.qualityLabel), color = Titanium, style = MaterialTheme.typography.bodySmall) }
                             DropdownMenu(menu, { menu = false }) {
                                 engines.take(60).forEach { (m, p) ->
                                     DropdownMenuItem(text = { Text("${p.config.name} · ${m.title}") }, onClick = { model.select(m, p); menu = false })
@@ -119,7 +127,8 @@ internal fun ArtScreen(model: ArtViewModel, dashboard: DashboardState, dispatch:
                             }
                         }
                     }
-                    if (chosen == null) Text(stringResource(R.string.art_need_engine), color = Titanium, style = MaterialTheme.typography.bodySmall)
+                    if (chosen == null) Text(stringResource(if (engines.isEmpty()) R.string.art_need_engine else R.string.art_selection_changed),
+                        color = Titanium, style = MaterialTheme.typography.bodySmall)
                     else if (offline) Text(stringResource(R.string.art_offline), color = Titanium, style = MaterialTheme.typography.bodySmall)
                     else Text(stringResource(R.string.art_paid), style = MaterialTheme.typography.bodySmall, color = Amber)
                 }
@@ -154,11 +163,14 @@ internal fun ArtScreen(model: ArtViewModel, dashboard: DashboardState, dispatch:
     art.pending?.let { request ->
         AlertDialog(onDismissRequest = model::dismiss, properties = DialogProperties(securePolicy = SecureFlagPolicy.SecureOn),
             title = { Text(stringResource(R.string.art_allow_title)) }, text = {
-                Column(Modifier.padding(vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(stringResource(R.string.art_allow_body))
+                Column(Modifier.heightIn(max = 400.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(stringResource(if (request.model.studio) R.string.art_allow_studio else R.string.art_allow_body))
                     Text(request.profile.config.name, style = MaterialTheme.typography.titleMedium)
                     TechnicalText(request.profile.config.baseUrl, maxLines = 3)
                     TechnicalText(request.model.id, maxLines = 2)
+                    val size = if (request.model.service == QuickService.GOOGLE) request.shape.ratio else request.shape.openAiSize
+                    Text("${stringResource(request.model.qualityLabel)} · $size", style = MaterialTheme.typography.bodySmall)
+                    Text(request.prompt)
                 }
             }, confirmButton = {
                 Button(onClick = model::approve, enabled = !offline) { Text(stringResource(R.string.send_allow)) }
@@ -167,3 +179,11 @@ internal fun ArtScreen(model: ArtViewModel, dashboard: DashboardState, dispatch:
             })
     }
 }
+
+internal val ArtModel.qualityLabel: Int
+    get() = when {
+        service == QuickService.GOOGLE && studio -> R.string.art_quality_2k
+        service == QuickService.GOOGLE -> R.string.art_quality_1k
+        studio -> R.string.art_quality_high
+        else -> R.string.art_quality_low
+    }

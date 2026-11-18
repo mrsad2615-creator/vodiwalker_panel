@@ -77,11 +77,11 @@ internal class ArtViewModel @Inject constructor(private val images: ImageGenerat
         mutable.update { it.copy(running = true, pending = null, error = null, status = null) }
         work = viewModelScope.launch {
             try {
-                if (!approved && !direct.permits(request.grant)) {
+                if (!approved && (request.model.studio || !direct.permits(request.grant))) {
                     mutable.update { it.copy(pending = request) }
                     return@launch
                 }
-                if (approved) direct.remember(request.grant)
+                if (approved && !request.model.studio) direct.remember(request.grant)
                 val started = TimeSource.Monotonic.markNow()
                 val image = images.generate(request)
                 val preview = withContext(Dispatchers.Default) {

@@ -60,7 +60,7 @@ device shell cmd connectivity airplane-mode enable >> "$log" 2>&1
 device shell svc wifi disable >> "$log" 2>&1
 device shell svc data disable >> "$log" 2>&1
 [[ "$(device shell settings get global airplane_mode_on | tr -d '\r')" == 1 ]] || report_failure 'Emulator did not enter airplane mode.'
-mark 'Run native model inference, Phone, chat and OCR tests on the exact installed APK.'
+mark 'Run message review, native inference, Phone, image, chat and OCR tests on the exact installed APK.'
 # Stream only lifecycle and crash tags so a VM transport loss doesn't erase what led to it.
 adb logcat -T 1 -v brief 'ActivityTaskManager:I' 'WindowManager:E' 'AndroidRuntime:E' 'Watchdog:E' 'libc:F' '*:S' > "$RUNNER_TEMP/dana-emulator-guest.log" 2>&1 &
 logcat_pid=$!
@@ -68,8 +68,8 @@ trap 'kill "$logcat_pid" 2>/dev/null || true' EXIT
 if ! DANA_ADB_TIMEOUT=460s device shell am instrument -w "$test_package/ai.dana.WorkspaceTestRunner" 2>&1 | tee "$log"; then
   report_failure 'Could not run Android instrumentation on the verified APK.'
 fi
-if ! grep -Eq '^OK \((1[4-9]|[2-9][0-9]+) tests\)' "$log" || grep -Eq 'FAILURES!!!|INSTRUMENTATION_(FAILED|ABORTED)' "$log"; then
-  report_failure 'The installed APK did not pass assistant, chat and native OCR tests.'
+if ! grep -Eq '^OK \((1[5-9]|[2-9][0-9]+) tests\)' "$log" || grep -Eq 'FAILURES!!!|INSTRUMENTATION_(FAILED|ABORTED)' "$log"; then
+  report_failure 'The installed APK did not pass message review, assistant, chat, studio and native OCR tests.'
 fi
 
 mark 'App instrumentation passed; copy six screenshots.'
@@ -88,4 +88,4 @@ for p in Path(sys.argv[1]).glob('*.png'):
     if len(header) != 24 or header[:8] != b'\x89PNG\r\n\x1a\n' or min(struct.unpack('>II', header[16:])) < 240:
         raise SystemExit(f'::error title=Dana screenshots::Missing or invalid screenshot: {p.name}')
 PYTHON
-printf '::notice title=Dana installed APK::Real Qwen3 and SmolLM2 inference in airplane mode, standard Android Clock intent and typed Phone commands; browser PKCE/selected free model, image/export and fast SSE passed with fixtures; native camera file/OCR passed.\n'
+printf '::notice title=Dana installed APK::Real Qwen3 message analysis and Qwen3/SmolLM2 chat in airplane mode, standard Android Clock intent, and typed Phone commands; isolated pasted text consent, browser PKCE, Sunburst catalog/generation/export and fast SSE with fixtures; native camera file/OCR passed.\n'

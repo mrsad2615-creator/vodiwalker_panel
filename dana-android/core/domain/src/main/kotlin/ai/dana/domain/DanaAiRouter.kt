@@ -90,6 +90,15 @@ class DanaAiRouter(
         parallel(ConversationInput.single(request.prompt, request.task), request.targets)
     }
 
+    /** Message review has no candidate list, auto-send grants, or chat history. */
+    fun reviewMessage(plan: MessageReviewPlan): Flow<EngineEvent> = whenOnline {
+        flow {
+            emit(EngineEvent.Started(plan.profile.id))
+            runEngine(plan.profile, plan.input) { emit(it) }
+            emit(EngineEvent.Finished)
+        }
+    }
+
     fun chat(route: ChatRoute): Flow<EngineEvent> = whenOnline {
         if (route.parallel) parallel(route.input, route.candidates) else flow {
             val destinations = route.destinations

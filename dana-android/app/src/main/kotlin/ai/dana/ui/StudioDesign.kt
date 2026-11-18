@@ -34,7 +34,7 @@ import androidx.compose.ui.unit.dp
 
 internal fun faDigits(value: Number): String = value.toString().map { if (it in '0'..'9') '۰' + (it - '0') else it }.joinToString("")
 
-internal enum class Mark { CHAT, ENGINES, IMAGE, PHONE, ACTION, BACK, ARROW, MORE, ADD, MIC, STOP, SETTINGS }
+internal enum class Mark { CHAT, MESSAGE, ENGINES, IMAGE, PHONE, ACTION, BACK, ARROW, MORE, ADD, MIC, STOP, SETTINGS }
 
 @Composable
 internal fun StudioPill(text: String, color: Color = Mint, dot: Boolean = false) {
@@ -81,6 +81,7 @@ private fun Glyph(mark: Mark, tint: Color, modifier: Modifier = Modifier) {
         }
         when (mark) {
             Mark.CHAT -> { rect(3f, 4f, 18f, 13f, 3f); path(7f to 17f, 7f to 21f, 12f to 17f); segment(7f, 10.5f, 17f, 10.5f) }
+            Mark.MESSAGE -> { rect(2.5f, 5f, 19f, 14f, 2.5f); path(3.5f to 6.5f, 12f to 13f, 20.5f to 6.5f) }
             Mark.ENGINES -> { path(12f to 2.5f, 14.5f to 9.5f, 21.5f to 12f, 14.5f to 14.5f, 12f to 21.5f, 9.5f to 14.5f, 2.5f to 12f, 9.5f to 9.5f, 12f to 2.5f) }
             Mark.PHONE -> { rect(6f, 2.5f, 12f, 19f, 2.7f); segment(10.5f, 18.5f, 13.5f, 18.5f) }
             Mark.ADD -> { segment(12f, 5f, 12f, 19f); segment(5f, 12f, 19f, 12f) }

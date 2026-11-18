@@ -8,13 +8,24 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.transformLatest
 
 /** Image output is separate from chat and is never silently routed through the Free text profile. */
-enum class ArtModel(val title: String, val id: String, val service: QuickService) {
+enum class ArtModel(val title: String, val id: String, val service: QuickService, val studio: Boolean = false) {
     AVAL_IMAGE("GPT Image 2.6 Flare", "gpt-image-2.6-flare", QuickService.AVALAI),
+    AVAL_STUDIO("GPT Image 2.6 Sunburst", "gpt-image-2.6-sunburst", QuickService.AVALAI, studio = true),
     NANO_LITE("Nano Banana 2 Lite", "gemini-3.1-flash-lite-image", QuickService.GOOGLE),
     NANO("Nano Banana 2", "gemini-3.1-flash-image", QuickService.GOOGLE),
-    GPT_IMAGE("GPT Image 2.5 Flare", "gpt-image-2.5-flare", QuickService.OPENAI);
+    NANO_PRO("Nano Banana Pro", "gemini-3-pro-image", QuickService.GOOGLE, studio = true),
+    GPT_IMAGE("GPT Image 2.5 Flare", "gpt-image-2.5-flare", QuickService.OPENAI),
+    GPT_STUDIO("GPT Image 2.6 Sunburst", "gpt-image-2.6-sunburst", QuickService.OPENAI, studio = true);
 
-    fun matches(profile: ProviderProfile): Boolean = profile.hasCredential && profile.config.endpoint == service.endpoint
+    val openAiQuality: String get() = if (studio) "high" else "low"
+    val geminiSize: String get() = if (studio) "2K" else "1K"
+
+    fun matches(profile: ProviderProfile): Boolean = profile.hasCredential && profile.config.endpoint == service.endpoint &&
+        (profile.config.acceptsChat || profile.config.model.removePrefix("models/") == id)
+
+    companion object {
+        fun forService(service: QuickService): List<ArtModel> = entries.filter { it.service == service }.sortedBy { !it.studio }
+    }
 }
 
 enum class ArtShape(val ratio: String, val openAiSize: String) {

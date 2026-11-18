@@ -218,12 +218,13 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           RELEASE_TAG="aegis-v1.0.0-offline"
-          RELEASE_NOTES="AegisGuard 100% Offline Personal, Family & Community Security Ecosystem (17-module Clean Architecture). Verified zero INTERNET/network permissions via aapt, Room v1->v2 SQLite migration tested, and full Compose E2E suite passed on Android API 35 Emulator in Airplane Mode."
-          gh release delete "$RELEASE_TAG" --yes || true
+          RELEASE_NOTES="AegisGuard 100% Offline Personal, Family & Community Security Ecosystem (17-module Clean Architecture). Verified zero INTERNET/network permissions via aapt, Room v1->v2 SQLite migration tested, and full Compose E2E suite passed on Android API 35 Emulator in Airplane Mode. Build evidence: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          gh release delete "$RELEASE_TAG" --repo "${{ github.repository }}" --yes || true
           gh release create "$RELEASE_TAG" \
             dist-apks/app-release.apk \
             dist-apks/app-debug.apk \
             dist-apks/SHA256SUMS.txt \
+            --repo "${{ github.repository }}" \
             --target "${{ github.sha }}" \
             --title "AegisGuard v1.0.0 Offline Release APK" \
             --notes "$RELEASE_NOTES"

@@ -51,9 +51,10 @@ for mod in ['core/database', 'app']:
     print(f"Verified {len(cases)} passing Android instrumentation test(s) in {mod}")
 PYTHON
 
-mark "Launching MainActivity and capturing screenshot + logcat"
+mark "Installing app-debug.apk and launching MainActivity in Airplane Mode for screenshot & logcat check"
 mkdir -p screenshots
-adb shell am start -n ir.aegis.security/ir.aegis.app.MainActivity
+adb install -r app/build/outputs/apk/debug/app-debug.apk
+adb shell am start -W -n ir.aegis.security/ir.aegis.app.MainActivity
 sleep 3
 adb exec-out screencap -p > screenshots/home_airplane_mode.png || true
 adb logcat -d -s AndroidRuntime:E | tee screenshots/crash_log.txt || true

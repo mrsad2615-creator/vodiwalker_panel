@@ -130,7 +130,7 @@ internal fun PhoneScreen(model: PhoneViewModel) {
             VoiceStatus(voice.state)
             Column(Modifier.fillMaxWidth()) {
                 Text(stringResource(R.string.workspace_examples), style = MaterialTheme.typography.labelLarge, color = Titanium)
-                listOf(R.string.cmd_timer, R.string.cmd_open, R.string.cmd_event_timed).forEach { label ->
+                listOf(R.string.cmd_timer, R.string.workspace_settings_example, R.string.cmd_event_timed).forEach { label ->
                     val example = stringResource(label)
                     FilterChip(selected = false, onClick = { model.draft(example) }, enabled = !state.busy, label = { Text(example) })
                 }

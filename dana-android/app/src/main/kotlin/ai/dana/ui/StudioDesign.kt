@@ -1,14 +1,19 @@
 package ai.dana.ui
 
+import ai.dana.R
+import androidx.annotation.StringRes
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -22,6 +27,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
@@ -37,6 +43,17 @@ internal fun StudioPill(text: String, color: Color = Mint, dot: Boolean = false)
             horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             if (dot) Box(Modifier.size(6.dp).background(color, CircleShape))
             Text(text, style = MaterialTheme.typography.labelSmall, color = color)
+        }
+    }
+}
+
+@Composable
+internal fun OfflinePanel(@StringRes body: Int, enabled: Boolean, onAllow: () -> Unit) {
+    GlassCard(Modifier.fillMaxWidth()) {
+        StudioPill(stringResource(R.string.studio_mode_offline), Titanium, dot = true)
+        Text(stringResource(body), style = MaterialTheme.typography.bodyMedium, color = Titanium)
+        OutlinedButton(onClick = onAllow, modifier = Modifier.heightIn(min = 48.dp), enabled = enabled) {
+            Text(stringResource(R.string.studio_allow_network))
         }
     }
 }

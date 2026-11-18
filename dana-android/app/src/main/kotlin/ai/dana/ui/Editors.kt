@@ -47,6 +47,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontFamily
@@ -120,6 +121,7 @@ private fun QuickEditor(editor: Editor.Quick, session: DashboardSession, dismiss
     var browserError by remember { mutableStateOf(false) }
     val browser = LocalUriHandler.current
     val focus = LocalFocusManager.current
+    val keyboard = LocalSoftwareKeyboardController.current
     val busy = session.busy
     val selected = service
     val code = session.approval.takeIf { selected == QuickService.FREE }
@@ -128,8 +130,10 @@ private fun QuickEditor(editor: Editor.Quick, session: DashboardSession, dismiss
     EditorDialog(R.string.workspace_connect, R.string.quick_connect, valid, busy, session.error, secure = true, onDismiss = dismiss,
         onConfirm = {
             focus.clearFocus()
+            keyboard?.hide()
             if (service == selected) dispatch(DanaIntent.Connect(selected, secret, code, imageOnly))
         }) {
+        session.httpStatus?.let { TechnicalText("HTTP $it") }
         Column {
             OutlinedButton(onClick = { expanded = true }, enabled = !busy, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
                 Text(stringResource(R.string.quick_provider, selected.title))
@@ -179,7 +183,6 @@ private fun QuickEditor(editor: Editor.Quick, session: DashboardSession, dismiss
             Text(stringResource(R.string.quick_testing), style = MaterialTheme.typography.bodySmall, color = Mint)
             TextButton(onClick = { dispatch(DanaIntent.StopSetup) }) { Text(stringResource(R.string.compare_stop)) }
         }
-        session.httpStatus?.let { TechnicalText("HTTP $it") }
         if (!busy) SetupLink(R.string.workspace_hoosha_web,
             if (forImage) "https://hoosha.com/image/generate" else "https://hoosha.com/ai/", true)
     }

@@ -470,7 +470,7 @@
     <string name="art_intro">توصیف بنویسید، قالب را انتخاب کنید و عکس ساخته‌شده را پیش‌نمایش بگیرید یا ذخیره کنید.</string>
     <string name="art_tile">تبدیل متن به تصویر؛ پیش‌نمایش و ذخیرهٔ فایل اصلی.</string>
     <string name="art_need_engine">برای ساخت تصویر، یک کلید AvalAI، Gemini یا OpenAI با دسترسی مدل تصویر وصل کنید.</string>
-    <string name="art_connect">اتصال موتور ساخت تصویر</string>
+    <string name="art_connect">اتصال برای ساخت تصویر</string>
     <string name="art_paid">هر لمس «ساختن» یک درخواست به مدل انتخاب‌شده است و ممکن است هزینه داشته باشد. موتور رایگان متن خودکار جایگزین نمی‌شود.</string>
     <string name="art_offline">برای ساخت تصویر نیاز به اینترنت دارید. تصویرهای قبلی بدون اینترنت قابل ذخیره‌اند.</string>
     <string name="art_square">مربع</string>
@@ -478,10 +478,10 @@
     <string name="art_portrait">عمودی</string>
     <string name="art_prompt">مثال: گلدان سفالی کنار پنجره با نور صبح</string>
     <string name="art_wait">مدل در حال ساخت تصویر است. ممکن است چند دقیقه طول بکشد.</string>
-    <string name="art_generate">ساختن</string>
+    <string name="art_generate">ساخت تصویر</string>
     <string name="art_ready">تصویر آماده است</string>
     <string name="art_preview">پیش‌نمایش تصویر ساخته‌شده</string>
-    <string name="art_save">ذخیرهٔ فایل اصلی</string>
+    <string name="art_save">ذخیرهٔ تصویر</string>
     <string name="art_clear">پاک کردن پیش‌نمایش</string>
     <string name="art_allow_title">اجازهٔ ساخت تصویر</string>
     <string name="art_allow_body">فقط متن توصیف به مدل زیر می‌رود؛ بدون حافظه، گفتگو یا عکس گوشی. از این پس «ساختن» برای همین مدل از همین حساب مستقیم است و ممکن است هزینه داشته باشد.</string>
@@ -536,6 +536,7 @@
     <string name="workspace_phone_prompt">فرمان را بنویسید</string>
     <string name="workspace_run">اجرای فرمان</string>
     <string name="workspace_unrecognized">این فرمان پشتیبانی نمی‌شود. یکی از نمونه‌ها را امتحان کنید.</string>
+    <string name="workspace_settings_example">تنظیمات گوشی</string>
     <string name="workspace_examples">نمونهٔ فرمان</string>
     <string name="workspace_controls">کنترل گوشی</string>
     <string name="workspace_quieter">صدای کمتر</string>

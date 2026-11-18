@@ -444,7 +444,9 @@ class StudioSmokeTest {
             trace("Explicit clipboard paste, exact masked preview, cancel and fresh approval for one isolated text request passed")
         } finally { compose.runOnIdle { clipboard.clearPrimaryClip() } }
         compose.onNodeWithContentDescription(label(R.string.studio_back)).performClick()
-        visible(R.string.art_generate)
+        val generateButton = clickable(R.string.art_generate) // The Studio heading has the same Persian text.
+        waitFor(generateButton)
+        compose.onNode(generateButton).assertIsDisplayed().assertIsEnabled()
     }
 
     private fun messageScroll(matcher: SemanticsMatcher) = compose.onNodeWithTag("message-review-list").performScrollToNode(matcher)

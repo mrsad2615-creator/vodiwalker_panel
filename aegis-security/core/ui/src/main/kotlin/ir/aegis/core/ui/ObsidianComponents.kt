@@ -36,6 +36,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import ir.aegis.core.model.AegisModule
+import ir.aegis.core.model.AppLanguage
 import kotlin.math.cos
 import kotlin.math.sin
 

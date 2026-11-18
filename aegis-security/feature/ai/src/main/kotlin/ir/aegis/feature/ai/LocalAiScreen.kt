@@ -10,6 +10,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import ir.aegis.core.ai.AiAssistantResponse
 import ir.aegis.core.ai.LocalAiEngine
@@ -91,7 +92,11 @@ fun LocalAiScreen(
 
         when (selectedTab) {
             0 -> {
-                LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                LazyColumn(
+                    modifier = Modifier.testTag("ai_assistant_list"),
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
                     item {
                         AiSafetyBanner(
                             text = tr(

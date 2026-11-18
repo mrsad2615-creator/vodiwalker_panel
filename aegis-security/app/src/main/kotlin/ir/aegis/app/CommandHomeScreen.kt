@@ -10,6 +10,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -73,7 +74,7 @@ fun CommandHomeScreen(
     }
 
     LazyColumn(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier.fillMaxSize().testTag("home_lazy_list"),
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
@@ -183,7 +184,10 @@ fun CommandHomeScreen(
         }
 
         item {
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            LazyRow(
+                modifier = Modifier.testTag("quick_actions_row"),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
                 item { GlassButton(label = tr("Quick SOS", "SOS فوری"), accent = colors.accentCrimson, onClick = { onOpenModule(AegisModule.EMERGENCY) }) }
                 item { GlassButton(label = tr("3D Offline Map", "نقشه ۳D"), accent = colors.accentTeal, onClick = { onOpenModule(AegisModule.MAPS) }) }
                 item { GlassButton(label = tr("Log Incident", "ثبت رخداد"), accent = colors.accentAmber, onClick = { onOpenModule(AegisModule.CRISIS) }) }

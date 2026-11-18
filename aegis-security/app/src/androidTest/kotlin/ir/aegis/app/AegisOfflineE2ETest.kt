@@ -2,12 +2,16 @@ package ir.aegis.app
 
 import android.content.pm.PackageManager
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performScrollToIndex
+import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTextInput
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -34,37 +38,56 @@ class AegisOfflineE2ETest {
 
     @Test
     fun offlineDashboardLanguageToggleAndModuleFlowsWork() {
+        composeRule.waitForIdle()
         composeRule.onNodeWithText("AegisGuard").assertIsDisplayed()
         composeRule.onNodeWithText("100% OFFLINE · NO CLOUD").assertIsDisplayed()
 
         // Switch EN -> FA (RTL) and back to EN
         composeRule.onNodeWithText("فا").performClick()
+        composeRule.waitForIdle()
         composeRule.onNodeWithText("شاخص آمادگی آفلاین").assertIsDisplayed()
         composeRule.onNodeWithText("EN").performClick()
+        composeRule.waitForIdle()
         composeRule.onNodeWithText("Offline Readiness Index").assertIsDisplayed()
 
-        // Navigate into Emergency Response Center and activate / deactivate SOS screen state
+        // Navigate into Emergency Response Center and verify SOS panel
+        composeRule.onNodeWithTag("quick_actions_row").performScrollToNode(hasText("Quick SOS"))
         composeRule.onNodeWithText("Quick SOS").performClick()
+        composeRule.waitForIdle()
         composeRule.onNodeWithText("OFFLINE SOS RESPONSE PANEL").assertIsDisplayed()
         composeRule.onNodeWithText("←").performClick()
+        composeRule.waitForIdle()
 
         // Navigate into Local AI and execute an offline BM25 query
+        composeRule.onNodeWithTag("quick_actions_row").performScrollToNode(hasText("Local AI"))
         composeRule.onNodeWithText("Local AI").performClick()
+        composeRule.waitForIdle()
         composeRule.onNodeWithText("earthquake").performClick()
-        composeRule.onAllNodesWithText("Referenced Reviewed Protocols:").onFirst().assertIsDisplayed()
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag("ai_assistant_list").performScrollToIndex(2)
+        composeRule.onAllNodesWithText("Referenced Reviewed Protocols:").onFirst().performScrollTo().assertIsDisplayed()
         composeRule.onNodeWithText("←").performClick()
+        composeRule.waitForIdle()
 
         // Navigate into Crisis Management and register a real offline incident
+        composeRule.onNodeWithTag("quick_actions_row").performScrollToNode(hasText("Log Incident"))
         composeRule.onNodeWithText("Log Incident").performClick()
+        composeRule.waitForIdle()
         composeRule.onNodeWithText("Register New").performClick()
+        composeRule.waitForIdle()
         composeRule.onNodeWithText("Incident Title").performTextInput("Airplane E2E Drill")
         composeRule.onNodeWithText("Create Incident + Auto Checklist").performScrollTo().performClick()
+        composeRule.waitForIdle()
         composeRule.onAllNodesWithText("Airplane E2E Drill").onFirst().assertIsDisplayed()
         composeRule.onNodeWithText("←").performClick()
+        composeRule.waitForIdle()
 
-        // Verify Privacy & Security confirms zero-network permission audit
-        composeRule.onNodeWithText("Privacy & Security").performScrollTo().performClick()
+        // Scroll Home LazyColumn to Privacy & Security module card and verify zero-network permission audit
+        composeRule.onNodeWithTag("home_lazy_list").performScrollToNode(hasText("Privacy & Security"))
+        composeRule.onNodeWithText("Privacy & Security").performClick()
+        composeRule.waitForIdle()
         composeRule.onNodeWithText("Audit & Perms").performClick()
+        composeRule.waitForIdle()
         composeRule.onNodeWithText("• INTERNET Permission: ABSENT BY DESIGN").assertIsDisplayed()
     }
 }

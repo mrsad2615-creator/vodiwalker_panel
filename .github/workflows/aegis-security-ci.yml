@@ -130,8 +130,9 @@ jobs:
             echo "=== Auditing $APK ==="
             PERMS="$("$AAPT" dump permissions "$APK")"
             echo "$PERMS"
-            if echo "$PERMS" | grep -qE "android\.permission\.(INTERNET|ACCESS_NETWORK_STATE|ACCESS_WIFI_STATE)"; then
-              echo "::error title=Network Audit::Prohibited network permission detected in $APK!"
+            if echo "$PERMS" | grep -qE "android\.permission\.(INTERNET|ACCESS_NETWORK_STATE|ACCESS_WIFI_STATE|CHANGE_NETWORK_STATE|CHANGE_WIFI_STATE)"; then
+              FLAT_PERMS="$(echo "$PERMS" | tr '\n' ' ')"
+              echo "::error title=Network Audit::Prohibited network permission detected in $APK! Found: $FLAT_PERMS"
               exit 1
             fi
           done
@@ -174,7 +175,15 @@ jobs:
             if ! gradle --no-daemon --console=plain --stacktrace \
               :core:database:connectedDebugAndroidTest \
               :app:connectedDebugAndroidTest 2>&1 | tee "$RUNNER_TEMP/aegis-e2e.log"; then
-              tail -n 60 "$RUNNER_TEMP/aegis-e2e.log" | tr '\n' ' ' | xargs -I{} echo "::error title=Emulator E2E Failed::{}"
+              python3 - "$RUNNER_TEMP/aegis-e2e.log" <<'PYTHON'
+            import sys
+            from pathlib import Path
+            lines = Path(sys.argv[1]).read_text(errors='replace').splitlines()
+            diag = [l for l in lines if 'FAILED' in l or 'Exception' in l or 'Error' in l or 'Caused by:' in l or l.strip().startswith('at ir.aegis')]
+            msg = '\n'.join(dict.fromkeys(diag or lines[-50:]))[:6200]
+            msg = msg.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
+            print(f'::error title=Emulator E2E Failed::{msg}')
+            PYTHON
               exit 1
             fi
 

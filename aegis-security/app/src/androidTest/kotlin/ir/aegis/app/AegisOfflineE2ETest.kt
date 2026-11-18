@@ -15,6 +15,7 @@ import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTextInput
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import ir.aegis.core.model.SecurityReminder
 import org.junit.Assert.assertFalse
 import org.junit.Rule
 import org.junit.Test
@@ -27,13 +28,29 @@ class AegisOfflineE2ETest {
     val composeRule = createAndroidComposeRule<MainActivity>()
 
     @Test
-    fun apkHasZeroInternetPermissions() {
+    fun apkHasZeroInternetPermissionsAndOfflineWorkManagerWorks() {
         val ctx = ApplicationProvider.getApplicationContext<android.content.Context>()
         @Suppress("DEPRECATION")
         val pkgInfo = ctx.packageManager.getPackageInfo(ctx.packageName, PackageManager.GET_PERMISSIONS)
         val perms = pkgInfo.requestedPermissions?.toSet().orEmpty()
         assertFalse("App must NEVER declare INTERNET permission", "android.permission.INTERNET" in perms)
         assertFalse("App must NEVER declare ACCESS_NETWORK_STATE", "android.permission.ACCESS_NETWORK_STATE" in perms)
+        assertFalse("App must NEVER declare ACCESS_WIFI_STATE", "android.permission.ACCESS_WIFI_STATE" in perms)
+
+        // Verify offline WorkManager scheduling works without ACCESS_NETWORK_STATE
+        val app = ctx.applicationContext as AegisApplication
+        val rem = SecurityReminder(
+            id = "e2e-rem-1",
+            title = "Offline Kit Check",
+            category = "Kit",
+            dueAtMillis = System.currentTimeMillis() + 3_600_000L,
+            recurrenceDays = 0,
+            enabled = true,
+            completed = false,
+            createdAtMillis = System.currentTimeMillis(),
+        )
+        app.container.reminderScheduler.scheduleReminder(rem, redactContent = true)
+        app.container.reminderScheduler.cancelReminder(rem.id)
     }
 
     @Test

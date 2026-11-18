@@ -59,12 +59,14 @@ jobs:
 
       - name: Run All Unit Tests, Lint, Debug & Signed Release APKs
         working-directory: aegis-security
+        shell: bash
         env:
           AEGIS_KEYSTORE_PATH: ${{ runner.temp }}/keystore/aegis-release.jks
           AEGIS_KEYSTORE_PASSWORD: AegisOffline2026!
           AEGIS_KEY_ALIAS: aegis-release
           AEGIS_KEY_PASSWORD: AegisOffline2026!
         run: |
+          set -o pipefail
           if gradle --no-daemon --console=plain --stacktrace \
             test \
             testDebugUnitTest \
@@ -156,6 +158,7 @@ jobs:
             echo "Airplane mode status:"
             adb shell settings get global airplane_mode_on
 
+            set -o pipefail
             cd aegis-security
             if ! gradle --no-daemon --console=plain --stacktrace \
               :core:database:connectedDebugAndroidTest \

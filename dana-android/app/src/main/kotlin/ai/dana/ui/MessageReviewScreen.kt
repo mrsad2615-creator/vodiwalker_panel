@@ -2,6 +2,7 @@ package ai.dana.ui
 
 import ai.dana.R
 import ai.dana.domain.MessageReviewPlan
+import ai.dana.domain.ProviderProfile
 import ai.dana.domain.ReviewMessage
 import ai.dana.voice.VoiceStatus
 import ai.dana.voice.rememberDanaVoice
@@ -30,8 +31,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -74,7 +73,7 @@ internal fun MessageReviewScreen(model: MessageReviewViewModel, onClose: () -> U
     val keyboard = LocalSoftwareKeyboardController.current
     val hideKeyboard = { focus.clearFocus(); keyboard?.hide() }
     val playingAllowed = state.draft.isNotBlank() && state.pending == null && state.active == null
-    var menu by remember(state.revision, offline, profiles) { mutableStateOf(false) }
+    var choosingEngine by remember(state.revision, offline, profiles) { mutableStateOf(false) }
     val voice = key(state.revision) { rememberDanaVoice() }
     LaunchedEffect(state.revision) { list.requestScrollToItem(0) }
     val showAnalysis = state.active != null || state.signals != null || state.result != null || state.notice != null || state.analysisProblem != null
@@ -128,19 +127,9 @@ internal fun MessageReviewScreen(model: MessageReviewViewModel, onClose: () -> U
                         VoiceStatus(voice.state)
                         Button(onClick = { voice.close(); hideKeyboard(); model.local() }, enabled = playingAllowed,
                             modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text(stringResource(R.string.message_local)) }
-                        Column {
-                            TextButton(onClick = { hideKeyboard(); menu = true }, enabled = playingAllowed && !offline && profiles.isNotEmpty()) {
-                                Text(stringResource(R.string.message_online))
-                            }
-                            DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                                profiles.forEach { profile ->
-                                    DropdownMenuItem(text = { Text("${profile.config.name} · ${profile.config.model}") }, onClick = {
-                                        menu = false
-                                        voice.close()
-                                        model.reviewOnline(profile)
-                                    })
-                                }
-                            }
+                        TextButton(onClick = { voice.close(); hideKeyboard(); choosingEngine = true },
+                            enabled = playingAllowed && !offline && profiles.isNotEmpty(), modifier = Modifier.heightIn(min = 48.dp)) {
+                            Text(stringResource(R.string.message_online))
                         }
                         if (offline || profiles.isEmpty()) Text(stringResource(if (offline) R.string.message_offline else R.string.message_no_provider),
                             color = Titanium, style = MaterialTheme.typography.bodySmall)
@@ -180,7 +169,28 @@ internal fun MessageReviewScreen(model: MessageReviewViewModel, onClose: () -> U
             }
         }
     }
-    state.pending?.let { plan -> MessageSendReview(plan, !offline && plan.profile in profiles, model::dismiss) { model.approve(plan) } }
+    val pending = state.pending
+    if (pending != null) MessageSendReview(pending, !offline && pending.profile in profiles, model::dismiss) { model.approve(pending) }
+    else if (choosingEngine && playingAllowed && !offline && profiles.isNotEmpty()) {
+        MessageEnginePicker(profiles, dismiss = { choosingEngine = false }, select = { profile ->
+            choosingEngine = false
+            model.reviewOnline(profile)
+        })
+    }
+}
+
+@Composable
+private fun MessageEnginePicker(profiles: List<ProviderProfile>, dismiss: () -> Unit, select: (ProviderProfile) -> Unit) {
+    AlertDialog(onDismissRequest = dismiss, properties = DialogProperties(securePolicy = SecureFlagPolicy.SecureOn),
+        title = { Text(stringResource(R.string.message_online)) }, text = {
+            Column(Modifier.heightIn(max = 400.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                profiles.forEach { profile ->
+                    OutlinedButton(onClick = { select(profile) }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
+                        Text("${profile.config.name} · ${profile.config.model}")
+                    }
+                }
+            }
+        }, confirmButton = { TextButton(onClick = dismiss) { Text(stringResource(R.string.cancel)) } })
 }
 
 @Composable

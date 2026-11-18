@@ -241,12 +241,20 @@ class StudioSmokeTest {
         assertEquals(1, Settings.Global.getInt(context.contentResolver, Settings.Global.AIRPLANE_MODE_ON))
         val source = "لطفاً گزارش جلسه را فردا ساعت ۱۸:۳۰ آماده کنید. note DANA_SMOKE_LOCAL"
         val share = Intent(Intent.ACTION_SEND).setType("text/plain").setPackage(context.packageName)
-            .putExtra(Intent.EXTRA_TEXT, source)
         val shareTargets = context.packageManager.queryIntentActivities(share, PackageManager.MATCH_DEFAULT_ONLY)
         assertEquals(listOf(MessageReviewActivity::class.java.name), shareTargets.map { it.activityInfo.name })
-        compose.activityRule.scenario.onActivity { it.startActivity(share) }
+        val typedCommand = "note DANA_SMOKE_LOCAL"
+        fun sendToReview(text: String) = compose.activityRule.scenario.onActivity {
+            it.startActivity(Intent(share).putExtra(Intent.EXTRA_TEXT, text))
+        }
+        sendToReview(typedCommand)
         visible(R.string.message_title)
+        visible(typedCommand)
+        compose.onNodeWithText(label(R.string.chat_confirm_action)).assertDoesNotExist()
+        assertTrue(calls.isEmpty())
+        sendToReview(source) // singleTop receives a new share and drops the previous draft.
         visible(source)
+        compose.onNodeWithText(typedCommand).assertDoesNotExist()
         compose.onNodeWithText(label(R.string.chat_note_saved)).assertDoesNotExist()
         compose.onNodeWithText(label(R.string.message_result)).assertDoesNotExist()
         compose.onNodeWithText(label(R.string.voice_playing)).assertDoesNotExist()
@@ -265,7 +273,7 @@ class StudioSmokeTest {
         visible(R.string.workspace_chat_title)
         compose.onNodeWithText(source).assertDoesNotExist()
         click(R.string.tab_phone)
-        enter(R.string.workspace_phone_prompt, "note DANA_SMOKE_LOCAL", scroll = true)
+        enter(R.string.workspace_phone_prompt, typedCommand, scroll = true)
         click(R.string.workspace_run, scroll = true)
         visible(R.string.chat_confirm_action)
         click(R.string.chat_execute)
@@ -406,7 +414,7 @@ class StudioSmokeTest {
                 messageClick(R.string.message_online)
                 val engine = "${QuickService.AVALAI.title} · ${QuickService.AVALAI.models.first()}"
                 waitFor(hasText(engine) and hasClickAction())
-                compose.onNodeWithText(engine).performClick()
+                compose.onNode(hasText(engine) and hasClickAction()).assertIsDisplayed().assertIsEnabled().performClick()
                 visible(R.string.message_send_title)
                 compose.onNodeWithTag("message-outbound").assertTextEquals("کد ورود [محفوظ]؛ [پیوند]")
                 assertTrue(calls.isEmpty())

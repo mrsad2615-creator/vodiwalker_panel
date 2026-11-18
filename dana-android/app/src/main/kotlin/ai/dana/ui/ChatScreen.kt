@@ -14,7 +14,8 @@ import ai.dana.domain.ChatRoute
 import ai.dana.domain.PhotoSupport
 import ai.dana.domain.photoSupport
 import ai.dana.domain.acceptsCredential
-import ai.dana.domain.cloudEngine
+import ai.dana.domain.acceptsChat
+import ai.dana.domain.SendLane
 import ai.dana.domain.LocalAction
 import ai.dana.domain.LocalText
 import ai.dana.domain.MessageRole
@@ -22,7 +23,9 @@ import ai.dana.domain.ProviderProfile
 import ai.dana.domain.ProviderProtocol
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -30,6 +33,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -37,6 +41,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
@@ -45,6 +50,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -60,6 +66,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
@@ -79,29 +87,22 @@ internal fun ChatScreen(
     media: MediaViewModel,
     dashboard: DashboardState,
     onSettings: () -> Unit,
+    onConnect: () -> Unit,
+    onEnableNetwork: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val chat by model.state.collectAsStateWithLifecycle()
-    val profiles = (dashboard.profiles as? Reading.Ready)?.value.orEmpty()
+    val profiles = remember(dashboard.profiles) { (dashboard.profiles as? Reading.Ready)?.value.orEmpty().filter { it.config.acceptsChat } }
     val offline = (dashboard.offline as? Reading.Ready)?.value != false
     BackHandler(enabled = chat.page != ChatPage.CONVERSATION && chat.dialog == null && !chat.busy) {
         model.page(ChatPage.CONVERSATION)
     }
-    Column(modifier.fillMaxSize().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            ChatPage.entries.forEach { page ->
-                FilterChip(
-                    selected = page == chat.page,
-                    enabled = !chat.busy,
-                    onClick = { model.page(page) },
-                    label = { Text(stringResource(when (page) {
-                        ChatPage.CONVERSATION -> R.string.chat_room
-                        ChatPage.HISTORY -> R.string.chat_history
-                        ChatPage.MEMORY -> R.string.chat_memory
-                        ChatPage.TOOLS -> R.string.chat_tools
-                    })) },
-                )
-            }
+    LaunchedEffect(dashboard.preferredEngine, dashboard.session.notice) {
+        if (dashboard.preferredEngine != null && dashboard.session.notice == R.string.quick_connected) model.engine(null)
+    }
+    Column(modifier.fillMaxSize().padding(horizontal = 18.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        if (chat.page != ChatPage.CONVERSATION) TextButton(onClick = { model.page(ChatPage.CONVERSATION) }, enabled = !chat.busy) {
+            Text(stringResource(R.string.workspace_back_chat))
         }
         if (chat.dialog == null) {
             chat.error?.let { ReadError(it) }
@@ -111,10 +112,10 @@ internal fun ChatScreen(
             }
         }
         when (chat.page) {
-            ChatPage.CONVERSATION -> Dialogue(chat, model, media::open, profiles, offline, dashboard.preferredEngine, onSettings)
+            ChatPage.CONVERSATION -> Dialogue(chat, model, media::open, profiles, offline, dashboard.preferredEngine,
+                onSettings, onConnect, onEnableNetwork, dashboard.profiles is Reading.Ready && dashboard.offline is Reading.Ready)
             ChatPage.HISTORY -> Archive(chat, model)
             ChatPage.MEMORY -> MemoryVault(chat, model)
-            ChatPage.TOOLS -> ToolPanel(chat, model, media::open)
         }
     }
     MediaReview(media, chat.busy, model::importText, model::photo)
@@ -130,6 +131,9 @@ private fun Dialogue(
     offline: Boolean,
     preferred: String?,
     onSettings: () -> Unit,
+    onConnect: () -> Unit,
+    onEnableNetwork: () -> Unit,
+    connectionReady: Boolean,
 ) {
     val context = LocalContext.current
     val voice = rememberDanaVoice()
@@ -160,15 +164,47 @@ private fun Dialogue(
     }
     if (setupVoice) VoiceSetup(voice, offline, useSystemSpeech, onSystemSpeech = { systemSpeech = it }, onClose = { setupVoice = false })
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text(chat.current?.title ?: stringResource(R.string.chat_heading), style = MaterialTheme.typography.titleLarge,
-                    maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(stringResource(if (chat.options.autoHistory) R.string.chat_recording else R.string.chat_temporary),
-                    style = MaterialTheme.typography.labelSmall, color = Titanium)
+        val target = ChatRoute.target(profiles, chat.manualId, preferred)
+        var menu by remember { mutableStateOf(false) }
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            if (!connectionReady) {
+                Text(stringResource(R.string.status_checking), Modifier.weight(1f), color = Titanium, style = MaterialTheme.typography.labelMedium)
+            } else if (chat.localOnly || target == null || offline) {
+                TextButton(onClick = {
+                    focus.clearFocus()
+                    when {
+                        chat.localOnly -> model.localMode(false)
+                        target == null -> onConnect()
+                        else -> onEnableNetwork()
+                    }
+                }, enabled = !chat.busy, modifier = Modifier.heightIn(min = 48.dp)) {
+                    Text(stringResource(when {
+                        chat.localOnly -> R.string.workspace_exit_local
+                        target == null -> R.string.workspace_connect
+                        else -> R.string.workspace_enable_ai
+                    }))
+                }
+                androidx.compose.foundation.layout.Spacer(Modifier.weight(1f))
+            } else {
+                Box(Modifier.weight(1f)) { EngineChooser(chat, profiles, preferred, model::engine) { model.dialog(ChatDialog.PickTeam) } }
             }
-            TextButton(onClick = model::newConversation, enabled = !chat.busy) { Text(stringResource(R.string.chat_new)) }
-            TextButton(onClick = { model.dialog(ChatDialog.Options) }, enabled = !chat.busy) { Text(stringResource(R.string.chat_privacy)) }
+            TextButton(onClick = model::newConversation, enabled = !chat.busy, modifier = Modifier.heightIn(min = 48.dp)) {
+                Text(stringResource(R.string.chat_new))
+            }
+            Box {
+                IconButton(onClick = { menu = true }, enabled = !chat.busy, modifier = Modifier.size(48.dp)) {
+                    StudioMark(Mark.MORE, Titanium, stringResource(R.string.workspace_chat_options))
+                }
+                DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                    listOf(ChatPage.HISTORY to R.string.chat_history, ChatPage.MEMORY to R.string.chat_memory).forEach { (page, label) ->
+                        DropdownMenuItem(text = { Text(stringResource(label)) }, onClick = { menu = false; model.page(page) })
+                    }
+                    DropdownMenuItem(text = { Text(stringResource(if (chat.voiceOpen) R.string.voice_exit else R.string.voice_conversation)) },
+                        onClick = { menu = false; focus.clearFocus(); voice.close(); model.toggleVoice() })
+                    DropdownMenuItem(text = { Text(stringResource(R.string.chat_privacy)) }, onClick = { menu = false; model.dialog(ChatDialog.Options) })
+                    DropdownMenuItem(text = { Text(stringResource(R.string.workspace_settings)) }, onClick = { menu = false; onSettings() })
+                }
+            }
         }
         val scroll = rememberLazyListState()
         val team = chat.team
@@ -190,18 +226,14 @@ private fun Dialogue(
                     ToggleLine(R.string.voice_read_replies, chat.options.readReplies, !chat.busy) { model.options(chat.options.copy(readReplies = it)) }
                 }
             }
-            if (chat.turns.isEmpty() && team == null && !chat.voiceOpen) {
-                item {
-                    GlassCard(Modifier.fillMaxWidth()) {
-                        StudioPill(stringResource(if (offline) R.string.studio_mode_offline else R.string.studio_mode_online),
-                            color = if (offline) Titanium else Mint, dot = true)
-                        Text(stringResource(if (offline) R.string.chat_offline_title else R.string.chat_start_title),
-                            style = MaterialTheme.typography.titleLarge, color = Ice)
-                        Text(stringResource(if (offline) R.string.chat_offline_help else if (profiles.isEmpty()) R.string.studio_chat_no_provider else R.string.chat_start_body),
-                            style = MaterialTheme.typography.bodyMedium, color = Titanium)
-                        if (offline || profiles.isEmpty()) TextButton(onClick = { focus.clearFocus(); onSettings() }) { Text(stringResource(R.string.chat_setup_engines)) }
-                    }
-                }
+            if (chat.turns.isEmpty() && team == null && !chat.voiceOpen) item(key = "welcome") {
+                ChatWelcome(
+                    online = connectionReady && !offline && target != null && !chat.localOnly,
+                    ready = connectionReady,
+                    onExample = model::draft,
+                    examplesEnabled = !chat.busy && !chat.localOnly && chat.draft.isBlank(),
+                )
+                if (!connectionReady) dashboardUnavailableHint()
             }
             items(chat.turns, key = { it.index }) { turn ->
                 DialogueTurn(turn, team == null && chat.running && chat.turns.lastOrNull()?.index == turn.index, !chat.busy,
@@ -229,15 +261,6 @@ private fun Dialogue(
         Surface(Modifier.fillMaxWidth().padding(bottom = 7.dp), shape = MaterialTheme.shapes.large,
             color = MaterialTheme.colorScheme.surfaceContainerLow, border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) {
             Column(Modifier.padding(horizontal = 10.dp, vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(5.dp),
-                    verticalAlignment = Alignment.CenterVertically) {
-                    FilterChip(selected = chat.localOnly, enabled = !chat.busy && !voice.state.listening,
-                        onClick = { model.localMode(!chat.localOnly) }, label = { Text(stringResource(R.string.phone_mode)) })
-                    if (!chat.localOnly) {
-                        EngineChooser(chat, profiles, preferred, model::engine) { model.dialog(ChatDialog.PickTeam) }
-                        TaskChooser(chat, model::task)
-                    }
-                }
                 VoiceStatus(voice.state)
                 if (chat.photo != null) {
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -249,13 +272,19 @@ private fun Dialogue(
                     label = { Text(stringResource(R.string.chat_prompt)) }, maxLines = 3)
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(3.dp), verticalAlignment = Alignment.CenterVertically) {
                     Row(Modifier.weight(1f).horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically) {
-                        TextButton(onClick = { focus.clearFocus(); voice.close(); onMedia() }, enabled = !chat.busy) { Text(stringResource(R.string.media_short)) }
-                        VoiceButton(voice, enabled = !chat.busy, useSystemSpeech = useSystemSpeech, turnMode = chat.voiceOpen, onText = { heard ->
-                            if (chat.voiceOpen) model.importText(heard)
-                            else model.importText(listOf(chat.draft, heard).filter { it.isNotBlank() }.joinToString(" "))
-                        })
-                        TextButton(onClick = { focus.clearFocus(); voice.close(); model.toggleVoice() }, enabled = !chat.busy && !voice.state.listening) {
-                            Text(stringResource(if (chat.voiceOpen) R.string.voice_exit else R.string.voice_conversation))
+                        IconButton(onClick = { focus.clearFocus(); voice.close(); onMedia() }, enabled = !chat.busy,
+                            modifier = Modifier.size(48.dp)) {
+                            StudioMark(Mark.ADD, Titanium, stringResource(R.string.media_short))
+                        }
+                        if (chat.voiceOpen) VoiceButton(voice, enabled = !chat.busy, useSystemSpeech = useSystemSpeech, turnMode = true,
+                            onText = model::importText)
+                        else {
+                            VoiceButton(voice, enabled = !chat.busy, useSystemSpeech = false, turnMode = false, compact = true,
+                                onText = { heard -> model.importText(listOf(chat.draft, heard).filter { it.isNotBlank() }.joinToString(" ")) })
+                            FilterChip(selected = chat.options.lane == SendLane.FAST, enabled = !chat.busy && !chat.localOnly,
+                                modifier = Modifier.heightIn(min = 48.dp),
+                                onClick = { model.options(chat.options.copy(lane = if (chat.options.lane == SendLane.FAST) SendLane.STANDARD else SendLane.FAST)) },
+                                label = { Text(stringResource(R.string.workspace_fast)) }, leadingIcon = { StudioMark(Mark.ACTION, Mint) })
                         }
                     }
                     if (chat.running) OutlinedButton(model::stop, modifier = Modifier.heightIn(min = 48.dp)) { Text(stringResource(R.string.compare_stop)) }
@@ -265,7 +294,7 @@ private fun Dialogue(
                         model.submit(profiles, offline, preferred) { command -> DeviceActions.execute(context, command) }
                     },
                         modifier = Modifier.heightIn(min = 48.dp), enabled = !chat.busy && !voice.state.listening && chat.draft.isNotBlank()) {
-                        Text(stringResource(R.string.chat_review))
+                        Text(stringResource(R.string.workspace_send))
                     }
                 }
             }
@@ -274,15 +303,45 @@ private fun Dialogue(
 }
 
 @Composable
+private fun ChatWelcome(online: Boolean, ready: Boolean, onExample: (String) -> Unit, examplesEnabled: Boolean) {
+    val shape = RoundedCornerShape(24.dp)
+    Surface(Modifier.fillMaxWidth(), shape = shape, border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        color = MaterialTheme.colorScheme.surfaceContainerLow) {
+        Column(Modifier.fillMaxWidth().background(Brush.linearGradient(listOf(Color(0xFF24213E), Color(0xFF161622), Color(0xFF181B23))))
+            .padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Box(Modifier.size(38.dp).background(Color(0xFF35304B), RoundedCornerShape(12.dp)), contentAlignment = Alignment.Center) {
+                    StudioMark(Mark.ENGINES, Mint)
+                }
+                if (ready) StudioPill(stringResource(if (online) R.string.workspace_ai_ready else R.string.workspace_ai_inactive),
+                    color = if (online) Mint else Titanium, dot = true)
+            }
+            Text(stringResource(R.string.workspace_chat_title), style = MaterialTheme.typography.headlineSmall)
+            Text(stringResource(if (online) R.string.workspace_chat_hint else R.string.workspace_chat_start), color = Titanium,
+                style = MaterialTheme.typography.bodyMedium)
+            if (examplesEnabled) {
+                val example = stringResource(R.string.workspace_example_chat)
+                OutlinedButton(onClick = { onExample(example) }, modifier = Modifier.heightIn(min = 48.dp)) { Text(example) }
+            }
+        }
+    }
+}
+
+@Composable
+private fun dashboardUnavailableHint() {
+    Text(stringResource(R.string.workspace_reading), color = Titanium, style = MaterialTheme.typography.bodySmall)
+}
+
+@Composable
 private fun EngineChooser(chat: ChatState, profiles: List<ProviderProfile>, preferred: String?, choose: (String?) -> Unit, chooseTeam: () -> Unit) {
     var expanded by remember { mutableStateOf(false) }
-    val name = ChatRoute.target(profiles, chat.manualId, preferred)?.config?.name
+    val name = ChatRoute.target(profiles, chat.manualId, preferred)?.let { "${it.config.name} · ${it.config.model.removePrefix("models/")}" }
     Column {
         TextButton(onClick = { expanded = true }, enabled = !chat.busy) {
             Text(when {
                 chat.teamIds.isNotEmpty() -> stringResource(R.string.chat_team_count, faDigits(chat.teamIds.size))
-                else -> name?.take(24) ?: stringResource(R.string.chat_no_engine_short)
-            }, maxLines = 1)
+                else -> name ?: stringResource(R.string.chat_no_engine_short)
+            }, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         DropdownMenu(expanded, { expanded = false }) {
             DropdownMenuItem(text = { Text(stringResource(R.string.chat_auto)) }, onClick = { choose(null); expanded = false })
@@ -318,7 +377,9 @@ private fun DialogueTurn(turn: ChatTurn, running: Boolean, actionsEnabled: Boole
                 running -> Text(stringResource(R.string.compare_streaming), color = Titanium)
                 turn.interrupted -> Text(stringResource(R.string.compare_stopped), color = Amber)
             }
-            if (turn.answer.isNotBlank()) RichAnswer(turn.answer)
+            if (turn.answer.isNotBlank()) {
+                if (running) Text(turn.answer, style = MaterialTheme.typography.bodyLarge) else RichAnswer(turn.answer)
+            }
             for (attempt in turn.errors) {
                 val reason = stringResource(DanaErrorHandler.messageFor(attempt.problem))
                 Text("${attempt.name} · $reason", style = MaterialTheme.typography.bodySmall, color = Amber)
@@ -402,37 +463,8 @@ private fun MemoryVault(chat: ChatState, model: ChatViewModel) {
 }
 
 @Composable
-private fun ToolPanel(chat: ChatState, model: ChatViewModel, onMedia: () -> Unit) {
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(stringResource(R.string.chat_tools_title), style = MaterialTheme.typography.headlineSmall)
-        Text(stringResource(R.string.chat_tools_help), color = Titanium)
-        Button(onClick = { model.assistant(local = true) }, enabled = !chat.busy) { Text(stringResource(R.string.phone_voice_commands)) }
-        TextButton(onClick = { model.page(ChatPage.CONVERSATION); onMedia() }, enabled = !chat.busy) { Text(stringResource(R.string.media_title)) }
-        AssistantSetup(enabled = !chat.busy)
-        GlassCard(Modifier.fillMaxWidth()) {
-            Text(stringResource(R.string.phone_quick), style = MaterialTheme.typography.titleMedium)
-            listOf(LocalAction.Battery, LocalAction.MediaVolume, LocalAction.Torch(true), LocalAction.Torch(false),
-                LocalAction.Internet, LocalAction.Wifi, LocalAction.Bluetooth, LocalAction.Sound, LocalAction.Clock,
-                LocalAction.Panel.DISPLAY, LocalAction.Panel.APPS, LocalAction.Panel.CAMERA, LocalAction.Panel.CALCULATOR,
-                LocalAction.Panel.SETTINGS).forEach { action ->
-                TextButton(onClick = { model.dialog(ChatDialog.Action(action, false)) }, enabled = !chat.busy,
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text(actionText(action)) }
-            }
-        }
-        GlassCard(Modifier.fillMaxWidth()) {
-            Text(stringResource(R.string.chat_templates_title), style = MaterialTheme.typography.titleMedium)
-            listOf(R.string.cmd_volume, R.string.cmd_timer, R.string.cmd_alarm, R.string.cmd_note, R.string.cmd_dial,
-                R.string.cmd_event, R.string.cmd_event_timed, R.string.cmd_open, R.string.cmd_web, R.string.cmd_sms).forEach { example ->
-                val sample = stringResource(example)
-                TextButton(onClick = { model.commandExample(sample) }, enabled = !chat.busy) { Text(sample) }
-            }
-        }
-    }
-}
-
-@Composable
 private fun TeamPicker(chat: ChatState, model: ChatViewModel, profiles: List<ProviderProfile>, dismiss: () -> Unit) {
-    val eligible = profiles.filter { it.config.endpoint.acceptsCredential(it.hasCredential) && it.config.cloudEngine?.acceptsChat(it.config.model) != false &&
+    val eligible = profiles.filter { it.config.endpoint.acceptsCredential(it.hasCredential) && it.config.acceptsChat &&
         (chat.photo == null || it.config.photoSupport != PhotoSupport.NO) }
     val visible = eligible.take(60)
     var choice by remember { mutableStateOf(chat.teamIds.intersect(visible.map { it.id }.toSet())) }
@@ -465,6 +497,7 @@ private fun ChatOverlay(dialog: ChatDialog, chat: ChatState, model: ChatViewMode
     when (dialog) {
         ChatDialog.PickTeam -> TeamPicker(chat, model, profiles, dismiss)
         ChatDialog.Options -> ChatModal(R.string.chat_privacy, R.string.chat_done, true, chat, dismiss, dismiss) {
+            TaskChooser(chat, model::task)
             Text(stringResource(R.string.chat_privacy_help))
             ToggleLine(R.string.chat_history_switch, chat.options.autoHistory, !chat.busy) { model.options(chat.options.copy(autoHistory = it)) }
             ToggleLine(R.string.chat_context_switch, chat.options.includeContext, !chat.busy) { model.options(chat.options.copy(includeContext = it)) }

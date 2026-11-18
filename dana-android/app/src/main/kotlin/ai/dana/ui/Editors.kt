@@ -46,6 +46,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontFamily
@@ -109,54 +110,78 @@ internal fun DanaEditor(editor: Editor, session: DashboardSession, offline: Bool
 
 @Composable
 private fun QuickEditor(editor: Editor.Quick, session: DashboardSession, dismiss: () -> Unit, dispatch: (DanaIntent) -> Unit) {
-    var service by remember { mutableStateOf(editor.initial) }
+    val forImage = editor.after == DashboardTab.ART
+    val options = if (forImage) QuickService.entries.filter { it.supportsImage }
+        else listOf(QuickService.FREE, QuickService.AVALAI) + QuickService.entries.filter { it !in listOf(QuickService.FREE, QuickService.AVALAI) }
+    var service by remember { mutableStateOf(editor.initial.takeIf { it in options } ?: options.first()) }
     var expanded by remember { mutableStateOf(false) }
     var secret by remember(service) { mutableStateOf("") }
-    var approval by remember(service) { mutableStateOf<RouterApproval?>(null) }
-    var direct by remember { mutableStateOf(true) }
+    var imageOnly by remember { mutableStateOf(false) }
     var browserError by remember { mutableStateOf(false) }
     val browser = LocalUriHandler.current
+    val focus = LocalFocusManager.current
     val busy = session.busy
     val selected = service
-    val code = approval
+    val code = session.approval.takeIf { selected == QuickService.FREE }
     val valid = secret.isNotBlank() && (code == null || secret.length >= 8) &&
-        (service != QuickService.FREE || code != null || secret.startsWith("sk-or-v1-"))
-    EditorDialog(R.string.quick_title, R.string.quick_connect, valid, busy, session.error, secure = true, onDismiss = dismiss,
-        onConfirm = { if (service == selected) dispatch(DanaIntent.Connect(selected, secret, code, direct)) }) {
-        Text(stringResource(R.string.quick_intro))
+        (selected != QuickService.FREE || code != null || secret.startsWith("sk-or-v1-"))
+    EditorDialog(R.string.workspace_connect, R.string.quick_connect, valid, busy, session.error, secure = true, onDismiss = dismiss,
+        onConfirm = {
+            focus.clearFocus()
+            if (service == selected) dispatch(DanaIntent.Connect(selected, secret, code, imageOnly))
+        }) {
         Column {
-            OutlinedButton(onClick = { expanded = true }, enabled = !busy, modifier = Modifier.fillMaxWidth()) {
-                Text(stringResource(R.string.quick_provider, service.title))
+            OutlinedButton(onClick = { expanded = true }, enabled = !busy, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
+                Text(stringResource(R.string.quick_provider, selected.title))
             }
             DropdownMenu(expanded, { expanded = false }) {
-                QuickService.entries.forEach { candidate ->
-                    DropdownMenuItem(text = { Text(candidate.title) }, onClick = { service = candidate; expanded = false; browserError = false })
+                options.forEach { candidate ->
+                    DropdownMenuItem(text = { Text(candidate.title) }, onClick = {
+                        service = candidate
+                        expanded = false
+                        imageOnly = false
+                        browserError = false
+                        dispatch(DanaIntent.SetupApproval(null))
+                    })
                 }
             }
         }
-        TechnicalText(service.api, maxLines = 3)
-        if (service == QuickService.FREE) {
-            Text(stringResource(R.string.quick_free), style = MaterialTheme.typography.bodySmall, color = Mint)
+        if (selected == QuickService.FREE) {
+            Text(stringResource(R.string.workspace_free_hint), style = MaterialTheme.typography.bodySmall, color = Titanium)
             OutlinedButton(onClick = {
                 val next = RouterApproval.create()
                 secret = ""
-                approval = next
+                dispatch(DanaIntent.SetupApproval(next))
                 browserError = runCatching { browser.openUri(next.browserUrl) }.isFailure
-            }, enabled = !busy, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.quick_browser)) }
+            }, enabled = !busy, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text(stringResource(R.string.quick_browser)) }
             if (code != null) {
-                Text(stringResource(R.string.quick_code_help), color = Titanium, style = MaterialTheme.typography.bodySmall)
-                TextButton(onClick = { approval = null; secret = ""; browserError = false }, enabled = !busy) { Text(stringResource(R.string.quick_use_key)) }
+                Text(stringResource(R.string.workspace_code_hint), color = Titanium, style = MaterialTheme.typography.bodySmall)
+                TextButton(onClick = { dispatch(DanaIntent.SetupApproval(null)); secret = ""; browserError = false }, enabled = !busy) {
+                    Text(stringResource(R.string.quick_use_key))
+                }
             }
-            if (browserError) ReadError(R.string.quick_no_browser)
-        } else Text(stringResource(R.string.quick_paid), color = Amber, style = MaterialTheme.typography.bodySmall)
-        if (code == null) SetupLink(R.string.quick_get_key, service.keyUrl, !busy)
+        } else Text(stringResource(if (selected.supportsImage) R.string.workspace_same_key else R.string.workspace_credit),
+            style = MaterialTheme.typography.bodySmall, color = Titanium)
+        if (browserError) ReadError(R.string.quick_no_browser)
+        if (code == null) SetupLink(R.string.workspace_get_key, selected.keyUrl, !busy)
         OutlinedTextField(secret, { if (it.length <= ApiCredential.LIMIT) secret = it.trim() }, Modifier.fillMaxWidth(),
             enabled = !busy, singleLine = true,
             label = { Text(stringResource(if (code == null) R.string.quick_key else R.string.quick_code)) },
             textStyle = MaterialTheme.typography.bodyMedium.copy(textDirection = TextDirection.Ltr),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, autoCorrectEnabled = false),
             visualTransformation = PasswordVisualTransformation())
-        ProbeInfo(busy, session.httpStatus, direct, { direct = it }, { dispatch(DanaIntent.StopSetup) })
+        if (forImage) ToggleLine(R.string.workspace_image_only, imageOnly, !busy, { imageOnly = it })
+        if (!imageOnly) TechnicalText(selected.models.first())
+        Text(stringResource(if (imageOnly) R.string.workspace_image_probe else R.string.workspace_connect_consent),
+            style = MaterialTheme.typography.bodySmall, color = Titanium)
+        if (busy) {
+            LinearProgressIndicator(Modifier.fillMaxWidth())
+            Text(stringResource(R.string.quick_testing), style = MaterialTheme.typography.bodySmall, color = Mint)
+            TextButton(onClick = { dispatch(DanaIntent.StopSetup) }) { Text(stringResource(R.string.compare_stop)) }
+        }
+        session.httpStatus?.let { TechnicalText("HTTP $it") }
+        if (!busy) SetupLink(R.string.workspace_hoosha_web,
+            if (forImage) "https://hoosha.com/image/generate" else "https://hoosha.com/ai/", true)
     }
 }
 
@@ -449,7 +474,7 @@ private const val APPLE_GUIDE_URL =
     "https://github.com/mrsad2615-creator/vodiwalker_panel/blob/arena/13014174-vodiwalker-panel/dana-android/docs/03-engine-guide-fa.md"
 
 @Composable
-private fun SetupLink(label: Int, target: String, enabled: Boolean) {
+internal fun SetupLink(label: Int, target: String, enabled: Boolean) {
     val browser = LocalUriHandler.current
     var failed by remember(target) { mutableStateOf(false) }
     TextButton(onClick = { failed = runCatching { browser.openUri(target) }.isFailure }, enabled = enabled) {

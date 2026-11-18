@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.transformLatest
 
 /** Image output is separate from chat and is never silently routed through the Free text profile. */
 enum class ArtModel(val title: String, val id: String, val service: QuickService) {
+    AVAL_IMAGE("GPT Image 2.6 Flare", "gpt-image-2.6-flare", QuickService.AVALAI),
     NANO_LITE("Nano Banana 2 Lite", "gemini-3.1-flash-lite-image", QuickService.GOOGLE),
     NANO("Nano Banana 2", "gemini-3.1-flash-image", QuickService.GOOGLE),
     GPT_IMAGE("GPT Image 2.5 Flare", "gpt-image-2.5-flare", QuickService.OPENAI);

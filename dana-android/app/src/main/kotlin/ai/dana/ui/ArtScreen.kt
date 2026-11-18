@@ -2,7 +2,6 @@ package ai.dana.ui
 
 import ai.dana.R
 import ai.dana.domain.ArtModel
-import ai.dana.domain.ArtRequest
 import ai.dana.domain.ArtShape
 import ai.dana.domain.QuickService
 import androidx.compose.foundation.Image
@@ -26,6 +25,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -51,10 +51,14 @@ internal fun ArtScreen(model: ArtViewModel, dashboard: DashboardState, dispatch:
             .sortedBy { (_, p) -> p.id != dashboard.preferredEngine }
     }
     val chosen = engines.firstOrNull { (m, p) -> m == art.model && p.id == art.engineId } ?: engines.firstOrNull()
+    val newlyConnected = engines.firstOrNull { (_, p) -> p.id == dashboard.session.newImageProfile }
+    LaunchedEffect(newlyConnected) {
+        if (newlyConnected != null) model.select(newlyConnected.first, newlyConnected.second)
+    }
     var menu by remember { mutableStateOf(false) }
     val focus = LocalFocusManager.current
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        SectionIntro(R.string.art_title, R.string.art_intro)
+        SectionIntro(R.string.art_title, R.string.workspace_image_intro)
         if (art.preview != null) {
             val result = checkNotNull(art.preview)
             GlassCard(Modifier.fillMaxWidth()) {
@@ -70,21 +74,24 @@ internal fun ArtScreen(model: ArtViewModel, dashboard: DashboardState, dispatch:
                 }
             }
         }
-        if (chosen == null) {
-            GlassCard(Modifier.fillMaxWidth()) {
-                Text(stringResource(R.string.art_need_engine), color = Titanium)
-                Button(onClick = { dispatch(DanaIntent.OpenQuick(QuickService.GOOGLE, DashboardTab.ART)) },
-                    enabled = dashboard.profiles is Reading.Ready) { Text(stringResource(R.string.art_connect)) }
+        GlassCard(Modifier.fillMaxWidth()) {
+            OutlinedTextField(art.prompt, model::prompt, Modifier.fillMaxWidth(), enabled = !art.running,
+                label = { Text(stringResource(R.string.art_prompt)) },
+                placeholder = { Text(stringResource(R.string.workspace_image_example)) }, minLines = 3, maxLines = 6)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                ArtShape.entries.forEach { shape ->
+                    FilterChip(selected = art.shape == shape, enabled = !art.running, modifier = Modifier.weight(1f).heightIn(min = 48.dp),
+                        onClick = { model.shape(shape) }, label = { Text(stringResource(when (shape) {
+                            ArtShape.SQUARE -> R.string.art_square
+                            ArtShape.LANDSCAPE -> R.string.art_landscape
+                            ArtShape.PORTRAIT -> R.string.art_portrait
+                        })) })
+                }
             }
-        } else {
-            if (offline) OfflinePanel(R.string.art_offline, !dashboard.session.busy && dashboard.offline is Reading.Ready) {
-                dispatch(DanaIntent.SetOffline(false))
-            }
-            GlassCard(Modifier.fillMaxWidth()) {
-                Text(stringResource(R.string.art_paid), style = MaterialTheme.typography.bodySmall, color = Amber)
+            if (chosen != null) {
                 Column {
-                    OutlinedButton(onClick = { menu = true }, enabled = !art.running, modifier = Modifier.fillMaxWidth()) {
-                        Text("${chosen.second.config.name} · ${chosen.first.title}")
+                    TextButton(onClick = { menu = true }, enabled = !art.running, modifier = Modifier.heightIn(min = 48.dp)) {
+                        Text("${chosen.second.config.name} · ${chosen.first.title}", style = MaterialTheme.typography.labelLarge)
                     }
                     DropdownMenu(menu, { menu = false }) {
                         engines.take(60).forEach { (m, p) ->
@@ -92,33 +99,41 @@ internal fun ArtScreen(model: ArtViewModel, dashboard: DashboardState, dispatch:
                         }
                         DropdownMenuItem(text = { Text(stringResource(R.string.art_connect)) }, onClick = {
                             menu = false
-                            dispatch(DanaIntent.OpenQuick(QuickService.GOOGLE, DashboardTab.ART))
+                            focus.clearFocus()
+                            dispatch(DanaIntent.OpenQuick(QuickService.AVALAI, DashboardTab.ART))
                         })
                     }
                 }
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    ArtShape.entries.forEach { shape ->
-                        FilterChip(selected = art.shape == shape, enabled = !art.running, modifier = Modifier.weight(1f),
-                            onClick = { model.shape(shape) }, label = { Text(stringResource(when (shape) {
-                                ArtShape.SQUARE -> R.string.art_square
-                                ArtShape.LANDSCAPE -> R.string.art_landscape
-                                ArtShape.PORTRAIT -> R.string.art_portrait
-                            })) })
-                    }
+            }
+            if (art.running) {
+                LinearProgressIndicator(Modifier.fillMaxWidth())
+                Text(stringResource(R.string.art_wait), color = Titanium)
+                OutlinedButton(onClick = model::stop, modifier = Modifier.heightIn(min = 48.dp)) { Text(stringResource(R.string.compare_stop)) }
+            } else if (chosen == null) {
+                Text(stringResource(R.string.art_need_engine), color = Titanium, style = MaterialTheme.typography.bodySmall)
+                Button(onClick = { focus.clearFocus(); dispatch(DanaIntent.OpenQuick(QuickService.AVALAI, DashboardTab.ART)) },
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp), enabled = dashboard.profiles is Reading.Ready) {
+                    Text(stringResource(R.string.art_connect))
                 }
-                OutlinedTextField(art.prompt, model::prompt, Modifier.fillMaxWidth(), enabled = !art.running,
-                    label = { Text(stringResource(R.string.art_prompt)) }, minLines = 3, maxLines = 7,
-                    supportingText = { Text("${faDigits(art.prompt.length)} / ${faDigits(ArtRequest.PROMPT_LIMIT)}") })
-                if (art.running) {
-                    LinearProgressIndicator(Modifier.fillMaxWidth())
-                    Text(stringResource(R.string.art_wait), color = Titanium)
-                    OutlinedButton(onClick = model::stop) { Text(stringResource(R.string.compare_stop)) }
-                } else Button(onClick = { focus.clearFocus(); model.submit(chosen.first, chosen.second) },
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp), enabled = !offline && art.prompt.isNotBlank()) {
+            } else if (offline) {
+                Text(stringResource(R.string.art_offline), color = Titanium, style = MaterialTheme.typography.bodySmall)
+                Button(onClick = { focus.clearFocus(); dispatch(DanaIntent.SetOffline(false)) },
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp), enabled = dashboard.offline is Reading.Ready && !dashboard.session.busy) {
+                    Text(stringResource(R.string.workspace_enable_ai))
+                }
+            } else {
+                Text(stringResource(R.string.art_paid), style = MaterialTheme.typography.bodySmall, color = Amber)
+                Button(onClick = { focus.clearFocus(); model.submit(chosen.first, chosen.second) },
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp), enabled = art.prompt.isNotBlank()) {
                     Text(stringResource(R.string.art_generate))
                 }
-                art.error?.let { ReadError(it) }
-                art.status?.let { TechnicalText("HTTP $it") }
+            }
+            art.error?.let {
+                ReadError(it)
+                art.status?.let { status -> TechnicalText("HTTP $status") }
+                if (art.status in setOf(401, 402, 403, 404, 429)) TextButton(onClick = {
+                    dispatch(DanaIntent.OpenQuick(chosen?.first?.service ?: QuickService.AVALAI, DashboardTab.ART))
+                }, modifier = Modifier.heightIn(min = 48.dp)) { Text(stringResource(R.string.workspace_connect)) }
             }
         }
     }

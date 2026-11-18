@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<animated-vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:drawable="@drawable/mrsad_launch">
+    <target android:name="symbol" android:animation="@animator/mrsad_symbol_draw" />
+    <target android:name="signature" android:animation="@animator/mrsad_word_draw" />
+</animated-vector>

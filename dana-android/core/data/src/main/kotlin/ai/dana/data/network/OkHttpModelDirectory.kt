@@ -34,9 +34,13 @@ internal class OkHttpModelDirectory(
     override suspend fun list(endpoint: ProviderEndpoint, key: ApiCredential?): List<DirectoryModel> =
         withTimeoutOrNull(40_000) { collect(endpoint, key) } ?: throw EngineFailure(EngineProblem.TIMEOUT)
 
-    private suspend fun collect(endpoint: ProviderEndpoint, key: ApiCredential?): List<DirectoryModel> {
+    override suspend fun hasImageModel(endpoint: ProviderEndpoint, key: ApiCredential, id: String): Boolean =
+        withTimeoutOrNull(40_000) { collect(endpoint, key, imageModel = id).isNotEmpty() } ?: throw EngineFailure(EngineProblem.TIMEOUT)
+
+    private suspend fun collect(endpoint: ProviderEndpoint, key: ApiCredential?, imageModel: String? = null): List<DirectoryModel> {
         val protocol = endpoint.protocol
         if (protocol == ProviderProtocol.OPENROUTER_FREE) {
+            if (imageModel != null) return emptyList()
             // Credential check only: this route has one fixed model and requires no priced catalog.
             val builder = Request.Builder().url(EngineProtocol.url(endpoint).addPathSegment("key").build())
                 .get().header("Accept", "application/json")
@@ -68,7 +72,13 @@ internal class OkHttpModelDirectory(
                 else -> throw EngineFailure(EngineProblem.PROTOCOL)
             }
             for (entry in entries) {
-                val model = (entry as? JsonObject)?.toModel(protocol, cloud) ?: continue
+                val objectEntry = entry as? JsonObject ?: continue
+                if (imageModel != null) {
+                    val id = objectEntry[if (gemini) "name" else "id"].string()
+                    if (id == (if (gemini) "models/$imageModel" else imageModel)) return listOf(DirectoryModel(imageModel, imageModel))
+                    continue
+                }
+                val model = objectEntry.toModel(protocol, cloud) ?: continue
                 models.putIfAbsent(model.id, model)
                 if (models.size > MAX_MODELS) throw EngineFailure(EngineProblem.PROTOCOL)
             }

@@ -91,13 +91,28 @@ class OkHttpEngineTransportTest {
     }
 
     @Test
-    fun rateLimitIsNotRetriedAndNonSseIsRejected() = localTest { server, transport ->
+    fun rateLimitIsNotRetriedAndMalformedJsonIsRejected() = localTest { server, transport ->
         server.enqueue(MockResponse.Builder().code(429).setHeader("Retry-After", "0").build())
         expect(EngineProblem.RATE_LIMIT) { transport.stream(config(server, OPEN), key, "پرسش").map { it.value }.toList() }
         assertEquals(1, server.requestCount)
         server.enqueue(MockResponse.Builder().setHeader("Content-Type", "application/json").body("{}").build())
         expect(EngineProblem.PROTOCOL) { transport.stream(config(server, OPEN), key, "پرسش").map { it.value }.toList() }
         assertEquals(2, server.requestCount)
+    }
+
+    @Test
+    fun chatAcceptsACompleteJsonAnswerFromSameRequest() = localTest { server, transport ->
+        server.enqueue(json("""{"choices":[{"message":{"content":"پاسخ یک‌باره"},"finish_reason":"stop"}]}"""))
+        assertEquals(listOf("پاسخ یک‌باره"), transport.stream(config(server, OPEN), key, "پرسش").map { it.value }.toList())
+        assertEquals(1, server.requestCount)
+    }
+
+    @Test
+    fun exhaustedCreditIsNotPresentedAsTemporaryThrottling() = localTest { server, transport ->
+        server.enqueue(MockResponse.Builder().code(429).setHeader("Content-Type", "application/json")
+            .body("""{"error":{"code":"insufficient_quota","message":"this text must not be shown"}}""").build())
+        expect(EngineProblem.PAYMENT_REQUIRED) { transport.stream(config(server, OPEN), key, "پرسش").map { it.value }.toList() }
+        assertEquals(1, server.requestCount)
     }
 
     @Test

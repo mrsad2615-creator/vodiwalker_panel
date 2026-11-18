@@ -34,7 +34,13 @@ internal fun AssistantSetup(enabled: Boolean) {
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     var held by remember(context) { mutableStateOf(isAssistant(context)) }
     var failed by remember { mutableStateOf(false) }
-    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { held = isAssistant(context) }
+    var requestedRole by remember { mutableStateOf(false) }
+    var notSelected by remember { mutableStateOf(false) }
+    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+        held = isAssistant(context)
+        notSelected = requestedRole && !held
+        requestedRole = false
+    }
     DisposableEffect(context, lifecycle) {
         val observer = LifecycleEventObserver { _, event -> if (event == Lifecycle.Event.ON_RESUME) held = isAssistant(context) }
         lifecycle.addObserver(observer)
@@ -45,11 +51,15 @@ internal fun AssistantSetup(enabled: Boolean) {
         Text(stringResource(if (held) R.string.phone_assistant_active else R.string.phone_assistant_help), color = if (held) Mint else Titanium)
         OutlinedButton(onClick = {
             val request = if (Build.VERSION.SDK_INT >= 29 && !held) runCatching { requestRole(context) }.getOrNull() else null
+            notSelected = false
+            requestedRole = request != null
             failed = (request == null || runCatching { launcher.launch(request) }.isFailure) &&
-                runCatching { launcher.launch(Intent(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS)) }.isFailure
+                runCatching { requestedRole = false; launcher.launch(Intent(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS)) }.isFailure
         }, enabled = enabled, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
             Text(stringResource(if (held) R.string.phone_assistant_settings else R.string.phone_assistant_enable))
         }
+        if (notSelected && !held) Text(stringResource(R.string.workspace_assistant_not_selected), color = Amber,
+            style = MaterialTheme.typography.bodySmall)
         if (failed) ReadError(R.string.phone_assistant_unavailable)
     }
 }

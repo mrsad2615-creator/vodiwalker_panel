@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.Dana.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">#101018</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/mrsad_launch_motion</item>
+        <item name="windowSplashScreenAnimationDuration">360</item>
+        <item name="postSplashScreenTheme">@style/Theme.Dana</item>
+    </style>
+</resources>

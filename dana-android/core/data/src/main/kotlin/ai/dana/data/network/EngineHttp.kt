@@ -21,13 +21,21 @@ import okhttp3.ResponseBody
 
 internal fun Response.requireSuccess(protocol: ProviderProtocol) {
     if (isSuccessful) return
+    // Inspect only a bounded, typed error code. Never expose the provider body, which may echo keys or prompts.
+    val codeHint = if (body.contentType()?.subtype == "json" && code in setOf(400, 403, 429)) runCatching {
+        val root = EngineProtocol.decodeObject(body.boundedUtf8(8_192))
+        val error = root["error"] as? JsonObject
+        error?.get("code").string() ?: error?.get("type").string()
+    }.getOrNull() else null
     val problem = when (code) {
-        400, 404, 422 -> EngineProblem.CONFIGURATION
+        400 -> if (codeHint in setOf("moderation_blocked", "content_policy_violation")) EngineProblem.FILTERED else EngineProblem.CONFIGURATION
+        404, 422 -> EngineProblem.CONFIGURATION
         401 -> EngineProblem.AUTHENTICATION
         402 -> EngineProblem.PAYMENT_REQUIRED
         403 -> EngineProblem.FORBIDDEN
         408, 504 -> EngineProblem.TIMEOUT
-        429 -> EngineProblem.RATE_LIMIT
+        429 -> if (codeHint in setOf("insufficient_quota", "insufficient_balance", "billing_hard_limit_reached"))
+            EngineProblem.PAYMENT_REQUIRED else EngineProblem.RATE_LIMIT
         in 300..399 -> EngineProblem.PROTOCOL
         503 -> if (protocol == ProviderProtocol.APPLE_MAC) {
             val error = runCatching {

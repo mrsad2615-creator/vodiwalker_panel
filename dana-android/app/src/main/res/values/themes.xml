@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <style name="Theme.Dana" parent="android:style/Theme.Material.NoActionBar">
-        <item name="android:windowBackground">#0C1212</item>
-        <item name="android:colorAccent">#BDEF9B</item>
+        <item name="android:windowBackground">#101018</item>
+        <item name="android:colorAccent">#C9BAFF</item>
         <item name="android:windowLightStatusBar">false</item>
     </style>
     <style name="Theme.Dana.Starting" parent="Theme.SplashScreen">
-        <item name="windowSplashScreenBackground">#0C1212</item>
+        <item name="windowSplashScreenBackground">#101018</item>
         <item name="windowSplashScreenAnimatedIcon">@drawable/mrsad_launch</item>
         <item name="postSplashScreenTheme">@style/Theme.Dana</item>
     </style>

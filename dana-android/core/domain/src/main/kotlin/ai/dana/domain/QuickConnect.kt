@@ -12,6 +12,7 @@ enum class QuickService(val title: String, val protocol: ProviderProtocol, val a
     FREE("OpenRouter Free", ProviderProtocol.OPENROUTER_FREE, OPENROUTER_BASE_URL, "https://openrouter.ai/settings/keys", listOf(OPENROUTER_FREE_MODEL)),
     GOOGLE("Gemini", ProviderProtocol.GEMINI_NATIVE, GOOGLE_GEMINI_BASE_URL, "https://aistudio.google.com/api-keys",
         listOf("models/gemini-3.5-flash-lite", "models/gemini-3.1-flash-lite", "models/gemini-2.5-flash-lite")),
+    AVALAI(CloudEngine.AVALAI),
     OPENAI(CloudEngine.OPENAI),
     GROQ(CloudEngine.GROQ),
     MISTRAL(CloudEngine.MISTRAL),
@@ -21,6 +22,7 @@ enum class QuickService(val title: String, val protocol: ProviderProtocol, val a
     constructor(cloud: CloudEngine) : this(cloud.label, ProviderProtocol.OPENAI_COMPATIBLE, cloud.baseUrl, cloud.consoleUrl, cloud.suggested)
 
     val endpoint: ProviderEndpoint get() = ProviderEndpoint.create(protocol, ProviderNetwork.INTERNET, api)
+    val supportsImage: Boolean get() = ArtModel.entries.any { it.service == this }
 }
 
 /** Official OpenRouter browser flow without a callback URI. Verifier lives only in memory and is never shown or logged. */
@@ -65,21 +67,25 @@ class QuickConnect(
     private val transport: EngineTransport,
     private val exchanger: RouterKeyExchange,
 ) {
-    suspend fun test(service: QuickService, raw: String, approval: RouterApproval? = null): TestedEngine =
+    suspend fun test(service: QuickService, raw: String, approval: RouterApproval? = null, imageOnly: Boolean = false): TestedEngine =
         withTimeoutOrNull(50_000L) {
             val key = if (approval != null && service == QuickService.FREE) exchanger.exchange(RouterCode.create(raw, approval))
                 else ApiCredential.parse(raw)
             if (service == QuickService.FREE && !key.value.startsWith("sk-or-v1-")) reject(InputIssue.INVALID_API_KEY)
-            val model = if (service == QuickService.FREE) OPENROUTER_FREE_MODEL else {
-                val catalog = directory.list(service.endpoint, key).mapTo(hashSetOf()) { it.id }
-                service.models.firstOrNull { it in catalog } ?: throw EngineFailure(EngineProblem.CONFIGURATION)
+            val model = if (!imageOnly) service.models.first() else {
+                ArtModel.entries.firstOrNull { it.service == service }?.id ?: throw EngineFailure(EngineProblem.CONFIGURATION)
             }
             val config = ProviderConfig.create(service.title, service.protocol, ProviderNetwork.INTERNET, service.api, model)
-            probe(config, key)
+            // No required catalog lookup or model guessing for a text request. Some per-project keys cannot list models.
+            // Image setup checks the key/catalog; it does not make a billable image request or promise that quota exists.
+            if (imageOnly) {
+                if (!directory.hasImageModel(service.endpoint, key, model)) throw EngineFailure(EngineProblem.CONFIGURATION)
+            } else probe(config, key)
             TestedEngine(config, key)
         } ?: throw EngineFailure(EngineProblem.TIMEOUT)
 
     suspend fun probe(config: ProviderConfig, key: ApiCredential?): Long = withTimeoutOrNull(40_000L) {
+        if (!config.acceptsChat) throw EngineFailure(EngineProblem.CONFIGURATION)
         if (!config.endpoint.acceptsCredential(key != null)) throw EngineFailure(EngineProblem.AUTHENTICATION)
         val started = TimeSource.Monotonic.markNow()
         var visible = false

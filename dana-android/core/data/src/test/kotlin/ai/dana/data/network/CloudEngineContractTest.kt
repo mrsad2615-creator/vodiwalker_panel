@@ -36,7 +36,7 @@ class CloudEngineContractTest {
         val jpeg = checkNotNull(VisionPhoto.fromJpeg(byteArrayOf(-1, -40, 1, -1, -39)))
         val input = checkNotNull(ConversationInput.prepare("این تصویر چیست؟", emptyList(), emptyList(),
             AssistantStyle.BALANCED, AssistantTask.ASK, jpeg, mask = false))
-        val urls = mapOf(CloudEngine.OPENAI to "https://api.openai.com/v1/chat/completions",
+        val urls = mapOf(CloudEngine.AVALAI to "https://api.avalai.ir/v1/chat/completions", CloudEngine.OPENAI to "https://api.openai.com/v1/chat/completions",
             CloudEngine.GROQ to "https://api.groq.com/openai/v1/chat/completions",
             CloudEngine.MISTRAL to "https://api.mistral.ai/v1/chat/completions",
             CloudEngine.DEEPSEEK to "https://api.deepseek.com/chat/completions",
@@ -50,14 +50,14 @@ class CloudEngineContractTest {
             assertEquals(urls[cloud], request.url.toString())
             assertEquals("POST", request.method)
             assertEquals("Bearer ${token.value}", request.header("Authorization"))
-            assertEquals("text/event-stream", request.header("Accept"))
+            assertEquals("text/event-stream, application/json", request.header("Accept"))
             val output = Buffer()
             val body = requireNotNull(request.body)
             assertTrue(body.isOneShot())
             body.writeTo(output)
             val json = output.readUtf8()
             assertTrue(json.contains("\"stream\":true"))
-            assertTrue(json.contains(if (cloud.prefersMaxCompletionTokens) "\"max_completion_tokens\":1024" else "\"max_tokens\":1024"))
+            assertTrue(json.contains("\"${cloud.completionLimitField(config.model)}\":1024"))
             assertFalse(json.contains("tool_choice"))
             assertFalse(json.contains(token.value))
             assertTrue(json.contains("این تصویر چیست؟"))

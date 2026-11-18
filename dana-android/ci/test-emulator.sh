@@ -2,7 +2,7 @@
 set -Eeuo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 
-package=ai.dana.mrsad
+package=ai.dana.mrsad.workspace
 apk="$RUNNER_TEMP/dana-verified/mrsad-preview.apk"
 test_apk="$PWD/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk"
 test_package="$package.test"
@@ -60,17 +60,17 @@ mark 'Run mrsad assistant and OCR tests on the exact installed APK.'
 adb logcat -T 1 -v brief 'ActivityTaskManager:I' 'WindowManager:E' 'AndroidRuntime:E' 'Watchdog:E' 'libc:F' '*:S' > "$RUNNER_TEMP/dana-emulator-guest.log" 2>&1 &
 logcat_pid=$!
 trap 'kill "$logcat_pid" 2>/dev/null || true' EXIT
-if ! DANA_ADB_TIMEOUT=235s device shell am instrument -w "$test_package/androidx.test.runner.AndroidJUnitRunner" 2>&1 | tee "$log"; then
+if ! DANA_ADB_TIMEOUT=235s device shell am instrument -w "$test_package/ai.dana.WorkspaceTestRunner" 2>&1 | tee "$log"; then
   report_failure 'Could not run Android instrumentation on the verified APK.'
 fi
-if ! grep -Eq '^OK \(([8-9]|[1-9][0-9]+) tests\)' "$log" || grep -Eq 'FAILURES!!!|INSTRUMENTATION_(FAILED|ABORTED)' "$log"; then
+if ! grep -Eq '^OK \((9|[1-9][0-9]+) tests\)' "$log" || grep -Eq 'FAILURES!!!|INSTRUMENTATION_(FAILED|ABORTED)' "$log"; then
   report_failure 'The installed APK did not pass assistant, chat and native OCR tests.'
 fi
 
 mark 'App instrumentation passed; copy five screenshots.'
 screen_dir="$RUNNER_TEMP/dana-screens"
 mkdir -p "$screen_dir"
-for page in home account engines chat art; do
+for page in home connection phone chat art; do
   device exec-out run-as "$package" cat "files/ci-screens/$page.png" > "$screen_dir/$page.png"
 done
 python3 - "$screen_dir" <<'PYTHON'
@@ -83,4 +83,4 @@ for p in Path(sys.argv[1]).glob('*.png'):
     if len(header) != 24 or header[:8] != b'\x89PNG\r\n\x1a\n' or min(struct.unpack('>II', header[16:])) < 240:
         raise SystemExit(f'::error title=Dana screenshots::Missing or invalid screenshot: {p.name}')
 PYTHON
-printf '::notice title=Dana installed APK::Assistant entry, offline battery, quick setup, image setup, Share, fixture-based direct chat, native image decoding/content export, private camera output and offline OCR passed.\n'
+printf '::notice title=Dana installed APK::Chat UI key rejection and recovery, fast SSE, image generation/content URI save (fixture), permissions status, offline commands, Share, camera and OCR passed.\n'

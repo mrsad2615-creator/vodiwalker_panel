@@ -12,6 +12,8 @@ object ChatLimits {
     const val PHOTO_EDGE = 1_536
 }
 
+enum class SendLane { STANDARD, FAST }
+
 enum class AssistantStyle { BALANCED, CONCISE, DETAILED }
 
 data class ContextMessage(val role: MessageRole, val body: String)
@@ -40,10 +42,11 @@ class ConversationInput private constructor(
     val maskedValues: Int,
     val omittedPairs: Int,
     val probe: Boolean = false,
+    val lane: SendLane = SendLane.STANDARD,
 ) {
     fun fits(profile: ProviderProfile): Boolean {
         val cfg = profile.config
-        if (!cfg.endpoint.acceptsCredential(profile.hasCredential) || cfg.cloudEngine?.acceptsChat(cfg.model) == false) return false
+        if (!cfg.endpoint.acceptsCredential(profile.hasCredential) || !cfg.acceptsChat) return false
         if (photo != null && cfg.photoSupport == PhotoSupport.NO) return false
         return cfg.protocol != ProviderProtocol.APPLE_MAC || appleText().length <= ComparisonLimits.PROMPT_CHARS
     }
@@ -81,6 +84,7 @@ class ConversationInput private constructor(
             task: AssistantTask,
             photo: VisionPhoto?,
             mask: Boolean,
+            lane: SendLane = SendLane.STANDARD,
         ): ConversationInput? {
             val clean = raw.trim()
             if (clean.length !in 1..ComparisonLimits.PROMPT_CHARS) return null
@@ -97,9 +101,10 @@ class ConversationInput private constructor(
             val pairs = history.takeLast(ChatLimits.RETAINED_MESSAGES).zipWithNext()
                 .filter { (user, agent) -> user.role == MessageRole.USER && agent.role == MessageRole.ASSISTANT }
             val selected = ArrayDeque<ContextMessage>()
-            var remaining = ChatLimits.CONTEXT_CHARS
+            val quick = lane == SendLane.FAST
+            var remaining = if (quick) 1_800 else ChatLimits.CONTEXT_CHARS
             var included = 0
-            for ((user, agent) in pairs.asReversed().take(ChatLimits.CONTEXT_PAIRS)) {
+            for ((user, agent) in pairs.asReversed().take(if (quick) 1 else ChatLimits.CONTEXT_PAIRS)) {
                 if (user.body.length + agent.body.length > remaining) break
                 val priorHits = hits
                 val u = protect(user.body)
@@ -114,7 +119,8 @@ class ConversationInput private constructor(
                 included++
             }
             val facts = relevantFacts(clean, memories).map { protect(it) }
-            return ConversationInput(prompt, selected.toList(), facts, style, task, photo, hits, pairs.size - included)
+            return ConversationInput(prompt, selected.toList(), facts, if (quick) AssistantStyle.CONCISE else style, task,
+                photo, hits, pairs.size - included, lane = lane)
         }
 
         private fun relevantFacts(prompt: String, memories: List<UserMemory>): List<String> {
@@ -175,7 +181,7 @@ class ChatRoute private constructor(
 
         fun target(profiles: List<ProviderProfile>, engineId: String?, preferredId: String?): ProviderProfile? {
             if (engineId != null) return profiles.singleOrNull { it.id == engineId }
-            val usable = profiles.filter { it.config.endpoint.acceptsCredential(it.hasCredential) && it.config.cloudEngine?.acceptsChat(it.config.model) != false }
+            val usable = profiles.filter { it.config.endpoint.acceptsCredential(it.hasCredential) && it.config.acceptsChat }
             if (preferredId != null) return usable.singleOrNull { it.id == preferredId }
             return usable.firstOrNull { it.config.protocol == ProviderProtocol.OPENROUTER_FREE }
                 ?: usable.firstOrNull()

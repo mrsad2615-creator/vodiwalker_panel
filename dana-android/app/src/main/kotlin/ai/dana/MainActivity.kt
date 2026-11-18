@@ -10,7 +10,7 @@ import ai.dana.ui.DanaApp
 import ai.dana.ui.DanaIntent
 import ai.dana.ui.DanaTheme
 import ai.dana.ui.DanaViewModel
-import android.animation.ValueAnimator
+import ai.dana.ui.PhoneViewModel
 import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
@@ -26,26 +26,23 @@ import dagger.hilt.android.AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     private val model: DanaViewModel by viewModels()
     private val chat: ChatViewModel by viewModels()
-    private val account: AccountViewModel by viewModels()
+    private val accountDelegate = viewModels<AccountViewModel>()
+    private val account by accountDelegate
     private val media: MediaViewModel by viewModels()
-    private val art: ArtViewModel by viewModels()
+    private val artDelegate = viewModels<ArtViewModel>()
+    private val art by artDelegate
+    private val phone: PhoneViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        val splash = installSplashScreen()
+        installSplashScreen()
         super.onCreate(savedInstanceState)
-        if (savedInstanceState == null && intent?.action == Intent.ACTION_MAIN && ValueAnimator.areAnimatorsEnabled()) {
-            splash.setOnExitAnimationListener { screen ->
-                screen.iconView.animate().scaleX(1.09f).scaleY(1.09f).setDuration(240L).start()
-                screen.view.animate().alpha(0f).setDuration(260L).withEndAction { screen.remove() }.start()
-            }
-        }
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
             navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
         )
         if (savedInstanceState == null) handleExternal(intent)
         setContent {
-            DanaTheme { DanaApp(model, chat, media, account, art) }
+            DanaTheme { DanaApp(model, chat, media, { account }, { art }, { phone }) }
         }
     }
 
@@ -58,8 +55,7 @@ class MainActivity : ComponentActivity() {
         when (received?.action) {
             Intent.ACTION_ASSIST -> {
                 // Android can attach foreground-app context. Ignore it; no screen read or microphone start.
-                model.dispatch(DanaIntent.Navigate(DashboardTab.CHAT))
-                chat.assistant(local = true)
+                model.dispatch(DanaIntent.Navigate(DashboardTab.PHONE))
             }
             OneFrameCaptureService.ACTION_OPEN_MEDIA -> {
                 model.dispatch(DanaIntent.Navigate(DashboardTab.CHAT))
@@ -78,8 +74,8 @@ class MainActivity : ComponentActivity() {
         if (!isChangingConfigurations) {
             model.dispatch(DanaIntent.StopRemoteRequests)
             chat.background()
-            account.background()
-            art.stop()
+            if (accountDelegate.isInitialized()) account.background()
+            if (artDelegate.isInitialized()) art.stop()
         }
         super.onStop()
     }

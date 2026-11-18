@@ -13,9 +13,9 @@ android {
         applicationId = "ai.dana"
         minSdk = libs.versions.min.sdk.get().toInt()
         targetSdk = libs.versions.compile.sdk.get().toInt()
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        versionCode = 7
-        versionName = "0.7.0"
+        testInstrumentationRunner = "ai.dana.WorkspaceTestRunner"
+        versionCode = 8
+        versionName = "0.8.0"
     }
 
     compileOptions {
@@ -30,7 +30,7 @@ android {
     buildTypes {
         debug {
             // Side-by-side with older debug APKs, whose signing key may differ.
-            applicationIdSuffix = ".mrsad"
+            applicationIdSuffix = ".mrsad.workspace"
             versionNameSuffix = "-preview"
         }
         release {
@@ -61,6 +61,10 @@ dependencies {
     implementation(libs.hilt.android)
     implementation(libs.tesseract.android)
     androidTestImplementation(libs.androidx.test.core)
+    androidTestImplementation(libs.okhttp.client)
+    androidTestImplementation(libs.hilt.android.testing)
+    androidTestImplementation(libs.androidx.test.espresso.intents)
+    kspAndroidTest(libs.hilt.compiler)
     androidTestImplementation(libs.androidx.test.runner)
     androidTestImplementation(libs.androidx.test.junit)
     androidTestImplementation(platform(libs.androidx.compose.bom))

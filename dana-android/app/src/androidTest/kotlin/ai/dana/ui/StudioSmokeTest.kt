@@ -2,15 +2,23 @@ package ai.dana.ui
 
 import ai.dana.MainActivity
 import ai.dana.R
+import ai.dana.data.di.EngineClientModule
+import ai.dana.data.network.EngineClients
+import ai.dana.domain.QuickService
 import android.Manifest
+import android.app.Activity
+import android.content.ContentValues
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
 import android.os.BatteryManager
 import android.os.Bundle
 import android.os.ParcelFileDescriptor
-import android.view.KeyEvent
+import android.provider.MediaStore
+import android.util.Base64
 import androidx.annotation.StringRes
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
@@ -18,68 +26,169 @@ import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextReplacement
+import androidx.test.espresso.intent.Intents
+import androidx.test.espresso.intent.matcher.IntentMatchers.hasAction
+import androidx.test.espresso.intent.matcher.IntentMatchers.hasExtra
+import androidx.test.espresso.intent.matcher.IntentMatchers.hasType
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.filters.SdkSuppress
 import androidx.test.platform.app.InstrumentationRegistry
+import dagger.hilt.android.testing.BindValue
+import dagger.hilt.android.testing.HiltAndroidRule
+import dagger.hilt.android.testing.HiltAndroidTest
+import dagger.hilt.android.testing.UninstallModules
+import java.io.ByteArrayOutputStream
 import java.io.File
+import java.util.concurrent.LinkedBlockingQueue
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Protocol
+import okhttp3.Response
+import okhttp3.ResponseBody.Companion.toResponseBody
+import okio.Buffer
+import org.hamcrest.Matchers.allOf
+import org.junit.Assert.assertArrayEquals
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
-/** Runs against the exact installed preview; all input is synthetic and stays offline. */
+/** Real UI / DI / app storage with isolated, strict HTTP response fixtures in the test APK only. */
 @OptIn(ExperimentalTestApi::class)
+@UninstallModules(EngineClientModule::class)
+@HiltAndroidTest
 @RunWith(AndroidJUnit4::class)
 class StudioSmokeTest {
-    @get:Rule val compose = createAndroidComposeRule<MainActivity>()
-    private val context get() = InstrumentationRegistry.getInstrumentation().targetContext
+    private val inst get() = InstrumentationRegistry.getInstrumentation()
+    private val context get() = inst.targetContext
+    private val calls = LinkedBlockingQueue<WireCall>()
+    private val replies = LinkedBlockingQueue<WireReply>()
+    @BindValue @JvmField val engines = EngineClients(OkHttpClient.Builder().addInterceptor { chain ->
+        val request = chain.request()
+        val body = Buffer().apply { request.body?.writeTo(this) }.readUtf8()
+        calls.add(WireCall(request.url.toString(), request.header("Authorization"), body))
+        val reply = replies.poll() ?: error("Unexpected request in isolated UI test")
+        Response.Builder().request(request).protocol(Protocol.HTTP_1_1).code(reply.code).message("Isolated fixture")
+            .body(reply.body.toResponseBody(reply.mime.toMediaType())).build()
+    }.build())
+
+    @get:Rule(order = 0) val hilt = HiltAndroidRule(this)
+    @get:Rule(order = 1) val compose = createAndroidComposeRule<MainActivity>()
 
     @Test
-    fun homeAccountConnectionAndSharedNoteWorkOnFreshInstall() {
-        trace("Activity resumed; wait for Studio semantics")
-        visible(R.string.studio_hello)
-        visible(R.string.hub_heading)
+    @SdkSuppress(minSdkVersion = 29)
+    fun aFreshInstallRejectsBadKeyThenConnectsChatsAndSavesImageThroughUi() {
+        visible(R.string.workspace_chat_title)
+        waitFor(clickable(R.string.workspace_connect))
         capture("home")
-
-        click(R.string.tab_account)
-        visible(R.string.account_email_title)
-        visible(R.string.account_configure)
-        capture("account")
-        click(R.string.account_configure)
-        enter(R.string.account_project_url, "https://abcdefghijklmnopqrst.supabase.co")
-        enter(R.string.account_public_key, "sb_publishable_dana-ci-public-fixture")
-        click(R.string.save)
-        visible(R.string.account_email_title)
-        enter(R.string.account_email, "fixture@dana.example.test")
-        compose.onNodeWithText(label(R.string.account_send)).assertIsNotEnabled()
-        // The bottom bar intentionally hides while the keyboard is open.
-        InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
-
-        click(R.string.tab_engines)
-        visible(R.string.engines_title)
-        visible(R.string.quick_title)
-        capture("engines")
-        click(R.string.quick_title)
+        compose.onNodeWithContentDescription(label(R.string.workspace_settings)).performClick()
+        visible(R.string.workspace_connection)
+        capture("connection")
+        compose.onNodeWithContentDescription(label(R.string.studio_back)).performClick()
+        click(R.string.workspace_connect)
         visible(R.string.quick_key)
-        visible(R.string.quick_browser)
         compose.onNodeWithText(label(R.string.quick_connect)).assertIsNotEnabled()
-        enter(R.string.quick_key, "sk-or-v1-dana-ci-offline-fixture")
-        compose.onNodeWithText(label(R.string.quick_connect)).assertIsEnabled()
-        click(R.string.cancel)
-        trace("Quick connection form validates without contacting any provider")
+        enter(R.string.quick_key, BAD_KEY)
+        replies.add(WireReply(401, """{"error":{"code":"invalid_api_key"}}"""))
+        click(R.string.quick_connect)
+        visible("HTTP 401")
+        visible(R.string.error_engine_auth)
+        checkCall("/chat/completions", BAD_KEY, "Reply with one short word: OK.", "\"stream\":false")
+        assertNoMic()
 
-        click(R.string.tab_home)
-        click(R.string.art_title)
-        visible(R.string.art_need_engine)
+        enter(R.string.quick_key, KEY)
+        replies.add(WireReply(200, completion("OK")))
+        click(R.string.quick_connect)
+        visible(R.string.workspace_ai_ready)
+        checkCall("/chat/completions", KEY, "Reply with one short word: OK.", "\"max_completion_tokens\":256")
+        assertTrue(calls.isEmpty())
+        click(R.string.workspace_fast)
+        enter(R.string.chat_prompt, "پاسخ سریع آزمایشی")
+        replies.add(WireReply(200, "data: {\"choices\":[{\"delta\":{\"content\":\"پاسخ دریافت شد.\"}}]}\n\ndata: [DONE]\n\n", "text/event-stream"))
+        click(R.string.workspace_send)
+        visible("پاسخ دریافت شد.")
+        checkCall("/chat/completions", KEY, "پاسخ سریع آزمایشی", "\"stream\":true", "\"max_completion_tokens\":448")
+        capture("chat")
+
+        click(R.string.tab_image)
+        enter(R.string.art_prompt, "کوه بنفش در سپیده دم")
+        click(R.string.art_landscape)
+        click(R.string.art_generate)
+        visible(R.string.art_allow_title)
+        assertTrue(calls.isEmpty())
+        val original = tinyPng()
+        replies.add(WireReply(200, """{"data":[{"b64_json":"${Base64.encodeToString(original, Base64.NO_WRAP)}"}]}"""))
+        click(R.string.send_allow)
+        visible(R.string.art_ready)
+        compose.onNodeWithContentDescription(label(R.string.art_preview)).assertIsDisplayed()
+        checkCall("/images/generations", KEY, "کوه بنفش در سپیده دم", "gpt-image-2.6-flare", "1536x1024")
         capture("art")
-        InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
-        click(R.string.tab_compare)
-        visible(R.string.compare_heading)
-        visible(R.string.compare_offline)
 
-        // Exercise Android's public intent path, not a direct call into the ViewModel.
+        // Stub only the picker result (not the click or write). Android writes the original bytes to a real content URI.
+        val resolver = context.contentResolver
+        val uri = checkNotNull(resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, ContentValues().apply {
+            put(MediaStore.Images.Media.DISPLAY_NAME, "mrsad-ui-fixture.png")
+            put(MediaStore.Images.Media.MIME_TYPE, "image/png")
+        }))
+        val document = allOf(hasAction(Intent.ACTION_CREATE_DOCUMENT), hasType("image/png"), hasExtra(Intent.EXTRA_TITLE, "mrsad-image.png"))
+        Intents.init()
+        try {
+            Intents.intending(document).respondWith(android.app.Instrumentation.ActivityResult(Activity.RESULT_OK, Intent().setData(uri)))
+            click(R.string.art_save)
+            visible(R.string.export_saved)
+            Intents.intended(document)
+            assertArrayEquals(original, resolver.openInputStream(uri)?.use { it.readBytes() })
+        } finally {
+            Intents.release()
+            resolver.delete(uri, null, null)
+        }
+        assertTrue(calls.isEmpty())
+        assertNoMic()
+        trace("UI passed: 401 recovery, real saved key / fast SSE, image approval / original PNG content-URI export")
+    }
+
+    @Test
+    fun assistantIgnoresExtrasAndPhoneCommandsWorkWithoutAnyPermissions() {
+        val assist = Intent(Intent.ACTION_ASSIST).setPackage(context.packageName)
+        assertTrue(context.packageManager.queryIntentActivities(assist, PackageManager.MATCH_DEFAULT_ONLY)
+            .any { it.activityInfo.name == MainActivity::class.java.name })
+        compose.activityRule.scenario.onActivity { activity ->
+            activity.startActivity(assist.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                .putExtra(Intent.EXTRA_ASSIST_CONTEXT, Bundle().apply { putString("fixture", "note DO_NOT_IMPORT") }))
+        }
+        visible(R.string.workspace_phone_title)
+        compose.onNodeWithText("note DO_NOT_IMPORT").assertDoesNotExist()
+        assertNoMic()
+        val battery = checkNotNull(context.getSystemService(BatteryManager::class.java))
+        val percent = battery.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)
+        assertTrue(percent in 0..100)
+        val result = context.getString(if (battery.isCharging) R.string.phone_battery_charging else R.string.phone_battery_result, faDigits(percent))
+        click(R.string.phone_battery)
+        visible(result)
+        enter(R.string.workspace_phone_prompt, "فرمان ناشناس محلی")
+        click(R.string.workspace_run)
+        visible(R.string.workspace_unrecognized)
+        enter(R.string.workspace_phone_prompt, "شارژ گوشی چقدره؟")
+        click(R.string.workspace_run)
+        visible(result)
+        capture("phone")
+        click(R.string.workspace_access, scroll = true)
+        visible(R.string.workspace_mic_off, scroll = true)
+        visible(R.string.workspace_android_permissions, scroll = true)
+        assertNoMic()
+        assertTrue(calls.isEmpty())
+        trace("UI passed: optional permissions not granted, local battery typed / tap, unknown command, settings recovery entry")
+    }
+
+    @Test
+    fun sharedTextRemainsDraftUntilUserExecutesIt() {
         compose.activityRule.scenario.onActivity { activity ->
             activity.startActivity(Intent(activity, MainActivity::class.java).apply {
                 action = Intent.ACTION_SEND
@@ -90,79 +199,67 @@ class StudioSmokeTest {
         }
         visible("note DANA_SMOKE_LOCAL")
         compose.onNodeWithText(label(R.string.chat_note_saved)).assertDoesNotExist()
-        capture("chat")
-        click(R.string.chat_review)
+        click(R.string.workspace_send)
         visible(R.string.chat_confirm_action)
         click(R.string.chat_execute)
         visible(R.string.chat_note_saved)
-        click(R.string.tab_home)
-        click(R.string.tab_notes)
-        visible("DANA_SMOKE_LOCAL")
+        assertTrue(calls.isEmpty())
     }
 
-    @Test
-    fun assistantEntryIgnoresExtrasAndRunsReadOnlyCommandsOffline() {
-        val assist = Intent(Intent.ACTION_ASSIST).setPackage(context.packageName)
-        assertTrue(context.packageManager.queryIntentActivities(assist, PackageManager.MATCH_DEFAULT_ONLY)
-            .any { it.activityInfo.name == MainActivity::class.java.name })
-        compose.activityRule.scenario.onActivity { activity ->
-            activity.startActivity(assist.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
-                .putExtra(Intent.EXTRA_ASSIST_CONTEXT, Bundle().apply { putString("fixture", "note DO_NOT_IMPORT") }))
-        }
-        visible(R.string.voice_record_turn)
-        compose.onNodeWithText("note DO_NOT_IMPORT").assertDoesNotExist()
-        assertTrue(context.checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED)
-        val battery = checkNotNull(context.getSystemService(BatteryManager::class.java))
-        val percent = battery.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)
-        assertTrue(percent in 0..100)
-        val result = context.getString(if (battery.isCharging) R.string.phone_battery_charging else R.string.phone_battery_result, faDigits(percent))
-        enter(R.string.chat_prompt, "شارژ گوشی چقدره؟")
-        click(R.string.chat_review)
-        visible(result)
-        compose.onNodeWithText(label(R.string.chat_confirm_action)).assertDoesNotExist()
-        enter(R.string.chat_prompt, "فرمان ناشناس محلی")
-        click(R.string.chat_review)
-        visible(R.string.phone_unrecognized)
-        enter(R.string.chat_prompt, "جستجوی وب عبارت آزمایشی")
-        click(R.string.chat_review)
-        visible(R.string.phone_web_offline)
-        trace("Assistant entry, direct battery read and offline guards passed")
+    private fun checkCall(path: String, key: String, vararg fragments: String) {
+        val call = checkNotNull(calls.poll())
+        assertEquals(QuickService.AVALAI.api + path, call.url)
+        assertEquals("Bearer $key", call.auth)
+        assertFalse(call.body.contains(key))
+        fragments.forEach { assertTrue("Expected request fragment: $it", call.body.contains(it)) }
     }
 
     private fun label(@StringRes id: Int) = context.getString(id)
-    private fun visible(@StringRes id: Int) = visible(label(id))
-    private fun visible(text: String) {
-        compose.waitUntilAtLeastOneExists(hasText(text), timeoutMillis = 12_000)
-        compose.onNodeWithText(text).assertIsDisplayed()
+    private fun clickable(@StringRes id: Int) = hasText(label(id)) and hasClickAction()
+    private fun waitFor(matcher: SemanticsMatcher) = compose.waitUntilAtLeastOneExists(matcher, timeoutMillis = 15_000)
+    private fun visible(@StringRes id: Int, scroll: Boolean = false) = visible(label(id), scroll)
+    private fun visible(text: String, scroll: Boolean = false) {
+        waitFor(hasText(text))
+        val node = compose.onNodeWithText(text)
+        if (scroll) node.performScrollTo()
+        node.assertIsDisplayed()
     }
-
-    private fun click(@StringRes id: Int) {
-        val click = hasText(label(id)) and hasClickAction()
-        compose.waitUntilAtLeastOneExists(click, timeoutMillis = 12_000)
-        compose.onNode(click).assertIsDisplayed().assertIsEnabled().performClick()
+    private fun click(@StringRes id: Int, scroll: Boolean = false) {
+        val matcher = clickable(id)
+        waitFor(matcher)
+        val node = compose.onNode(matcher)
+        if (scroll) node.performScrollTo()
+        node.assertIsDisplayed().assertIsEnabled().performClick()
     }
-
     private fun enter(@StringRes id: Int, value: String) {
-        val enter = hasText(label(id)) and hasSetTextAction()
-        compose.waitUntilAtLeastOneExists(enter, timeoutMillis = 12_000)
-        compose.onNode(enter).assertIsDisplayed().performTextReplacement(value)
+        val matcher = hasText(label(id)) and hasSetTextAction()
+        waitFor(matcher)
+        compose.onNode(matcher).assertIsDisplayed().performTextReplacement(value)
     }
-
-    private fun trace(message: String) {
-        InstrumentationRegistry.getInstrumentation().sendStatus(2, Bundle().apply {
-            putString("stream", "\nDana smoke: $message\n")
-        })
+    private fun trace(message: String) = inst.sendStatus(2, Bundle().apply { putString("stream", "\nmrsad: $message\n") })
+    private fun assertNoMic() = assertTrue(context.checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED)
+    private fun completion(text: String) = """{"choices":[{"message":{"role":"assistant","content":"$text"},"finish_reason":"stop"}]}"""
+    private fun tinyPng() = ByteArrayOutputStream().use { output ->
+        val bitmap = Bitmap.createBitmap(160, 104, Bitmap.Config.ARGB_8888)
+        try {
+            bitmap.eraseColor(android.graphics.Color.rgb(116, 87, 181))
+            assertTrue(bitmap.compress(Bitmap.CompressFormat.PNG, 100, output))
+            output.toByteArray()
+        } finally { bitmap.recycle() }
     }
-
     private fun capture(name: String) {
         compose.waitForIdle()
-        trace("Capture $name")
         val directory = File(context.filesDir, "ci-screens").apply { mkdirs() }
-        val capture = InstrumentationRegistry.getInstrumentation().uiAutomation.executeShellCommand("screencap -p")
-        // Capture the actual screen. PixelCopy on Compose windows destabilized the headless emulator.
+        val capture = inst.uiAutomation.executeShellCommand("screencap -p")
         ParcelFileDescriptor.AutoCloseInputStream(capture).use { input ->
             File(directory, "$name.png").outputStream().use { output -> assertTrue(input.copyTo(output) > 24) }
         }
         trace("Captured $name")
+    }
+    private data class WireReply(val code: Int, val body: String, val mime: String = "application/json")
+    private class WireCall(val url: String, val auth: String?, val body: String)
+    private companion object {
+        const val KEY = "dana-fixture-accepted"
+        const val BAD_KEY = "dana-fixture-rejected"
     }
 }

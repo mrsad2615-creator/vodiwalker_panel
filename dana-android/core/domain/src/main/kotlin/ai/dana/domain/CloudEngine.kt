@@ -2,6 +2,8 @@ package ai.dana.domain
 
 /** Fixed, documented entry points. Persisted profiles still use the existing compatible protocol and credential scope. */
 enum class CloudEngine(val label: String, val baseUrl: String, val consoleUrl: String, val suggested: List<String>) {
+    AVALAI("AvalAI", "https://api.avalai.ir/v1", "https://chat.avalai.ir/platform/api-keys",
+        listOf("gpt-5.4-nano", "gpt-5.4-mini")),
     OPENAI("OpenAI", "https://api.openai.com/v1", "https://platform.openai.com/api-keys", listOf("gpt-4.1-mini", "gpt-4o-mini")),
     GROQ("Groq", "https://api.groq.com/openai/v1", "https://console.groq.com/keys",
         listOf("qwen/qwen3.8-27b", "openai/gpt-oss-20b")),
@@ -14,6 +16,9 @@ enum class CloudEngine(val label: String, val baseUrl: String, val consoleUrl: S
 
     val prefersMaxCompletionTokens: Boolean get() = this == GROQ || this == CEREBRAS || this == OPENAI
 
+    fun completionLimitField(model: String): String =
+        if (prefersMaxCompletionTokens || this == AVALAI && model.startsWith("gpt-5")) "max_completion_tokens" else "max_tokens"
+
     // Catalogs can include transcribers, classifiers and hosted tool runners. This is a chat-only integration.
     fun acceptsChat(model: String): Boolean = when (this) {
         GROQ -> !(model.startsWith("whisper-") || model.startsWith("canopylabs/") ||
@@ -21,12 +26,15 @@ enum class CloudEngine(val label: String, val baseUrl: String, val consoleUrl: S
             model.startsWith("meta-llama/llama-prompt-guard"))
         MISTRAL -> !(model.startsWith("mistral-embed") || model.startsWith("codestral-embed") ||
             model.startsWith("mistral-ocr") || model.startsWith("voxtral") || model.startsWith("mistral-moderation"))
+        AVALAI -> model !in ArtModel.entries.map { it.id } && !model.startsWith("gpt-image") &&
+            listOf("embedding", "-image", "-tts", "whisper", "transcribe", "realtime").none { it in model }
         OPENAI -> model.startsWith("gpt-") && !model.startsWith("gpt-image") &&
             listOf("audio", "realtime", "transcrib", "tts", "embedding", "codex", "search").none { it in model }
         DEEPSEEK, CEREBRAS -> true
     }
 
     fun photoSupport(model: String): PhotoSupport = when (this) {
+        AVALAI -> if (model in suggested) PhotoSupport.YES else PhotoSupport.UNKNOWN
         OPENAI -> if (model.startsWith("gpt-4.1") || model.startsWith("gpt-4o")) PhotoSupport.YES else PhotoSupport.UNKNOWN
         GROQ -> if (model in GROQ_VISION) PhotoSupport.YES else PhotoSupport.NO
         DEEPSEEK -> if (model in DEEPSEEK_VISION) PhotoSupport.YES else PhotoSupport.NO
@@ -70,3 +78,8 @@ val ProviderConfig.photoSupport: PhotoSupport
         ProviderProtocol.OPENROUTER_FREE -> PhotoSupport.UNKNOWN
         ProviderProtocol.OPENAI_COMPATIBLE -> cloudEngine?.photoSupport(model) ?: PhotoSupport.UNKNOWN
     }
+
+/** Image-only profiles are usable by Art but must not silently be selected for chat. */
+val ProviderConfig.acceptsChat: Boolean
+    get() = cloudEngine?.acceptsChat(model) != false &&
+        (protocol != ProviderProtocol.GEMINI_NATIVE || listOf("-image", "-tts", "embedding", "native-audio").none { it in model })

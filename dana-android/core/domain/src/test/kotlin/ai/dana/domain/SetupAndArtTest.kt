@@ -47,36 +47,64 @@ class SetupAndArtTest {
         assertNull(ChatRoute.direct(text, listOf(free), null, google.id))
     }
 
-    @Test fun quickConnectTestsExactlyOneCatalogModelAndSendsOnlySyntheticPrompt() = runBlocking {
-        val google = QuickService.GOOGLE
-        val model = google.models.last()
-        val key = "google-fixture-key"
-        var catalogReads = 0
-        val directory = object : ModelDirectory {
-            override suspend fun list(endpoint: ProviderEndpoint, key: ApiCredential?): List<DirectoryModel> {
-                assertEquals(google.endpoint, endpoint)
-                assertEquals("google-fixture-key", key?.value)
-                catalogReads++
-                return listOf(DirectoryModel("models/not-approved-candidate", "Other"), DirectoryModel(model, "Lite"))
-            }
-        }
+    @Test fun quickConnectProbesOnlyTheRequestedPresetWithoutNeedingCatalogPermission() = runBlocking {
+        val avalai = QuickService.AVALAI
+        val key = "avalai-fixture-key"
         var probes = 0
-        val service = QuickConnect(directory, object : EngineTransport {
+        val service = QuickConnect(object : ModelDirectory {
+            override suspend fun list(endpoint: ProviderEndpoint, key: ApiCredential?): List<DirectoryModel> = error("No catalog for chat")
+        }, object : EngineTransport {
             override fun stream(config: ProviderConfig, key: ApiCredential?, input: ConversationInput): kotlinx.coroutines.flow.Flow<EngineText> {
                 probes++
-                assertEquals(model, config.model)
-                assertEquals("google-fixture-key", key?.value)
+                assertEquals("gpt-5.4-nano", config.model)
+                assertEquals(avalai.endpoint, config.endpoint)
+                assertEquals("avalai-fixture-key", key?.value)
                 assertTrue(input.probe)
                 assertTrue(input.history.isEmpty() && input.facts.isEmpty() && input.photo == null)
                 assertEquals("Reply with one short word: OK.", input.prompt)
                 return flowOf(EngineText("OK"))
             }
         }, object : RouterKeyExchange { override suspend fun exchange(code: RouterCode): ApiCredential = error("No code exchange") })
-        val tested = service.test(google, key)
+        val tested = service.test(avalai, key)
         assertEquals(1, probes)
-        assertEquals(1, catalogReads)
-        assertEquals(model, tested.config.model)
         assertFalse(tested.toString().contains(key))
+    }
+
+    @Test fun imageConnectionChecksCatalogWithoutTextProbeAndNeverBecomesChatRoute() = runBlocking {
+        val preset = QuickService.AVALAI
+        val selected = ArtModel.AVAL_IMAGE
+        var models = emptyList<DirectoryModel>()
+        var requests = 0
+        val service = QuickConnect(object : ModelDirectory {
+            override suspend fun list(endpoint: ProviderEndpoint, key: ApiCredential?): List<DirectoryModel> {
+                requests++
+                assertEquals(preset.endpoint, endpoint)
+                return models
+            }
+        }, object : EngineTransport {
+            override fun stream(config: ProviderConfig, key: ApiCredential?, input: ConversationInput): kotlinx.coroutines.flow.Flow<EngineText> =
+                error("No billable completion for image-only setup")
+        }, object : RouterKeyExchange { override suspend fun exchange(code: RouterCode): ApiCredential = error("No code exchange") })
+        assertEquals(EngineProblem.CONFIGURATION,
+            (runCatching { service.test(preset, "fixture", imageOnly = true) }.exceptionOrNull() as EngineFailure).problem)
+        models = listOf(DirectoryModel(selected.id, selected.title))
+        val imageOnly = ProviderProfile("image-profile", service.test(preset, "fixture", imageOnly = true).config, true)
+        assertTrue(selected.matches(imageOnly))
+        assertEquals(selected.id, imageOnly.config.model)
+        assertNull(ChatRoute.direct(ConversationInput.single("hello"), listOf(imageOnly), null, null))
+        assertEquals(2, requests)
+    }
+
+    @Test fun fastLaneKeepsAtMostOneCompletePairAndPreservesMasking() {
+        val history = (1..3).flatMap {
+            listOf(ContextMessage(MessageRole.USER, "question $it"), ContextMessage(MessageRole.ASSISTANT, "answer $it"))
+        }
+        val input = checkNotNull(ConversationInput.prepare("verification code: 123456", history, emptyList(),
+            AssistantStyle.DETAILED, AssistantTask.ASK, null, mask = true, lane = SendLane.FAST))
+        assertEquals(2, input.omittedPairs)
+        assertEquals(history.takeLast(2), input.history)
+        assertEquals(AssistantStyle.CONCISE, input.style)
+        assertEquals("verification code: [محفوظ]", input.prompt)
     }
 
     @Test fun pkceUsesFreshS256ChallengeAndDoesNotPutSecretInUrl() {

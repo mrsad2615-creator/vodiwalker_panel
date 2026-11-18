@@ -56,13 +56,13 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 internal enum class DashboardTab(@StringRes val label: Int) {
-    HOME(R.string.tab_home),
     CHAT(R.string.tab_chat),
     COMPARE(R.string.tab_compare),
     NOTES(R.string.tab_notes),
     SETTINGS(R.string.tab_engines),
     ACCOUNT(R.string.tab_account),
-    ART(R.string.art_title),
+    ART(R.string.tab_image),
+    PHONE(R.string.tab_phone),
 }
 
 internal sealed interface Reading<out T> {
@@ -89,7 +89,7 @@ internal sealed interface DirectoryState {
 }
 
 internal data class DashboardSession(
-    val tab: DashboardTab = DashboardTab.HOME,
+    val tab: DashboardTab = DashboardTab.CHAT,
     val editor: Editor? = null,
     val busy: Boolean = false,
     @StringRes val error: Int? = null,
@@ -97,6 +97,8 @@ internal data class DashboardSession(
     val directory: DirectoryState? = null,
     val httpStatus: Int? = null,
     val probeMillis: Long? = null,
+    val approval: RouterApproval? = null,
+    val newImageProfile: String? = null,
 )
 
 internal data class DashboardState(
@@ -116,8 +118,9 @@ internal sealed interface DanaIntent {
         val lanPreset: Boolean = false, val cloud: CloudEngine? = profile?.config?.cloudEngine) : DanaIntent
     data class ChooseTask(val task: AssistantTask, val openWorkspace: Boolean = false) : DanaIntent
     data class NoteFromAnswer(val profileId: String) : DanaIntent
-    data class OpenQuick(val service: QuickService = QuickService.FREE, val after: DashboardTab = DashboardTab.SETTINGS) : DanaIntent
-    class Connect(val service: QuickService, val secret: String, val approval: RouterApproval?, val direct: Boolean) : DanaIntent
+    data class OpenQuick(val service: QuickService = QuickService.FREE, val after: DashboardTab? = null) : DanaIntent
+    class Connect(val service: QuickService, val secret: String, val approval: RouterApproval?, val imageOnly: Boolean) : DanaIntent
+    data class SetupApproval(val value: RouterApproval?) : DanaIntent
     data class TestProfile(val profile: ProviderProfile) : DanaIntent
     data class ActivateProfile(val direct: Boolean) : DanaIntent
     data object StopSetup : DanaIntent
@@ -230,8 +233,9 @@ internal class DanaViewModel @Inject constructor(
             is DanaIntent.ToggleEngine -> toggleEngine(intent.profileId)
             DanaIntent.ReviewComparison -> reviewComparison()
             DanaIntent.SendComparison -> (current.editor as? Editor.ConfirmComparison)?.let { prepareComparison(it.request, remember = true) }
-            is DanaIntent.OpenQuick -> show(Editor.Quick(intent.service, intent.after))
+            is DanaIntent.OpenQuick -> show(Editor.Quick(intent.service, intent.after ?: current.tab))
             is DanaIntent.Connect -> connect(intent)
+            is DanaIntent.SetupApproval -> if (current.editor is Editor.Quick) session.update { it.copy(approval = intent.value, error = null, httpStatus = null) }
             is DanaIntent.TestProfile -> show(Editor.Test(intent.profile))
             is DanaIntent.ActivateProfile -> activate(intent.direct)
             DanaIntent.RevokeDirectSend -> write {
@@ -340,11 +344,15 @@ internal class DanaViewModel @Inject constructor(
         val editor = session.value.editor as? Editor.Quick ?: return
         runSetup {
             val started = kotlin.time.TimeSource.Monotonic.markNow()
-            val tested = quickConnect.test(intent.service, intent.secret, intent.approval)
-            val id = providers.save(null, tested.config, CredentialChange.Replace(tested.credential))
+            val tested = quickConnect.test(intent.service, intent.secret, intent.approval, intent.imageOnly)
+            val existing = providers.profiles.first().singleOrNull { it.config == tested.config }
+            val id = providers.save(existing?.id, tested.config, CredentialChange.Replace(tested.credential))
             val saved = providers.profiles.first().single { it.id == id }
-            directSend.activate(saved, intent.direct)
-            connected(editor.after, started.elapsedNow().inWholeMilliseconds)
+            if (intent.imageOnly) preferences.setOfflineMode(false) else directSend.activate(saved, allowDirectText = true)
+            session.value = DashboardSession(tab = editor.after,
+                notice = if (intent.imageOnly) R.string.workspace_image_key_ok else R.string.quick_connected,
+                probeMillis = started.elapsedNow().inWholeMilliseconds,
+                newImageProfile = id.takeIf { editor.after == DashboardTab.ART && intent.service.supportsImage })
         }
     }
 
@@ -435,7 +443,7 @@ internal class DanaViewModel @Inject constructor(
 
     private fun show(editor: Editor?) {
         clearDirectory()
-        session.update { it.copy(editor = editor, error = null, notice = null, httpStatus = null, probeMillis = null) }
+        session.update { it.copy(editor = editor, error = null, notice = null, httpStatus = null, probeMillis = null, approval = null) }
     }
 
     private fun write(closeEditor: Boolean = false, operation: suspend () -> Unit) {

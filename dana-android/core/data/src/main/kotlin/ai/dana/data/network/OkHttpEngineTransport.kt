@@ -39,10 +39,13 @@ internal class OkHttpEngineTransport(
                         response.requireSuccess(config.protocol)
                         val body = response.body
                         val type = body.contentType()
-                        if (type?.type != "text" || type.subtype != "event-stream") {
-                            throw EngineFailure(EngineProblem.PROTOCOL)
+                        val emit: (EngineText) -> Boolean = { trySendBlocking(it).isSuccess }
+                        when {
+                            type?.type == "text" && type.subtype == "event-stream" -> EngineProtocol.read(body.source(), config.protocol, emit)
+                            type?.type == "application" && type.subtype == "json" ->
+                                EngineProtocol.readJson(body.boundedUtf8(256_000), config.protocol, emit)
+                            else -> throw EngineFailure(EngineProblem.PROTOCOL)
                         }
-                        EngineProtocol.read(body.source(), config.protocol) { chunk -> trySendBlocking(chunk).isSuccess }
                     }
                     close()
                 } catch (error: EngineFailure) {

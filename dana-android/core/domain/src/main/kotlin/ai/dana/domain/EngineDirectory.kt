@@ -16,6 +16,10 @@ data class DirectoryResult(val models: List<DirectoryModel>, val elapsedMillis: 
 
 interface ModelDirectory {
     suspend fun list(endpoint: ProviderEndpoint, key: ApiCredential?): List<DirectoryModel>
+
+    /** A catalog check for a single image model, which is not part of the chat-model picker. */
+    suspend fun hasImageModel(endpoint: ProviderEndpoint, key: ApiCredential, id: String): Boolean =
+        list(endpoint, key).any { it.id.removePrefix("models/") == id }
 }
 
 /** The key is typed in the app or read from the vault only after destination and offline checks. */

@@ -27,33 +27,33 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-internal val Obsidian = Color(0xFF0C1212)
-internal val Ice = Color(0xFFE5F1EC)
-internal val Titanium = Color(0xFFB2C2BC)
-internal val Mint = Color(0xFFBDEF9B)
+internal val Obsidian = Color(0xFF101018)
+internal val Ice = Color(0xFFEEEDF7)
+internal val Titanium = Color(0xFFBCBACD)
+internal val Mint = Color(0xFFC9BAFF)
 internal val Amber = Color(0xFFFFCC8B)
 
 private val DanaColors = darkColorScheme(
     primary = Mint,
-    onPrimary = Color(0xFF14280B),
-    primaryContainer = Color(0xFF243C2B),
-    onPrimaryContainer = Color(0xFFDDF7D6),
-    secondary = Color(0xFFACD5C0),
-    onSecondary = Color(0xFF123127),
-    secondaryContainer = Color(0xFF20362E),
-    onSecondaryContainer = Color(0xFFCCEBDA),
+    onPrimary = Color(0xFF241749),
+    primaryContainer = Color(0xFF332759),
+    onPrimaryContainer = Color(0xFFF0E9FF),
+    secondary = Color(0xFFB8E2D5),
+    onSecondary = Color(0xFF183D34),
+    secondaryContainer = Color(0xFF28273C),
+    onSecondaryContainer = Color(0xFFDDD5F3),
     tertiary = Color(0xFFF1CF96),
     background = Obsidian,
-    onBackground = Color(0xFFF1F7F3),
-    surface = Color(0xFF131D1B),
-    onSurface = Color(0xFFF1F7F3),
-    surfaceVariant = Color(0xFF22322C),
+    onBackground = Color(0xFFF3F0FF),
+    surface = Color(0xFF171721),
+    onSurface = Color(0xFFF3F0FF),
+    surfaceVariant = Color(0xFF28263A),
     onSurfaceVariant = Titanium,
-    surfaceContainer = Color(0xFF15211E),
-    surfaceContainerLow = Color(0xFF101A17),
-    surfaceContainerHigh = Color(0xFF1B2A25),
-    outline = Color(0xFF80968C),
-    outlineVariant = Color(0xFF2D443A),
+    surfaceContainer = Color(0xFF1C1B29),
+    surfaceContainerLow = Color(0xFF15151F),
+    surfaceContainerHigh = Color(0xFF242336),
+    outline = Color(0xFF8C86A3),
+    outlineVariant = Color(0xFF36334A),
     error = Color(0xFFFFB4AB),
 )
 

@@ -9,12 +9,8 @@ import ai.dana.data.local.RoomHistoryRepository
 import ai.dana.data.local.RoomMemoryRepository
 import ai.dana.data.local.RoomNotesRepository
 import ai.dana.data.network.AndroidNetworkMonitor
-import ai.dana.data.network.OkHttpArtTransport
-import ai.dana.data.network.OkHttpEngineTransport
-import ai.dana.data.network.OkHttpRouterKeyExchange
-import ai.dana.data.network.OkHttpModelDirectory
+import ai.dana.data.network.EngineClients
 import ai.dana.data.network.danaHttpClient
-import ai.dana.data.network.privateLanClient
 import ai.dana.data.provider.EngineRepository
 import ai.dana.data.provider.KeystoreVault
 import ai.dana.domain.DanaAiRouter
@@ -78,9 +74,6 @@ internal object DataModule {
     @Singleton
     fun network(@ApplicationContext context: Context): NetworkMonitor = AndroidNetworkMonitor(context)
 
-    private val client by lazy { danaHttpClient() }
-    private val lanClient by lazy { client.privateLanClient() }
-
     @Provides
     @Singleton
     fun emailAccounts(@ApplicationContext context: Context, preferences: PrivacyPreferences): EmailAccounts {
@@ -91,21 +84,20 @@ internal object DataModule {
 
     @Provides
     @Singleton
-    fun discovery(preferences: PrivacyPreferences, providers: ProviderRepository): EngineDiscovery =
-        EngineDiscovery(preferences, providers, OkHttpModelDirectory(client, lanClient))
+    fun discovery(preferences: PrivacyPreferences, providers: ProviderRepository, clients: EngineClients): EngineDiscovery =
+        EngineDiscovery(preferences, providers, clients.catalog)
 
     @Provides
     @Singleton
-    fun router(preferences: PrivacyPreferences, providers: ProviderRepository): DanaAiRouter =
-        DanaAiRouter(preferences, providers, OkHttpEngineTransport(client, lanClient))
+    fun router(preferences: PrivacyPreferences, providers: ProviderRepository, clients: EngineClients): DanaAiRouter =
+        DanaAiRouter(preferences, providers, clients.chat)
 
     @Provides
     @Singleton
-    fun quickConnect(): QuickConnect = QuickConnect(OkHttpModelDirectory(client, lanClient),
-        OkHttpEngineTransport(client, lanClient), OkHttpRouterKeyExchange(client))
+    fun quickConnect(clients: EngineClients): QuickConnect = clients.setup
 
     @Provides
     @Singleton
-    fun imageGeneration(preferences: PrivacyPreferences, providers: ProviderRepository): ImageGeneration =
-        ImageGeneration(preferences, providers, OkHttpArtTransport(client))
+    fun imageGeneration(preferences: PrivacyPreferences, providers: ProviderRepository, clients: EngineClients): ImageGeneration =
+        ImageGeneration(preferences, providers, clients.art)
 }

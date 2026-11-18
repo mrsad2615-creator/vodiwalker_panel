@@ -12,6 +12,7 @@ import ai.dana.domain.ConversationInput
 import ai.dana.domain.DanaAiRouter
 import ai.dana.domain.DirectSendSettings
 import ai.dana.domain.SendGrant
+import ai.dana.domain.SendLane
 import ai.dana.domain.EngineEvent
 import ai.dana.domain.EngineProblem
 import ai.dana.domain.HistoryRepository
@@ -47,7 +48,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-internal enum class ChatPage { CONVERSATION, HISTORY, MEMORY, TOOLS }
+internal enum class ChatPage { CONVERSATION, HISTORY, MEMORY }
 
 internal data class ChatOptions(
     val autoHistory: Boolean = false,
@@ -56,6 +57,7 @@ internal data class ChatOptions(
     val mask: Boolean = true,
     val readReplies: Boolean = false,
     val style: AssistantStyle = AssistantStyle.BALANCED,
+    val lane: SendLane = SendLane.STANDARD,
 )
 
 internal data class ChatAttempt(val name: String, val problem: EngineProblem, val status: Int?)
@@ -286,7 +288,7 @@ internal class ChatViewModel @Inject constructor(
                 listOf(ContextMessage(MessageRole.USER, t.question), ContextMessage(MessageRole.ASSISTANT, t.answer))
             }
             val included = if (chat.options.useMemory) memory.facts.first() else emptyList()
-            val input = ConversationInput.prepare(chat.draft, context, included, chat.options.style, chat.task, chat.photo, chat.options.mask)
+            val input = ConversationInput.prepare(chat.draft, context, included, chat.options.style, chat.task, chat.photo, chat.options.mask, chat.options.lane)
             if (input == null) {
                 error(R.string.chat_payload_invalid)
                 return@prepare
@@ -330,6 +332,7 @@ internal class ChatViewModel @Inject constructor(
             startTeam(approved)
             return
         }
+        val attached = chat.photo
         val turn = ChatTurn(++counter, approved.question, includedImage = approved.route.input.photo != null,
             readWhenDone = chat.options.readReplies)
         mutable.value = chat.copy(draft = "", photo = null, running = true, dialog = null, error = null, notice = null,
@@ -364,7 +367,13 @@ internal class ChatViewModel @Inject constructor(
             } catch (failure: Exception) {
                 error(DanaErrorHandler.messageFor(failure))
             } finally {
-                mutable.update { it.copy(running = false) }
+                mutable.update { state ->
+                    val result = state.turns.lastOrNull()?.takeIf { it.index == turn.index }
+                    // Retain an unsatisfied prompt for editing/explicit retry. Never send again automatically.
+                    if (result != null && !result.complete && result.answer.isBlank() && state.draft.isEmpty())
+                        state.copy(running = false, draft = turn.question, photo = attached)
+                    else state.copy(running = false)
+                }
             }
         }
     }

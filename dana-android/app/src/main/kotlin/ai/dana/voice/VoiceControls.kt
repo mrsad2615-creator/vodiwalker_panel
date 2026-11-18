@@ -4,6 +4,10 @@ import ai.dana.R
 import ai.dana.ui.Amber
 import ai.dana.ui.Ice
 import ai.dana.ui.ReadError
+import ai.dana.ui.Mark
+import ai.dana.ui.StudioMark
+import ai.dana.ui.Titanium
+import ai.dana.ui.openAppPermissions
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -14,11 +18,13 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -50,7 +56,7 @@ internal fun rememberDanaVoice(): DanaVoice {
 }
 
 @Composable
-internal fun VoiceButton(voice: DanaVoice, enabled: Boolean, useSystemSpeech: Boolean, turnMode: Boolean, onText: (String) -> Unit) {
+internal fun VoiceButton(voice: DanaVoice, enabled: Boolean, useSystemSpeech: Boolean, turnMode: Boolean, compact: Boolean = false, onText: (String) -> Unit) {
     val context = LocalContext.current
     val latest by rememberUpdatedState(onText)
     val canStart by rememberUpdatedState(enabled)
@@ -86,7 +92,9 @@ internal fun VoiceButton(voice: DanaVoice, enabled: Boolean, useSystemSpeech: Bo
         turnMode -> R.string.voice_record_turn
         else -> R.string.voice_record
     })
-    if (turnMode) Button(onClick = press, enabled = enabled, modifier = Modifier.heightIn(min = 48.dp)) { Text(label) }
+    if (compact) IconButton(onClick = press, enabled = enabled, modifier = Modifier.size(48.dp)) {
+        StudioMark(if (state.listening || state.speaking || state.initializing) Mark.STOP else Mark.MIC, Titanium, label)
+    } else if (turnMode) Button(onClick = press, enabled = enabled, modifier = Modifier.heightIn(min = 48.dp)) { Text(label) }
     else TextButton(onClick = press, enabled = enabled, modifier = Modifier.heightIn(min = 48.dp)) { Text(label) }
     if (consent) AlertDialog(onDismissRequest = { consent = false }, title = { Text(stringResource(R.string.voice_consent_title)) },
         text = { Text(stringResource(if (local) R.string.voice_consent_body else R.string.voice_system_notice)) },
@@ -112,6 +120,14 @@ internal fun VoiceStatus(state: VoiceState) {
             state.initializing -> Text(stringResource(R.string.voice_initializing), color = Amber, style = MaterialTheme.typography.bodySmall)
         }
         state.status?.let { ReadError(it) }
+        if (state.status == R.string.voice_denied) {
+            val context = LocalContext.current
+            var settingsFailed by remember { mutableStateOf(false) }
+            TextButton(onClick = { settingsFailed = !openAppPermissions(context) }, modifier = Modifier.heightIn(min = 48.dp)) {
+                Text(stringResource(R.string.workspace_android_permissions))
+            }
+            if (settingsFailed) ReadError(R.string.chat_action_unavailable)
+        }
     }
 }
 

@@ -65,6 +65,31 @@ class ArtAndSetupContractTest {
         assertArrayEquals(Base64.getDecoder().decode(png), transport.generate(request(ArtModel.NANO_LITE), key).data())
     }
 
+    @Test fun imageOnlySetupFindsExactModelWithoutExposingItInTextCatalog() = runBlocking {
+        val service = QuickService.AVALAI
+        val response = """{"data":[{"id":"gpt-5.4-nano"},{"id":"gpt-image-2.6-flare"}]}"""
+        val http = client(response = response) { request ->
+            assertEquals("${service.api}/models", request.url.toString())
+            assertEquals("GET", request.method)
+            assertEquals("Bearer ${key.value}", request.header("Authorization"))
+        }
+        val engines = EngineClients(http)
+        assertEquals(listOf("gpt-5.4-nano"), engines.catalog.list(service.endpoint, key).map { it.id })
+        assertEquals(ArtModel.AVAL_IMAGE.id, engines.setup.test(service, key.value, imageOnly = true).config.model)
+    }
+
+    @Test fun avalaiUsesTheSameCredentialForTheDocumentedImageRoute() = runBlocking {
+        val transport = OkHttpArtTransport(client(response = """{"data":[{"b64_json":"$png"}]}""") { request ->
+            assertEquals("https://api.avalai.ir/v1/images/generations", request.url.toString())
+            assertEquals("Bearer ${key.value}", request.header("Authorization"))
+            val json = body(request)
+            assertTrue("\"model\":\"gpt-image-2.6-flare\"" in json)
+            assertTrue("\"size\":\"1536x1024\"" in json)
+            assertTrue("\"n\":1" in json)
+        })
+        assertArrayEquals(Base64.getDecoder().decode(png), transport.generate(request(ArtModel.AVAL_IMAGE), key).data())
+    }
+
     @Test fun openAiUsesImageEndpointAndOneExplicitImageWithoutChatHistoryOrUrlFetch() = runBlocking {
         val transport = OkHttpArtTransport(client(response = """{"data":[{"b64_json":"$png","url":"https://not-fetched.test"}]}""") { request ->
             assertEquals("https://api.openai.com/v1/images/generations", request.url.toString())
@@ -109,7 +134,8 @@ class ArtAndSetupContractTest {
 
     @Test fun quickProbeUsesSmallBudgetAndZeroPriceCapsForFreeRouter() {
         val json = body(EngineProtocol.request(config(QuickService.FREE), key, ConversationInput.connectionProbe()))
-        assertTrue("\"max_tokens\":128" in json)
+        assertTrue("\"max_tokens\":256" in json)
+        assertTrue("\"stream\":false" in json)
         assertTrue("\"max_price\":{\"prompt\":0,\"completion\":0,\"request\":0,\"image\":0}" in json)
         assertTrue("Reply with one short word: OK." in json)
     }

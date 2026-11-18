@@ -129,6 +129,8 @@ internal fun DanaApp(
                     ChatScreen(chat, media, state, onSettings = openSettings,
                         onConnect = { dispatch(DanaIntent.OpenQuick(ai.dana.domain.QuickService.AVALAI, DashboardTab.CHAT)) },
                         onEnableNetwork = allowNetwork, modifier = Modifier.widthIn(max = 740.dp).imePadding())
+                } else if (session.tab == DashboardTab.ART) {
+                    ArtScreen(art(), state, dispatch, Modifier.widthIn(max = 680.dp).imePadding())
                 } else LazyColumn(
                     modifier = Modifier.widthIn(max = 680.dp).fillMaxSize().imePadding(),
                     contentPadding = PaddingValues(start = 18.dp, end = 18.dp, top = 8.dp, bottom = 26.dp),
@@ -142,11 +144,10 @@ internal fun DanaApp(
                         } }
                     }
                     when (session.tab) {
-                        DashboardTab.CHAT -> Unit
+                        DashboardTab.CHAT, DashboardTab.ART -> Unit
                         DashboardTab.COMPARE -> comparison(state, dispatch)
                         DashboardTab.NOTES -> notes(state, dispatch)
                         DashboardTab.SETTINGS -> settings(state, dispatch)
-                        DashboardTab.ART -> item { ArtScreen(art(), state, dispatch) }
                         DashboardTab.PHONE -> item { PhoneScreen(phone()) }
                         DashboardTab.ACCOUNT -> item { AccountScreen(account(), offline, !session.busy && state.offline is Reading.Ready, allowNetwork) }
                     }

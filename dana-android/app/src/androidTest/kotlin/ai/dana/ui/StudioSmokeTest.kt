@@ -119,7 +119,7 @@ class StudioSmokeTest {
 
         click(R.string.tab_image)
         enter(R.string.art_prompt, "کوه بنفش در سپیده دم")
-        click(R.string.art_landscape)
+        click(R.string.art_landscape, scroll = true)
         click(R.string.art_generate)
         visible(R.string.art_allow_title)
         assertTrue(calls.isEmpty())
@@ -141,8 +141,8 @@ class StudioSmokeTest {
         Intents.init()
         try {
             Intents.intending(document).respondWith(android.app.Instrumentation.ActivityResult(Activity.RESULT_OK, Intent().setData(uri)))
-            click(R.string.art_save)
-            visible(R.string.export_saved)
+            click(R.string.art_save, scroll = true)
+            visible(R.string.export_saved, scroll = true)
             Intents.intended(document)
             assertArrayEquals(original, resolver.openInputStream(uri)?.use { it.readBytes() })
         } finally {

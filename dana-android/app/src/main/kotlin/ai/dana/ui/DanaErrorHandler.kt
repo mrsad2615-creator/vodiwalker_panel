@@ -48,6 +48,7 @@ internal object DanaErrorHandler {
         EngineProblem.ENGINE_UNAVAILABLE -> R.string.error_apple_unavailable
         EngineProblem.UNSUPPORTED_LANGUAGE -> R.string.error_engine_language
         EngineProblem.CONTEXT_LIMIT -> R.string.error_engine_context
+        EngineProblem.NO_IMAGE -> R.string.art_no_image
         EngineProblem.NO_TEXT -> R.string.error_engine_no_text
         EngineProblem.OUTPUT_LIMIT -> R.string.error_engine_limit
     }

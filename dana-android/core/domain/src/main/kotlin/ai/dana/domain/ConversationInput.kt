@@ -39,6 +39,7 @@ class ConversationInput private constructor(
     val photo: VisionPhoto?,
     val maskedValues: Int,
     val omittedPairs: Int,
+    val probe: Boolean = false,
 ) {
     fun fits(profile: ProviderProfile): Boolean {
         val cfg = profile.config
@@ -65,6 +66,9 @@ class ConversationInput private constructor(
     }
 
     companion object {
+        fun connectionProbe(): ConversationInput = ConversationInput("Reply with one short word: OK.", emptyList(), emptyList(),
+            AssistantStyle.CONCISE, AssistantTask.ASK, null, 0, 0, probe = true)
+
         fun single(prompt: String, task: AssistantTask = AssistantTask.ASK): ConversationInput =
             prepare(prompt, emptyList(), emptyList(), AssistantStyle.BALANCED, task, null, mask = false)
                 ?: reject(InputIssue.INVALID_MESSAGE)
@@ -163,6 +167,18 @@ class ChatRoute private constructor(
             if (selected.size !in 2..ComparisonLimits.ENGINE_COUNT) return null
             val targets = selected.map { id -> profiles.singleOrNull { it.id == id }?.takeIf(input::fits) ?: return null }
             return ChatRoute(input, targets.toList(), parallel = true)
+        }
+
+        /** One destination only. A failure never spends quota at a second engine. */
+        fun direct(input: ConversationInput, profiles: List<ProviderProfile>, engineId: String?, preferredId: String?): ChatRoute? =
+            target(profiles, engineId, preferredId)?.takeIf(input::fits)?.let { ChatRoute(input, listOf(it), parallel = false) }
+
+        fun target(profiles: List<ProviderProfile>, engineId: String?, preferredId: String?): ProviderProfile? {
+            if (engineId != null) return profiles.singleOrNull { it.id == engineId }
+            val usable = profiles.filter { it.config.endpoint.acceptsCredential(it.hasCredential) && it.config.cloudEngine?.acceptsChat(it.config.model) != false }
+            if (preferredId != null) return usable.singleOrNull { it.id == preferredId }
+            return usable.firstOrNull { it.config.protocol == ProviderProtocol.OPENROUTER_FREE }
+                ?: usable.firstOrNull()
         }
 
         fun select(input: ConversationInput, profiles: List<ProviderProfile>, manualId: String?): ChatRoute? {

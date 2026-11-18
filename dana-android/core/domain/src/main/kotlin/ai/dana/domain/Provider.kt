@@ -123,7 +123,7 @@ data class ProviderConfig private constructor(
 }
 
 /** Safe to place in observable UI state. hasCredential describes presence, not server validity. */
-data class ProviderProfile(val id: String, val config: ProviderConfig, val hasCredential: Boolean)
+data class ProviderProfile(val id: String, val config: ProviderConfig, val hasCredential: Boolean, val credentialRevision: String = "")
 
 class ApiCredential private constructor(val value: String) {
     override fun toString(): String = "ApiCredential([redacted])"

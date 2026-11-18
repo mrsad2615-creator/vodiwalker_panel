@@ -11,6 +11,8 @@ import ai.dana.domain.LocalText
 import ai.dana.domain.ProviderConfig
 import ai.dana.domain.ProviderNetwork
 import ai.dana.domain.ProviderProtocol
+import ai.dana.domain.QuickService
+import ai.dana.domain.RouterApproval
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -25,6 +27,10 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -60,9 +66,11 @@ internal fun DanaEditor(editor: Editor, session: DashboardSession, offline: Bool
         is Editor.Provider -> if (editor.initial == ProviderProtocol.OPENROUTER_FREE) {
             OpenRouterEditor(editor, session, offline, dismiss, dispatch)
         } else ProviderEditor(editor, busy, error, session.directory, offline, dismiss, dispatch)
+        is Editor.Quick -> QuickEditor(editor, session, dismiss, dispatch)
+        is Editor.Test -> ProbeEditor(editor, session, dismiss, dispatch)
         is Editor.ConfirmComparison -> EditorDialog(
             title = R.string.compare_confirm_title,
-            button = R.string.compare_send,
+            button = R.string.send_allow,
             enabled = !offline,
             busy = busy,
             error = error,
@@ -97,6 +105,84 @@ internal fun DanaEditor(editor: Editor, session: DashboardSession, offline: Bool
             }
         }
     }
+}
+
+@Composable
+private fun QuickEditor(editor: Editor.Quick, session: DashboardSession, dismiss: () -> Unit, dispatch: (DanaIntent) -> Unit) {
+    var service by remember { mutableStateOf(editor.initial) }
+    var expanded by remember { mutableStateOf(false) }
+    var secret by remember(service) { mutableStateOf("") }
+    var approval by remember(service) { mutableStateOf<RouterApproval?>(null) }
+    var direct by remember { mutableStateOf(true) }
+    var browserError by remember { mutableStateOf(false) }
+    val browser = LocalUriHandler.current
+    val busy = session.busy
+    val selected = service
+    val code = approval
+    val valid = secret.isNotBlank() && (code == null || secret.length >= 8) &&
+        (service != QuickService.FREE || code != null || secret.startsWith("sk-or-v1-"))
+    EditorDialog(R.string.quick_title, R.string.quick_connect, valid, busy, session.error, secure = true, onDismiss = dismiss,
+        onConfirm = { if (service == selected) dispatch(DanaIntent.Connect(selected, secret, code, direct)) }) {
+        Text(stringResource(R.string.quick_intro))
+        Column {
+            OutlinedButton(onClick = { expanded = true }, enabled = !busy, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(R.string.quick_provider, service.title))
+            }
+            DropdownMenu(expanded, { expanded = false }) {
+                QuickService.entries.forEach { candidate ->
+                    DropdownMenuItem(text = { Text(candidate.title) }, onClick = { service = candidate; expanded = false; browserError = false })
+                }
+            }
+        }
+        TechnicalText(service.api, maxLines = 3)
+        if (service == QuickService.FREE) {
+            Text(stringResource(R.string.quick_free), style = MaterialTheme.typography.bodySmall, color = Mint)
+            OutlinedButton(onClick = {
+                val next = RouterApproval.create()
+                secret = ""
+                approval = next
+                browserError = runCatching { browser.openUri(next.browserUrl) }.isFailure
+            }, enabled = !busy, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.quick_browser)) }
+            if (code != null) {
+                Text(stringResource(R.string.quick_code_help), color = Titanium, style = MaterialTheme.typography.bodySmall)
+                TextButton(onClick = { approval = null; secret = ""; browserError = false }, enabled = !busy) { Text(stringResource(R.string.quick_use_key)) }
+            }
+            if (browserError) ReadError(R.string.quick_no_browser)
+        } else Text(stringResource(R.string.quick_paid), color = Amber, style = MaterialTheme.typography.bodySmall)
+        if (code == null) SetupLink(R.string.quick_get_key, service.keyUrl, !busy)
+        OutlinedTextField(secret, { if (it.length <= ApiCredential.LIMIT) secret = it.trim() }, Modifier.fillMaxWidth(),
+            enabled = !busy, singleLine = true,
+            label = { Text(stringResource(if (code == null) R.string.quick_key else R.string.quick_code)) },
+            textStyle = MaterialTheme.typography.bodyMedium.copy(textDirection = TextDirection.Ltr),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, autoCorrectEnabled = false),
+            visualTransformation = PasswordVisualTransformation())
+        ProbeInfo(busy, session.httpStatus, direct, { direct = it }, { dispatch(DanaIntent.StopSetup) })
+    }
+}
+
+@Composable
+private fun ProbeEditor(editor: Editor.Test, session: DashboardSession, dismiss: () -> Unit, dispatch: (DanaIntent) -> Unit) {
+    var direct by remember { mutableStateOf(true) }
+    EditorDialog(R.string.quick_test_title, R.string.quick_connect, true, session.busy, session.error, secure = true,
+        onDismiss = dismiss, onConfirm = { dispatch(DanaIntent.ActivateProfile(direct)) }) {
+        Text(editor.profile.config.name, style = MaterialTheme.typography.titleMedium)
+        TechnicalText(editor.profile.config.baseUrl, maxLines = 4)
+        TechnicalText(editor.profile.config.model, maxLines = 3)
+        if (editor.profile.config.protocol != ProviderProtocol.OPENROUTER_FREE) Text(stringResource(R.string.quick_paid), color = Amber)
+        ProbeInfo(session.busy, session.httpStatus, direct, { direct = it }, { dispatch(DanaIntent.StopSetup) })
+    }
+}
+
+@Composable
+private fun ProbeInfo(busy: Boolean, status: Int?, direct: Boolean, onDirect: (Boolean) -> Unit, stop: () -> Unit) {
+    Text(stringResource(R.string.quick_probe_help), style = MaterialTheme.typography.bodySmall, color = Titanium)
+    ToggleLine(R.string.quick_direct, direct, !busy, onDirect)
+    if (busy) {
+        LinearProgressIndicator(Modifier.fillMaxWidth())
+        Text(stringResource(R.string.quick_testing), color = Mint)
+        TextButton(onClick = stop) { Text(stringResource(R.string.compare_stop)) }
+    }
+    status?.let { TechnicalText("HTTP $it") }
 }
 
 @Composable

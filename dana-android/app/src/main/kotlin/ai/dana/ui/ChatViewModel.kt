@@ -10,6 +10,8 @@ import ai.dana.domain.ContextMessage
 import ai.dana.domain.Conversation
 import ai.dana.domain.ConversationInput
 import ai.dana.domain.DanaAiRouter
+import ai.dana.domain.DirectSendSettings
+import ai.dana.domain.SendGrant
 import ai.dana.domain.EngineEvent
 import ai.dana.domain.EngineProblem
 import ai.dana.domain.HistoryRepository
@@ -85,7 +87,7 @@ internal data class TeamTurn(
 internal sealed interface ChatDialog {
     data object Options : ChatDialog
     data object PickTeam : ChatDialog
-    class Send(val route: ChatRoute, val question: String, val historyId: Long?, val store: Boolean) : ChatDialog
+    class Send(val route: ChatRoute, val question: String, val historyId: Long?, val store: Boolean, val grant: SendGrant) : ChatDialog
     data class Action(val command: LocalAction, val fromText: Boolean) : ChatDialog
     data class EditMemory(val previous: UserMemory?, val draft: String = previous?.fact.orEmpty()) : ChatDialog
     data class RemoveMemory(val id: Long?) : ChatDialog
@@ -123,12 +125,14 @@ internal class ChatViewModel @Inject constructor(
     private val history: HistoryRepository,
     private val memory: MemoryRepository,
     private val notes: NotesRepository,
+    private val directSend: DirectSendSettings,
 ) : ViewModel() {
     private val mutable = MutableStateFlow(ChatState())
     val state = mutable.asStateFlow()
     private val search = MutableStateFlow("")
     val query = search.asStateFlow()
     private var generation: Job? = null
+    private var preparing: Job? = null
     private var counter = 0L
 
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -252,13 +256,16 @@ internal class ChatViewModel @Inject constructor(
     }
 
     @MainThread
-    fun review(profiles: List<ProviderProfile>, offline: Boolean) {
+    fun submit(profiles: List<ProviderProfile>, offline: Boolean, preferred: String?, execute: (LocalAction) -> DeviceOutcome) {
         val chat = mutable.value
-        if (chat.busy || chat.dialog != null) return
-        if (chat.draft.isBlank()) return
-        if (chat.photo == null) LocalCommands.parse(chat.draft)?.let {
-            if (offline && it is LocalAction.WebSearch) error(R.string.phone_web_offline)
-            else dialog(ChatDialog.Action(it, fromText = true))
+        if (chat.busy || chat.dialog != null || chat.draft.isBlank()) return
+        if (chat.photo == null) LocalCommands.parse(chat.draft)?.let { command ->
+            when {
+                offline && command is LocalAction.WebSearch -> error(R.string.phone_web_offline)
+                command == LocalAction.Battery || command == LocalAction.MediaVolume ->
+                    actionResult(ChatDialog.Action(command, fromText = true), execute(command))
+                else -> dialog(ChatDialog.Action(command, fromText = true))
+            }
             return
         }
         if (chat.localOnly) {
@@ -273,8 +280,8 @@ internal class ChatViewModel @Inject constructor(
             error(R.string.chat_offline_help)
             return
         }
-        // Snapshot exact choices, then read opted-in facts. No network I/O is performed by review.
-        write(close = false) {
+        prepare {
+            // Only completed, opted-in context can leave the phone. No input is sent while making the snapshot.
             val context = if (!chat.options.includeContext) emptyList() else chat.turns.filter { it.complete }.flatMap { t ->
                 listOf(ContextMessage(MessageRole.USER, t.question), ContextMessage(MessageRole.ASSISTANT, t.answer))
             }
@@ -282,28 +289,43 @@ internal class ChatViewModel @Inject constructor(
             val input = ConversationInput.prepare(chat.draft, context, included, chat.options.style, chat.task, chat.photo, chat.options.mask)
             if (input == null) {
                 error(R.string.chat_payload_invalid)
-                return@write
+                return@prepare
             }
-            val route = if (chat.teamIds.isEmpty()) ChatRoute.select(input, profiles, chat.manualId)
+            val route = if (chat.teamIds.isEmpty()) ChatRoute.direct(input, profiles, chat.manualId, preferred)
                 else ChatRoute.parallel(input, profiles, chat.teamIds)
             if (route == null) {
-                error(if (chat.teamIds.isEmpty()) R.string.chat_no_engine else R.string.chat_team_unavailable)
-                return@write
+                error(when {
+                    chat.teamIds.isNotEmpty() -> R.string.chat_team_unavailable
+                    chat.photo != null -> R.string.chat_image_choose_vision
+                    else -> R.string.chat_no_engine
+                })
+                return@prepare
             }
-            mutable.update { it.copy(dialog = ChatDialog.Send(route, chat.draft.trim(), chat.current?.id, chat.options.autoHistory)) }
+            val grant = SendGrant.chat(route.candidates, route.parallel, chat.options.includeContext,
+                chat.options.useMemory, input.photo != null, chat.options.mask)
+            val plan = ChatDialog.Send(route, chat.draft.trim(), chat.current?.id, chat.options.autoHistory, grant)
+            if (directSend.permits(grant)) start(plan)
+            else mutable.update { it.copy(dialog = plan) }
         }
     }
 
     @MainThread
-    fun send(offline: Boolean) {
-        val chat = mutable.value
-        val approved = chat.dialog as? ChatDialog.Send ?: return
-        if (chat.busy) return
+    fun approve(offline: Boolean) {
+        val plan = mutable.value.dialog as? ChatDialog.Send ?: return
         if (offline) {
             dialog(null)
             error(R.string.chat_offline_help)
             return
         }
+        prepare {
+            directSend.remember(plan.grant)
+            start(plan)
+        }
+    }
+
+    private fun start(approved: ChatDialog.Send) {
+        val chat = mutable.value
+        if (chat.running) return
         if (approved.route.parallel) {
             startTeam(approved)
             return
@@ -398,7 +420,10 @@ internal class ChatViewModel @Inject constructor(
     }
 
     @MainThread
-    fun stop() { generation?.cancel() }
+    fun stop() {
+        preparing?.cancel()
+        generation?.cancel()
+    }
 
     @MainThread
     fun background() {
@@ -484,6 +509,22 @@ internal class ChatViewModel @Inject constructor(
 
     private fun reviseTurn(index: Long, change: (ChatTurn) -> ChatTurn) {
         mutable.update { st -> st.copy(turns = st.turns.map { if (it.index == index) change(it) else it }) }
+    }
+
+    private fun prepare(operation: suspend () -> Unit) {
+        if (mutable.value.busy) return
+        mutable.update { it.copy(writing = true, error = null, notice = null) }
+        preparing = viewModelScope.launch {
+            try {
+                operation()
+            } catch (canceled: CancellationException) {
+                throw canceled
+            } catch (failure: Exception) {
+                error(DanaErrorHandler.messageFor(failure))
+            } finally {
+                mutable.update { it.copy(writing = false) }
+            }
+        }
     }
 
     private fun write(close: Boolean = true, operation: suspend () -> Unit) {

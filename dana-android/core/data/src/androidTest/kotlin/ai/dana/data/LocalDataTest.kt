@@ -16,6 +16,8 @@ import ai.dana.domain.MessageRole
 import ai.dana.domain.ProviderConfig
 import ai.dana.domain.ProviderNetwork
 import ai.dana.domain.ProviderProtocol
+import ai.dana.domain.ProviderProfile
+import ai.dana.domain.SendGrant
 import android.content.Context
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.room.Room
@@ -145,6 +147,34 @@ class LocalDataTest {
     }
 
     @Test
+    fun activatedRoutePersistsAndDoesNotAuthorizeChangedCredentialsOrPhotos() = deviceTest {
+        val file = File(context.cacheDir, "grants-${UUID.randomUUID()}.preferences_pb")
+        val job = Job()
+        val nextJob = Job()
+        fun load(scope: Job) = PreferencesStore(PreferenceDataStoreFactory.create(scope = CoroutineScope(Dispatchers.IO + scope)) { file })
+        val profile = ProviderProfile("my-engine", config("https://original.example.com/v1"), true, "v1.fixture")
+        fun grant(profile: ProviderProfile, photo: Boolean = false) = SendGrant.chat(listOf(profile), false, true, false, photo, true)
+        try {
+            val store = load(job)
+            assertFalse(store.permits(grant(profile)))
+            store.activate(profile, allowDirectText = true)
+            assertFalse(store.offlineMode.first())
+            assertEquals(profile.id, store.preferredEngine.first())
+            job.cancelAndJoin()
+            val next = load(nextJob)
+            assertTrue(next.permits(grant(profile)))
+            assertFalse(next.permits(grant(profile.copy(credentialRevision = "v1.reissued"))))
+            assertFalse(next.permits(grant(profile, photo = true)))
+            next.forgetAll()
+            assertFalse(next.permits(grant(profile)))
+        } finally {
+            job.cancelAndJoin()
+            nextJob.cancelAndJoin()
+            file.delete()
+        }
+    }
+
+    @Test
     fun profileUpdateIsAtomicAndRequiresExplicitKeyChangeForNewDestination() = deviceTest {
         withVault { vault ->
             database().useDb { db ->
@@ -163,6 +193,10 @@ class LocalDataTest {
                 expectInputIssue(InputIssue.CREDENTIAL_DESTINATION_CHANGED) { repo.save(id, changed, CredentialChange.Keep) }
                 assertEquals(profile, repo.profiles.first().single())
                 assertEquals(raw, db.engines().find(id)?.sealedKey)
+                repo.save(id, original, CredentialChange.Replace(ApiCredential.parse("rotated-device-test-only")))
+                val rotated = repo.profiles.first().single()
+                assertNotEquals(profile.credentialRevision, rotated.credentialRevision)
+                expectInputIssue(InputIssue.RECORD_NOT_FOUND) { repo.credentialFor(profile) }
                 repo.save(id, changed, CredentialChange.Remove)
                 val updated = repo.profiles.first().single()
                 assertFalse(updated.hasCredential)

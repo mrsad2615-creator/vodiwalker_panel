@@ -3,6 +3,7 @@ package ai.dana
 import ai.dana.media.MediaViewModel
 import ai.dana.media.OneFrameCaptureService
 import ai.dana.ui.AccountViewModel
+import ai.dana.ui.ArtViewModel
 import ai.dana.ui.ChatViewModel
 import ai.dana.ui.DashboardTab
 import ai.dana.ui.DanaApp
@@ -27,6 +28,7 @@ class MainActivity : ComponentActivity() {
     private val chat: ChatViewModel by viewModels()
     private val account: AccountViewModel by viewModels()
     private val media: MediaViewModel by viewModels()
+    private val art: ArtViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         val splash = installSplashScreen()
@@ -43,7 +45,7 @@ class MainActivity : ComponentActivity() {
         )
         if (savedInstanceState == null) handleExternal(intent)
         setContent {
-            DanaTheme { DanaApp(model, chat, media, account) }
+            DanaTheme { DanaApp(model, chat, media, account, art) }
         }
     }
 
@@ -77,6 +79,7 @@ class MainActivity : ComponentActivity() {
             model.dispatch(DanaIntent.StopRemoteRequests)
             chat.background()
             account.background()
+            art.stop()
         }
         super.onStop()
     }

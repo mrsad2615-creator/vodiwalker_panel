@@ -14,8 +14,8 @@ android {
         minSdk = libs.versions.min.sdk.get().toInt()
         targetSdk = libs.versions.compile.sdk.get().toInt()
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        versionCode = 6
-        versionName = "0.6.0"
+        versionCode = 7
+        versionName = "0.7.0"
     }
 
     compileOptions {
@@ -29,7 +29,8 @@ android {
 
     buildTypes {
         debug {
-            applicationIdSuffix = ".preview"
+            // Side-by-side with older debug APKs, whose signing key may differ.
+            applicationIdSuffix = ".mrsad"
             versionNameSuffix = "-preview"
         }
         release {

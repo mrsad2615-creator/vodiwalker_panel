@@ -36,7 +36,8 @@ class CloudEngineContractTest {
         val jpeg = checkNotNull(VisionPhoto.fromJpeg(byteArrayOf(-1, -40, 1, -1, -39)))
         val input = checkNotNull(ConversationInput.prepare("این تصویر چیست؟", emptyList(), emptyList(),
             AssistantStyle.BALANCED, AssistantTask.ASK, jpeg, mask = false))
-        val urls = mapOf(CloudEngine.GROQ to "https://api.groq.com/openai/v1/chat/completions",
+        val urls = mapOf(CloudEngine.OPENAI to "https://api.openai.com/v1/chat/completions",
+            CloudEngine.GROQ to "https://api.groq.com/openai/v1/chat/completions",
             CloudEngine.MISTRAL to "https://api.mistral.ai/v1/chat/completions",
             CloudEngine.DEEPSEEK to "https://api.deepseek.com/chat/completions",
             CloudEngine.CEREBRAS to "https://api.cerebras.ai/v1/chat/completions")

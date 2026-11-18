@@ -2,6 +2,7 @@ package ai.dana.domain
 
 /** Fixed, documented entry points. Persisted profiles still use the existing compatible protocol and credential scope. */
 enum class CloudEngine(val label: String, val baseUrl: String, val consoleUrl: String, val suggested: List<String>) {
+    OPENAI("OpenAI", "https://api.openai.com/v1", "https://platform.openai.com/api-keys", listOf("gpt-4.1-mini", "gpt-4o-mini")),
     GROQ("Groq", "https://api.groq.com/openai/v1", "https://console.groq.com/keys",
         listOf("qwen/qwen3.8-27b", "openai/gpt-oss-20b")),
     MISTRAL("Mistral", "https://api.mistral.ai/v1", "https://console.mistral.ai/api-keys",
@@ -11,7 +12,7 @@ enum class CloudEngine(val label: String, val baseUrl: String, val consoleUrl: S
     CEREBRAS("Cerebras", "https://api.cerebras.ai/v1", "https://cloud.cerebras.ai/",
         listOf("qwen-3.8-27b", "gpt-oss-120b"));
 
-    val prefersMaxCompletionTokens: Boolean get() = this == GROQ || this == CEREBRAS
+    val prefersMaxCompletionTokens: Boolean get() = this == GROQ || this == CEREBRAS || this == OPENAI
 
     // Catalogs can include transcribers, classifiers and hosted tool runners. This is a chat-only integration.
     fun acceptsChat(model: String): Boolean = when (this) {
@@ -20,10 +21,13 @@ enum class CloudEngine(val label: String, val baseUrl: String, val consoleUrl: S
             model.startsWith("meta-llama/llama-prompt-guard"))
         MISTRAL -> !(model.startsWith("mistral-embed") || model.startsWith("codestral-embed") ||
             model.startsWith("mistral-ocr") || model.startsWith("voxtral") || model.startsWith("mistral-moderation"))
+        OPENAI -> model.startsWith("gpt-") && !model.startsWith("gpt-image") &&
+            listOf("audio", "realtime", "transcrib", "tts", "embedding", "codex", "search").none { it in model }
         DEEPSEEK, CEREBRAS -> true
     }
 
     fun photoSupport(model: String): PhotoSupport = when (this) {
+        OPENAI -> if (model.startsWith("gpt-4.1") || model.startsWith("gpt-4o")) PhotoSupport.YES else PhotoSupport.UNKNOWN
         GROQ -> if (model in GROQ_VISION) PhotoSupport.YES else PhotoSupport.NO
         DEEPSEEK -> if (model in DEEPSEEK_VISION) PhotoSupport.YES else PhotoSupport.NO
         CEREBRAS -> if (model in CEREBRAS_VISION) PhotoSupport.YES else PhotoSupport.NO

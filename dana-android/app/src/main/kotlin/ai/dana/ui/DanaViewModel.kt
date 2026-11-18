@@ -9,6 +9,12 @@ import ai.dana.domain.InputRejected
 import ai.dana.domain.cloudEngine
 import ai.dana.domain.AssistantTask
 import ai.dana.domain.DirectoryResult
+import ai.dana.domain.DirectSendSettings
+import ai.dana.domain.SendGrant
+import ai.dana.domain.ProviderProfile
+import ai.dana.domain.QuickConnect
+import ai.dana.domain.QuickService
+import ai.dana.domain.RouterApproval
 import ai.dana.domain.EngineDiscovery
 import ai.dana.domain.EngineFailure
 import ai.dana.domain.ComparisonLimits
@@ -25,7 +31,6 @@ import ai.dana.domain.PrivacyPreferences
 import ai.dana.domain.ProviderConfig
 import ai.dana.domain.ProviderEndpoint
 import ai.dana.domain.ProviderNetwork
-import ai.dana.domain.ProviderProfile
 import ai.dana.domain.ProviderProtocol
 import ai.dana.domain.ProviderRepository
 import androidx.annotation.MainThread
@@ -42,6 +47,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
@@ -56,6 +62,7 @@ internal enum class DashboardTab(@StringRes val label: Int) {
     NOTES(R.string.tab_notes),
     SETTINGS(R.string.tab_engines),
     ACCOUNT(R.string.tab_account),
+    ART(R.string.art_title),
 }
 
 internal sealed interface Reading<out T> {
@@ -70,6 +77,8 @@ internal sealed interface Editor {
         val cloud: CloudEngine? = previous?.config?.cloudEngine) : Editor
     data class DeleteNote(val id: Long) : Editor
     data class DeleteProvider(val id: String) : Editor
+    data class Quick(val initial: QuickService, val after: DashboardTab) : Editor
+    data class Test(val profile: ProviderProfile) : Editor
     class ConfirmComparison(val request: ComparisonRequest) : Editor
 }
 
@@ -86,6 +95,8 @@ internal data class DashboardSession(
     @StringRes val error: Int? = null,
     @StringRes val notice: Int? = null,
     val directory: DirectoryState? = null,
+    val httpStatus: Int? = null,
+    val probeMillis: Long? = null,
 )
 
 internal data class DashboardState(
@@ -95,6 +106,7 @@ internal data class DashboardState(
     val profiles: Reading<List<ProviderProfile>> = Reading.Loading,
     val session: DashboardSession = DashboardSession(),
     val comparison: ComparisonState = ComparisonState(),
+    val preferredEngine: String? = null,
 )
 
 internal sealed interface DanaIntent {
@@ -104,6 +116,12 @@ internal sealed interface DanaIntent {
         val lanPreset: Boolean = false, val cloud: CloudEngine? = profile?.config?.cloudEngine) : DanaIntent
     data class ChooseTask(val task: AssistantTask, val openWorkspace: Boolean = false) : DanaIntent
     data class NoteFromAnswer(val profileId: String) : DanaIntent
+    data class OpenQuick(val service: QuickService = QuickService.FREE, val after: DashboardTab = DashboardTab.SETTINGS) : DanaIntent
+    class Connect(val service: QuickService, val secret: String, val approval: RouterApproval?, val direct: Boolean) : DanaIntent
+    data class TestProfile(val profile: ProviderProfile) : DanaIntent
+    data class ActivateProfile(val direct: Boolean) : DanaIntent
+    data object StopSetup : DanaIntent
+    data object RevokeDirectSend : DanaIntent
     data object ClearDirectory : DanaIntent
     data object StopRemoteRequests : DanaIntent
     data class RequestNoteDeletion(val id: Long) : DanaIntent
@@ -147,12 +165,16 @@ internal class DanaViewModel @Inject constructor(
     private val providers: ProviderRepository,
     private val router: DanaAiRouter,
     private val discovery: EngineDiscovery,
+    private val quickConnect: QuickConnect,
+    private val directSend: DirectSendSettings,
 ) : ViewModel() {
     private val session = MutableStateFlow(DashboardSession())
     private val reloadGeneration = MutableStateFlow(0L)
     private val comparison = MutableStateFlow(ComparisonState())
     private var comparisonJob: Job? = null
     private var directoryJob: Job? = null
+    private var setup: Job? = null
+    private var comparisonPreparation: Job? = null
 
     val uiState = combine(
         monitor.status.onStart { emit(NetworkStatus.CHECKING) },
@@ -163,14 +185,20 @@ internal class DanaViewModel @Inject constructor(
     ) { network, offline, notes, profiles, session ->
         DashboardState(network, offline, notes, profiles, session)
     }.combine(comparison) { state, comparing -> state.copy(comparison = comparing) }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DashboardState())
+        .combine(directSend.preferredEngine.catch { error -> if (error is CancellationException) throw error else emit(null) }) { state, preferred ->
+            state.copy(preferredEngine = preferred)
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DashboardState())
 
     @MainThread
     fun dispatch(intent: DanaIntent) {
         val current = session.value
-        if (intent == DanaIntent.StopRemoteRequests) {
-            comparisonJob?.cancel()
-            if (current.directory == DirectoryState.Loading) clearDirectory()
+        if (intent == DanaIntent.StopRemoteRequests || intent == DanaIntent.StopSetup) {
+            setup?.cancel()
+            if (intent == DanaIntent.StopRemoteRequests) {
+                comparisonJob?.cancel()
+                comparisonPreparation?.cancel()
+                if (current.directory == DirectoryState.Loading) clearDirectory()
+            }
             return
         }
         if (current.busy && intent != DanaIntent.StopComparison) return
@@ -201,9 +229,17 @@ internal class DanaViewModel @Inject constructor(
             }
             is DanaIntent.ToggleEngine -> toggleEngine(intent.profileId)
             DanaIntent.ReviewComparison -> reviewComparison()
-            DanaIntent.SendComparison -> (current.editor as? Editor.ConfirmComparison)?.let { startComparison(it.request) }
+            DanaIntent.SendComparison -> (current.editor as? Editor.ConfirmComparison)?.let { prepareComparison(it.request, remember = true) }
+            is DanaIntent.OpenQuick -> show(Editor.Quick(intent.service, intent.after))
+            is DanaIntent.Connect -> connect(intent)
+            is DanaIntent.TestProfile -> show(Editor.Test(intent.profile))
+            is DanaIntent.ActivateProfile -> activate(intent.direct)
+            DanaIntent.RevokeDirectSend -> write {
+                directSend.forgetAll()
+                session.update { it.copy(notice = R.string.send_revoked) }
+            }
             DanaIntent.StopComparison -> comparisonJob?.cancel()
-            DanaIntent.StopRemoteRequests -> Unit // Handled before the write lock.
+            DanaIntent.StopRemoteRequests, DanaIntent.StopSetup -> Unit // Handled before the write lock.
             DanaIntent.ClearDirectory -> clearDirectory()
             is DanaIntent.ReadModels -> readModels(intent)
             is DanaIntent.EditNote -> show(Editor.Note(intent.note))
@@ -273,13 +309,79 @@ internal class DanaViewModel @Inject constructor(
             comparison.update { it.copy(problem = EngineProblem.CONFIGURATION) }
             return
         }
-        show(Editor.ConfirmComparison(request))
+        prepareComparison(request, remember = false)
+    }
+
+    private fun prepareComparison(request: ComparisonRequest, remember: Boolean) {
+        if (session.value.tab != DashboardTab.COMPARE || comparison.value.running || session.value.busy) return
+        session.update { it.copy(busy = true, error = null) }
+        comparisonPreparation = viewModelScope.launch {
+            try {
+                if (preferences.offlineMode.first()) {
+                    show(null)
+                    comparison.update { it.copy(problem = EngineProblem.OFFLINE) }
+                    return@launch
+                }
+                val grant = SendGrant.comparison(request.targets)
+                if (remember) directSend.remember(grant)
+                if (remember || directSend.permits(grant)) startComparison(request)
+                else show(Editor.ConfirmComparison(request))
+            } catch (canceled: CancellationException) {
+                throw canceled
+            } catch (error: Exception) {
+                session.update { it.copy(error = DanaErrorHandler.messageFor(error)) }
+            } finally {
+                session.update { it.copy(busy = false) }
+            }
+        }
+    }
+
+    private fun connect(intent: DanaIntent.Connect) {
+        val editor = session.value.editor as? Editor.Quick ?: return
+        runSetup {
+            val started = kotlin.time.TimeSource.Monotonic.markNow()
+            val tested = quickConnect.test(intent.service, intent.secret, intent.approval)
+            val id = providers.save(null, tested.config, CredentialChange.Replace(tested.credential))
+            val saved = providers.profiles.first().single { it.id == id }
+            directSend.activate(saved, intent.direct)
+            connected(editor.after, started.elapsedNow().inWholeMilliseconds)
+        }
+    }
+
+    private fun activate(direct: Boolean) {
+        val editor = session.value.editor as? Editor.Test ?: return
+        runSetup {
+            val profile = editor.profile
+            val millis = quickConnect.probe(profile.config, providers.credentialFor(profile))
+            directSend.activate(profile, direct)
+            connected(DashboardTab.SETTINGS, millis)
+        }
+    }
+
+    private fun connected(after: DashboardTab, millis: Long) {
+        session.value = DashboardSession(tab = after, notice = R.string.quick_connected, probeMillis = millis)
+    }
+
+    private fun runSetup(block: suspend () -> Unit) {
+        session.update { it.copy(busy = true, error = null, httpStatus = null, notice = null, probeMillis = null) }
+        setup = viewModelScope.launch {
+            try {
+                block()
+            } catch (canceled: CancellationException) {
+                throw canceled
+            } catch (error: Exception) {
+                session.update { it.copy(error = DanaErrorHandler.messageFor(error), httpStatus = (error as? EngineFailure)?.httpStatus) }
+            } finally {
+                session.update { it.copy(busy = false) }
+            }
+        }
     }
 
     private fun startComparison(request: ComparisonRequest) {
         if (session.value.tab != DashboardTab.COMPARE || comparison.value.running) return
         show(null)
-        comparison.update { it.copy(running = true, lanes = request.targets.map { EngineLane(it) }, problem = null) }
+        val report = ComparisonRun(java.util.UUID.randomUUID().toString(), java.time.Instant.now(), request.task, request.prompt)
+        comparison.update { it.copy(running = true, lanes = request.targets.map { EngineLane(it) }, problem = null, report = report) }
         comparisonJob = viewModelScope.launch {
             try {
                 router.compare(request).collect { event ->
@@ -333,7 +435,7 @@ internal class DanaViewModel @Inject constructor(
 
     private fun show(editor: Editor?) {
         clearDirectory()
-        session.update { it.copy(editor = editor, error = null, notice = null) }
+        session.update { it.copy(editor = editor, error = null, notice = null, httpStatus = null, probeMillis = null) }
     }
 
     private fun write(closeEditor: Boolean = false, operation: suspend () -> Unit) {

@@ -55,6 +55,7 @@ enum class EngineProblem {
     UNSUPPORTED_LANGUAGE,
     CONTEXT_LIMIT,
     NO_TEXT,
+    NO_IMAGE,
     OUTPUT_LIMIT,
 }
 

@@ -10,6 +10,7 @@ import ai.dana.voice.rememberDanaVoice
 import ai.dana.domain.AssistantStyle
 import ai.dana.domain.AssistantTask
 import ai.dana.domain.ComparisonLimits
+import ai.dana.domain.ChatRoute
 import ai.dana.domain.PhotoSupport
 import ai.dana.domain.photoSupport
 import ai.dana.domain.acceptsCredential
@@ -110,7 +111,7 @@ internal fun ChatScreen(
             }
         }
         when (chat.page) {
-            ChatPage.CONVERSATION -> Dialogue(chat, model, media::open, profiles, offline, onSettings)
+            ChatPage.CONVERSATION -> Dialogue(chat, model, media::open, profiles, offline, dashboard.preferredEngine, onSettings)
             ChatPage.HISTORY -> Archive(chat, model)
             ChatPage.MEMORY -> MemoryVault(chat, model)
             ChatPage.TOOLS -> ToolPanel(chat, model, media::open)
@@ -127,8 +128,10 @@ private fun Dialogue(
     onMedia: () -> Unit,
     profiles: List<ProviderProfile>,
     offline: Boolean,
+    preferred: String?,
     onSettings: () -> Unit,
 ) {
+    val context = LocalContext.current
     val voice = rememberDanaVoice()
     val focus = LocalFocusManager.current
     var setupVoice by remember { mutableStateOf(false) }
@@ -231,7 +234,7 @@ private fun Dialogue(
                     FilterChip(selected = chat.localOnly, enabled = !chat.busy && !voice.state.listening,
                         onClick = { model.localMode(!chat.localOnly) }, label = { Text(stringResource(R.string.phone_mode)) })
                     if (!chat.localOnly) {
-                        EngineChooser(chat, profiles, model::engine) { model.dialog(ChatDialog.PickTeam) }
+                        EngineChooser(chat, profiles, preferred, model::engine) { model.dialog(ChatDialog.PickTeam) }
                         TaskChooser(chat, model::task)
                     }
                 }
@@ -248,17 +251,19 @@ private fun Dialogue(
                     Row(Modifier.weight(1f).horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically) {
                         TextButton(onClick = { focus.clearFocus(); voice.close(); onMedia() }, enabled = !chat.busy) { Text(stringResource(R.string.media_short)) }
                         VoiceButton(voice, enabled = !chat.busy, useSystemSpeech = useSystemSpeech, turnMode = chat.voiceOpen, onText = { heard ->
-                            if (chat.voiceOpen) {
-                                model.importText(heard)
-                                model.review(profiles, offline)
-                            } else model.importText(listOf(chat.draft, heard).filter { it.isNotBlank() }.joinToString(" "))
+                            if (chat.voiceOpen) model.importText(heard)
+                            else model.importText(listOf(chat.draft, heard).filter { it.isNotBlank() }.joinToString(" "))
                         })
                         TextButton(onClick = { focus.clearFocus(); voice.close(); model.toggleVoice() }, enabled = !chat.busy && !voice.state.listening) {
                             Text(stringResource(if (chat.voiceOpen) R.string.voice_exit else R.string.voice_conversation))
                         }
                     }
                     if (chat.running) OutlinedButton(model::stop, modifier = Modifier.heightIn(min = 48.dp)) { Text(stringResource(R.string.compare_stop)) }
-                    else Button(onClick = { focus.clearFocus(); voice.stopPlayback(); model.review(profiles, offline) },
+                    else Button(onClick = {
+                        focus.clearFocus()
+                        voice.stopPlayback()
+                        model.submit(profiles, offline, preferred) { command -> DeviceActions.execute(context, command) }
+                    },
                         modifier = Modifier.heightIn(min = 48.dp), enabled = !chat.busy && !voice.state.listening && chat.draft.isNotBlank()) {
                         Text(stringResource(R.string.chat_review))
                     }
@@ -269,14 +274,13 @@ private fun Dialogue(
 }
 
 @Composable
-private fun EngineChooser(chat: ChatState, profiles: List<ProviderProfile>, choose: (String?) -> Unit, chooseTeam: () -> Unit) {
+private fun EngineChooser(chat: ChatState, profiles: List<ProviderProfile>, preferred: String?, choose: (String?) -> Unit, chooseTeam: () -> Unit) {
     var expanded by remember { mutableStateOf(false) }
-    val name = profiles.firstOrNull { it.id == chat.manualId }?.config?.name
+    val name = ChatRoute.target(profiles, chat.manualId, preferred)?.config?.name
     Column {
         TextButton(onClick = { expanded = true }, enabled = !chat.busy) {
             Text(when {
                 chat.teamIds.isNotEmpty() -> stringResource(R.string.chat_team_count, faDigits(chat.teamIds.size))
-                chat.manualId == null -> stringResource(R.string.chat_auto)
                 else -> name?.take(24) ?: stringResource(R.string.chat_no_engine_short)
             }, maxLines = 1)
         }
@@ -418,7 +422,7 @@ private fun ToolPanel(chat: ChatState, model: ChatViewModel, onMedia: () -> Unit
         GlassCard(Modifier.fillMaxWidth()) {
             Text(stringResource(R.string.chat_templates_title), style = MaterialTheme.typography.titleMedium)
             listOf(R.string.cmd_volume, R.string.cmd_timer, R.string.cmd_alarm, R.string.cmd_note, R.string.cmd_dial,
-                R.string.cmd_event, R.string.cmd_web, R.string.cmd_sms).forEach { example ->
+                R.string.cmd_event, R.string.cmd_event_timed, R.string.cmd_open, R.string.cmd_web, R.string.cmd_sms).forEach { example ->
                 val sample = stringResource(example)
                 TextButton(onClick = { model.commandExample(sample) }, enabled = !chat.busy) { Text(sample) }
             }
@@ -476,19 +480,15 @@ private fun ChatOverlay(dialog: ChatDialog, chat: ChatState, model: ChatViewMode
                     })) })
             }
         }
-        is ChatDialog.Send -> ChatModal(R.string.chat_destinations, R.string.compare_send, !offline, chat, dismiss, { model.send(offline) }, secure = true) {
+        is ChatDialog.Send -> ChatModal(R.string.chat_destinations, R.string.send_allow, !offline, chat, dismiss, { model.approve(offline) }, secure = true) {
             val data = dialog.route.input
             val parallel = dialog.route.parallel
             Text(stringResource(if (parallel) R.string.chat_team_transfer else R.string.chat_transfer_notice))
             if (dialog.route.candidates.all { it.config.protocol == ProviderProtocol.OPENROUTER_FREE }) {
                 Text(stringResource(R.string.engine_free_review), color = Mint)
             }
-            dialog.route.candidates.forEachIndexed { index, target ->
-                Text(stringResource(when {
-                    parallel -> R.string.chat_team_target
-                    index == 0 -> R.string.chat_preferred
-                    else -> R.string.chat_fallback
-                }, target.config.name), color = Ice)
+            dialog.route.candidates.forEach { target ->
+                Text(stringResource(if (parallel) R.string.chat_team_target else R.string.chat_preferred, target.config.name), color = Ice)
                 TechnicalText(target.config.baseUrl, maxLines = 4)
                 TechnicalText(target.config.model)
             }
@@ -505,6 +505,8 @@ private fun ChatOverlay(dialog: ChatDialog, chat: ChatState, model: ChatViewMode
             if (data.omittedPairs > 0) Text(stringResource(R.string.chat_history_limited), color = Titanium)
             if (data.facts.isNotEmpty()) Text(stringResource(R.string.chat_facts_included, data.facts.joinToString("\n")), color = Ice)
             if (data.maskedValues > 0) Text(stringResource(R.string.chat_masked), color = Mint)
+            if (chat.options.includeContext) Text(stringResource(R.string.chat_context_switch), color = Titanium)
+            if (chat.options.useMemory) Text(stringResource(R.string.chat_memory_switch), color = Titanium)
             if (data.photo != null) {
                 Text(stringResource(R.string.chat_image_notice), color = Amber)
                 if (dialog.route.candidates.any { it.config.photoSupport == PhotoSupport.UNKNOWN }) {
@@ -570,7 +572,12 @@ private fun actionText(action: LocalAction): String = when (action) {
     is LocalAction.Note -> stringResource(R.string.chat_action_note, action.text)
     is LocalAction.Timer -> stringResource(R.string.chat_action_timer, action.seconds)
     is LocalAction.Alarm -> stringResource(R.string.chat_action_alarm, action.hour, action.minute)
-    is LocalAction.CalendarDraft -> stringResource(R.string.chat_action_calendar, action.title)
+    is LocalAction.CalendarDraft -> action.start?.let { start ->
+        stringResource(R.string.phone_calendar_time, action.title,
+            stringResource(if (start.daysFromToday == 0) R.string.phone_today else R.string.phone_tomorrow),
+            start.hour, start.minute)
+    } ?: stringResource(R.string.chat_action_calendar, action.title)
+    is LocalAction.LaunchApp -> stringResource(R.string.phone_app_open, action.label)
     is LocalAction.SmsDraft -> stringResource(R.string.chat_action_sms, action.number, action.text)
     is LocalAction.Share -> stringResource(R.string.chat_action_share, action.text)
     LocalAction.Wifi -> stringResource(R.string.chat_action_wifi)

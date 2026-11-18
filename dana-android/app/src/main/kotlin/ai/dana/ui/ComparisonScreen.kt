@@ -99,6 +99,16 @@ internal fun LazyListScope.comparison(state: DashboardState, dispatch: (DanaInte
             }
         }
     }
+    val report = comparison.report
+    if (report != null && !comparison.running) item(key = "comparison-export") {
+        GlassCard(Modifier.fillMaxWidth()) {
+            Text(stringResource(R.string.report_title), style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(R.string.report_help), color = Titanium, style = MaterialTheme.typography.bodySmall)
+            ExportButton(R.string.report_save, report.id, "text/plain", "mrsad-comparison.txt") { output ->
+                output.write(comparisonReport(report, comparison.lanes).toByteArray(Charsets.UTF_8))
+            }
+        }
+    }
     items(comparison.lanes, key = { "answer-${it.profile.id}" }) { lane ->
         EngineAnswer(lane, canSave = !comparison.running && !state.session.busy) {
             dispatch(DanaIntent.NoteFromAnswer(lane.profile.id))
@@ -124,13 +134,7 @@ private fun EngineChoice(profile: ProviderProfile, checked: Boolean, enabled: Bo
 internal fun EngineAnswer(lane: EngineLane, canSave: Boolean, saveLabel: Int = R.string.studio_save_note, onSave: () -> Unit) {
     GlassCard(Modifier.fillMaxWidth()) {
         Text(lane.profile.config.name, style = MaterialTheme.typography.titleMedium)
-        val label = when (lane.status) {
-            LaneStatus.CONNECTING -> R.string.compare_connecting
-            LaneStatus.STREAMING -> R.string.compare_streaming
-            LaneStatus.COMPLETE -> R.string.compare_complete
-            LaneStatus.FAILED -> R.string.compare_failed
-            LaneStatus.STOPPED -> R.string.compare_stopped
-        }
+        val label = laneLabel(lane.status)
         Text(stringResource(label), color = if (lane.status == LaneStatus.COMPLETE) Mint else Titanium,
             style = MaterialTheme.typography.labelMedium)
         lane.firstTextMillis?.let {
@@ -195,4 +199,30 @@ private fun taskPrompt(task: AssistantTask): Int = when (task) {
     AssistantTask.SUMMARIZE -> R.string.task_summarize_input
     AssistantTask.TRANSLATE -> R.string.task_translate_input
     AssistantTask.DRAFT -> R.string.task_draft_input
+}
+
+private fun laneLabel(status: LaneStatus): Int = when (status) {
+    LaneStatus.CONNECTING -> R.string.compare_connecting
+    LaneStatus.STREAMING -> R.string.compare_streaming
+    LaneStatus.COMPLETE -> R.string.compare_complete
+    LaneStatus.FAILED -> R.string.compare_failed
+    LaneStatus.STOPPED -> R.string.compare_stopped
+}
+
+internal fun comparisonReport(run: ComparisonRun, lanes: List<EngineLane>): String = buildString {
+    appendLine("mrsad | گزارش مقایسه")
+    appendLine(run.started.toString())
+    appendLine(run.task.name)
+    appendLine().appendLine(run.prompt)
+    for (lane in lanes) {
+        appendLine().appendLine("────────────────────────")
+        appendLine(lane.profile.config.name)
+        appendLine(lane.profile.config.model)
+        appendLine(lane.status.name)
+        lane.firstTextMillis?.let { appendLine("First text: $it ms") }
+        lane.elapsedMillis?.let { appendLine("Total: $it ms") }
+        lane.httpStatus?.let { appendLine("HTTP $it") }
+        lane.problem?.let { appendLine(it.name) }
+        appendLine().appendLine(lane.answer)
+    }
 }

@@ -2,7 +2,9 @@ package ai.dana.ui
 
 import ai.dana.R
 import ai.dana.domain.LocalAction
+import ai.dana.domain.LocalCommands
 import android.content.ActivityNotFoundException
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -18,6 +20,8 @@ import android.provider.CalendarContract
 import android.provider.MediaStore
 import android.provider.Settings
 import androidx.annotation.StringRes
+import java.time.LocalDate
+import java.time.ZoneId
 import kotlin.math.roundToInt
 
 internal class DeviceOutcome(@StringRes val message: Int, val percent: Int? = null, val ok: Boolean = true)
@@ -53,8 +57,8 @@ internal object DeviceActions {
         })
         is LocalAction.Dial -> if (dialable.matches(action.number)) open(context,
             Intent(Intent.ACTION_DIAL, Uri.fromParts("tel", action.number, null))) else failure()
-        is LocalAction.CalendarDraft -> if (action.title.length in 1..160) open(context, Intent(Intent.ACTION_INSERT, CalendarContract.Events.CONTENT_URI)
-            .putExtra(CalendarContract.Events.TITLE, action.title)) else failure()
+        is LocalAction.CalendarDraft -> calendarIntent(action)?.let { open(context, it) } ?: failure()
+        is LocalAction.LaunchApp -> launchApp(context, action.label)
         is LocalAction.SmsDraft -> if (dialable.matches(action.number) && action.text.length in 1..500) open(context,
             Intent(Intent.ACTION_SENDTO, Uri.fromParts("smsto", action.number, null)).putExtra("sms_body", action.text)) else failure()
         is LocalAction.Share -> open(context, Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain")
@@ -62,6 +66,31 @@ internal object DeviceActions {
         is LocalAction.WebSearch -> if (action.query.length in 1..240) open(context, Intent(Intent.ACTION_VIEW,
             Uri.Builder().scheme("https").authority("www.google.com").path("search").appendQueryParameter("q", action.query).build())
             .addCategory(Intent.CATEGORY_BROWSABLE)) else failure()
+    }
+
+    internal fun calendarIntent(action: LocalAction.CalendarDraft): Intent? {
+        if (action.title.length !in 1..160) return null
+        val intent = Intent(Intent.ACTION_INSERT, CalendarContract.Events.CONTENT_URI)
+            .putExtra(CalendarContract.Events.TITLE, action.title)
+        val time = action.start ?: return intent
+        if (time.daysFromToday !in 0..1 || time.hour !in 0..23 || time.minute !in 0..59) return null
+        val zone = ZoneId.systemDefault()
+        val start = LocalDate.now(zone).plusDays(time.daysFromToday.toLong()).atTime(time.hour, time.minute)
+            .atZone(zone).toInstant().toEpochMilli()
+        return intent.putExtra(CalendarContract.EXTRA_EVENT_BEGIN_TIME, start)
+            .putExtra(CalendarContract.EXTRA_EVENT_END_TIME, start + 1_800_000L)
+    }
+
+    private fun launchApp(context: Context, label: String): DeviceOutcome {
+        if (!LocalCommands.validAppLabel(label)) return failure(R.string.phone_app_missing)
+        val pm = context.packageManager
+        val name = LocalCommands.appLabel(label)
+        val matches = pm.queryIntentActivities(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER), 0)
+            .asSequence().filter { it.activityInfo.packageName != context.packageName && LocalCommands.appLabel(it.loadLabel(pm).toString()) == name }
+            .map { ComponentName(it.activityInfo.packageName, it.activityInfo.name) }.distinct().take(2).toList()
+        if (matches.isEmpty()) return failure(R.string.phone_app_missing)
+        if (matches.size != 1) return failure(R.string.phone_app_ambiguous)
+        return open(context, Intent.makeMainActivity(matches.single()))
     }
 
     private fun settingsPanel(context: Context, panel: String?, fallback: String): DeviceOutcome {

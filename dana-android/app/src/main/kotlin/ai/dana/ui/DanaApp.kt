@@ -69,16 +69,17 @@ private val rootTabs = listOf(
 )
 
 @Composable
-internal fun DanaApp(model: DanaViewModel, chat: ChatViewModel, media: MediaViewModel, account: AccountViewModel) {
+internal fun DanaApp(model: DanaViewModel, chat: ChatViewModel, media: MediaViewModel, account: AccountViewModel, art: ArtViewModel) {
     val state by model.uiState.collectAsStateWithLifecycle()
     val session = state.session
     val offline = (state.offline as? Reading.Ready)?.value != false
     val ime = WindowInsets.ime.getBottom(LocalDensity.current) > 0
-    val secondary = session.tab == DashboardTab.COMPARE || session.tab == DashboardTab.NOTES
+    val secondary = session.tab in setOf(DashboardTab.COMPARE, DashboardTab.NOTES, DashboardTab.ART)
     val dispatch: (DanaIntent) -> Unit = { intent ->
         if (intent is DanaIntent.Navigate && !session.busy) {
             if (intent.tab != DashboardTab.CHAT) { chat.background(); media.close() }
             if (intent.tab != DashboardTab.ACCOUNT) account.background()
+            if (intent.tab != DashboardTab.ART) art.stop()
         }
         model.dispatch(intent)
     }
@@ -138,6 +139,7 @@ internal fun DanaApp(model: DanaViewModel, chat: ChatViewModel, media: MediaView
                         DashboardTab.COMPARE -> comparison(state, dispatch)
                         DashboardTab.NOTES -> notes(state, dispatch)
                         DashboardTab.SETTINGS -> settings(state, dispatch)
+                        DashboardTab.ART -> item { ArtScreen(art, state, dispatch) }
                         DashboardTab.ACCOUNT -> item { AccountScreen(account, offline, !session.busy && state.offline is Reading.Ready, allowNetwork) }
                     }
                 }
@@ -159,8 +161,8 @@ private fun LazyListScope.home(
     }
     item {
         ActionPair(
-            StudioAction(R.string.studio_free, R.string.studio_free_hint, Mark.ENGINES, open(DashboardTab.SETTINGS)),
-            StudioAction(R.string.studio_read_image, R.string.studio_read_image_hint, Mark.IMAGE, onMedia),
+            StudioAction(R.string.quick_title, R.string.quick_tile, Mark.ENGINES, open(DashboardTab.SETTINGS)),
+            StudioAction(R.string.art_title, R.string.art_tile, Mark.IMAGE, open(DashboardTab.ART)),
         )
     }
     item {
@@ -173,6 +175,12 @@ private fun LazyListScope.home(
         ActionPair(
             StudioAction(R.string.voice_conversation, R.string.voice_home_hint, Mark.CHAT, onVoice),
             StudioAction(R.string.phone_mode, R.string.phone_home_hint, Mark.ENGINES, onDevice),
+        )
+    }
+    item {
+        ActionPair(
+            StudioAction(R.string.studio_read_image, R.string.studio_read_image_hint, Mark.IMAGE, onMedia),
+            StudioAction(R.string.tab_account, R.string.studio_account_hint, Mark.ACCOUNT, open(DashboardTab.ACCOUNT)),
         )
     }
     val configured = (state.profiles as? Reading.Ready)?.value?.size ?: 0
@@ -215,47 +223,39 @@ private fun LazyListScope.notes(state: DashboardState, dispatch: (DanaIntent) ->
 
 private fun LazyListScope.settings(state: DashboardState, dispatch: (DanaIntent) -> Unit) {
     val enabled = !state.session.busy && state.profiles is Reading.Ready
-    item { SectionIntro(R.string.engines_title, R.string.studio_engines_blurb) }
+    val preferred = (state.profiles as? Reading.Ready)?.value?.firstOrNull { it.id == state.preferredEngine }
+    item { SectionIntro(R.string.engines_title, R.string.quick_settings_help) }
     item {
         GlassCard(Modifier.fillMaxWidth()) {
-            StudioPill(stringResource(R.string.studio_free_pill))
-            Text(stringResource(R.string.engine_openrouter), style = MaterialTheme.typography.titleLarge)
-            Text(stringResource(R.string.engine_free_intro), style = MaterialTheme.typography.bodyMedium, color = Titanium)
-            Button(onClick = { dispatch(DanaIntent.EditProvider(null, ProviderProtocol.OPENROUTER_FREE)) },
-                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp), enabled = enabled) { Text(stringResource(R.string.engine_add_free)) }
+            if (preferred != null) {
+                StudioPill(stringResource(R.string.quick_default))
+                Text(preferred.config.name, style = MaterialTheme.typography.titleLarge)
+                TechnicalText(preferred.config.model)
+                state.session.probeMillis?.let { TechnicalText("${it} ms") }
+                Button(onClick = { dispatch(DanaIntent.Navigate(DashboardTab.CHAT)) }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+                    enabled = enabled) { Text(stringResource(R.string.hub_begin_chat)) }
+            }
+            if (preferred == null) {
+                Button(onClick = { dispatch(DanaIntent.OpenQuick()) }, enabled = enabled, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
+                    Text(stringResource(R.string.quick_title))
+                }
+            } else OutlinedButton(onClick = { dispatch(DanaIntent.OpenQuick()) }, enabled = enabled, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
+                Text(stringResource(R.string.quick_add_other))
+            }
+            Text(stringResource(R.string.quick_no_account), color = Titanium, style = MaterialTheme.typography.bodySmall)
         }
     }
     when (val mode = state.offline) {
         Reading.Loading -> item { Loading() }
         is Reading.Failed -> item { ReadError(mode.message) { dispatch(DanaIntent.Reload) } }
-        is Reading.Ready -> if (mode.value) item {
-            OfflinePanel(R.string.engine_network_help, !state.session.busy) { dispatch(DanaIntent.SetOffline(false)) }
-        } else item {
+        is Reading.Ready -> item {
             GlassCard(Modifier.fillMaxWidth()) {
-                ToggleLine(R.string.offline_title, false, !state.session.busy) { dispatch(DanaIntent.SetOffline(it)) }
-                NetworkLine(state.network)
-                Text(stringResource(R.string.status_disclaimer), style = MaterialTheme.typography.bodySmall, color = Titanium)
-            }
-        }
-    }
-    item {
-        GlassCard(Modifier.fillMaxWidth()) {
-            Text(stringResource(R.string.studio_engine_more_title), style = MaterialTheme.typography.titleMedium)
-            Text(stringResource(R.string.engine_gemini_tier), color = Titanium, style = MaterialTheme.typography.bodyMedium)
-            OutlinedButton(onClick = { dispatch(DanaIntent.EditProvider(null, ProviderProtocol.GEMINI_NATIVE)) },
-                enabled = enabled, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text(stringResource(R.string.engine_add_gemini)) }
-            CloudEngine.entries.forEach { cloud ->
-                OutlinedButton(onClick = { dispatch(DanaIntent.EditProvider(null, cloud = cloud)) }, enabled = enabled,
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
-                    Text(stringResource(R.string.engine_add_cloud, cloud.label))
+                ToggleLine(R.string.offline_title, mode.value, !state.session.busy) { dispatch(DanaIntent.SetOffline(it)) }
+                if (mode.value) Text(stringResource(R.string.quick_offline_help), style = MaterialTheme.typography.bodySmall, color = Titanium)
+                else NetworkLine(state.network)
+                TextButton(onClick = { dispatch(DanaIntent.RevokeDirectSend) }, enabled = !state.session.busy) {
+                    Text(stringResource(R.string.send_revoke))
                 }
-            }
-            var expanded by remember { mutableStateOf(false) }
-            TextButton(onClick = { expanded = !expanded }) { Text(stringResource(if (expanded) R.string.studio_advanced_hide else R.string.studio_advanced)) }
-            if (expanded) {
-                TextButton(onClick = { dispatch(DanaIntent.EditProvider(null, lanPreset = true)) }, enabled = enabled) { Text(stringResource(R.string.engine_add_lan)) }
-                TextButton(onClick = { dispatch(DanaIntent.EditProvider(null)) }, enabled = enabled) { Text(stringResource(R.string.engine_add_custom)) }
-                TextButton(onClick = { dispatch(DanaIntent.EditProvider(null, ProviderProtocol.APPLE_MAC)) }, enabled = enabled) { Text(stringResource(R.string.engine_add_apple)) }
             }
         }
     }
@@ -266,6 +266,24 @@ private fun LazyListScope.settings(state: DashboardState, dispatch: (DanaIntent)
             item { Text(stringResource(R.string.studio_saved_engines), style = MaterialTheme.typography.titleLarge) }
             if (profiles.value.isEmpty()) item { EmptyCard(R.string.engines_empty) }
             items(profiles.value, key = { it.id }) { profile -> ProfileCard(profile, state.session.busy, dispatch) }
+        }
+    }
+    item {
+        GlassCard(Modifier.fillMaxWidth()) {
+            var expanded by remember { mutableStateOf(false) }
+            TextButton(onClick = { expanded = !expanded }) { Text(stringResource(if (expanded) R.string.studio_advanced_hide else R.string.studio_advanced)) }
+            if (expanded) {
+                TextButton(onClick = { dispatch(DanaIntent.EditProvider(null, ProviderProtocol.OPENROUTER_FREE)) }, enabled = enabled) { Text(stringResource(R.string.engine_add_free)) }
+                TextButton(onClick = { dispatch(DanaIntent.EditProvider(null, ProviderProtocol.GEMINI_NATIVE)) }, enabled = enabled) { Text(stringResource(R.string.engine_add_gemini)) }
+                CloudEngine.entries.forEach { cloud ->
+                    TextButton(onClick = { dispatch(DanaIntent.EditProvider(null, cloud = cloud)) }, enabled = enabled) {
+                        Text(stringResource(R.string.engine_add_cloud, cloud.label))
+                    }
+                }
+                TextButton(onClick = { dispatch(DanaIntent.EditProvider(null, lanPreset = true)) }, enabled = enabled) { Text(stringResource(R.string.engine_add_lan)) }
+                TextButton(onClick = { dispatch(DanaIntent.EditProvider(null)) }, enabled = enabled) { Text(stringResource(R.string.engine_add_custom)) }
+                TextButton(onClick = { dispatch(DanaIntent.EditProvider(null, ProviderProtocol.APPLE_MAC)) }, enabled = enabled) { Text(stringResource(R.string.engine_add_apple)) }
+            }
         }
     }
     item {
@@ -295,6 +313,9 @@ private fun ProfileCard(profile: ProviderProfile, busy: Boolean, dispatch: (Dana
             style = MaterialTheme.typography.labelMedium,
             color = if (profile.hasCredential) Mint else Titanium,
         )
+        OutlinedButton(onClick = { dispatch(DanaIntent.TestProfile(profile)) }, enabled = !busy) {
+            Text(stringResource(R.string.quick_test_title))
+        }
         RecordActions(
             enabled = !busy,
             onEdit = { dispatch(DanaIntent.EditProvider(profile)) },

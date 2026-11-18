@@ -37,7 +37,7 @@ class StudioSmokeTest {
     private val context get() = InstrumentationRegistry.getInstrumentation().targetContext
 
     @Test
-    fun homeAccountFreeEngineAndSharedNoteWorkOnFreshInstall() {
+    fun homeAccountConnectionAndSharedNoteWorkOnFreshInstall() {
         trace("Activity resumed; wait for Studio semantics")
         visible(R.string.studio_hello)
         visible(R.string.hub_heading)
@@ -59,17 +59,22 @@ class StudioSmokeTest {
 
         click(R.string.tab_engines)
         visible(R.string.engines_title)
-        visible(R.string.engine_add_free)
+        visible(R.string.quick_title)
         capture("engines")
-        click(R.string.engine_add_free)
-        visible("openrouter/free")
-        trace("Free editor opened")
-        enter(R.string.engine_openrouter_key_label, "sk-or-v1-dana-ci-offline-fixture")
-        click(R.string.engine_free_save)
-        visible(R.string.engine_saved)
-        trace("Free engine stored offline")
+        click(R.string.quick_title)
+        visible(R.string.quick_key)
+        visible(R.string.quick_browser)
+        compose.onNodeWithText(label(R.string.quick_connect)).assertIsNotEnabled()
+        enter(R.string.quick_key, "sk-or-v1-dana-ci-offline-fixture")
+        compose.onNodeWithText(label(R.string.quick_connect)).assertIsEnabled()
+        click(R.string.cancel)
+        trace("Quick connection form validates without contacting any provider")
 
         click(R.string.tab_home)
+        click(R.string.art_title)
+        visible(R.string.art_need_engine)
+        capture("art")
+        InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
         click(R.string.tab_compare)
         visible(R.string.compare_heading)
         visible(R.string.compare_offline)
@@ -96,7 +101,7 @@ class StudioSmokeTest {
     }
 
     @Test
-    fun assistantEntryIgnoresExtrasAndRequiresConfirmationForLocalCommands() {
+    fun assistantEntryIgnoresExtrasAndRunsReadOnlyCommandsOffline() {
         val assist = Intent(Intent.ACTION_ASSIST).setPackage(context.packageName)
         assertTrue(context.packageManager.queryIntentActivities(assist, PackageManager.MATCH_DEFAULT_ONLY)
             .any { it.activityInfo.name == MainActivity::class.java.name })
@@ -113,17 +118,15 @@ class StudioSmokeTest {
         val result = context.getString(if (battery.isCharging) R.string.phone_battery_charging else R.string.phone_battery_result, faDigits(percent))
         enter(R.string.chat_prompt, "شارژ گوشی چقدره؟")
         click(R.string.chat_review)
-        visible(R.string.phone_battery)
-        compose.onNodeWithText(result).assertDoesNotExist()
-        click(R.string.chat_execute)
         visible(result)
+        compose.onNodeWithText(label(R.string.chat_confirm_action)).assertDoesNotExist()
         enter(R.string.chat_prompt, "فرمان ناشناس محلی")
         click(R.string.chat_review)
         visible(R.string.phone_unrecognized)
         enter(R.string.chat_prompt, "جستجوی وب عبارت آزمایشی")
         click(R.string.chat_review)
         visible(R.string.phone_web_offline)
-        trace("Assistant entry, reviewed battery read and offline guards passed")
+        trace("Assistant entry, direct battery read and offline guards passed")
     }
 
     private fun label(@StringRes id: Int) = context.getString(id)

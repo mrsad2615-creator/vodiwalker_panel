@@ -1,0 +1,116 @@
+package ai.dana.data.network
+
+import ai.dana.domain.ApiCredential
+import ai.dana.domain.ArtModel
+import ai.dana.domain.ArtRequest
+import ai.dana.domain.ArtShape
+import ai.dana.domain.ConversationInput
+import ai.dana.domain.EngineFailure
+import ai.dana.domain.EngineProblem
+import ai.dana.domain.ProviderConfig
+import ai.dana.domain.ProviderNetwork
+import ai.dana.domain.ProviderProfile
+import ai.dana.domain.QuickService
+import ai.dana.domain.RouterApproval
+import ai.dana.domain.RouterCode
+import java.util.Base64
+import kotlinx.coroutines.runBlocking
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Protocol
+import okhttp3.Request
+import okhttp3.Response
+import okhttp3.ResponseBody.Companion.toResponseBody
+import okio.Buffer
+import org.junit.Assert.assertArrayEquals
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertThrows
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+class ArtAndSetupContractTest {
+    private val png = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aLSQAAAAASUVORK5CYII="
+    private val key = ApiCredential.parse("ci-test-key-only")
+    private fun config(engine: QuickService) = ProviderConfig.create(engine.title, engine.protocol, ProviderNetwork.INTERNET, engine.api, engine.models.first())
+    private fun request(model: ArtModel) = checkNotNull(ArtRequest.create(ProviderProfile("fixture", config(model.service), true), model,
+        ArtShape.LANDSCAPE, "نمونهٔ تصویر"))
+    private fun client(code: Int = 200, response: String, check: (Request) -> Unit = {}) =
+        danaHttpClient().newBuilder().addInterceptor { chain ->
+            val request = chain.request()
+            check(request)
+            Response.Builder().request(request).code(code).message("Fixture").protocol(Protocol.HTTP_1_1)
+                .body(response.toResponseBody("application/json".toMediaType())).build()
+        }.build()
+    private fun body(request: Request): String = Buffer().also { buffer ->
+        val data = checkNotNull(request.body)
+        assertTrue(data.isOneShot())
+        data.writeTo(buffer)
+    }.readUtf8()
+
+    @Test fun googleGenerateContentReadsFinalInlineImageOnly() = runBlocking {
+        val response = """{"candidates":[{"content":{"parts":[{"text":"caption"},{"thought":true,
+          "inlineData":{"mimeType":"image/png","data":"NOT_FINAL"}},{"inlineData":{"mimeType":"image/png","data":"$png"}}]},"finishReason":"STOP"}]}"""
+        val transport = OkHttpArtTransport(client(response = response) { request ->
+            assertEquals("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite-image:generateContent", request.url.toString())
+            assertEquals(key.value, request.header("x-goog-api-key"))
+            assertNull(request.header("Authorization"))
+            val json = body(request)
+            assertTrue("\"responseModalities\":[\"TEXT\",\"IMAGE\"]" in json)
+            assertTrue("\"aspectRatio\":\"3:2\"" in json)
+            assertTrue("نمونهٔ تصویر" in json)
+            assertFalse(key.value in json)
+        })
+        assertArrayEquals(Base64.getDecoder().decode(png), transport.generate(request(ArtModel.NANO_LITE), key).data())
+    }
+
+    @Test fun openAiUsesImageEndpointAndOneExplicitImageWithoutChatHistoryOrUrlFetch() = runBlocking {
+        val transport = OkHttpArtTransport(client(response = """{"data":[{"b64_json":"$png","url":"https://not-fetched.test"}]}""") { request ->
+            assertEquals("https://api.openai.com/v1/images/generations", request.url.toString())
+            assertEquals("Bearer ${key.value}", request.header("Authorization"))
+            val json = body(request)
+            assertTrue("\"model\":\"gpt-image-2.5-flare\"" in json)
+            assertTrue("\"size\":\"1536x1024\"" in json)
+            assertTrue("\"n\":1" in json)
+            assertFalse(listOf("messages", "response_format", key.value).any { it in json })
+        })
+        assertEquals("image/png", transport.generate(request(ArtModel.GPT_IMAGE), key).mime)
+    }
+
+    @Test fun aTextOnlyResponseOrExternalUrlIsNotAnImageAndBlockIsNotRetried() {
+        val art = request(ArtModel.GPT_IMAGE)
+        var requests = 0
+        val noImage = OkHttpArtTransport(client(response = """{"data":[{"url":"https://do-not-fetch.test"}]}""") { requests++ })
+        assertEquals(EngineProblem.NO_IMAGE, assertThrows(EngineFailure::class.java) { runBlocking { noImage.generate(art, key) } }.problem)
+        val block = OkHttpArtTransport(client(response = """{"promptFeedback":{"blockReason":"SAFETY"}}""") { requests++ })
+        assertEquals(EngineProblem.FILTERED, assertThrows(EngineFailure::class.java) { runBlocking { block.generate(request(ArtModel.NANO_LITE), key) } }.problem)
+        assertEquals(2, requests)
+    }
+
+    @Test fun malformedOrNonPngPayloadDoesNotBecomeAFile() {
+        val transport = OkHttpArtTransport(client(response = """{"data":[{"b64_json":"not-a-base64-image!"}]}"""))
+        assertEquals(EngineProblem.PROTOCOL,
+            assertThrows(EngineFailure::class.java) { runBlocking { transport.generate(request(ArtModel.GPT_IMAGE), key) } }.problem)
+    }
+
+    @Test fun exchangesOnlyAtTheFixedOpenRouterEndpointWithoutAuthorizationHeader() = runBlocking {
+        val code = RouterCode.create("fixture-code", RouterApproval.create())
+        val http = client(response = """{"key":"sk-or-v1-fixture-only"}""") { request ->
+            assertEquals("https://openrouter.ai/api/v1/auth/keys", request.url.toString())
+            assertNull(request.header("Authorization"))
+            val json = body(request)
+            assertTrue("\"code_challenge_method\":\"S256\"" in json)
+            assertTrue("\"code_verifier\":\"${code.verifier}\"" in json)
+            assertTrue("\"code\":\"fixture-code\"" in json)
+        }
+        assertEquals("sk-or-v1-fixture-only", OkHttpRouterKeyExchange(http).exchange(code).value)
+    }
+
+    @Test fun quickProbeUsesSmallBudgetAndZeroPriceCapsForFreeRouter() {
+        val json = body(EngineProtocol.request(config(QuickService.FREE), key, ConversationInput.connectionProbe()))
+        assertTrue("\"max_tokens\":128" in json)
+        assertTrue("\"max_price\":{\"prompt\":0,\"completion\":0,\"request\":0,\"image\":0}" in json)
+        assertTrue("Reply with one short word: OK." in json)
+    }
+}

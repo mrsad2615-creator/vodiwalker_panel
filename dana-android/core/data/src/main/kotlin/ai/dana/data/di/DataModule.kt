@@ -9,13 +9,18 @@ import ai.dana.data.local.RoomHistoryRepository
 import ai.dana.data.local.RoomMemoryRepository
 import ai.dana.data.local.RoomNotesRepository
 import ai.dana.data.network.AndroidNetworkMonitor
+import ai.dana.data.network.OkHttpArtTransport
 import ai.dana.data.network.OkHttpEngineTransport
+import ai.dana.data.network.OkHttpRouterKeyExchange
 import ai.dana.data.network.OkHttpModelDirectory
 import ai.dana.data.network.danaHttpClient
 import ai.dana.data.network.privateLanClient
 import ai.dana.data.provider.EngineRepository
 import ai.dana.data.provider.KeystoreVault
 import ai.dana.domain.DanaAiRouter
+import ai.dana.domain.DirectSendSettings
+import ai.dana.domain.ImageGeneration
+import ai.dana.domain.QuickConnect
 import ai.dana.domain.EngineDiscovery
 import ai.dana.domain.EmailAccounts
 import ai.dana.domain.EmailProject
@@ -61,7 +66,13 @@ internal object DataModule {
 
     @Provides
     @Singleton
-    fun preferences(@ApplicationContext context: Context): PrivacyPreferences = PreferencesStore(context)
+    fun settings(@ApplicationContext context: Context): PreferencesStore = PreferencesStore(context)
+
+    @Provides
+    fun preferences(settings: PreferencesStore): PrivacyPreferences = settings
+
+    @Provides
+    fun directSend(settings: PreferencesStore): DirectSendSettings = settings
 
     @Provides
     @Singleton
@@ -87,4 +98,14 @@ internal object DataModule {
     @Singleton
     fun router(preferences: PrivacyPreferences, providers: ProviderRepository): DanaAiRouter =
         DanaAiRouter(preferences, providers, OkHttpEngineTransport(client, lanClient))
+
+    @Provides
+    @Singleton
+    fun quickConnect(): QuickConnect = QuickConnect(OkHttpModelDirectory(client, lanClient),
+        OkHttpEngineTransport(client, lanClient), OkHttpRouterKeyExchange(client))
+
+    @Provides
+    @Singleton
+    fun imageGeneration(preferences: PrivacyPreferences, providers: ProviderRepository): ImageGeneration =
+        ImageGeneration(preferences, providers, OkHttpArtTransport(client))
 }

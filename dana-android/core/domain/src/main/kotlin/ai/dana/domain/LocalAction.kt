@@ -18,7 +18,9 @@ sealed interface LocalAction {
     data class Torch(val on: Boolean) : LocalAction
     data class Dial(val number: String) : LocalAction
     data class WebSearch(val query: String) : LocalAction
-    data class CalendarDraft(val title: String) : LocalAction
+    data class CalendarDraft(val title: String, val start: CalendarStart? = null) : LocalAction
+    data class CalendarStart(val daysFromToday: Int, val hour: Int, val minute: Int)
+    data class LaunchApp(val label: String) : LocalAction
     data class SmsDraft(val number: String, val text: String) : LocalAction
     data class Share(val text: String) : LocalAction
 }
@@ -28,6 +30,9 @@ object LocalCommands {
     private val alarm = Regex("(?:آلارم|زنگ|alarm)\\s+(?:(?:را|رو) )?(?:(?:برای|روی) )?(?:ساعت )?(\\d{1,2})[:٫](\\d{2})(?: (?:بذار|بگذار|تنظیم کن))?")
     private val note = Regex("(?:یادداشت|note)\\s+(.+)", RegexOption.DOT_MATCHES_ALL)
     private val calendar = Regex("(?:رویداد|event)\\s+(.+)")
+    private val scheduled = Regex("رویداد (امروز|فردا) (\\d{1,2})[:٫](\\d{2}) +(.+)")
+    private val scheduledPrefix = Regex("رویداد (امروز|فردا)( |$)")
+    private val app = Regex("(?:(?:برنامه |اپ )?(.+?) (?:را |رو )?باز کن|open app (.+))")
     private val sms = Regex("(?:پیامک|sms)\\s+(\\+?[0-9]{5,15})\\s+(.+)", RegexOption.DOT_MATCHES_ALL)
     private val share = Regex("(?:اشتراک|share)\\s+(.+)", RegexOption.DOT_MATCHES_ALL)
     private val dial = Regex("(?:شماره گیری|شماره گیر|تماس با|dial|call)\\s+(\\+?[0-9](?:[0-9 -]{3,22}[0-9])?)(?: را بگیر)?")
@@ -80,12 +85,24 @@ object LocalCommands {
         }
         fun original(value: MatchResult, group: Int) = text.substring(checkNotNull(value.groups[group]).range).trim()
         note.matchEntire(normalized)?.let { return LocalAction.Note(original(it, 1)) }
+        scheduled.matchEntire(normalized)?.let {
+            val hour = it.groupValues[2].toInt()
+            val minute = it.groupValues[3].toInt()
+            val title = original(it, 4)
+            if (hour !in 0..23 || minute !in 0..59 || title.length !in 1..160) return null
+            return LocalAction.CalendarDraft(title, LocalAction.CalendarStart(if (it.groupValues[1] == "امروز") 0 else 1, hour, minute))
+        }
+        if (scheduledPrefix.containsMatchIn(normalized) && normalized.startsWith("رویداد ")) return null
         calendar.matchEntire(normalized)?.let { return original(it, 1).takeIf { title -> title.length in 1..160 }?.let(LocalAction::CalendarDraft) }
         sms.matchEntire(normalized)?.let {
             return original(it, 2).takeIf { body -> body.length in 1..500 }?.let { body -> LocalAction.SmsDraft(it.groupValues[1], body) }
         }
         share.matchEntire(normalized)?.let { return LocalAction.Share(original(it, 1)) }
         search.matchEntire(normalized)?.let { return original(it, 1).takeIf { q -> q.length in 1..240 }?.let(LocalAction::WebSearch) }
+        app.matchEntire(command)?.let {
+            val label = it.groupValues[1].ifBlank { it.groupValues[2] }.trim()
+            if (validAppLabel(label)) return LocalAction.LaunchApp(label)
+        }
         return null
     }
 
@@ -102,6 +119,12 @@ object LocalCommands {
         val unit = if (rest.isEmpty()) 0 else units.indexOf(rest).takeIf { it in 1..9 } ?: return null
         return (base + 2) * 10 + unit
     }
+
+    fun validAppLabel(label: String): Boolean = label.length in 1..80 && label.none { it.isISOControl() || it in ":/\\@" }
+
+    fun appLabel(raw: String): String = normalize(raw).lowercase(java.util.Locale.ROOT)
+        .filterNot { it in '\u064b'..'\u065f' || it == '\u0640' || it == '\u200f' || it == '\u200e' }
+        .trim().replace(gaps, " ")
 
     private fun normalize(value: String) = value.map { c ->
         when (c) {

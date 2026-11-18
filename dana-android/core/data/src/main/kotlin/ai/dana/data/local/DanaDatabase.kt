@@ -74,6 +74,7 @@ internal data class EngineSummary(
     @ColumnInfo(name = "base_url") val baseUrl: String,
     val model: String,
     @ColumnInfo(name = "has_credential") val hasCredential: Boolean,
+    @ColumnInfo(name = "credential_revision") val credentialRevision: String,
 )
 
 @Dao
@@ -148,7 +149,8 @@ internal interface EngineDao {
     @Query(
         """
         SELECT id, name, protocol, network, base_url, model,
-               CASE WHEN sealed_key IS NULL THEN 0 ELSE 1 END AS has_credential
+               CASE WHEN sealed_key IS NULL THEN 0 ELSE 1 END AS has_credential,
+               coalesce(substr(sealed_key, 1, 19), '') AS credential_revision
         FROM engine_profiles ORDER BY name COLLATE NOCASE, id
         """,
     )

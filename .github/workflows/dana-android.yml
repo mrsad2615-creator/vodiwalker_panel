@@ -100,7 +100,7 @@ jobs:
           from xml.etree import ElementTree as ET
           import os
 
-          for module, task, minimum in [('core/domain', 'test', 38), ('core/data', 'testDebugUnitTest', 20)]:
+          for module, task, minimum in [('core/domain', 'test', 44), ('core/data', 'testDebugUnitTest', 26)]:
               reports = list((Path(module) / 'build/test-results' / task).glob('TEST-*.xml'))
               tests = [case for report in reports for case in ET.parse(report).iter('testcase')]
               if len(tests) < minimum or any(case.find('skipped') is not None or case.find('failure') is not None or case.find('error') is not None for case in tests):
@@ -112,11 +112,12 @@ jobs:
           apk="$RUNNER_TEMP/dana-verified/mrsad-preview.apk"
           cp app/build/outputs/apk/debug/app-debug.apk "$apk"
           tools="$ANDROID_HOME/build-tools/36.0.0"
+          cmp LICENSE app/src/main/assets/licenses/mrsad-MIT.txt
           "$tools/apksigner" verify --verbose --print-certs "$apk"
           "$tools/zipalign" -c -P 16 4 "$apk"
           python3 ci/check-native-alignment.py "$apk"
           badging=$("$tools/aapt" dump badging "$apk")
-          grep -Fq "package: name='ai.dana.preview' versionCode='6' versionName='0.6.0-preview'" <<< "$badging"
+          grep -Fq "package: name='ai.dana.mrsad' versionCode='7' versionName='0.7.0-preview'" <<< "$badging"
           digest=$(sha256sum "$apk" | cut -d' ' -f1)
           printf 'sha256=%s\n' "$digest" >> "$GITHUB_OUTPUT"
           printf '\nSHA-256: `%s`\n' "$digest" >> "$GITHUB_STEP_SUMMARY"
@@ -178,7 +179,7 @@ jobs:
         if: failure() && steps.verify.conclusion == 'success'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
-          name: mrsad-0.6-debug-device-tests-not-passed
+          name: mrsad-0.7-debug-device-tests-not-passed
           path: ${{ runner.temp }}/dana-verified/mrsad-preview.apk
           if-no-files-found: error
           retention-days: 7
@@ -193,7 +194,7 @@ jobs:
       - name: Save emulator screenshots of the new UI
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
-          name: mrsad-0.6-Android-screens
+          name: mrsad-0.7-Android-screens
           path: ${{ runner.temp }}/dana-screens/*.png
           if-no-files-found: error
           retention-days: 30
@@ -260,7 +261,7 @@ jobs:
           tag="mrsad-preview-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
           gh release create "$tag" mrsad-preview.apk SHA256SUMS.txt \
             --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
-            --title "mrsad 0.6 Android preview (${GITHUB_SHA:0:8})" --prerelease --latest=false \
-            --notes "Tested Android preview for commit $GITHUB_SHA. Debug-signed (ai.dana.preview), not a production or Play Store build. Persian device commands, Android assistant entry, reviewed voice turns, photo input and parallel chat engines. The OpenRouter Free preset uses a personal key and has no paid fallback. Email OTP requires a configured Supabase project and mail service. CI checks GoTrue registration and sign-in with a disposable SMTP sink, controlled AI request/response fixtures, storage, the exact installed APK, local command review and offline photo/OCR. It does not check public email delivery, live provider accounts or physical-device microphone/screen behavior. Build and test evidence: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID."
+            --title "mrsad 0.7 Android preview (${GITHUB_SHA:0:8})" --prerelease --latest=false \
+            --notes "Tested Android preview for commit $GITHUB_SHA. Debug-signed (ai.dana.mrsad), separate from older previews and not a production or Play Store build. Persian chat with direct sends after initial approval, connect-and-test with personal keys, Gemini/OpenAI image generation and original file export, offline device commands, and exportable comparison reports. OpenRouter Free has zero price caps and no paid fallback. CI verifies controlled provider request/response fixtures, Android storage and Keystore, and the exact installed APK on an emulator. Live provider accounts, regional access, external email delivery and physical hardware are not verified. Source license and third-party notices are in dana-android/. Evidence: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID."
           printf '\n[Download mrsad APK](%s/%s/releases/download/%s/mrsad-preview.apk)\n' \
             "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$tag" >> "$GITHUB_STEP_SUMMARY"

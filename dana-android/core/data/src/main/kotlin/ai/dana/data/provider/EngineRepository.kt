@@ -25,7 +25,7 @@ internal class EngineRepository(
 
     override val profiles = dao.observe().map { engines ->
         engines.map {
-            ProviderProfile(it.id, config(it.name, it.protocol, it.network, it.baseUrl, it.model), it.hasCredential)
+            ProviderProfile(it.id, config(it.name, it.protocol, it.network, it.baseUrl, it.model), it.hasCredential, it.credentialRevision)
         }
     }
 
@@ -68,6 +68,8 @@ internal class EngineRepository(
 
     private fun EngineEntity.profile() = ProviderProfile(
         id, config(name, protocol, network, baseUrl, model), sealedKey != null,
+        // v1. + the 16-character random IV, not the ciphertext or a key fingerprint.
+        sealedKey?.take(19).orEmpty(),
     )
 
     private fun config(name: String, protocol: String, network: String, url: String, model: String) =

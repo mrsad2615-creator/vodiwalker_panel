@@ -7,7 +7,9 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -24,7 +26,8 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.res.ResourcesCompat
-import ir.aegis.core.maps.BaseAtlasBundle
+import ir.aegis.core.maps.GeoBBox
+import ir.aegis.core.maps.IndexedBaseAtlas
 import ir.aegis.core.maps.OfflineRouteResult
 import ir.aegis.core.maps.Projection3D
 import ir.aegis.core.maps.VectorBuilding
@@ -36,9 +39,7 @@ import ir.aegis.core.model.MarkerCategory
 import ir.aegis.core.model.SavedRoute
 import ir.aegis.core.ui.LocalAppLanguage
 import ir.aegis.core.ui.LocalObsidianColors
-import kotlin.math.cos
 import kotlin.math.hypot
-import kotlin.math.sin
 
 internal data class ProjectedMarkerHit(
     val marker: MapMarker,
@@ -48,7 +49,7 @@ internal data class ProjectedMarkerHit(
 
 @Composable
 internal fun OfflineVectorMapCanvas(
-    atlas: BaseAtlasBundle,
+    atlas: IndexedBaseAtlas,
     bundle: VectorMapBundle,
     centerLat: Double,
     centerLon: Double,
@@ -74,12 +75,21 @@ internal fun OfflineVectorMapCanvas(
     rulerEnd: MapMarker?,
     onTransformGesture: (panDelta: Offset, zoomFactor: Float) -> Unit,
     onSelectMarker: (MapMarker) -> Unit,
+    onLongPressMap: ((lat: Double, lon: Double) -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalObsidianColors.current
     val lang = LocalAppLanguage.current
     val context = LocalContext.current
     val isDark = colors.isDark
+
+    val currentTransformCb by rememberUpdatedState(onTransformGesture)
+    val currentSelectMarkerCb by rememberUpdatedState(onSelectMarker)
+    val currentLongPressCb by rememberUpdatedState(onLongPressMap)
+    val currentCenterLat by rememberUpdatedState(centerLat)
+    val currentCenterLon by rememberUpdatedState(centerLon)
+    val currentSpanDeg by rememberUpdatedState(spanDeg)
+    val currentZoomScale by rememberUpdatedState(zoomScale)
 
     val mapTypeface = remember(context) {
         runCatching {
@@ -94,30 +104,30 @@ internal fun OfflineVectorMapCanvas(
 
     val hitTargets = remember { mutableListOf<ProjectedMarkerHit>() }
 
-    // Minimalist Smoked Jade & Porcelain Cartographic Palette
-    val oceanBg = if (isDark) Color(0xFF070D14) else Color(0xFFD9E6F0)
-    val landFill = if (isDark) Color(0xFF101822) else Color(0xFFF3F6F9)
-    val landBorder = if (isDark) Color(0xFF273748) else Color(0xFFB5C4D4)
-    val iranProvinceFill = if (isDark) Color(0xCC13202B) else Color(0xDCE9F0F4)
-    val iranProvinceBorder = if (isDark) Color(0xFF2D595B) else Color(0xFF6B9699)
-    val nationalHwyColor = if (isDark) Color(0xAA4DB6AC) else Color(0xCC0F766E)
-    val gridColor = if (isDark) Color(0x28334155) else Color(0x3894A3B8)
+    // High-clarity Cartographic Palette tailored for Frosted Glass
+    val oceanBg = if (isDark) Color(0xFF070E16) else Color(0xFFD5E3EF)
+    val landFill = if (isDark) Color(0xFF101923) else Color(0xFFF3F6FA)
+    val landBorder = if (isDark) Color(0xFF283A4D) else Color(0xFFB3C3D4)
+    val iranProvinceFill = if (isDark) Color(0xCC13222E) else Color(0xDDEAF1F6)
+    val iranProvinceBorder = if (isDark) Color(0xFF2C6B66) else Color(0xFF5D928E)
+    val nationalHwyColor = if (isDark) Color(0xBB34D399) else Color(0xCC0F766E)
+    val gridColor = if (isDark) Color(0x22334155) else Color(0x3294A3B8)
 
-    val parkFill = if (isDark) Color(0xBA113A32) else Color(0xCCBCE5CD)
-    val parkBorder = if (isDark) Color(0xFF34997D) else Color(0xFF4C9B6E)
-    val waterFill = if (isDark) Color(0xFF113E5A) else Color(0xFF83C5E5)
-    val contourColor = if (isDark) Color(0x4064748B) else Color(0x457C8BA1)
-    val hwyCasing = if (isDark) Color(0xFF0B1117) else Color(0xFF78350F)
-    val hwyFill = if (isDark) Color(0xFFEAB308) else Color(0xFFF59E0B)
+    val parkFill = if (isDark) Color(0xBA113C33) else Color(0xCCBCE6CE)
+    val parkBorder = if (isDark) Color(0xFF2E9C7B) else Color(0xFF47996B)
+    val waterFill = if (isDark) Color(0xFF10405F) else Color(0xFF7CC1E4)
+    val contourColor = if (isDark) Color(0x3E64748B) else Color(0x457C8BA1)
+    val hwyCasing = if (isDark) Color(0xFF0A1016) else Color(0xFF78350F)
+    val hwyFill = if (isDark) Color(0xFFF59E0B) else Color(0xFFF59E0B)
     val primaryCasing = if (isDark) Color(0xFF0A0F14) else Color(0xFF94A3B8)
-    val primaryFill = if (isDark) Color(0xFFD6E2EC) else Color(0xFFFFFFFF)
-    val secondaryFill = if (isDark) Color(0xFF47586B) else Color(0xFFCBD5E1)
+    val primaryFill = if (isDark) Color(0xFFDCE7F0) else Color(0xFFFFFFFF)
+    val secondaryFill = if (isDark) Color(0xFF47596C) else Color(0xFFCBD5E1)
     val trailColor = if (isDark) Color(0xFF5EEAD4) else Color(0xFF0F766E)
 
-    val haloColorArgb = (if (isDark) Color(0xF0070C12) else Color(0xF4FFFFFF)).toArgb()
-    val streetTextArgb = (if (isDark) Color(0xFFE2ECF5) else Color(0xFF1E293B)).toArgb()
+    val haloColorArgb = (if (isDark) Color(0xF2060B11) else Color(0xF6FFFFFF)).toArgb()
+    val streetTextArgb = (if (isDark) Color(0xFFE4EEF7) else Color(0xFF1E293B)).toArgb()
     val districtTextArgb = (if (isDark) Color(0xFF5EEAD4) else Color(0xFF0F766E)).toArgb()
-    val provinceTextArgb = (if (isDark) Color(0xFF94B4C6) else Color(0xFF3B5A70)).toArgb()
+    val provinceTextArgb = (if (isDark) Color(0xFF8DB6C9) else Color(0xFF33556D)).toArgb()
     val parkTextArgb = (if (isDark) Color(0xFF6EE7B7) else Color(0xFF15803D)).toArgb()
 
     val haloPaint = remember(mapTypeface, haloColorArgb) {
@@ -159,16 +169,27 @@ internal fun OfflineVectorMapCanvas(
         modifier = modifier
             .pointerInput(Unit) {
                 detectTransformGestures { _, pan, zoom, _ ->
-                    onTransformGesture(pan, zoom)
+                    currentTransformCb(pan, zoom)
                 }
             }
-            .pointerInput(markers, zoomScale, yawDeg, pitchDeg, centerLat, centerLon, spanDeg) {
-                detectTapGestures { tap ->
-                    val hit = hitTargets.minByOrNull { hypot(it.x - tap.x, it.y - tap.y) }
-                    if (hit != null && hypot(hit.x - tap.x, hit.y - tap.y) <= 46f) {
-                        onSelectMarker(hit.marker)
-                    }
-                }
+            .pointerInput(Unit) {
+                detectTapGestures(
+                    onTap = { tap ->
+                        val hit = hitTargets.minByOrNull { hypot(it.x - tap.x, it.y - tap.y) }
+                        if (hit != null && hypot(hit.x - tap.x, hit.y - tap.y) <= 58f) {
+                            currentSelectMarkerCb(hit.marker)
+                        }
+                    },
+                    onLongPress = { tap ->
+                        val w = size.width.toFloat().coerceAtLeast(1f)
+                        val h = size.height.toFloat().coerceAtLeast(1f)
+                        val aspect = kotlin.math.cos(Math.toRadians(currentCenterLat)).coerceAtLeast(0.3)
+                        val unitPx = (minOf(w, h) * 0.95f * currentZoomScale).coerceAtLeast(1f)
+                        val lon = currentCenterLon + ((tap.x - w * 0.5f) / unitPx) * (currentSpanDeg / aspect)
+                        val lat = currentCenterLat - ((tap.y - h * 0.52f) / unitPx) * currentSpanDeg
+                        currentLongPressCb?.invoke(lat.coerceIn(-85.0, 85.0), lon.coerceIn(-180.0, 180.0))
+                    },
+                )
             },
     ) {
         val w = size.width
@@ -179,6 +200,18 @@ internal fun OfflineVectorMapCanvas(
         val effectiveDegSpan = spanDeg / zoomScale.toDouble().coerceAtLeast(0.05)
         val isCityDetailMode = effectiveDegSpan < 1.25 && bundle.packageId !in setOf("atlas-iran", "atlas-world")
         val isNationalView = effectiveDegSpan in 0.45..28.0
+
+        val viewLatHalf = effectiveDegSpan * 1.15
+        val viewLonHalf = effectiveDegSpan * 1.45
+        val viewBox = GeoBBox(
+            minLat = centerLat - viewLatHalf,
+            maxLat = centerLat + viewLatHalf,
+            minLon = centerLon - viewLonHalf,
+            maxLon = centerLon + viewLonHalf,
+        )
+
+        fun intersectsView(b: GeoBBox): Boolean =
+            !(b.maxLat < viewBox.minLat || b.minLat > viewBox.maxLat || b.maxLon < viewBox.minLon || b.minLon > viewBox.maxLon)
 
         fun proj(lat: Double, lon: Double, heightMeters: Double = 0.0) = Projection3D.project(
             lat = lat,
@@ -194,48 +227,40 @@ internal fun OfflineVectorMapCanvas(
             pitchDeg = pitch,
         )
 
-        fun pointInView(minLat: Double, maxLat: Double, minLon: Double, maxLon: Double): Boolean {
-            val viewLatHalf = effectiveDegSpan * 0.9
-            val viewLonHalf = effectiveDegSpan * 1.15
-            return !(maxLat < centerLat - viewLatHalf || minLat > centerLat + viewLatHalf ||
-                maxLon < centerLon - viewLonHalf || minLon > centerLon + viewLonHalf)
-        }
+        // 1. Ocean / Land Canvas Background
+        // When deep inside a city, fill with landFill so street tiles never flash ocean blue during fast pans!
+        drawRect(color = if (effectiveDegSpan < 0.85) landFill else oceanBg)
 
-        // 1. Ocean / Deep Atmospheric Background
-        drawRect(color = oceanBg)
-
-        // 2. Global Country Polygons (Natural Base Layer — always keeps land/coastline context!)
-        val marginView = effectiveDegSpan * 1.4
-        atlas.countries.forEach { country ->
-            val rings = country.rings
-            for (ring in rings) {
-                if (ring.size < 3) continue
-                if (effectiveDegSpan < 20.0) {
-                    val anyNear = ring.any { pt ->
-                        kotlin.math.abs(pt.lat - centerLat) <= marginView * 3.0 &&
-                            kotlin.math.abs(pt.lon - centerLon) <= marginView * 3.0
+        // 2. O(1) BBox-Culled Global Country Polygons
+        if (effectiveDegSpan >= 0.45) {
+            atlas.countries.forEach { country ->
+                if (!intersectsView(country.bbox)) return@forEach
+                for (ring in country.rings) {
+                    if (!intersectsView(ring.bbox)) continue
+                    val path = Path()
+                    val step = if (effectiveDegSpan > 30.0 && ring.points.size > 40) 2 else 1
+                    var idx = 0
+                    while (idx < ring.points.size) {
+                        val pt = ring.points[idx]
+                        val p = proj(pt.lat, pt.lon)
+                        if (idx == 0) path.moveTo(p.x, p.y) else path.lineTo(p.x, p.y)
+                        idx += step
                     }
-                    if (!anyNear) continue
+                    path.close()
+                    drawPath(path, landFill, style = Fill)
+                    drawPath(path, landBorder, style = Stroke(width = if (isNationalView) 1.5f else 1.0f))
                 }
-                val path = Path()
-                ring.forEachIndexed { idx, pt ->
-                    val p = proj(pt.lat, pt.lon)
-                    if (idx == 0) path.moveTo(p.x, p.y) else path.lineTo(p.x, p.y)
-                }
-                path.close()
-                drawPath(path, landFill, style = Fill)
-                drawPath(path, landBorder, style = Stroke(width = if (isNationalView) 1.5f else 1.0f))
             }
         }
 
-        // 3. All 30 Iranian Provinces (clean multi-scale administration borders)
-        if (effectiveDegSpan < 40.0) {
+        // 3. O(1) BBox-Culled Iranian Provinces (30 provinces)
+        if (effectiveDegSpan in 0.25..40.0) {
             atlas.iranProvinces.forEach { prov ->
-                val rings = prov.rings
-                for (ring in rings) {
-                    if (ring.size < 3) continue
+                if (!intersectsView(prov.bbox)) return@forEach
+                for (ring in prov.rings) {
+                    if (!intersectsView(ring.bbox)) continue
                     val path = Path()
-                    ring.forEachIndexed { idx, pt ->
+                    ring.points.forEachIndexed { idx, pt ->
                         val p = proj(pt.lat, pt.lon)
                         if (idx == 0) path.moveTo(p.x, p.y) else path.lineTo(p.x, p.y)
                     }
@@ -247,7 +272,7 @@ internal fun OfflineVectorMapCanvas(
         }
 
         // 4. National Highway Corridors across Iran
-        if (effectiveDegSpan > 0.35 && effectiveDegSpan < 35.0) {
+        if (effectiveDegSpan in 0.35..35.0) {
             atlas.nationalHighways.forEach { hwy ->
                 if (hwy.size >= 2) {
                     val path = Path()
@@ -258,7 +283,7 @@ internal fun OfflineVectorMapCanvas(
                     drawPath(
                         path = path,
                         color = nationalHwyColor,
-                        style = Stroke(width = if (effectiveDegSpan < 4.0) 4.2f else 2.4f, cap = StrokeCap.Round, join = StrokeJoin.Round),
+                        style = Stroke(width = if (effectiveDegSpan < 4.0) 4.2f else 2.6f, cap = StrokeCap.Round, join = StrokeJoin.Round),
                     )
                 }
             }
@@ -445,7 +470,7 @@ internal fun OfflineVectorMapCanvas(
             }
         }
 
-        // 7. Saved Offline Routes
+        // 7. Saved Routes
         if (showRoutesLayer) {
             routes.forEach { route ->
                 if (route.waypoints.size >= 2) {
@@ -457,14 +482,14 @@ internal fun OfflineVectorMapCanvas(
                     }
                     drawPath(
                         path = path,
-                        color = colors.accentTeal.copy(alpha = 0.60f),
-                        style = Stroke(width = 4.0f, cap = StrokeCap.Round, pathEffect = PathEffect.dashPathEffect(floatArrayOf(12f, 8f))),
+                        color = colors.accentTeal.copy(alpha = 0.55f),
+                        style = Stroke(width = 3.8f, cap = StrokeCap.Round, pathEffect = PathEffect.dashPathEffect(floatArrayOf(12f, 8f))),
                     )
                 }
             }
         }
 
-        // 8. Active Safe-Corridor Route
+        // 8. Active Dijkstra Route
         if (activeRoute != null && activeRoute.waypoints.size >= 2) {
             val routePath = Path()
             val projectedWps = activeRoute.waypoints.map { wp ->
@@ -474,7 +499,7 @@ internal fun OfflineVectorMapCanvas(
             projectedWps.forEachIndexed { idx, pt ->
                 if (idx == 0) routePath.moveTo(pt.x, pt.y) else routePath.lineTo(pt.x, pt.y)
             }
-            drawPath(routePath, Color(0x555EEAD4), style = Stroke(width = 16f, cap = StrokeCap.Round, join = StrokeJoin.Round))
+            drawPath(routePath, colors.accentCyan.copy(alpha = 0.36f), style = Stroke(width = 16f, cap = StrokeCap.Round, join = StrokeJoin.Round))
             drawPath(routePath, Color(0xFF0A1416), style = Stroke(width = 9.0f, cap = StrokeCap.Round, join = StrokeJoin.Round))
             drawPath(routePath, colors.accentCyan, style = Stroke(width = 5.6f, cap = StrokeCap.Round, join = StrokeJoin.Round))
 
@@ -488,7 +513,7 @@ internal fun OfflineVectorMapCanvas(
             }
         }
 
-        // 9. Active Incident Alert Zones
+        // 9. Incident Zones
         incidents.filter { it.latitude != null && it.longitude != null && it.status.name != "RESOLVED" }.forEach { inc ->
             val p = proj(inc.latitude!!, inc.longitude!!, 15.0)
             val py = if (is3DMode) p.extrudedTopY else p.y
@@ -510,50 +535,40 @@ internal fun OfflineVectorMapCanvas(
             drawCircle(colors.accentAmber, radius = 10f, center = Offset(e.x, ey))
         }
 
-        // 11. Standard GPS / GNSS Locator: Accuracy Ring + Directional Compass Cone + Crisp Beacon
+        // 11. GPS Accuracy Halo + Directional Compass Cone + User Marker
         val mpp = Projection3D.metersPerPixel(centerLat, spanDeg, w, h, zoomScale)
         run {
             val me = proj(userLat, userLon, 8.0)
             val mey = if (is3DMode) me.extrudedTopY else me.y
             val centerPt = Offset(me.x, mey)
 
-            // True metric horizontal accuracy halo
-            val accuracyRadiusPx = (gpsAccuracyMeters / mpp.toFloat()).coerceIn(22f, 145f)
-            drawCircle(
-                color = colors.accentCyan.copy(alpha = 0.14f),
-                radius = accuracyRadiusPx,
-                center = centerPt,
-            )
-            drawCircle(
-                color = colors.accentCyan.copy(alpha = 0.45f),
-                radius = accuracyRadiusPx,
-                center = centerPt,
-                style = Stroke(width = 1.6f),
-            )
+            if (centerPt.x in -200f..(w + 200f) && centerPt.y in -200f..(h + 200f)) {
+                val accuracyRadiusPx = (gpsAccuracyMeters / mpp.toFloat()).coerceIn(24f, 130f)
+                drawCircle(color = colors.accentCyan.copy(alpha = 0.14f), radius = accuracyRadiusPx, center = centerPt)
+                drawCircle(color = colors.accentCyan.copy(alpha = 0.45f), radius = accuracyRadiusPx, center = centerPt, style = Stroke(width = 1.6f))
 
-            // Directional Compass Heading Cone (Canvas 0 deg = East; North = -90 deg)
-            val coneRadius = 56f
-            val sweepStart = compassAzimuthDeg - 90f - 26f
-            drawArc(
-                brush = Brush.radialGradient(
-                    listOf(colors.accentCyan.copy(alpha = 0.55f), Color.Transparent),
-                    center = centerPt,
-                    radius = coneRadius,
-                ),
-                startAngle = sweepStart,
-                sweepAngle = 52f,
-                useCenter = true,
-                topLeft = Offset(centerPt.x - coneRadius, centerPt.y - coneRadius),
-                size = Size(coneRadius * 2f, coneRadius * 2f),
-            )
+                val coneRadius = 56f
+                val sweepStart = compassAzimuthDeg - 90f - 26f
+                drawArc(
+                    brush = Brush.radialGradient(
+                        listOf(colors.accentCyan.copy(alpha = 0.55f), Color.Transparent),
+                        center = centerPt,
+                        radius = coneRadius,
+                    ),
+                    startAngle = sweepStart,
+                    sweepAngle = 52f,
+                    useCenter = true,
+                    topLeft = Offset(centerPt.x - coneRadius, centerPt.y - coneRadius),
+                    size = Size(coneRadius * 2f, coneRadius * 2f),
+                )
 
-            // Center crisp beacon
-            drawCircle(Color.White, radius = 11.5f, center = centerPt)
-            drawCircle(colors.accentCyan, radius = 8f, center = centerPt)
-            drawCircle(Color.White, radius = 2.6f, center = centerPt)
+                drawCircle(Color.White, radius = 12f, center = centerPt)
+                drawCircle(colors.accentCyan, radius = 8.5f, center = centerPt)
+                drawCircle(Color.White, radius = 2.8f, center = centerPt)
+            }
         }
 
-        // 12. POIs & Markers + Hit Targets
+        // 12. POI Markers + Hit Targets
         hitTargets.clear()
         val projectedMarkers = markers.map { mk ->
             val relElev = (mk.elevationMeters - bundle.baseElevationMeters).coerceIn(10.0, 260.0)
@@ -571,18 +586,18 @@ internal fun OfflineVectorMapCanvas(
                 drawLine(mkColor.copy(alpha = 0.72f), Offset(baseProj.x, baseProj.y), topPt, strokeWidth = 2.4f)
             }
             if (isSelected) {
-                drawCircle(mkColor.copy(alpha = 0.30f), radius = 24f, center = topPt)
-                drawCircle(Color.White, radius = 14f, center = topPt)
+                drawCircle(mkColor.copy(alpha = 0.30f), radius = 25f, center = topPt)
+                drawCircle(Color.White, radius = 14.5f, center = topPt)
             } else {
-                drawCircle(Color(0xDD0B131B), radius = 11.5f, center = topPt)
+                drawCircle(Color(0xDD0B131B), radius = 12f, center = topPt)
             }
-            drawCircle(mkColor, radius = if (isSelected) 10.5f else 8.5f, center = topPt)
-            drawCircle(Color.White, radius = if (isSelected) 3.5f else 2.8f, center = topPt)
+            drawCircle(mkColor, radius = if (isSelected) 11f else 9f, center = topPt)
+            drawCircle(Color.White, radius = if (isSelected) 3.8f else 3f, center = topPt)
 
             hitTargets += ProjectedMarkerHit(mk, topPt.x, topPt.y)
         }
 
-        // 13. Multi-Scale Collision-Free Persian/English Labels (Native Canvas + Vazirmatn)
+        // 13. Collision-Free Labels
         val placedLabels = mutableListOf<RectF>()
         val nativeCanvas = drawContext.canvas.nativeCanvas
 
@@ -596,7 +611,7 @@ internal fun OfflineVectorMapCanvas(
             padX: Float = 10f,
             padY: Float = 6f,
         ) {
-            if (x < 28f || x > w - 28f || y < 22f || y > h - 34f) return
+            if (x < 30f || x > w - 30f || y < 90f || y > h - 140f) return
             val hp = if (bold) boldHaloPaint else haloPaint
             val tp = if (bold) boldTextPaint else textPaint
             hp.textSize = textSizeSp
@@ -617,32 +632,23 @@ internal fun OfflineVectorMapCanvas(
             nativeCanvas.drawText(label, x, y, tp)
         }
 
-        // Selected POI label
         projectedMarkers.firstOrNull { it.first.id == selectedMarkerId }?.let { (mk, _, topPt) ->
             tryDrawLabel(
                 label = mk.title,
                 x = topPt.x,
                 y = topPt.y - 24f,
-                textSizeSp = 31f,
+                textSizeSp = 32f,
                 colorArgb = if (isDark) Color.White.toArgb() else Color(0xFF0F172A).toArgb(),
                 bold = true,
             )
         }
 
-        // City / Atlas Labels across Iran & World at wide zoom
         if (effectiveDegSpan >= 0.45) {
             atlas.cities.sortedBy { it.tier }.forEach { city ->
                 if (effectiveDegSpan > 22.0 && city.tier > 2) return@forEach
                 val p = proj(city.lat, city.lon)
                 val name = if (lang == AppLanguage.FA) city.nameFa else city.nameEn
-                tryDrawLabel(
-                    label = name,
-                    x = p.x,
-                    y = p.y - 6f,
-                    textSizeSp = if (city.tier == 1) 30f else 24f,
-                    colorArgb = districtTextArgb,
-                    bold = city.tier == 1,
-                )
+                tryDrawLabel(name, p.x, p.y - 6f, if (city.tier == 1) 30f else 24f, districtTextArgb, bold = city.tier == 1)
             }
             if (effectiveDegSpan in 2.2..24.0) {
                 atlas.iranProvinces.forEach { prov ->
@@ -657,26 +663,12 @@ internal fun OfflineVectorMapCanvas(
             bundle.districts.sortedBy { it.importance }.forEach { d ->
                 val p = proj(d.lat, d.lon, 0.0)
                 val text = if (lang == AppLanguage.FA) d.nameFa else d.nameEn
-                tryDrawLabel(
-                    label = text,
-                    x = p.x,
-                    y = p.y - 4f,
-                    textSizeSp = if (d.importance == 1) 29f else 24f,
-                    colorArgb = districtTextArgb,
-                    bold = d.importance == 1,
-                )
+                tryDrawLabel(text, p.x, p.y - 4f, if (d.importance == 1) 29f else 24f, districtTextArgb, bold = d.importance == 1)
             }
 
             projectedMarkers.forEach { (mk, _, topPt) ->
                 val shortTitle = if (mk.title.length > 26) mk.title.take(24) + "…" else mk.title
-                tryDrawLabel(
-                    label = shortTitle,
-                    x = topPt.x,
-                    y = topPt.y - 18f,
-                    textSizeSp = 23f,
-                    colorArgb = markerColor(mk.category, colors).toArgb(),
-                    bold = false,
-                )
+                tryDrawLabel(shortTitle, topPt.x, topPt.y - 18f, 23f, markerColor(mk.category, colors).toArgb(), bold = false)
             }
 
             bundle.parks.forEach { park ->
@@ -702,13 +694,13 @@ internal fun OfflineVectorMapCanvas(
         }
 
         // 14. Dynamic Metric Scale Bar
-        val targetPx = 140.0
+        val targetPx = 130.0
         val rawMeters = mpp * targetPx
         val niceMeters = listOf(100, 200, 500, 1000, 2000, 5000, 10000, 25000, 50000, 100000, 250000, 500000, 1000000)
             .minByOrNull { kotlin.math.abs(it - rawMeters) } ?: 1000
-        val barWidthPx = (niceMeters / mpp).toFloat().coerceIn(54f, 220f)
-        val barStart = Offset(24f, h - 22f)
-        val barEnd = Offset(24f + barWidthPx, h - 22f)
+        val barWidthPx = (niceMeters / mpp).toFloat().coerceIn(54f, 200f)
+        val barStart = Offset(24f, h - 180f)
+        val barEnd = Offset(24f + barWidthPx, h - 180f)
         val scaleColor = if (isDark) Color(0xFFE2ECF5) else Color(0xFF0F172A)
         drawLine(scaleColor, barStart, barEnd, strokeWidth = 3.8f, cap = StrokeCap.Square)
         drawLine(scaleColor, Offset(barStart.x, barStart.y - 8f), barStart, strokeWidth = 2.8f)

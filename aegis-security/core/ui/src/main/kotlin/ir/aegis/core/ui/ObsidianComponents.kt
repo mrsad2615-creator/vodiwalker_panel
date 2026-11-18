@@ -15,6 +15,11 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.rounded.Star
+import androidx.compose.material.icons.rounded.StarBorder
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -22,20 +27,20 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import ir.aegis.core.model.AegisModule
-import ir.aegis.core.model.AppLanguage
-import kotlin.math.cos
-import kotlin.math.sin
 
 @Composable
 fun ObsidianBackground(
@@ -44,10 +49,10 @@ fun ObsidianBackground(
 ) {
     val colors = LocalObsidianColors.current
     val pulse by rememberInfiniteTransition(label = "bg-orb").animateFloat(
-        initialValue = 0.88f,
-        targetValue = 1.12f,
+        initialValue = 0.90f,
+        targetValue = 1.10f,
         animationSpec = infiniteRepeatable(
-            animation = tween(7000, easing = FastOutSlowInEasing),
+            animation = tween(8000, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse,
         ),
         label = "orb-pulse",
@@ -65,20 +70,20 @@ fun ObsidianBackground(
                 drawCircle(
                     brush = Brush.radialGradient(
                         listOf(colors.orbCyan, Color.Transparent),
-                        center = Offset(size.width * 0.20f, size.height * 0.12f),
+                        center = Offset(size.width * 0.18f, size.height * 0.10f),
                         radius = size.width * 0.72f * pulse,
                     ),
-                    center = Offset(size.width * 0.20f, size.height * 0.12f),
+                    center = Offset(size.width * 0.18f, size.height * 0.10f),
                     radius = size.width * 0.72f * pulse,
                 )
                 drawCircle(
                     brush = Brush.radialGradient(
                         listOf(colors.orbViolet, Color.Transparent),
-                        center = Offset(size.width * 0.84f, size.height * 0.82f),
-                        radius = size.width * 0.68f * pulse,
+                        center = Offset(size.width * 0.86f, size.height * 0.84f),
+                        radius = size.width * 0.65f * pulse,
                     ),
-                    center = Offset(size.width * 0.84f, size.height * 0.82f),
-                    radius = size.width * 0.68f * pulse,
+                    center = Offset(size.width * 0.86f, size.height * 0.84f),
+                    radius = size.width * 0.65f * pulse,
                 )
             },
         content = content,
@@ -88,7 +93,7 @@ fun ObsidianBackground(
 @Composable
 fun ObsidianGlassCard(
     modifier: Modifier = Modifier,
-    cornerRadius: Dp = 22.dp,
+    cornerRadius: Dp = 24.dp,
     elevated: Boolean = false,
     enable3DTilt: Boolean = false,
     accentBorderColor: Color? = null,
@@ -100,16 +105,16 @@ fun ObsidianGlassCard(
     val shape = RoundedCornerShape(cornerRadius)
     val rimBrush = Brush.linearGradient(
         colors = listOf(
-            accentBorderColor?.copy(alpha = 0.65f) ?: colors.glassRimStart,
+            accentBorderColor?.copy(alpha = 0.52f) ?: colors.glassRimStart,
             colors.glassRimEnd,
-            accentBorderColor?.copy(alpha = 0.24f) ?: colors.glassRimEnd.copy(alpha = 0.35f),
+            accentBorderColor?.copy(alpha = 0.20f) ?: colors.glassRimEnd.copy(alpha = 0.30f),
         ),
     )
 
     val fillBrush = Brush.linearGradient(
         colors = listOf(
             (if (elevated) colors.glassElevated else colors.glassSurface),
-            colors.glassSurface.copy(alpha = if (colors.isDark) 0.56f else 0.78f),
+            colors.glassSurface.copy(alpha = if (colors.isDark) 0.58f else 0.82f),
         ),
     )
 
@@ -122,13 +127,7 @@ fun ObsidianGlassCard(
                 color = colors.glassTopSheen,
                 start = Offset(size.width * 0.08f, 1.2f),
                 end = Offset(size.width * 0.92f, 1.2f),
-                strokeWidth = 1.6f,
-            )
-            drawLine(
-                color = colors.divider.copy(alpha = 0.25f),
-                start = Offset(size.width * 0.12f, size.height - 1.2f),
-                end = Offset(size.width * 0.88f, size.height - 1.2f),
-                strokeWidth = 1.0f,
+                strokeWidth = 1.5f,
             )
         }
         .let { if (onClick != null) it.clickable(onClick = onClick) else it }
@@ -147,101 +146,140 @@ fun Hero3DSecurityShield(
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalObsidianColors.current
-    val orbitAngle by rememberInfiniteTransition(label = "hero-3d").animateFloat(
-        initialValue = 0f,
-        targetValue = 360f,
-        animationSpec = infiniteRepeatable(animation = tween(16_000), repeatMode = RepeatMode.Restart),
-        label = "orbit",
-    )
+    val ringColor = when {
+        activeAlertsCount > 0 -> colors.accentCrimson
+        readinessScore >= 75 -> colors.accentEmerald
+        readinessScore >= 50 -> colors.accentCyan
+        else -> colors.accentAmber
+    }
+    val sweep = (readinessScore.coerceIn(0, 100) / 100f) * 360f
 
     Box(
-        modifier = modifier.size(100.dp),
+        modifier = modifier.size(112.dp),
         contentAlignment = Alignment.Center,
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
-            val c = Offset(size.width / 2f, size.height / 2f)
-            val r = size.minDimension * 0.42f
-
-            drawCircle(
-                color = colors.accentCyan.copy(alpha = 0.22f),
-                radius = r * 1.06f,
-                center = c,
-                style = Stroke(width = 2.5f),
+            val strokeW = 10.dp.toPx()
+            val pad = strokeW / 2f + 4f
+            val arcSize = Size(size.width - pad * 2f, size.height - pad * 2f)
+            drawArc(
+                color = ringColor.copy(alpha = 0.16f),
+                startAngle = 0f,
+                sweepAngle = 360f,
+                useCenter = false,
+                topLeft = Offset(pad, pad),
+                size = arcSize,
+                style = Stroke(width = strokeW, cap = StrokeCap.Round),
             )
             drawArc(
-                color = if (activeAlertsCount > 0) colors.accentCrimson else colors.accentTeal,
-                startAngle = orbitAngle,
-                sweepAngle = 110f,
+                brush = Brush.sweepGradient(listOf(ringColor, colors.accentCyan, ringColor)),
+                startAngle = -90f,
+                sweepAngle = sweep,
                 useCenter = false,
-                topLeft = Offset(c.x - r * 1.06f, c.y - r * 1.06f),
-                size = androidx.compose.ui.geometry.Size(r * 2.12f, r * 2.12f),
-                style = Stroke(width = 4.5f, cap = StrokeCap.Round),
-            )
-
-            val shield = Path().apply {
-                moveTo(c.x, c.y - r * 0.78f)
-                lineTo(c.x + r * 0.64f, c.y - r * 0.48f)
-                lineTo(c.x + r * 0.60f, c.y + r * 0.14f)
-                quadraticTo(c.x + r * 0.48f, c.y + r * 0.62f, c.x, c.y + r * 0.84f)
-                quadraticTo(c.x - r * 0.48f, c.y + r * 0.62f, c.x - r * 0.60f, c.y + r * 0.14f)
-                lineTo(c.x - r * 0.64f, c.y - r * 0.48f)
-                close()
-            }
-            drawPath(
-                path = shield,
-                brush = Brush.verticalGradient(
-                    listOf(
-                        colors.accentCyan.copy(alpha = 0.34f),
-                        colors.accentViolet.copy(alpha = 0.16f),
-                    ),
-                ),
-            )
-            drawPath(
-                path = shield,
-                color = colors.accentCyan.copy(alpha = 0.85f),
-                style = Stroke(width = 3f),
-            )
-
-            val rad = Math.toRadians(orbitAngle.toDouble())
-            drawCircle(
-                color = colors.accentEmerald,
-                radius = 5f,
-                center = Offset(
-                    c.x + (r * 1.06f * cos(rad)).toFloat(),
-                    c.y + (r * 1.06f * sin(rad)).toFloat(),
-                ),
+                topLeft = Offset(pad, pad),
+                size = arcSize,
+                style = Stroke(width = strokeW, cap = StrokeCap.Round),
             )
         }
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Row(verticalAlignment = Alignment.Bottom) {
+                Text(
+                    text = "$readinessScore",
+                    style = TextStyle(
+                        fontFamily = AegisFontFamily,
+                        fontSize = 34.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        fontFeatureSettings = "tnum",
+                    ),
+                    color = colors.textPrimary,
+                )
+                Text(
+                    text = "%",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = ringColor,
+                    modifier = Modifier.padding(bottom = 5.dp, start = 1.dp),
+                )
+            }
             Text(
-                text = "$readinessScore%",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.ExtraBold,
-                color = colors.textPrimary,
-            )
-            Text(
-                text = tr("SECURE", "امنیت"),
+                text = tr("SHIELD", "شاخص امنیت"),
                 style = MaterialTheme.typography.labelSmall,
-                color = colors.accentCyan,
+                color = colors.textSecondary,
             )
         }
     }
 }
 
 @Composable
+fun BentoMetricTile(
+    value: String,
+    label: String,
+    icon: ImageVector,
+    accent: Color,
+    modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null,
+) {
+    val colors = LocalObsidianColors.current
+    ObsidianGlassCard(
+        modifier = modifier,
+        cornerRadius = 22.dp,
+        elevated = true,
+        accentBorderColor = accent,
+        onClick = onClick,
+        contentPadding = PaddingValues(14.dp),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(accent.copy(alpha = 0.16f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(icon, contentDescription = null, tint = accent, modifier = Modifier.size(20.dp))
+            }
+        }
+        Spacer(Modifier.height(6.dp))
+        Text(
+            text = value,
+            style = TextStyle(
+                fontFamily = AegisFontFamily,
+                fontSize = 30.sp,
+                lineHeight = 34.sp,
+                fontWeight = FontWeight.ExtraBold,
+                fontFeatureSettings = "tnum",
+            ),
+            color = colors.textPrimary,
+            maxLines = 1,
+        )
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            color = colors.textSecondary,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+@Composable
 fun OfflineStatusPill(
-    text: String = tr("100% OFFLINE · ZERO NETWORK", "۱۰۰٪ آفلاین · بدون اینترنت"),
+    text: String = tr("OFFLINE · ZERO NETWORK", "آفلاین · بدون دسترسی شبکه"),
     isWarning: Boolean = false,
 ) {
     val colors = LocalObsidianColors.current
     val tone = if (isWarning) colors.accentAmber else colors.accentEmerald
     Surface(
         shape = RoundedCornerShape(50),
-        color = tone.copy(alpha = 0.16f),
-        border = BorderStroke(1.dp, tone.copy(alpha = 0.48f)),
+        color = tone.copy(alpha = 0.14f),
+        border = BorderStroke(1.dp, tone.copy(alpha = 0.42f)),
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
@@ -356,22 +394,29 @@ fun AiSafetyBanner(
     val colors = LocalObsidianColors.current
     Surface(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(14.dp),
-        color = colors.accentAmber.copy(alpha = 0.14f),
-        border = BorderStroke(1.dp, colors.accentAmber.copy(alpha = 0.45f)),
+        shape = RoundedCornerShape(16.dp),
+        color = colors.accentAmber.copy(alpha = 0.12f),
+        border = BorderStroke(1.dp, colors.accentAmber.copy(alpha = 0.40f)),
     ) {
-        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(
-                text = tr("AI SUGGESTION NOTICE · REVIEW REQUIRED", "هشدار پیشنهاد هوش مصنوعی · نیاز به بررسی"),
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.Bold,
-                color = colors.accentAmber,
-            )
-            Text(
-                text = text,
-                style = MaterialTheme.typography.bodyMedium,
-                color = colors.textPrimary,
-            )
+        Row(
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.Top,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Icon(Icons.Rounded.AutoAwesome, contentDescription = null, tint = colors.accentAmber, modifier = Modifier.size(18.dp))
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(
+                    text = tr("LOCAL SECURITY ANALYSIS", "تحلیل امنیتی آفلاین"),
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = colors.accentAmber,
+                )
+                Text(
+                    text = text,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = colors.textPrimary,
+                )
+            }
         }
     }
 }
@@ -397,23 +442,34 @@ fun ModuleTopBar(
         if (showBackButton) {
             Surface(
                 onClick = onBack,
-                shape = RoundedCornerShape(12.dp),
+                shape = RoundedCornerShape(14.dp),
                 color = colors.glassElevated,
                 border = BorderStroke(1.dp, colors.glassRimEnd),
             ) {
-                Text(
-                    text = if (lang == AppLanguage.FA) "→" else "←",
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = colors.textPrimary,
-                )
+                Box(modifier = Modifier.size(40.dp), contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
+                        contentDescription = "Back",
+                        tint = colors.textPrimary,
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
             }
         }
-        AegisModuleIcon(module = module, tint = colors.accentCyan, size = 26.dp)
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .clip(RoundedCornerShape(13.dp))
+                .background(colors.accentCyan.copy(alpha = 0.14f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            AegisModuleIcon(module = module, tint = colors.accentCyan, size = 22.dp)
+        }
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = moduleTitle(module, lang),
-                style = MaterialTheme.typography.titleLarge,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
                 color = colors.textPrimary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -428,16 +484,18 @@ fun ModuleTopBar(
         }
         Surface(
             onClick = onToggleFavorite,
-            shape = RoundedCornerShape(12.dp),
-            color = if (isFavorite) colors.accentAmber.copy(alpha = 0.2f) else colors.glassSurface,
+            shape = RoundedCornerShape(14.dp),
+            color = if (isFavorite) colors.accentAmber.copy(alpha = 0.18f) else colors.glassSurface,
             border = BorderStroke(1.dp, if (isFavorite) colors.accentAmber else colors.glassRimEnd),
         ) {
-            Text(
-                text = if (isFavorite) "★" else "☆",
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
-                style = MaterialTheme.typography.titleMedium,
-                color = if (isFavorite) colors.accentAmber else colors.textSecondary,
-            )
+            Box(modifier = Modifier.size(40.dp), contentAlignment = Alignment.Center) {
+                Icon(
+                    imageVector = if (isFavorite) Icons.Rounded.Star else Icons.Rounded.StarBorder,
+                    contentDescription = "Favorite",
+                    tint = if (isFavorite) colors.accentAmber else colors.textSecondary,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
         }
     }
 }
@@ -459,16 +517,13 @@ fun GlassTabRow(
             val selected = idx == selectedIndex
             Surface(
                 onClick = { onSelect(idx) },
-                modifier = Modifier.defaultMinSize(minHeight = 40.dp),
+                modifier = Modifier.defaultMinSize(minHeight = 38.dp),
                 shape = RoundedCornerShape(12.dp),
-                color = if (selected) colors.accentCyan.copy(alpha = 0.24f) else colors.glassSurface,
-                border = BorderStroke(
-                    1.dp,
-                    if (selected) colors.accentCyan else colors.glassRimEnd,
-                ),
+                color = if (selected) colors.accentCyan.copy(alpha = 0.22f) else colors.glassSurface,
+                border = BorderStroke(1.dp, if (selected) colors.accentCyan else colors.glassRimEnd),
             ) {
                 Box(
-                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp),
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
@@ -494,16 +549,16 @@ fun GlassButton(
     Button(
         onClick = onClick,
         enabled = enabled,
-        modifier = modifier.defaultMinSize(minHeight = 44.dp),
-        shape = RoundedCornerShape(13.dp),
+        modifier = modifier.defaultMinSize(minHeight = 42.dp),
+        shape = RoundedCornerShape(14.dp),
         colors = ButtonDefaults.buttonColors(
-            containerColor = accent.copy(alpha = 0.22f),
+            containerColor = accent.copy(alpha = 0.20f),
             contentColor = accent,
             disabledContainerColor = accent.copy(alpha = 0.08f),
             disabledContentColor = accent.copy(alpha = 0.45f),
         ),
-        border = BorderStroke(1.dp, accent.copy(alpha = if (enabled) 0.65f else 0.2f)),
-        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp),
+        border = BorderStroke(1.dp, accent.copy(alpha = if (enabled) 0.58f else 0.2f)),
+        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 9.dp),
     ) {
         Text(
             text = label,
@@ -533,7 +588,7 @@ fun GlassTextField(
         singleLine = singleLine,
         minLines = minLines,
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(14.dp),
+        shape = RoundedCornerShape(16.dp),
         colors = OutlinedTextFieldDefaults.colors(
             focusedBorderColor = colors.accentCyan,
             unfocusedBorderColor = colors.divider,

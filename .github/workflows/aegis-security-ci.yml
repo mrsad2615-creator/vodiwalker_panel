@@ -135,6 +135,14 @@ jobs:
               echo "::error title=Network Audit::Prohibited network permission detected in $APK! Found: $FLAT_PERMS"
               exit 1
             fi
+            unzip -l "$APK" | grep -q "assets/maps/base_atlas.json" || {
+              echo "::error title=Map Assets::assets/maps/base_atlas.json missing inside $APK!"
+              exit 1
+            }
+            unzip -l "$APK" | grep -q "assets/maps/pack-tehran-grid.json" || {
+              echo "::error title=Map Assets::assets/maps/pack-tehran-grid.json missing inside $APK!"
+              exit 1
+            }
           done
 
           "$ZIPALIGN" -c -P 16 -v 4 aegis-security/app/build/outputs/apk/release/app-release.apk
@@ -217,8 +225,8 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          RELEASE_TAG="aegis-v3.0.0-offline"
-          RELEASE_NOTES="AegisGuard v3.0.0 Cybersecurity & Pro Offline Map Overhaul: Minimalist Smoked/Porcelain Frosted Glass UI in Persian-primary RTL, Global/Iran 30-Province + 8-City Offline Vector Map with live GNSS/GPS satellite locator & smart destination recommendations, Android Anti-Hack OS Inspector (Root/ADB/Accessibility/DeviceAdmin/UserCA/VPN), App Antivirus & APK/SHA-256 Malware Scanner, Offline Phishing URL/SMS Analyzer, Password Entropy Lab, and App Permission Auditor — strictly ZERO network permissions verified via aapt and API 35 Airplane Mode emulator E2E. Build evidence: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          RELEASE_TAG="aegis-v4.0.0-offline"
+          RELEASE_NOTES="AegisGuard v4.0.0 Bento Glass UI & Fixed Full-Screen Offline Map: Overhauled minimalist Frosted Glass Bento layout with crisp Material vector icons and large tabular KPI metrics, plus fixed full-screen 60 FPS interactive offline map (bound via Android assets/maps + R8 kotlinx.serialization keep rules, background IO loading, O(1) bbox polygon culling, unblocked 360-deg pan/pinch gestures, multi-provider FUSED/GPS/NETWORK/PASSIVE location + GPS enable prompt, World/All-Iran 30-Province/8-City scale switching) — strictly zero network permissions verified via aapt and API 35 Airplane Mode emulator E2E. Build evidence: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           gh release delete "$RELEASE_TAG" --repo "${{ github.repository }}" --yes || true
           gh release create "$RELEASE_TAG" \
             dist-apks/app-release.apk \
@@ -226,5 +234,5 @@ jobs:
             dist-apks/SHA256SUMS.txt \
             --repo "${{ github.repository }}" \
             --target "${{ github.sha }}" \
-            --title "AegisGuard v3.0.0 Offline Cybersecurity + Pro Map Release APK" \
+            --title "AegisGuard v4.0.0 Offline Cybersecurity & Working Full-Screen Map APK" \
             --notes "$RELEASE_NOTES"

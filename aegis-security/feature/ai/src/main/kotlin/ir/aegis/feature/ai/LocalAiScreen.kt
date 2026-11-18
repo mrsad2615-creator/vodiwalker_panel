@@ -9,6 +9,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -114,6 +116,33 @@ fun LocalAiScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     item {
+                        val tone = when (phishingReport.verdict) {
+                            PhishingVerdict.MALICIOUS_PHISHING -> colors.accentCrimson
+                            PhishingVerdict.SUSPICIOUS -> colors.accentAmber
+                            PhishingVerdict.SAFE -> colors.accentEmerald
+                        }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        ) {
+                            BentoMetricTile(
+                                value = "${phishingReport.riskScore}%",
+                                label = tr("Phishing Risk", "ضریب ریسک فیشینگ"),
+                                icon = Icons.Rounded.Phishing,
+                                accent = tone,
+                                modifier = Modifier.weight(1f),
+                            )
+                            BentoMetricTile(
+                                value = "${phishingReport.signals.size}",
+                                label = tr("Red Flags", "نشانه‌های فیشینگ"),
+                                icon = Icons.Rounded.Flag,
+                                accent = if (phishingReport.signals.isNotEmpty()) colors.accentAmber else colors.accentEmerald,
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
+                    }
+
+                    item {
                         ObsidianGlassCard(elevated = true, accentBorderColor = colors.accentCyan) {
                             SectionHeader(
                                 title = tr("Offline SMS & URL Phishing Analyzer", "تحلیلگر آفلاین پیامک و لینک جعلی فیشینگ"),
@@ -213,6 +242,33 @@ fun LocalAiScreen(
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
+                    item {
+                        val tone = when (pwdAudit.grade) {
+                            PasswordGrade.FORTRESS, PasswordGrade.STRONG -> colors.accentEmerald
+                            PasswordGrade.FAIR -> colors.accentAmber
+                            else -> colors.accentCrimson
+                        }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        ) {
+                            BentoMetricTile(
+                                value = "${pwdAudit.scorePercent}%",
+                                label = tr("Strength", "امتیاز استحکام"),
+                                icon = Icons.Rounded.Password,
+                                accent = tone,
+                                modifier = Modifier.weight(1f),
+                            )
+                            BentoMetricTile(
+                                value = "${pwdAudit.entropyBits}",
+                                label = tr("Entropy Bits", "آنتروپی (بیت)"),
+                                icon = Icons.Rounded.Lock,
+                                accent = colors.accentCyan,
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
+                    }
+
                     item {
                         val tone = when (pwdAudit.grade) {
                             PasswordGrade.FORTRESS, PasswordGrade.STRONG -> colors.accentEmerald

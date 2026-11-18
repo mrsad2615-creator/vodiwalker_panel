@@ -428,13 +428,13 @@ class RoomAegisRepository(private val db: AegisDatabase) : AegisRepository {
         dao.upsertOfflineNote(
             OfflineNoteEntity(
                 id = "note-seed-1",
-                title = "سپر امنیتی ایجیس v3 — ۱۰۰٪ آفلاین و بدون دسترسی اینترنت",
+                title = "سپر امنیتی ایجیس v4 — ۱۰۰٪ آفلاین و بدون دسترسی اینترنت",
                 body = "تمام موتورهای ضد هک، آنتی‌ویروس بررسی بسته‌های APK، تحلیلگر فیشینگ و نقشه کامل جهان و ایران بدون هیچ مجوز شبکه‌ای درون دستگاه اجرا می‌شوند.",
                 category = "Security",
                 isPinned = true,
                 updatedAtMillis = now,
             ),
         )
-        logActivity("SYSTEM_INIT", "Core", "Initialized v3.0.0 offline cybersecurity & multi-scale map engine")
+        logActivity("SYSTEM_INIT", "Core", "Initialized v4.0.0 Bento glass UI & multi-scale offline map engine")
     }
 }

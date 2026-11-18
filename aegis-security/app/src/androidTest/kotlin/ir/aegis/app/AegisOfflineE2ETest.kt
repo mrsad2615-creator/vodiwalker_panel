@@ -6,6 +6,7 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -14,8 +15,10 @@ import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTextInput
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import ir.aegis.core.maps.VectorMapEngine
 import ir.aegis.core.model.SecurityReminder
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -27,7 +30,7 @@ class AegisOfflineE2ETest {
     val composeRule = createAndroidComposeRule<MainActivity>()
 
     @Test
-    fun apkHasZeroInternetPermissionsAndOfflineWorkManagerWorks() {
+    fun apkHasZeroInternetPermissionsAndMapAssetsAndWorkManagerWork() {
         val ctx = ApplicationProvider.getApplicationContext<android.content.Context>()
         @Suppress("DEPRECATION")
         val pkgInfo = ctx.packageManager.getPackageInfo(ctx.packageName, PackageManager.GET_PERMISSIONS)
@@ -35,6 +38,11 @@ class AegisOfflineE2ETest {
         assertFalse("App must NEVER declare INTERNET permission", "android.permission.INTERNET" in perms)
         assertFalse("App must NEVER declare ACCESS_NETWORK_STATE", "android.permission.ACCESS_NETWORK_STATE" in perms)
         assertFalse("App must NEVER declare ACCESS_WIFI_STATE", "android.permission.ACCESS_WIFI_STATE" in perms)
+
+        val atlas = VectorMapEngine.loadIndexedBaseAtlas()
+        assertTrue("Atlas countries failed to load on Android", atlas.countries.size >= 150)
+        assertTrue("Iran provinces failed to load on Android", atlas.iranProvinces.size >= 28)
+        assertTrue("Tehran city pack failed to load on Android", VectorMapEngine.loadBundle("pack-tehran-grid").roads.isNotEmpty())
 
         val app = ctx.applicationContext as AegisApplication
         val rem = SecurityReminder(
@@ -52,37 +60,41 @@ class AegisOfflineE2ETest {
     }
 
     @Test
-    fun offlinePersianDefaultDashboardMapAntiHackScannerPhishingAndPermsWork() {
+    fun offlinePersianDefaultBentoDashboardFullScreenMapAntiHackScannerPhishingAndPermsWork() {
         composeRule.waitForIdle()
         // Default primary language is Persian (RTL)
-        composeRule.onNodeWithText("سپر امنیتی ایجیس").assertIsDisplayed()
-        composeRule.onNodeWithText("۱۰۰٪ آفلاین · بدون اینترنت").assertIsDisplayed()
+        composeRule.onNodeWithText("ایجیس‌گارد").assertIsDisplayed()
+        composeRule.onNodeWithText("کاملاً آفلاین").assertIsDisplayed()
 
         // Toggle FA -> EN -> FA cleanly
         composeRule.onNodeWithText("EN").performClick()
         composeRule.waitForIdle()
-        composeRule.onNodeWithText("Device Security Posture").assertIsDisplayed()
+        composeRule.onNodeWithText("System Posture").assertIsDisplayed()
         composeRule.onNodeWithText("فا").performClick()
         composeRule.waitForIdle()
-        composeRule.onNodeWithText("شاخص امنیت و دفاع آفلاین").assertIsDisplayed()
+        composeRule.onNodeWithText("وضعیت کلی امنیت").assertIsDisplayed()
 
-        // Switch to EN for clean deterministic label assertions across sub-screens
+        // Switch to EN for deterministic label assertions across sub-screens
         composeRule.onNodeWithText("EN").performClick()
         composeRule.waitForIdle()
 
-        // 1. Pro Multi-Scale Offline Map + Smart Suggestions + Directory Routing
+        // 1. Full-Screen Multi-Scale Offline Map + All Iran / World + Directory Routing
         composeRule.onNodeWithText("Map").performClick()
         composeRule.waitForIdle()
-        composeRule.onAllNodesWithText("Pro Map & GNSS").onFirst().assertIsDisplayed()
+        composeRule.onNodeWithText("All Iran").performClick()
+        composeRule.waitForIdle()
+        composeRule.onNodeWithText("World").performClick()
+        composeRule.waitForIdle()
         composeRule.onAllNodesWithText("Directory", substring = true).onFirst().performClick()
         composeRule.waitUntil(5_000L) {
             composeRule.onAllNodesWithText("Route on Map").fetchSemanticsNodes().isNotEmpty()
         }
         composeRule.onAllNodesWithText("Route on Map").onFirst().performScrollTo().performClick()
-        composeRule.waitForIdle()
-        composeRule.onNodeWithTag("map_tab_lazy_list").performScrollToNode(hasText("Offline Corridor Route", substring = true))
-        composeRule.onAllNodesWithText("Offline Corridor Route", substring = true).onFirst().assertIsDisplayed()
-        composeRule.onNodeWithText("←").performClick()
+        composeRule.waitUntil(5_000L) {
+            composeRule.onAllNodesWithText("min", substring = true).fetchSemanticsNodes().isNotEmpty()
+        }
+        composeRule.onAllNodesWithText("min", substring = true).onFirst().assertIsDisplayed()
+        composeRule.onNodeWithContentDescription("Back").performClick()
         composeRule.waitForIdle()
 
         // 2. Anti-Hack OS Inspector
@@ -91,7 +103,7 @@ class AegisOfflineE2ETest {
             composeRule.onAllNodesWithText("Real-Time Hardware & OS Hardening Audit").fetchSemanticsNodes().isNotEmpty()
         }
         composeRule.onNodeWithText("Real-Time Hardware & OS Hardening Audit").assertIsDisplayed()
-        composeRule.onNodeWithText("←").performClick()
+        composeRule.onNodeWithContentDescription("Back").performClick()
         composeRule.waitForIdle()
 
         // 3. Antivirus / App Malware Scanner
@@ -100,19 +112,19 @@ class AegisOfflineE2ETest {
             composeRule.onAllNodesWithText("Antivirus & APK Heuristic Engine").fetchSemanticsNodes().isNotEmpty()
         }
         composeRule.onNodeWithText("Antivirus & APK Heuristic Engine").assertIsDisplayed()
-        composeRule.onNodeWithText("←").performClick()
+        composeRule.onNodeWithContentDescription("Back").performClick()
         composeRule.waitForIdle()
 
         // 4. Phishing Analyzer & Password Lab
         composeRule.onNodeWithText("Phishing").performClick()
         composeRule.waitForIdle()
         composeRule.onAllNodesWithText("MALICIOUS PHISHING", substring = true).onFirst().assertIsDisplayed()
-        composeRule.onNodeWithText("←").performClick()
+        composeRule.onNodeWithContentDescription("Back").performClick()
         composeRule.waitForIdle()
 
         // 5. Security Incident Log
-        composeRule.onNodeWithTag("quick_actions_row").performScrollToNode(hasText("Log Incident"))
-        composeRule.onNodeWithText("Log Incident").performClick()
+        composeRule.onNodeWithTag("quick_actions_row").performScrollToNode(hasText("Incidents"))
+        composeRule.onNodeWithText("Incidents").performClick()
         composeRule.waitForIdle()
         composeRule.onNodeWithText("Register New").performClick()
         composeRule.waitForIdle()
@@ -122,12 +134,12 @@ class AegisOfflineE2ETest {
             composeRule.onAllNodesWithText("Airplane E2E Security Drill").fetchSemanticsNodes().isNotEmpty()
         }
         composeRule.onAllNodesWithText("Airplane E2E Security Drill").onFirst().assertIsDisplayed()
-        composeRule.onNodeWithText("←").performClick()
+        composeRule.onNodeWithContentDescription("Back").performClick()
         composeRule.waitForIdle()
 
         // 6. Permission Auditor + Zero Network Verification
-        composeRule.onNodeWithTag("home_lazy_list").performScrollToNode(hasText("Permissions, Lock & Backup"))
-        composeRule.onNodeWithText("Permissions, Lock & Backup").performScrollTo().performClick()
+        composeRule.onNodeWithTag("quick_actions_row").performScrollToNode(hasText("Permissions"))
+        composeRule.onNodeWithText("Permissions").performClick()
         composeRule.waitForIdle()
         composeRule.onNodeWithText("Audit & Perms").performClick()
         composeRule.waitForIdle()

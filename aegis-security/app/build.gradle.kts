@@ -12,10 +12,12 @@ android {
         applicationId = "ir.aegis.security"
         minSdk = libs.versions.min.sdk.get().toInt()
         targetSdk = libs.versions.compile.sdk.get().toInt()
-        versionCode = 30000
-        versionName = "3.0.0-offline"
+        versionCode = 40000
+        versionName = "4.0.0-offline"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
+
+    sourceSets["main"].assets.srcDir(project(":core:maps").file("src/main/resources"))
 
     signingConfigs {
         // CI injects release keystore via properties when available; falls back safely to debug key for local verification

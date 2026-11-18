@@ -15,6 +15,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -117,6 +119,35 @@ fun AdvancedUtilitiesScreen(
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
+                    item {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        ) {
+                            BentoMetricTile(
+                                value = "${scanResults.size}",
+                                label = tr("Apps", "کل برنامه‌ها"),
+                                icon = Icons.Rounded.Apps,
+                                accent = colors.accentCyan,
+                                modifier = Modifier.weight(1f),
+                            )
+                            BentoMetricTile(
+                                value = "$criticalCount",
+                                label = tr("Alerts", "مشکوک"),
+                                icon = Icons.Rounded.BugReport,
+                                accent = if (criticalCount > 0) colors.accentCrimson else colors.accentEmerald,
+                                modifier = Modifier.weight(1f),
+                            )
+                            BentoMetricTile(
+                                value = "$sideloadCount",
+                                label = tr("Sideload", "نصب دستی"),
+                                icon = Icons.Rounded.InstallMobile,
+                                accent = if (sideloadCount > 0) colors.accentAmber else colors.accentTeal,
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
+                    }
+
                     item {
                         ObsidianGlassCard(
                             elevated = true,

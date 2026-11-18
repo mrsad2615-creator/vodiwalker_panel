@@ -5,6 +5,7 @@ import ir.aegis.core.database.AegisDatabase
 import ir.aegis.core.database.DataStorePreferencesRepository
 import ir.aegis.core.database.RoomAegisRepository
 import ir.aegis.core.database.WorkManagerReminderScheduler
+import ir.aegis.core.maps.VectorMapEngine
 import ir.aegis.core.model.AegisRepository
 import ir.aegis.core.model.PreferencesRepository
 import ir.aegis.core.model.ReminderScheduler
@@ -33,6 +34,9 @@ class AegisApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        VectorMapEngine.registerAssetOpener { path ->
+            runCatching { assets.open(path.removePrefix("/")) }.getOrNull()
+        }
         container = AppContainer(this)
     }
 }

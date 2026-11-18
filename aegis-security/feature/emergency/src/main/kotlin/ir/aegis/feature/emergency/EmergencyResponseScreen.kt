@@ -14,6 +14,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -119,6 +121,28 @@ fun EmergencyResponseScreen(
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
+                    item {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        ) {
+                            BentoMetricTile(
+                                value = "$secureCount",
+                                label = tr("Passed Checks", "موارد امن"),
+                                icon = Icons.Rounded.VerifiedUser,
+                                accent = colors.accentEmerald,
+                                modifier = Modifier.weight(1f),
+                            )
+                            BentoMetricTile(
+                                value = "${checks.count { it.status != AuditStatus.SECURE }}",
+                                label = tr("Need Action", "نیازمند بررسی"),
+                                icon = Icons.Rounded.WarningAmber,
+                                accent = if (checks.any { it.status == AuditStatus.DANGER }) colors.accentCrimson else colors.accentAmber,
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
+                    }
+
                     item {
                         ObsidianGlassCard(elevated = true, accentBorderColor = if (osScore >= 80) colors.accentEmerald else colors.accentAmber) {
                             Row(

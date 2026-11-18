@@ -50,9 +50,10 @@ fun PreparednessAcademyScreen(
             items(AcademyCurriculum.courses, key = { it.id }) { c ->
                 val cp = progressMap[c.id]
                 AegisFilterPill(
-                    label = "${academyDomainLabel(c.domain, lang)}${if (cp?.badgeEarned == true) " ★" else ""}",
+                    label = academyDomainLabel(c.domain, lang),
                     selected = c.id == selectedCourseId,
                     onClick = { selectedCourseId = c.id },
+                    accent = if (cp?.badgeEarned == true) colors.accentEmerald else colors.accentCyan,
                 )
             }
         }
@@ -96,7 +97,7 @@ fun PreparednessAcademyScreen(
                             Text("! ${lesson.warningNote}", style = MaterialTheme.typography.labelSmall, color = colors.accentAmber)
                             Spacer(Modifier.height(6.dp))
                             GlassButton(
-                                label = if (done) tr("Completed ✓", "تکمیل شد ✓") else tr("Mark Lesson Complete", "تکمیل درس"),
+                                label = if (done) tr("Completed", "تکمیل شده") else tr("Mark Lesson Complete", "تکمیل درس"),
                                 accent = if (done) colors.accentEmerald else colors.accentCyan,
                                 onClick = {
                                     scope.launch {
@@ -136,7 +137,7 @@ fun PreparednessAcademyScreen(
                             if (submittedScore != null) {
                                 val isRight = selectedAnswers[q.id] == q.correctIndex
                                 Text(
-                                    (if (isRight) "✓ " else "✗ ") + q.explanation,
+                                    q.explanation,
                                     style = MaterialTheme.typography.labelSmall,
                                     color = if (isRight) colors.accentEmerald else colors.accentCrimson,
                                 )

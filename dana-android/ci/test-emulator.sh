@@ -2,6 +2,8 @@
 set -Eeuo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 
+device() { timeout --kill-after=2s 18s adb "$@"; }
+
 fail() {
   # This emulator is clean and receives only synthetic fixture text. Include the
   # last visible nodes and crash buffer so a failure is actionable without job logs.
@@ -20,8 +22,8 @@ except (OSError, ET.ParseError):
 PYTHON
 )
   summary="$1"$'\n'"$summary"$'\n'
-  summary+="$(adb shell dumpsys window | grep -m 2 -E 'mCurrentFocus|mFocusedApp' || true)"$'\n'
-  summary+="$(adb logcat -b crash -d -t 28 | tail -c 2100 || true)"
+  summary+="$(device shell dumpsys -t 5 window | grep -m 2 -E 'mCurrentFocus|mFocusedApp' || true)"$'\n'
+  summary+="$(device logcat -b crash -d -t 28 | tail -c 2100 || true)"
   summary=${summary:0:3900}
   summary=${summary//%/%25}
   summary=${summary//$'\r'/%0D}
@@ -31,39 +33,35 @@ PYTHON
 }
 
 trap 'code=$?; printf "::error title=Dana emulator script::Failed at line %s (exit %s).\n" "$LINENO" "$code"' ERR
-printf '::notice title=Dana emulator booted::Android API %s is visible to adb.\n' "$(adb shell getprop ro.build.version.sdk | tr -d '\r')"
-adb shell svc power stayon true
+printf '::notice title=Dana emulator booted::Android API %s is visible to adb.\n' "$(device shell getprop ro.build.version.sdk | tr -d '\r')"
+device shell svc power stayon true
 package=ai.dana.preview
 activity="$package/ai.dana.MainActivity"
 xml_path=/sdcard/dana-smoke.xml
 snapshot="$RUNNER_TEMP/dana-smoke.xml"
 # Use the precise bytes whose signature, native alignment and hash were checked.
-adb install -r "$RUNNER_TEMP/dana-verified/DANA-AI-preview.apk"
-adb shell input keyevent KEYCODE_WAKEUP
-adb shell wm dismiss-keyguard
-adb shell pm clear "$package" | grep -Fq Success
+timeout --kill-after=2s 45s adb install -r "$RUNNER_TEMP/dana-verified/DANA-AI-preview.apk" || fail 'Could not install the verified APK.'
+device shell input keyevent KEYCODE_WAKEUP
+device shell wm dismiss-keyguard
+device shell pm clear "$package" | grep -Fq Success
+
+# Don't wait on ActivityManager's first-frame callback: the actual Compose
+# semantics below are a stronger readiness check than `am start -W`.
 launch() {
-  local output='' attempt
-  for attempt in 1 2 3; do
-    if output=$(timeout 28s adb shell am start -W -a android.intent.action.MAIN -c android.intent.category.LAUNCHER -n "$activity" 2>&1 | tr -d '\r') &&
-      grep -q '^Status: ok$' <<< "$output"; then
-      printf '%s\n' "$output"
-      return
-    fi
-    sleep 2
-  done
-  fail "The APK did not launch successfully. adb: ${output:0:950}"
+  local output=''
+  if ! output=$(device shell am start "$@" 2>&1 | tr -d '\r') || grep -Eq '^Error( type|:)|^Exception' <<< "$output"; then
+    fail "Could not start Dana. adb: ${output:0:950}"
+  fi
+  printf '%s\n' "$output"
 }
-launch
+launch -a android.intent.action.MAIN -c android.intent.category.LAUNCHER -n "$activity"
 
 await_ui() {
   local expected="$1" message="$2" attempt
-  # am start -W returns after the first window, which can still be the splash
-  # screen. Wait for the required semantic text, not merely any hierarchy.
+  # Wait for the required semantic text, not merely the splash window.
   for attempt in 1 2 3 4 5; do
-    adb shell rm -f "$xml_path"
-    if timeout 9s adb shell uiautomator dump "$xml_path" >/dev/null 2>&1 &&
-      adb exec-out cat "$xml_path" > "$snapshot" && grep -Fq "$expected" "$snapshot"; then
+    if device shell "rm -f $xml_path && timeout -k 1 10 uiautomator dump $xml_path" >/dev/null 2>&1 &&
+      device exec-out cat "$xml_path" > "$snapshot" && grep -Fq "$expected" "$snapshot"; then
       return 0
     fi
     sleep 1
@@ -92,13 +90,13 @@ PYTHON
 )
   [[ -n "$xy" ]] || fail "Cannot find the control: $needle"
   read -r x y <<< "$xy"
-  adb shell input tap "$x" "$y"
+  device shell input tap "$x" "$y"
 }
 
 screen_dir="$RUNNER_TEMP/dana-screens"
 mkdir -p "$screen_dir"
 screenshot() {
-  adb exec-out screencap -p > "$screen_dir/$1.png"
+  device exec-out screencap -p > "$screen_dir/$1.png"
   test -s "$screen_dir/$1.png"
 }
 
@@ -111,7 +109,7 @@ await_ui 'پیکربندی ثبت‌نام' 'A clean build did not expose the em
 screenshot account
 tap_text 'پیکربندی ثبت‌نام'
 await_ui 'نشانی پروژهٔ Supabase' 'The email service setup did not open.'
-adb shell input keyevent KEYCODE_BACK
+device shell input keyevent KEYCODE_BACK
 await_ui 'حساب دانا' 'The account page did not resume.'
 tap_text 'موتورها'
 await_ui 'مرکز اتصال موتورها' 'The Engine Hub did not open.'
@@ -122,8 +120,8 @@ await_ui 'کلید شخصی OpenRouter' 'The OpenRouter Free preset did not open
 await_ui 'openrouter/free' 'The free-only model is missing.'
 # A fixture key is stored without authorizing the network or contacting OpenRouter.
 tap_text 'کلید شخصی OpenRouter'
-adb shell input text 'sk-or-v1-dana-ci-offline-fixture'
-adb shell input keyevent KEYCODE_BACK
+device shell input text 'sk-or-v1-dana-ci-offline-fixture'
+device shell input keyevent KEYCODE_BACK
 await_ui 'ذخیرهٔ موتور' 'The preset save control is missing.'
 tap_text 'ذخیرهٔ موتور'
 await_ui 'موتور ذخیره شد' 'The offline engine setup could not store the profile.'
@@ -134,8 +132,7 @@ await_ui 'یک سؤال، چند پاسخ' 'The comparison screen did not open.'
 await_ui 'حالت کاملاً آفلاین روشن است' 'Engine setup disturbed the offline guard.'
 
 # Use an incoming user share to fill the draft exactly as Android does. It must not send or save automatically.
-opened=$(adb shell "am start -W -n $activity -a android.intent.action.SEND -t text/plain --es android.intent.extra.TEXT 'note DANA_SMOKE_LOCAL'" | tr -d '\r')
-grep -q '^Status: ok$' <<< "$opened" || fail 'Shared text did not open Dana.'
+launch "-n $activity -a android.intent.action.SEND -t text/plain --es android.intent.extra.TEXT 'note DANA_SMOKE_LOCAL'"
 await_ui 'DANA_SMOKE_LOCAL' 'The shared text did not appear in the editable composer.'
 tap_text 'بازبینی'
 await_ui 'این کار را انجام دهیم؟' 'Local command bypassed or failed to open the review.'
@@ -145,12 +142,12 @@ tap_text 'خانه'
 await_ui 'یادداشت‌ها' 'The local notes shortcut is missing.'
 tap_text 'یادداشت‌ها'
 await_ui 'DANA_SMOKE_LOCAL' 'The approved offline note is absent from the notes repository.'
-adb shell pidof "$package" >/dev/null || fail 'Dana terminated during the smoke test.'
-printf '\nDana APK installed. New home, account setup, free-engine setup, offline guard and approved note passed. No real email or AI credentials used.\n'
+device shell pidof "$package" >/dev/null || fail 'Dana terminated during the smoke test.'
+printf '::notice title=Dana installed APK::New home, account setup, free-engine setup, offline guard and approved note passed. No real email or AI credentials used.\n'
 
 # Exercise the APK's launch on a fresh install before the instrumentation runner can alter the UI/task state.
-adb shell am force-stop "$package"
-if ! ./gradlew --no-daemon --console=plain :core:data:connectedDebugAndroidTest :app:connectedDebugAndroidTest 2>&1 | tee "$RUNNER_TEMP/dana-device.log"; then
+device shell am force-stop "$package"
+if ! timeout --kill-after=8s 360s ./gradlew --no-daemon --console=plain :core:data:connectedDebugAndroidTest :app:connectedDebugAndroidTest 2>&1 | tee "$RUNNER_TEMP/dana-device.log"; then
   python3 - "$RUNNER_TEMP/dana-device.log" <<'PYTHON'
 import sys
 from pathlib import Path

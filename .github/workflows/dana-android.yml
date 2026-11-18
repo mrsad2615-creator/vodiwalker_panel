@@ -126,6 +126,7 @@ jobs:
           test -c /dev/kvm || { echo '::error title=Android emulator::KVM is unavailable on the runner.'; exit 1; }
           sudo chmod a+rw /dev/kvm
       - name: Test storage, native OCR and the installed app on Android
+        timeout-minutes: 12
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
         with:
           api-level: 34
@@ -134,6 +135,7 @@ jobs:
           # produced a Pixel Launcher ANR overlay that blocked the UI smoke test.
           target: default
           profile: pixel_6
+          emulator-boot-timeout: 180
           working-directory: dana-android
           disable-animations: true
           script: bash "$GITHUB_WORKSPACE/dana-android/ci/test-emulator.sh"

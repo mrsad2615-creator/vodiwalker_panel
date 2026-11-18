@@ -38,4 +38,6 @@ PY
 if ! "${compose[@]}" up -d --wait --wait-timeout 100 > "$log" 2>&1; then failure 'Could not start the isolated services.'; fi
 printf '\n' >> "$log"
 if ! python3 test-flow.py >> "$log" 2>&1; then failure 'The email fixture did not complete.'; fi
-tail -1 "$log"
+result=$(tail -1 "$log")
+printf '::notice title=Dana isolated email delivery::%s\n' "$result"
+if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then printf '%s\n' "$result" >> "$GITHUB_STEP_SUMMARY"; fi

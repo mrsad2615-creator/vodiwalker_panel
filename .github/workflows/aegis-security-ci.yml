@@ -153,49 +153,80 @@ jobs:
           sudo chmod a+rw /dev/kvm
 
       - name: Run Room Migration & Compose E2E Tests in Airplane Mode
+        timeout-minutes: 15
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: 34
+          api-level: 35
           target: default
           arch: x86_64
-          profile: pixel_6
-          emulator-options: -no-snapshot-save -gpu swiftshader_indirect -noaudio -no-boot-anim
+          profile: pixel_2
+          emulator-boot-timeout: 240
+          emulator-options: >-
+            -no-window -gpu off -feature -Vulkan -no-snapshot -noaudio -no-boot-anim
+            -camera-back none -camera-front none -cores 2 -memory 2816
+            > $RUNNER_TEMP/aegis-emulator-host.log 2>&1
           disable-animations: true
           script: |
             adb wait-for-device
+            adb shell svc power stayon true || true
+            adb shell input keyevent KEYCODE_WAKEUP || true
+            adb shell wm dismiss-keyguard || true
             adb shell cmd connectivity airplane-mode enable || true
             adb shell settings put global airplane_mode_on 1 || true
             adb shell svc wifi disable || true
             adb shell svc data disable || true
-            echo "Airplane mode status:"
-            adb shell settings get global airplane_mode_on
+            echo "Android API: $(adb shell getprop ro.build.version.sdk | tr -d '\r') | Airplane mode: $(adb shell settings get global airplane_mode_on | tr -d '\r')"
+
+            adb logcat -T 1 -v brief 'ActivityTaskManager:I' 'WindowManager:E' 'AndroidRuntime:E' 'Watchdog:E' 'libc:F' '*:S' > "$RUNNER_TEMP/aegis-emulator-guest.log" 2>&1 &
+            logcat_pid=$!
+            trap 'kill "$logcat_pid" 2>/dev/null || true' EXIT
 
             set -o pipefail
             cd aegis-security
-            if ! gradle --no-daemon --console=plain --stacktrace \
+            if ! timeout --kill-after=10s 540s gradle --no-daemon --console=plain --stacktrace \
               :core:database:connectedDebugAndroidTest \
               :app:connectedDebugAndroidTest 2>&1 | tee "$RUNNER_TEMP/aegis-e2e.log"; then
-              python3 - "$RUNNER_TEMP/aegis-e2e.log" <<'PYTHON'
-            import sys
-            from pathlib import Path
-            lines = Path(sys.argv[1]).read_text(errors='replace').splitlines()
-            diag = [l for l in lines if 'FAILED' in l or 'Exception' in l or 'Error' in l or 'Caused by:' in l or l.strip().startswith('at ir.aegis')]
-            msg = '\n'.join(dict.fromkeys(diag or lines[-50:]))[:6200]
-            msg = msg.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
-            print(f'::error title=Emulator E2E Failed::{msg}')
-            PYTHON
               exit 1
             fi
 
+            python3 - <<'PYTHON'
+            from pathlib import Path
+            from xml.etree import ElementTree as ET
+            for mod in ['core/database', 'app']:
+                reports = list((Path(mod) / 'build/outputs/androidTest-results').rglob('TEST-*.xml'))
+                cases = [c for r in reports for c in ET.parse(r).iter('testcase')]
+                if not cases or any(c.find('failure') is not None or c.find('error') is not None for c in cases):
+                    raise SystemExit(f"::error title=AndroidTest::{mod} instrumentation had 0 or failed tests")
+                print(f"Verified {len(cases)} passing Android instrumentation test(s) in {mod}")
+            PYTHON
+
             mkdir -p screenshots
             adb shell am start -n ir.aegis.security/ir.aegis.app.MainActivity
-            sleep 4
-            adb exec-out screencap -p > screenshots/home_airplane_mode.png
-            adb logcat -d -s AndroidRuntime:E | tee screenshots/crash_log.txt
+            sleep 3
+            adb exec-out screencap -p > screenshots/home_airplane_mode.png || true
+            adb logcat -d -s AndroidRuntime:E | tee screenshots/crash_log.txt || true
             if grep -q "FATAL EXCEPTION" screenshots/crash_log.txt; then
               echo "::error title=Logcat Crash::FATAL crash detected in logcat!"
               exit 1
             fi
+
+      - name: Report Emulator Diagnostics on Failure
+        if: failure()
+        shell: bash
+        run: |
+          python3 - "$RUNNER_TEMP" <<'PYTHON'
+          from pathlib import Path
+          import sys
+          root = Path(sys.argv[1])
+          for label, fname in [('Aegis E2E log', 'aegis-e2e.log'), ('Aegis guest logcat', 'aegis-emulator-guest.log'), ('Aegis host emulator log', 'aegis-emulator-host.log')]:
+              p = root / fname
+              if p.exists():
+                  lines = p.read_text(errors='replace').splitlines()
+                  interesting = [l for l in lines if any(k in l for k in ('FAILED', 'Exception', 'Error', 'Caused by:', 'FATAL', 'at ir.aegis'))]
+                  snippet = '\n'.join(dict.fromkeys((interesting[:20] + lines[-25:])))[:3600]
+                  snippet = snippet.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
+                  print(f'::error title={label}::{snippet}')
+          PYTHON
 
       - name: Upload Build APKs
         uses: actions/upload-artifact@v4
@@ -228,7 +259,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           RELEASE_TAG="aegis-v1.0.0-offline"
-          RELEASE_NOTES="AegisGuard 100% Offline Personal, Family & Community Security Ecosystem (17-module Clean Architecture). Verified zero INTERNET permissions via aapt, Room v1->v2 SQLite migration tested, and full Compose E2E suite passed on Pixel 6 API 34 in Airplane Mode."
+          RELEASE_NOTES="AegisGuard 100% Offline Personal, Family & Community Security Ecosystem (17-module Clean Architecture). Verified zero INTERNET/network permissions via aapt, Room v1->v2 SQLite migration tested, and full Compose E2E suite passed on Android API 35 Emulator in Airplane Mode."
           gh release delete "$RELEASE_TAG" --yes || true
           gh release create "$RELEASE_TAG" \
             dist-apks/app-release.apk \

@@ -146,7 +146,7 @@ fun SensorsAndFieldTab(repository: AegisRepository) {
             ObsidianGlassCard(elevated = true) {
                 Text(tr("1. Hardware Flashlight & Screen Lux Light", "۱. چراغ‌قوه سخت‌افزاری و نور صفحه"), style = MaterialTheme.typography.titleMedium, color = colors.accentCyan)
                 Spacer(Modifier.height(8.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                ChipFlowGroup {
                     GlassButton(label = if (torchOn) tr("Torch OFF", "خاموش") else tr("Torch ON", "روشن"), accent = if (torchOn) colors.accentAmber else colors.accentCyan, onClick = { torchOn = !torchOn })
                     GlassButton(label = if (strobeOn) tr("Strobe ON", "چشمک‌زن فعال") else tr("Strobe", "چشمک‌زن"), accent = colors.accentViolet, onClick = { strobeOn = !strobeOn })
                     GlassButton(label = tr("White Panel", "نور صفحه"), accent = colors.accentTeal, onClick = { screenTorch = !screenTorch })
@@ -442,10 +442,10 @@ fun NotesAndInventoryTab(repository: AegisRepository) {
 
         items(notes, key = { it.id }) { n ->
             ObsidianGlassCard {
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text((if (n.isPinned) "★ " else "") + n.title, style = MaterialTheme.typography.titleMedium, color = colors.textPrimary)
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text((if (n.isPinned) "★ " else "") + n.title, style = MaterialTheme.typography.titleMedium, color = colors.textPrimary, modifier = Modifier.weight(1f))
                     Row {
-                        TextButton(onClick = { scope.launch { repository.upsertOfflineNote(n.copy(isPinned = !n.isPinned)) } }) { Text(if (n.isPinned) "Unpin" else "Pin") }
+                        TextButton(onClick = { scope.launch { repository.upsertOfflineNote(n.copy(isPinned = !n.isPinned)) } }) { Text(if (n.isPinned) tr("Unpin", "برداشتن") else tr("Pin", "سنجاق")) }
                         TextButton(onClick = { scope.launch { repository.deleteOfflineNote(n.id) } }) { Text(tr("Delete", "حذف"), color = colors.accentCrimson) }
                     }
                 }
@@ -465,9 +465,14 @@ fun NotesAndInventoryTab(repository: AegisRepository) {
                     GlassTextField(invMin, { invMin = it }, tr("Min", "حداقل"), modifier = Modifier.weight(1f))
                 }
                 Spacer(Modifier.height(6.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    listOf("Water", "Food", "Medical", "Power").forEach { cat ->
-                        FilterChip(selected = invCat == cat, onClick = { invCat = cat }, label = { Text(cat, style = MaterialTheme.typography.labelSmall) })
+                ChipFlowGroup {
+                    listOf(
+                        "Water" to tr("Water", "آب"),
+                        "Food" to tr("Food", "غذا"),
+                        "Medical" to tr("Medical", "پزشکی"),
+                        "Power" to tr("Power", "انرژی"),
+                    ).forEach { (cat, label) ->
+                        AegisFilterPill(label = label, selected = invCat == cat, onClick = { invCat = cat }, accent = colors.accentTeal)
                     }
                 }
                 Spacer(Modifier.height(8.dp))
@@ -612,10 +617,10 @@ fun CalculatorCalendarTimerUnitsTab(
                 val ss = timerSecondsLeft % 60
                 Text("%02d:%02d".format(mm, ss), style = MaterialTheme.typography.headlineLarge, color = colors.textPrimary)
                 Spacer(Modifier.height(6.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                ChipFlowGroup {
                     GlassButton(label = if (timerRunning) tr("Pause", "توقف") else tr("Start", "شروع"), onClick = { timerRunning = !timerRunning })
-                    GlassButton(label = "5m", accent = colors.accentTeal, onClick = { timerRunning = false; timerSecondsLeft = 300 })
-                    GlassButton(label = "15m", accent = colors.accentTeal, onClick = { timerRunning = false; timerSecondsLeft = 900 })
+                    GlassButton(label = tr("5m", "۵ دقیقه"), accent = colors.accentTeal, onClick = { timerRunning = false; timerSecondsLeft = 300 })
+                    GlassButton(label = tr("15m", "۱۵ دقیقه"), accent = colors.accentTeal, onClick = { timerRunning = false; timerSecondsLeft = 900 })
                 }
             }
         }
@@ -626,9 +631,15 @@ fun CalculatorCalendarTimerUnitsTab(
                 Spacer(Modifier.height(8.dp))
                 GlassTextField(unitValStr, { unitValStr = it }, tr("Input Value", "مقدار ورودی"))
                 Spacer(Modifier.height(6.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    listOf("Dist", "Temp", "Mass", "Vol", "Speed").forEachIndexed { idx, lbl ->
-                        FilterChip(selected = convDomain == idx, onClick = { convDomain = idx }, label = { Text(lbl, style = MaterialTheme.typography.labelSmall) })
+                ChipFlowGroup {
+                    listOf(
+                        tr("Distance", "مسافت"),
+                        tr("Temp", "دما"),
+                        tr("Mass", "جرم"),
+                        tr("Volume", "حجم"),
+                        tr("Speed", "سرعت"),
+                    ).forEachIndexed { idx, lbl ->
+                        AegisFilterPill(label = lbl, selected = convDomain == idx, onClick = { convDomain = idx }, accent = colors.accentTeal)
                     }
                 }
                 Spacer(Modifier.height(6.dp))

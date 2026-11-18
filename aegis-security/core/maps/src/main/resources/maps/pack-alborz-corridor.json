@@ -1,0 +1,417 @@
+{
+  "packageId": "pack-alborz-corridor",
+  "baseElevationMeters": 1650.0,
+  "waterways": [
+    {
+      "id": "wa-darband",
+      "nameEn": "Darband Alpine Creek",
+      "nameFa": "رودخانه کوهستانی دربند",
+      "widthMeters": 18.0,
+      "points": [
+        {
+          "lat": 35.855,
+          "lon": 51.422
+        },
+        {
+          "lat": 35.84,
+          "lon": 51.421
+        },
+        {
+          "lat": 35.824,
+          "lon": 51.425
+        },
+        {
+          "lat": 35.806,
+          "lon": 51.428
+        }
+      ]
+    }
+  ],
+  "parks": [
+    {
+      "id": "pka-jamshid",
+      "nameEn": "Jamshidieh Mountain Park",
+      "nameFa": "پارک کوهستانی جمشیدیه",
+      "kind": "park",
+      "points": [
+        {
+          "lat": 35.814,
+          "lon": 51.454
+        },
+        {
+          "lat": 35.814,
+          "lon": 51.463
+        },
+        {
+          "lat": 35.821,
+          "lon": 51.463
+        },
+        {
+          "lat": 35.821,
+          "lon": 51.454
+        }
+      ]
+    },
+    {
+      "id": "pka-tochal",
+      "nameEn": "Tochal Open Plateau",
+      "nameFa": "دشت باز توچال",
+      "kind": "park",
+      "points": [
+        {
+          "lat": 35.813,
+          "lon": 51.396
+        },
+        {
+          "lat": 35.813,
+          "lon": 51.406
+        },
+        {
+          "lat": 35.821,
+          "lon": 51.406
+        },
+        {
+          "lat": 35.821,
+          "lon": 51.396
+        }
+      ]
+    }
+  ],
+  "contours": [
+    {
+      "elevationMeters": 1650,
+      "points": [
+        {
+          "lat": 35.805,
+          "lon": 51.345
+        },
+        {
+          "lat": 35.81,
+          "lon": 51.41
+        },
+        {
+          "lat": 35.808,
+          "lon": 51.48
+        }
+      ]
+    },
+    {
+      "elevationMeters": 1950,
+      "points": [
+        {
+          "lat": 35.824,
+          "lon": 51.345
+        },
+        {
+          "lat": 35.828,
+          "lon": 51.415
+        },
+        {
+          "lat": 35.825,
+          "lon": 51.48
+        }
+      ]
+    },
+    {
+      "elevationMeters": 2350,
+      "points": [
+        {
+          "lat": 35.846,
+          "lon": 51.35
+        },
+        {
+          "lat": 35.848,
+          "lon": 51.42
+        },
+        {
+          "lat": 35.843,
+          "lon": 51.48
+        }
+      ]
+    },
+    {
+      "elevationMeters": 2750,
+      "points": [
+        {
+          "lat": 35.862,
+          "lon": 51.355
+        },
+        {
+          "lat": 35.865,
+          "lon": 51.42
+        },
+        {
+          "lat": 35.86,
+          "lon": 51.478
+        }
+      ]
+    }
+  ],
+  "buildings": [
+    {
+      "id": "ba-shirpala",
+      "nameEn": "Shirpala Shelter",
+      "nameFa": "پناهگاه شیرپلا",
+      "kind": "shelter",
+      "heightMeters": 45.0,
+      "footprint": [
+        {
+          "lat": 35.8438,
+          "lon": 51.4176
+        },
+        {
+          "lat": 35.8438,
+          "lon": 51.4194
+        },
+        {
+          "lat": 35.8452,
+          "lon": 51.4194
+        },
+        {
+          "lat": 35.8452,
+          "lon": 51.4176
+        }
+      ]
+    },
+    {
+      "id": "ba-tochal",
+      "nameEn": "Tochal Telecabin Stn 1",
+      "nameFa": "ایستگاه ۱ توچال",
+      "kind": "civic",
+      "heightMeters": 40.0,
+      "footprint": [
+        {
+          "lat": 35.8155,
+          "lon": 51.4
+        },
+        {
+          "lat": 35.8155,
+          "lon": 51.4022
+        },
+        {
+          "lat": 35.8175,
+          "lon": 51.4022
+        },
+        {
+          "lat": 35.8175,
+          "lon": 51.4
+        }
+      ]
+    }
+  ],
+  "roads": [
+    {
+      "id": "ra-chamran",
+      "nameEn": "Parkway / Sadr Blvd",
+      "nameFa": "پارک‌وی / بزرگراه صدر",
+      "tier": "HIGHWAY",
+      "points": [
+        {
+          "lat": 35.792,
+          "lon": 51.345
+        },
+        {
+          "lat": 35.796,
+          "lon": 51.405
+        },
+        {
+          "lat": 35.795,
+          "lon": 51.48
+        }
+      ]
+    },
+    {
+      "id": "ra-niavaran",
+      "nameEn": "Bahonar / Niavaran",
+      "nameFa": "نیاوران / باهنر",
+      "tier": "PRIMARY",
+      "points": [
+        {
+          "lat": 35.8065,
+          "lon": 51.4285
+        },
+        {
+          "lat": 35.812,
+          "lon": 51.445
+        },
+        {
+          "lat": 35.817,
+          "lon": 51.4585
+        },
+        {
+          "lat": 35.818,
+          "lon": 51.48
+        }
+      ]
+    },
+    {
+      "id": "ra-shirpala",
+      "nameEn": "Darband - Shirpala Trail",
+      "nameFa": "مسیر صعود شیرپلا",
+      "tier": "TRAIL",
+      "points": [
+        {
+          "lat": 35.8065,
+          "lon": 51.4285
+        },
+        {
+          "lat": 35.824,
+          "lon": 51.425
+        },
+        {
+          "lat": 35.8445,
+          "lon": 51.4185
+        }
+      ]
+    },
+    {
+      "id": "ra-tochal",
+      "nameEn": "Tochal Rescue Trail",
+      "nameFa": "مسیر امداد توچال",
+      "tier": "TRAIL",
+      "points": [
+        {
+          "lat": 35.8065,
+          "lon": 51.4285
+        },
+        {
+          "lat": 35.8165,
+          "lon": 51.401
+        },
+        {
+          "lat": 35.812,
+          "lon": 51.41
+        },
+        {
+          "lat": 35.8445,
+          "lon": 51.4185
+        }
+      ]
+    }
+  ],
+  "districts": [
+    {
+      "nameEn": "TAJRISH",
+      "nameFa": "تجریش",
+      "lat": 35.8065,
+      "lon": 51.4285,
+      "importance": 1
+    },
+    {
+      "nameEn": "VELENJAK",
+      "nameFa": "ولنجک",
+      "lat": 35.8165,
+      "lon": 51.401,
+      "importance": 2
+    },
+    {
+      "nameEn": "DARBAND",
+      "nameFa": "دربند",
+      "lat": 35.824,
+      "lon": 51.425,
+      "importance": 2
+    },
+    {
+      "nameEn": "SHIRPALA 2750m",
+      "nameFa": "شیرپلا ۲۷۵۰متر",
+      "lat": 35.8445,
+      "lon": 51.4185,
+      "importance": 1
+    }
+  ],
+  "graphNodes": [
+    {
+      "id": "an-tajrish",
+      "labelEn": "Tajrish Assembly Hub",
+      "labelFa": "تجریش (نقطه شروع)",
+      "lat": 35.8065,
+      "lon": 51.4285
+    },
+    {
+      "id": "an-velenjak",
+      "labelEn": "Velenjak / Tochal Stn 1",
+      "labelFa": "ولنجک / ایستگاه ۱ توچال",
+      "lat": 35.8165,
+      "lon": 51.401
+    },
+    {
+      "id": "an-darband",
+      "labelEn": "Darband Trailhead",
+      "labelFa": "سربند دربند",
+      "lat": 35.824,
+      "lon": 51.425
+    },
+    {
+      "id": "an-jamshidieh",
+      "labelEn": "Jamshidieh Safe Plateau",
+      "labelFa": "پارک جمشیدیه",
+      "lat": 35.817,
+      "lon": 51.4585
+    },
+    {
+      "id": "an-shirpala",
+      "labelEn": "Shirpala Mountain Shelter",
+      "labelFa": "پناهگاه کوهستانی شیرپلا",
+      "lat": 35.8445,
+      "lon": 51.4185
+    },
+    {
+      "id": "an-ridge",
+      "labelEn": "Ridge Basecamp Relay",
+      "labelFa": "پناهگاه مرتفع رله",
+      "lat": 35.812,
+      "lon": 51.41
+    }
+  ],
+  "graphEdges": [
+    {
+      "fromId": "an-tajrish",
+      "toId": "an-darband",
+      "roadNameEn": "Darband Blvd",
+      "roadNameFa": "خیابان دربند",
+      "isWideCorridor": true
+    },
+    {
+      "fromId": "an-tajrish",
+      "toId": "an-velenjak",
+      "roadNameEn": "Yaman / Velenjak",
+      "roadNameFa": "بلوار دانشجو / ولنجک",
+      "isWideCorridor": true
+    },
+    {
+      "fromId": "an-tajrish",
+      "toId": "an-jamshidieh",
+      "roadNameEn": "Niavaran / Shahid Bahonar",
+      "roadNameFa": "نیاوران / شهید باهنر",
+      "isWideCorridor": true
+    },
+    {
+      "fromId": "an-velenjak",
+      "toId": "an-ridge",
+      "roadNameEn": "Tochal Ridge Trail",
+      "roadNameFa": "مسیر یال توچال",
+      "isWideCorridor": false
+    },
+    {
+      "fromId": "an-darband",
+      "toId": "an-ridge",
+      "roadNameEn": "Darband West Connector",
+      "roadNameFa": "رابط غربی دربند",
+      "isWideCorridor": false
+    },
+    {
+      "fromId": "an-darband",
+      "toId": "an-shirpala",
+      "roadNameEn": "Darband - Shirpala Trail",
+      "roadNameFa": "مسیر صعود شیرپلا",
+      "isWideCorridor": false
+    },
+    {
+      "fromId": "an-jamshidieh",
+      "toId": "an-shirpala",
+      "roadNameEn": "Kolakchal Ridge Path",
+      "roadNameFa": "مسیر کلکچال-شیرپلا",
+      "isWideCorridor": false
+    }
+  ]
+}

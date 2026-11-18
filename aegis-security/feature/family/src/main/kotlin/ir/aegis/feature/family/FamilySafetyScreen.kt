@@ -29,8 +29,10 @@ fun FamilySafetyScreen(
     isFavorite: Boolean,
     onToggleFavorite: () -> Unit,
     onBack: () -> Unit,
+    showBackButton: Boolean = true,
 ) {
     val colors = LocalObsidianColors.current
+    val lang = LocalAppLanguage.current
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
@@ -47,6 +49,7 @@ fun FamilySafetyScreen(
             onBack = onBack,
             isFavorite = isFavorite,
             onToggleFavorite = onToggleFavorite,
+            showBackButton = showBackButton,
         )
         GlassTabRow(
             tabs = listOf(
@@ -151,9 +154,10 @@ fun FamilySafetyScreen(
                                 }
                             }
                             Spacer(Modifier.height(6.dp))
-                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            ChipFlowGroup {
                                 FamilyCheckInStatus.entries.forEach { st ->
-                                    FilterChip(
+                                    AegisFilterPill(
+                                        label = familyStatusLabel(st, lang),
                                         selected = m.checkInStatus == st,
                                         onClick = {
                                             scope.launch {
@@ -161,7 +165,11 @@ fun FamilySafetyScreen(
                                                 repository.upsertFamilyMember(m.copy(checkInStatus = st, lastCheckInMillis = now, updatedAtMillis = now))
                                             }
                                         },
-                                        label = { Text(st.name, style = MaterialTheme.typography.labelSmall) },
+                                        accent = when (st) {
+                                            FamilyCheckInStatus.SAFE -> colors.accentEmerald
+                                            FamilyCheckInStatus.NEED_HELP -> colors.accentCrimson
+                                            else -> colors.accentAmber
+                                        },
                                     )
                                 }
                             }
@@ -289,8 +297,13 @@ fun FamilySafetyScreen(
 
                     items(points, key = { it.id }) { pt ->
                         ObsidianGlassCard(accentBorderColor = if (pt.isPrimary) colors.accentEmerald else null) {
-                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                Text("${if (pt.isPrimary) "[PRIMARY]" else "[BACKUP]"} ${pt.name}", style = MaterialTheme.typography.titleMedium, color = colors.textPrimary)
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    "${if (pt.isPrimary) tr("[PRIMARY]", "[اصلی]") else tr("[BACKUP]", "[پشتیبان]")} ${pt.name}",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = colors.textPrimary,
+                                    modifier = Modifier.weight(1f),
+                                )
                                 TextButton(onClick = { scope.launch { repository.deleteMeetingPoint(pt.id) } }) {
                                     Text(tr("Delete", "حذف"), color = colors.accentCrimson)
                                 }
@@ -328,7 +341,7 @@ fun FamilySafetyScreen(
                                 Checkbox(checked = consentChecked, onCheckedChange = { consentChecked = it })
                                 Text(tr("I explicitly consent to export selected family status & meeting points locally.", "با صدور محلی وضعیت و نقاط تجمع موافقم."), style = MaterialTheme.typography.labelMedium, color = colors.textPrimary)
                             }
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            ChipFlowGroup {
                                 GlassButton(
                                     label = tr("Generate Local Share Packet", "ساخت بسته محلی"),
                                     accent = colors.accentViolet,

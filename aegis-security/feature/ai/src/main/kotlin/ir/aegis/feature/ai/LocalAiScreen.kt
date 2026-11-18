@@ -29,6 +29,7 @@ fun LocalAiScreen(
     isFavorite: Boolean,
     onToggleFavorite: () -> Unit,
     onBack: () -> Unit,
+    showBackButton: Boolean = true,
 ) {
     val colors = LocalObsidianColors.current
     val lang = LocalAppLanguage.current
@@ -76,7 +77,8 @@ fun LocalAiScreen(
             onBack = onBack,
             isFavorite = isFavorite,
             onToggleFavorite = onToggleFavorite,
-            extraBadge = "ON-DEVICE NLP & BM25 · ZERO NETWORK",
+            extraBadge = tr("ON-DEVICE NLP & BM25 · ZERO NETWORK", "هوش آفلاین روی دستگاه · بدون اینترنت"),
+            showBackButton = showBackButton,
         )
         GlassTabRow(
             tabs = listOf(
@@ -111,14 +113,20 @@ fun LocalAiScreen(
                             Spacer(Modifier.height(8.dp))
                             GlassTextField(assistantQuery, { assistantQuery = it }, tr("Ask about bleeding, earthquake, evacuation, fire...", "سوال خود را بنویسید..."))
                             Spacer(Modifier.height(8.dp))
-                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                listOf("earthquake", "bleeding", "fire", "flood").forEach { preset ->
-                                    AssistChip(
+                            ChipFlowGroup {
+                                listOf(
+                                    "earthquake" to tr("Earthquake", "زلزله"),
+                                    "bleeding" to tr("Bleeding", "خونریزی"),
+                                    "fire" to tr("Fire", "آتش‌سوزی"),
+                                    "flood" to tr("Flood", "سیل"),
+                                ).forEach { (preset, label) ->
+                                    AegisFilterPill(
+                                        label = label,
+                                        selected = assistantQuery.equals(preset, ignoreCase = true),
                                         onClick = {
                                             assistantQuery = preset
                                             assistantReply = LocalAiEngine.answerQuery(preset, preferences.localModelName, isFa)
                                         },
-                                        label = { Text(preset) },
                                     )
                                 }
                             }
@@ -217,9 +225,14 @@ fun LocalAiScreen(
                         ObsidianGlassCard {
                             Text(tr("Emergency Checklist Generator (Draft Suggestion)", "تولیدگر چک‌لیست اضطراری"), style = MaterialTheme.typography.titleMedium, color = colors.accentTeal)
                             Spacer(Modifier.height(6.dp))
-                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            ChipFlowGroup {
                                 listOf(IncidentCategory.EARTHQUAKE, IncidentCategory.FIRE, IncidentCategory.FLOOD, IncidentCategory.MEDICAL).forEach { cat ->
-                                    FilterChip(selected = checklistCategory == cat, onClick = { checklistCategory = cat }, label = { Text(cat.name, style = MaterialTheme.typography.labelSmall) })
+                                    AegisFilterPill(
+                                        label = categoryLabel(cat, lang),
+                                        selected = checklistCategory == cat,
+                                        onClick = { checklistCategory = cat },
+                                        accent = colors.accentTeal,
+                                    )
                                 }
                             }
                             Spacer(Modifier.height(6.dp))
@@ -281,7 +294,7 @@ fun LocalAiScreen(
                                 Text("Active Model: ${preferences.localModelName} (${preferences.localModelSha256.take(12)}...)", style = MaterialTheme.typography.labelMedium, color = colors.accentEmerald)
                             }
                             Spacer(Modifier.height(8.dp))
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            ChipFlowGroup {
                                 GlassButton(
                                     label = tr("Import Local Model (.gguf / .bin)", "انتخاب فایل مدل آفلاین"),
                                     accent = colors.accentViolet,

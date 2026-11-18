@@ -1,0 +1,1436 @@
+{
+  "packageId": "pack-tehran-grid",
+  "baseElevationMeters": 1170.0,
+  "waterways": [
+    {
+      "id": "w-kan",
+      "nameEn": "Kan River Channel",
+      "nameFa": "مسیل رودخانه کن",
+      "widthMeters": 28.0,
+      "points": [
+        {
+          "lat": 35.752,
+          "lon": 51.318
+        },
+        {
+          "lat": 35.728,
+          "lon": 51.316
+        },
+        {
+          "lat": 35.702,
+          "lon": 51.314
+        },
+        {
+          "lat": 35.675,
+          "lon": 51.312
+        },
+        {
+          "lat": 35.646,
+          "lon": 51.311
+        }
+      ]
+    },
+    {
+      "id": "w-darband",
+      "nameEn": "Darband / Modarres Drainage Channel",
+      "nameFa": "کانال دربند / مدرس",
+      "widthMeters": 16.0,
+      "points": [
+        {
+          "lat": 35.754,
+          "lon": 51.425
+        },
+        {
+          "lat": 35.735,
+          "lon": 51.421
+        },
+        {
+          "lat": 35.712,
+          "lon": 51.419
+        },
+        {
+          "lat": 35.695,
+          "lon": 51.416
+        }
+      ]
+    }
+  ],
+  "waterBodies": [
+    {
+      "id": "wb-laleh-pond",
+      "nameEn": "Laleh Basin",
+      "nameFa": "حوضچه پارک لاله",
+      "kind": "water",
+      "points": [
+        {
+          "lat": 35.709,
+          "lon": 51.39
+        },
+        {
+          "lat": 35.709,
+          "lon": 51.393
+        },
+        {
+          "lat": 35.711,
+          "lon": 51.393
+        },
+        {
+          "lat": 35.711,
+          "lon": 51.39
+        }
+      ]
+    }
+  ],
+  "parks": [
+    {
+      "id": "pk-laleh",
+      "nameEn": "Laleh Park (Open Safe Zone)",
+      "nameFa": "پارک لاله (پناهگاه روباز)",
+      "kind": "park",
+      "points": [
+        {
+          "lat": 35.7072,
+          "lon": 51.3875
+        },
+        {
+          "lat": 35.7072,
+          "lon": 51.3965
+        },
+        {
+          "lat": 35.714,
+          "lon": 51.3965
+        },
+        {
+          "lat": 35.714,
+          "lon": 51.3875
+        }
+      ]
+    },
+    {
+      "id": "pk-shahr",
+      "nameEn": "Park-e Shahr Assembly Park",
+      "nameFa": "پارک شهر (نقطه تجمع)",
+      "kind": "park",
+      "points": [
+        {
+          "lat": 35.6805,
+          "lon": 51.4065
+        },
+        {
+          "lat": 35.6805,
+          "lon": 51.415
+        },
+        {
+          "lat": 35.6865,
+          "lon": 51.415
+        },
+        {
+          "lat": 35.6865,
+          "lon": 51.4065
+        }
+      ]
+    },
+    {
+      "id": "pk-pardisan",
+      "nameEn": "Pardisan Eco-Park",
+      "nameFa": "بوستان پردیسان",
+      "kind": "park",
+      "points": [
+        {
+          "lat": 35.744,
+          "lon": 51.345
+        },
+        {
+          "lat": 35.744,
+          "lon": 51.367
+        },
+        {
+          "lat": 35.7535,
+          "lon": 51.367
+        },
+        {
+          "lat": 35.7535,
+          "lon": 51.345
+        }
+      ]
+    },
+    {
+      "id": "pk-saei",
+      "nameEn": "Saei Park",
+      "nameFa": "پارک ساعی",
+      "kind": "park",
+      "points": [
+        {
+          "lat": 35.734,
+          "lon": 51.409
+        },
+        {
+          "lat": 35.734,
+          "lon": 51.4145
+        },
+        {
+          "lat": 35.741,
+          "lon": 51.4145
+        },
+        {
+          "lat": 35.741,
+          "lon": 51.409
+        }
+      ]
+    },
+    {
+      "id": "pk-daneshjoo",
+      "nameEn": "Daneshjoo Park",
+      "nameFa": "پارک دانشجو",
+      "kind": "park",
+      "points": [
+        {
+          "lat": 35.699,
+          "lon": 51.4048
+        },
+        {
+          "lat": 35.699,
+          "lon": 51.408
+        },
+        {
+          "lat": 35.7018,
+          "lon": 51.408
+        },
+        {
+          "lat": 35.7018,
+          "lon": 51.4048
+        }
+      ]
+    },
+    {
+      "id": "pk-mellat-edge",
+      "nameEn": "Mellat Green Corridor",
+      "nameFa": "کریدور سبز ملت",
+      "kind": "park",
+      "points": [
+        {
+          "lat": 35.748,
+          "lon": 51.408
+        },
+        {
+          "lat": 35.748,
+          "lon": 51.4145
+        },
+        {
+          "lat": 35.7545,
+          "lon": 51.4145
+        },
+        {
+          "lat": 35.7545,
+          "lon": 51.408
+        }
+      ]
+    }
+  ],
+  "contours": [
+    {
+      "elevationMeters": 1140,
+      "points": [
+        {
+          "lat": 35.662,
+          "lon": 51.312
+        },
+        {
+          "lat": 35.668,
+          "lon": 51.36
+        },
+        {
+          "lat": 35.666,
+          "lon": 51.41
+        },
+        {
+          "lat": 35.664,
+          "lon": 51.456
+        }
+      ]
+    },
+    {
+      "elevationMeters": 1190,
+      "points": [
+        {
+          "lat": 35.695,
+          "lon": 51.312
+        },
+        {
+          "lat": 35.7,
+          "lon": 51.365
+        },
+        {
+          "lat": 35.698,
+          "lon": 51.415
+        },
+        {
+          "lat": 35.693,
+          "lon": 51.456
+        }
+      ]
+    },
+    {
+      "elevationMeters": 1245,
+      "points": [
+        {
+          "lat": 35.728,
+          "lon": 51.312
+        },
+        {
+          "lat": 35.733,
+          "lon": 51.37
+        },
+        {
+          "lat": 35.731,
+          "lon": 51.42
+        },
+        {
+          "lat": 35.726,
+          "lon": 51.456
+        }
+      ]
+    },
+    {
+      "elevationMeters": 1310,
+      "points": [
+        {
+          "lat": 35.748,
+          "lon": 51.312
+        },
+        {
+          "lat": 35.752,
+          "lon": 51.378
+        },
+        {
+          "lat": 35.75,
+          "lon": 51.425
+        },
+        {
+          "lat": 35.746,
+          "lon": 51.456
+        }
+      ]
+    }
+  ],
+  "buildings": [
+    {
+      "id": "b-milad",
+      "nameEn": "Milad Tower Hub",
+      "nameFa": "برج میلاد",
+      "kind": "landmark",
+      "heightMeters": 435.0,
+      "footprint": [
+        {
+          "lat": 35.7438,
+          "lon": 51.3742
+        },
+        {
+          "lat": 35.7438,
+          "lon": 51.3772
+        },
+        {
+          "lat": 35.7462,
+          "lon": 51.3772
+        },
+        {
+          "lat": 35.7462,
+          "lon": 51.3742
+        }
+      ]
+    },
+    {
+      "id": "b-azadi",
+      "nameEn": "Azadi Tower Monument",
+      "nameFa": "برج آزادی",
+      "kind": "landmark",
+      "heightMeters": 95.0,
+      "footprint": [
+        {
+          "lat": 35.6988,
+          "lon": 51.3368
+        },
+        {
+          "lat": 35.6988,
+          "lon": 51.3392
+        },
+        {
+          "lat": 35.7008,
+          "lon": 51.3392
+        },
+        {
+          "lat": 35.7008,
+          "lon": 51.3368
+        }
+      ]
+    },
+    {
+      "id": "b-imam-hosp",
+      "nameEn": "Imam Khomeini Hospital",
+      "nameFa": "بیمارستان امام خمینی",
+      "kind": "hospital",
+      "heightMeters": 68.0,
+      "footprint": [
+        {
+          "lat": 35.7042,
+          "lon": 51.375
+        },
+        {
+          "lat": 35.7042,
+          "lon": 51.3802
+        },
+        {
+          "lat": 35.7082,
+          "lon": 51.3802
+        },
+        {
+          "lat": 35.7082,
+          "lon": 51.375
+        }
+      ]
+    },
+    {
+      "id": "b-tehran-univ",
+      "nameEn": "University of Tehran Campus",
+      "nameFa": "دانشگاه تهران",
+      "kind": "civic",
+      "heightMeters": 42.0,
+      "footprint": [
+        {
+          "lat": 35.7015,
+          "lon": 51.3928
+        },
+        {
+          "lat": 35.7015,
+          "lon": 51.3992
+        },
+        {
+          "lat": 35.7068,
+          "lon": 51.3992
+        },
+        {
+          "lat": 35.7068,
+          "lon": 51.3928
+        }
+      ]
+    },
+    {
+      "id": "b-city-theater",
+      "nameEn": "City Theater Block",
+      "nameFa": "تئاتر شهر",
+      "kind": "civic",
+      "heightMeters": 48.0,
+      "footprint": [
+        {
+          "lat": 35.6992,
+          "lon": 51.405
+        },
+        {
+          "lat": 35.6992,
+          "lon": 51.407
+        },
+        {
+          "lat": 35.701,
+          "lon": 51.407
+        },
+        {
+          "lat": 35.701,
+          "lon": 51.405
+        }
+      ]
+    },
+    {
+      "id": "b-parliament",
+      "nameEn": "Baharestan Complex",
+      "nameFa": "مجموعه بهارستان",
+      "kind": "civic",
+      "heightMeters": 55.0,
+      "footprint": [
+        {
+          "lat": 35.688,
+          "lon": 51.429
+        },
+        {
+          "lat": 35.688,
+          "lon": 51.4342
+        },
+        {
+          "lat": 35.6922,
+          "lon": 51.4342
+        },
+        {
+          "lat": 35.6922,
+          "lon": 51.429
+        }
+      ]
+    },
+    {
+      "id": "b-bazaar",
+      "nameEn": "Grand Bazaar District",
+      "nameFa": "بازار بزرگ تهران",
+      "kind": "commercial",
+      "heightMeters": 26.0,
+      "footprint": [
+        {
+          "lat": 35.6725,
+          "lon": 51.415
+        },
+        {
+          "lat": 35.6725,
+          "lon": 51.4255
+        },
+        {
+          "lat": 35.6795,
+          "lon": 51.4255
+        },
+        {
+          "lat": 35.6795,
+          "lon": 51.415
+        }
+      ]
+    },
+    {
+      "id": "b-vanak-tw",
+      "nameEn": "Vanak Commercial Towers",
+      "nameFa": "برج‌های ونک",
+      "kind": "commercial",
+      "heightMeters": 88.0,
+      "footprint": [
+        {
+          "lat": 35.751,
+          "lon": 51.406
+        },
+        {
+          "lat": 35.751,
+          "lon": 51.4125
+        },
+        {
+          "lat": 35.7545,
+          "lon": 51.4125
+        },
+        {
+          "lat": 35.7545,
+          "lon": 51.406
+        }
+      ]
+    },
+    {
+      "id": "b-shariati-hosp",
+      "nameEn": "Shariati Hospital",
+      "nameFa": "بیمارستان شریعتی",
+      "kind": "hospital",
+      "heightMeters": 62.0,
+      "footprint": [
+        {
+          "lat": 35.7205,
+          "lon": 51.386
+        },
+        {
+          "lat": 35.7205,
+          "lon": 51.391
+        },
+        {
+          "lat": 35.7242,
+          "lon": 51.391
+        },
+        {
+          "lat": 35.7242,
+          "lon": 51.386
+        }
+      ]
+    },
+    {
+      "id": "b-sina-hosp",
+      "nameEn": "Sina Trauma Center",
+      "nameFa": "بیمارستان سینا",
+      "kind": "hospital",
+      "heightMeters": 52.0,
+      "footprint": [
+        {
+          "lat": 35.6845,
+          "lon": 51.4162
+        },
+        {
+          "lat": 35.6845,
+          "lon": 51.4202
+        },
+        {
+          "lat": 35.688,
+          "lon": 51.4202
+        },
+        {
+          "lat": 35.688,
+          "lon": 51.4162
+        }
+      ]
+    },
+    {
+      "id": "b-south-shelter",
+      "nameEn": "Reinforced Underground Shelter",
+      "nameFa": "پناهگاه زیرزمینی جنوب",
+      "kind": "shelter",
+      "heightMeters": 36.0,
+      "footprint": [
+        {
+          "lat": 35.6748,
+          "lon": 51.3662
+        },
+        {
+          "lat": 35.6748,
+          "lon": 51.3698
+        },
+        {
+          "lat": 35.6778,
+          "lon": 51.3698
+        },
+        {
+          "lat": 35.6778,
+          "lon": 51.3662
+        }
+      ]
+    },
+    {
+      "id": "b-arg",
+      "nameEn": "Arg / Imam Square",
+      "nameFa": "ارگ / میدان امام",
+      "kind": "civic",
+      "heightMeters": 45.0,
+      "footprint": [
+        {
+          "lat": 35.6835,
+          "lon": 51.419
+        },
+        {
+          "lat": 35.6835,
+          "lon": 51.424
+        },
+        {
+          "lat": 35.6875,
+          "lon": 51.424
+        },
+        {
+          "lat": 35.6875,
+          "lon": 51.419
+        }
+      ]
+    }
+  ],
+  "roads": [
+    {
+      "id": "r-hemmat",
+      "nameEn": "Hemmat Expwy",
+      "nameFa": "بزرگراه همت",
+      "tier": "HIGHWAY",
+      "points": [
+        {
+          "lat": 35.7465,
+          "lon": 51.312
+        },
+        {
+          "lat": 35.746,
+          "lon": 51.355
+        },
+        {
+          "lat": 35.745,
+          "lon": 51.395
+        },
+        {
+          "lat": 35.744,
+          "lon": 51.43
+        },
+        {
+          "lat": 35.7425,
+          "lon": 51.458
+        }
+      ]
+    },
+    {
+      "id": "r-hakim",
+      "nameEn": "Hakim Expwy",
+      "nameFa": "بزرگراه حکیم",
+      "tier": "HIGHWAY",
+      "points": [
+        {
+          "lat": 35.7318,
+          "lon": 51.312
+        },
+        {
+          "lat": 35.7308,
+          "lon": 51.355
+        },
+        {
+          "lat": 35.7302,
+          "lon": 51.392
+        },
+        {
+          "lat": 35.7292,
+          "lon": 51.43
+        },
+        {
+          "lat": 35.7285,
+          "lon": 51.458
+        }
+      ]
+    },
+    {
+      "id": "r-resalat",
+      "nameEn": "Resalat Expwy",
+      "nameFa": "بزرگراه رسالت",
+      "tier": "HIGHWAY",
+      "points": [
+        {
+          "lat": 35.7418,
+          "lon": 51.409
+        },
+        {
+          "lat": 35.7415,
+          "lon": 51.43
+        },
+        {
+          "lat": 35.7412,
+          "lon": 51.458
+        }
+      ]
+    },
+    {
+      "id": "r-chamran",
+      "nameEn": "Chamran Expwy",
+      "nameFa": "بزرگراه چمران",
+      "tier": "HIGHWAY",
+      "points": [
+        {
+          "lat": 35.754,
+          "lon": 51.384
+        },
+        {
+          "lat": 35.738,
+          "lon": 51.38
+        },
+        {
+          "lat": 35.721,
+          "lon": 51.376
+        },
+        {
+          "lat": 35.706,
+          "lon": 51.374
+        }
+      ]
+    },
+    {
+      "id": "r-navvab",
+      "nameEn": "Navvab Expwy",
+      "nameFa": "بزرگراه نواب",
+      "tier": "HIGHWAY",
+      "points": [
+        {
+          "lat": 35.706,
+          "lon": 51.373
+        },
+        {
+          "lat": 35.689,
+          "lon": 51.371
+        },
+        {
+          "lat": 35.671,
+          "lon": 51.367
+        },
+        {
+          "lat": 35.651,
+          "lon": 51.364
+        }
+      ]
+    },
+    {
+      "id": "r-modarres",
+      "nameEn": "Modarres Expwy",
+      "nameFa": "بزرگراه مدرس",
+      "tier": "HIGHWAY",
+      "points": [
+        {
+          "lat": 35.754,
+          "lon": 51.422
+        },
+        {
+          "lat": 35.732,
+          "lon": 51.42
+        },
+        {
+          "lat": 35.714,
+          "lon": 51.418
+        },
+        {
+          "lat": 35.698,
+          "lon": 51.417
+        }
+      ]
+    },
+    {
+      "id": "r-valiasr",
+      "nameEn": "Valiasr St",
+      "nameFa": "خیابان ولیعصر",
+      "tier": "PRIMARY",
+      "points": [
+        {
+          "lat": 35.7545,
+          "lon": 51.41
+        },
+        {
+          "lat": 35.732,
+          "lon": 51.4085
+        },
+        {
+          "lat": 35.7115,
+          "lon": 51.4071
+        },
+        {
+          "lat": 35.7008,
+          "lon": 51.4068
+        },
+        {
+          "lat": 35.6836,
+          "lon": 51.406
+        },
+        {
+          "lat": 35.661,
+          "lon": 51.405
+        }
+      ]
+    },
+    {
+      "id": "r-enghelab",
+      "nameEn": "Azadi - Enghelab Ave",
+      "nameFa": "خیابان آزادی - انقلاب",
+      "tier": "PRIMARY",
+      "points": [
+        {
+          "lat": 35.6997,
+          "lon": 51.315
+        },
+        {
+          "lat": 35.6998,
+          "lon": 51.338
+        },
+        {
+          "lat": 35.7004,
+          "lon": 51.373
+        },
+        {
+          "lat": 35.701,
+          "lon": 51.391
+        },
+        {
+          "lat": 35.7008,
+          "lon": 51.407
+        },
+        {
+          "lat": 35.7005,
+          "lon": 51.422
+        },
+        {
+          "lat": 35.7,
+          "lon": 51.456
+        }
+      ]
+    },
+    {
+      "id": "r-shariati",
+      "nameEn": "Shariati St",
+      "nameFa": "خیابان شریعتی",
+      "tier": "PRIMARY",
+      "points": [
+        {
+          "lat": 35.7545,
+          "lon": 51.445
+        },
+        {
+          "lat": 35.732,
+          "lon": 51.44
+        },
+        {
+          "lat": 35.7156,
+          "lon": 51.434
+        },
+        {
+          "lat": 35.699,
+          "lon": 51.431
+        },
+        {
+          "lat": 35.682,
+          "lon": 51.429
+        }
+      ]
+    },
+    {
+      "id": "r-keshavarz",
+      "nameEn": "Keshavarz Blvd",
+      "nameFa": "بلوار کشاورز",
+      "tier": "PRIMARY",
+      "points": [
+        {
+          "lat": 35.707,
+          "lon": 51.377
+        },
+        {
+          "lat": 35.7095,
+          "lon": 51.391
+        },
+        {
+          "lat": 35.7115,
+          "lon": 51.407
+        }
+      ]
+    },
+    {
+      "id": "r-karimkhan",
+      "nameEn": "Karimkhan Zand Blvd",
+      "nameFa": "بلوار کریمخان زند",
+      "tier": "PRIMARY",
+      "points": [
+        {
+          "lat": 35.7115,
+          "lon": 51.407
+        },
+        {
+          "lat": 35.7138,
+          "lon": 51.417
+        },
+        {
+          "lat": 35.7156,
+          "lon": 51.426
+        },
+        {
+          "lat": 35.717,
+          "lon": 51.435
+        }
+      ]
+    },
+    {
+      "id": "r-karegar",
+      "nameEn": "Karegar St",
+      "nameFa": "خیابان کارگر",
+      "tier": "SECONDARY",
+      "points": [
+        {
+          "lat": 35.732,
+          "lon": 51.389
+        },
+        {
+          "lat": 35.7185,
+          "lon": 51.3905
+        },
+        {
+          "lat": 35.701,
+          "lon": 51.3911
+        },
+        {
+          "lat": 35.685,
+          "lon": 51.3915
+        },
+        {
+          "lat": 35.665,
+          "lon": 51.3918
+        }
+      ]
+    },
+    {
+      "id": "r-beheshti",
+      "nameEn": "Beheshti St",
+      "nameFa": "خیابان شهید بهشتی",
+      "tier": "SECONDARY",
+      "points": [
+        {
+          "lat": 35.7295,
+          "lon": 51.388
+        },
+        {
+          "lat": 35.7295,
+          "lon": 51.4085
+        },
+        {
+          "lat": 35.729,
+          "lon": 51.428
+        },
+        {
+          "lat": 35.7285,
+          "lon": 51.445
+        }
+      ]
+    },
+    {
+      "id": "r-imam-khomeini",
+      "nameEn": "Imam Khomeini St",
+      "nameFa": "خیابان امام خمینی",
+      "tier": "SECONDARY",
+      "points": [
+        {
+          "lat": 35.6915,
+          "lon": 51.365
+        },
+        {
+          "lat": 35.6915,
+          "lon": 51.3855
+        },
+        {
+          "lat": 35.688,
+          "lon": 51.411
+        },
+        {
+          "lat": 35.687,
+          "lon": 51.43
+        }
+      ]
+    },
+    {
+      "id": "r-sattarkhan",
+      "nameEn": "Sattarkhan St",
+      "nameFa": "خیابان ستارخان",
+      "tier": "SECONDARY",
+      "points": [
+        {
+          "lat": 35.7222,
+          "lon": 51.336
+        },
+        {
+          "lat": 35.716,
+          "lon": 51.356
+        },
+        {
+          "lat": 35.709,
+          "lon": 51.373
+        }
+      ]
+    },
+    {
+      "id": "r-15khordad",
+      "nameEn": "15 Khordad / Shoosh",
+      "nameFa": "پانزده خرداد / شوش",
+      "tier": "SECONDARY",
+      "points": [
+        {
+          "lat": 35.6762,
+          "lon": 51.368
+        },
+        {
+          "lat": 35.678,
+          "lon": 51.406
+        },
+        {
+          "lat": 35.6785,
+          "lon": 51.432
+        }
+      ]
+    }
+  ],
+  "districts": [
+    {
+      "nameEn": "VANAK",
+      "nameFa": "ونک",
+      "lat": 35.75,
+      "lon": 51.409,
+      "importance": 1
+    },
+    {
+      "nameEn": "SADEGHIEH",
+      "nameFa": "صادقیه",
+      "lat": 35.723,
+      "lon": 51.336,
+      "importance": 1
+    },
+    {
+      "nameEn": "AZADI SQ",
+      "nameFa": "میدان آزادی",
+      "lat": 35.6997,
+      "lon": 51.338,
+      "importance": 1
+    },
+    {
+      "nameEn": "LALEH PARK",
+      "nameFa": "پارک لاله",
+      "lat": 35.7106,
+      "lon": 51.3919,
+      "importance": 2
+    },
+    {
+      "nameEn": "ENGHELAB SQ",
+      "nameFa": "میدان انقلاب",
+      "lat": 35.701,
+      "lon": 51.3911,
+      "importance": 1
+    },
+    {
+      "nameEn": "VALIASR SQ",
+      "nameFa": "میدان ولیعصر",
+      "lat": 35.7115,
+      "lon": 51.4071,
+      "importance": 2
+    },
+    {
+      "nameEn": "PARK-E SHAHR",
+      "nameFa": "پارک شهر",
+      "lat": 35.6836,
+      "lon": 51.4112,
+      "importance": 2
+    },
+    {
+      "nameEn": "BAHARESTAN",
+      "nameFa": "بهارستان",
+      "lat": 35.6898,
+      "lon": 51.4305,
+      "importance": 2
+    },
+    {
+      "nameEn": "MILAD HUB",
+      "nameFa": "برج میلاد",
+      "lat": 35.7448,
+      "lon": 51.3755,
+      "importance": 2
+    }
+  ],
+  "graphNodes": [
+    {
+      "id": "n-azadi",
+      "labelEn": "Azadi Square",
+      "labelFa": "میدان آزادی",
+      "lat": 35.6997,
+      "lon": 51.338
+    },
+    {
+      "id": "n-navvab-az",
+      "labelEn": "Azadi / Navvab Jct",
+      "labelFa": "تقاطع آزادی-نواب",
+      "lat": 35.7002,
+      "lon": 51.3728
+    },
+    {
+      "id": "n-enqelab",
+      "labelEn": "Enghelab Square",
+      "labelFa": "میدان انقلاب",
+      "lat": 35.701,
+      "lon": 51.3911
+    },
+    {
+      "id": "n-valiasr-enq",
+      "labelEn": "Valiasr / Enghelab Jct",
+      "labelFa": "چهارراه ولیعصر",
+      "lat": 35.7008,
+      "lon": 51.4068
+    },
+    {
+      "id": "n-ferdowsi",
+      "labelEn": "Ferdowsi Square",
+      "labelFa": "میدان فردوسی",
+      "lat": 35.7005,
+      "lon": 51.4222
+    },
+    {
+      "id": "n-imam-hosp",
+      "labelEn": "Imam Khomeini Medical Complex",
+      "labelFa": "مجتمع بیمارستانی امام خمینی",
+      "lat": 35.7062,
+      "lon": 51.3775
+    },
+    {
+      "id": "n-laleh",
+      "labelEn": "Laleh Park / Keshavarz",
+      "labelFa": "پارک لاله / بلوار کشاورز",
+      "lat": 35.7106,
+      "lon": 51.3919
+    },
+    {
+      "id": "n-valiasr-sq",
+      "labelEn": "Valiasr Square",
+      "labelFa": "میدان ولیعصر",
+      "lat": 35.7115,
+      "lon": 51.4071
+    },
+    {
+      "id": "n-fatemi",
+      "labelEn": "Fatemi / Karegar",
+      "labelFa": "فاطمی / کارگر",
+      "lat": 35.7185,
+      "lon": 51.3905
+    },
+    {
+      "id": "n-beheshti",
+      "labelEn": "Beheshti / Valiasr",
+      "labelFa": "بهشتی / ولیعصر",
+      "lat": 35.7295,
+      "lon": 51.4085
+    },
+    {
+      "id": "n-vanak",
+      "labelEn": "Vanak Square",
+      "labelFa": "میدان ونک",
+      "lat": 35.754,
+      "lon": 51.4098
+    },
+    {
+      "id": "n-milad",
+      "labelEn": "Milad / Hemmat Hub",
+      "labelFa": "برج میلاد / همت",
+      "lat": 35.7448,
+      "lon": 51.3755
+    },
+    {
+      "id": "n-hakim-chamran",
+      "labelEn": "Hakim / Chamran",
+      "labelFa": "حکیم / چمران",
+      "lat": 35.7305,
+      "lon": 51.375
+    },
+    {
+      "id": "n-sadeghieh",
+      "labelEn": "Sadeghieh Hub",
+      "labelFa": "فلکه دوم صادقیه",
+      "lat": 35.7222,
+      "lon": 51.336
+    },
+    {
+      "id": "n-park-shahr",
+      "labelEn": "Park-e Shahr",
+      "labelFa": "پارک شهر",
+      "lat": 35.6836,
+      "lon": 51.4112
+    },
+    {
+      "id": "n-baharestan",
+      "labelEn": "Baharestan Square",
+      "labelFa": "میدان بهارستان",
+      "lat": 35.6898,
+      "lon": 51.4305
+    },
+    {
+      "id": "n-south-navvab",
+      "labelEn": "South Navvab / Qazvin",
+      "labelFa": "جنوب نواب / قزوین",
+      "lat": 35.6762,
+      "lon": 51.3678
+    },
+    {
+      "id": "n-hor",
+      "labelEn": "Hor Square",
+      "labelFa": "میدان حر",
+      "lat": 35.6915,
+      "lon": 51.3855
+    },
+    {
+      "id": "n-haft-tir",
+      "labelEn": "Haft-e Tir Square",
+      "labelFa": "میدان هفت‌تیر",
+      "lat": 35.7156,
+      "lon": 51.4258
+    },
+    {
+      "id": "n-resalat",
+      "labelEn": "Resalat / Shariati",
+      "labelFa": "رسالت / شریعتی",
+      "lat": 35.7412,
+      "lon": 51.442
+    }
+  ],
+  "graphEdges": [
+    {
+      "fromId": "n-azadi",
+      "toId": "n-navvab-az",
+      "roadNameEn": "Azadi Ave",
+      "roadNameFa": "خیابان آزادی",
+      "isWideCorridor": true
+    },
+    {
+      "fromId": "n-navvab-az",
+      "toId": "n-enqelab",
+      "roadNameEn": "Azadi Ave",
+      "roadNameFa": "خیابان آزادی",
+      "isWideCorridor": true
+    },
+    {
+      "fromId": "n-enqelab",
+      "toId": "n-valiasr-enq",
+      "roadNameEn": "Enghelab St",
+      "roadNameFa": "خیابان انقلاب",
+      "isWideCorridor": true
+    },
+    {
+      "fromId": "n-valiasr-enq",
+      "toId": "n-ferdowsi",
+      "roadNameEn": "Enghelab St",
+      "roadNameFa": "خیابان انقلاب",
+      "isWideCorridor": true
+    },
+    {
+      "fromId": "n-enqelab",
+      "toId": "n-laleh",
+      "roadNameEn": "Karegar Ave",
+      "roadNameFa": "خیابان کارگر شمالی",
+      "isWideCorridor": true
+    },
+    {
+      "fromId": "n-navvab-az",
+      "toId": "n-imam-hosp",
+      "roadNameEn": "Towhid / Bagherkhan",
+      "roadNameFa": "بزرگراه توحید / باقرخان",
+      "isWideCorridor": true
+    },
+    {
+      "fromId": "n-imam-hosp",
+      "toId": "n-laleh",
+      "roadNameEn": "Keshavarz Blvd",
+      "roadNameFa": "بلوار کشاورز",
+      "isWideCorridor": true
+    },
+    {
+      "fromId": "n-laleh",
+      "toId": "n-valiasr-sq",
+      "roadNameEn": "Keshavarz Blvd",
+      "roadNameFa": "بلوار کشاورز",
+      "isWideCorridor": true
+    },
+    {
+      "fromId": "n-valiasr-enq",
+      "toId": "n-valiasr-sq",
+      "roadNameEn": "Valiasr St",
+      "roadNameFa": "خیابان ولیعصر",
+      "isWideCorridor": true
+    },
+    {
+      "fromId": "n-valiasr-sq",
+      "toId": "n-beheshti",
+      "roadNameEn": "Valiasr St",
+      "roadNameFa": "خیابان ولیعصر",
+      "isWideCorridor": true
+    },
+    {
+      "fromId": "n-beheshti",
+      "toId": "n-vanak",
+      "roadNameEn": "Valiasr St",
+      "roadNameFa": "خیابان ولیعصر",
+      "isWideCorridor": true
+    },
+    {
+      "fromId": "n-laleh",
+      "toId": "n-fatemi",
+      "roadNameEn": "Karegar North",
+      "roadNameFa": "کارگر شمالی",
+      "isWideCorridor": true
+    },
+    {
+      "fromId": "n-fatemi",
+      "toId": "n-hakim-chamran",
+      "roadNameEn": "Chamran Expwy",
+      "roadNameFa": "بزرگراه چمران",
+      "isWideCorridor": true
+    },
+    {
+      "fromId": "n-hakim-chamran",
+      "toId": "n-milad",
+      "roadNameEn": "Chamran Expwy",
+      "roadNameFa": "بزرگراه چمران",
+      "isWideCorridor": true
+    },
+    {
+      "fromId": "n-milad",
+      "toId": "n-vanak",
+      "roadNameEn": "Hemmat Expwy",
+      "roadNameFa": "بزرگراه همت",
+      "isWideCorridor": true
+    },
+    {
+      "fromId": "n-sadeghieh",
+      "toId": "n-azadi",
+      "roadNameEn": "Mohammad Ali Jenah",
+      "roadNameFa": "بزرگراه جناح",
+      "isWideCorridor": true
+    },
+    {
+      "fromId": "n-sadeghieh",
+      "toId": "n-hakim-chamran",
+      "roadNameEn": "Hakim Expwy",
+      "roadNameFa": "بزرگراه حکیم",
+      "isWideCorridor": true
+    },
+    {
+      "fromId": "n-hakim-chamran",
+      "toId": "n-beheshti",
+      "roadNameEn": "Hakim / Modarres",
+      "roadNameFa": "حکیم / مدرس",
+      "isWideCorridor": true
+    },
+    {
+      "fromId": "n-valiasr-sq",
+      "toId": "n-haft-tir",
+      "roadNameEn": "Karimkhan Zand Blvd",
+      "roadNameFa": "بلوار کریمخان زند",
+      "isWideCorridor": true
+    },
+    {
+      "fromId": "n-ferdowsi",
+      "toId": "n-haft-tir",
+      "roadNameEn": "Mofatteh / Taleghani",
+      "roadNameFa": "طالقانی / مفتح",
+      "isWideCorridor": false
+    },
+    {
+      "fromId": "n-haft-tir",
+      "toId": "n-resalat",
+      "roadNameEn": "Shariati St",
+      "roadNameFa": "خیابان شریعتی",
+      "isWideCorridor": true
+    },
+    {
+      "fromId": "n-vanak",
+      "toId": "n-resalat",
+      "roadNameEn": "Resalat Expwy",
+      "roadNameFa": "بزرگراه رسالت",
+      "isWideCorridor": true
+    },
+    {
+      "fromId": "n-valiasr-enq",
+      "toId": "n-park-shahr",
+      "roadNameEn": "Valiasr / Fayazbakhsh",
+      "roadNameFa": "ولیعصر / فیاض‌بخش",
+      "isWideCorridor": true
+    },
+    {
+      "fromId": "n-ferdowsi",
+      "toId": "n-baharestan",
+      "roadNameEn": "Jomhouri / Ekbatan",
+      "roadNameFa": "جمهوری / بهارستان",
+      "isWideCorridor": false
+    },
+    {
+      "fromId": "n-park-shahr",
+      "toId": "n-baharestan",
+      "roadNameEn": "15 Khordad / Ekbatan",
+      "roadNameFa": "پانزده خرداد / اکباتان",
+      "isWideCorridor": false
+    },
+    {
+      "fromId": "n-enqelab",
+      "toId": "n-hor",
+      "roadNameEn": "Daneshgah / Pastour",
+      "roadNameFa": "کارگر جنوبی / پاستور",
+      "isWideCorridor": false
+    },
+    {
+      "fromId": "n-hor",
+      "toId": "n-park-shahr",
+      "roadNameEn": "Imam Khomeini St",
+      "roadNameFa": "خیابان امام خمینی",
+      "isWideCorridor": true
+    },
+    {
+      "fromId": "n-hor",
+      "toId": "n-south-navvab",
+      "roadNameEn": "Navvab Expwy",
+      "roadNameFa": "بزرگراه نواب",
+      "isWideCorridor": true
+    },
+    {
+      "fromId": "n-navvab-az",
+      "toId": "n-south-navvab",
+      "roadNameEn": "Navvab Expwy",
+      "roadNameFa": "بزرگراه نواب",
+      "isWideCorridor": true
+    }
+  ]
+}

@@ -37,6 +37,7 @@ fun PrivacySecurityScreen(
     isFavorite: Boolean,
     onToggleFavorite: () -> Unit,
     onBack: () -> Unit,
+    showBackButton: Boolean = true,
 ) {
     val colors = LocalObsidianColors.current
     val context = LocalContext.current
@@ -85,7 +86,8 @@ fun PrivacySecurityScreen(
             onBack = onBack,
             isFavorite = isFavorite,
             onToggleFavorite = onToggleFavorite,
-            extraBadge = if (preferences.pinEnabled) "PIN PROTECTED · ZERO CLOUD" else "LOCAL CRYPTO READY",
+            extraBadge = if (preferences.pinEnabled) tr("PIN PROTECTED · ZERO CLOUD", "محافظت‌شده با پین · بدون اینترنت") else tr("LOCAL CRYPTO READY", "رمزنگاری محلی آماده"),
+            showBackButton = showBackButton,
         )
         GlassTabRow(
             tabs = listOf(
@@ -109,7 +111,7 @@ fun PrivacySecurityScreen(
                             Spacer(Modifier.height(8.dp))
                             val pinEnabledText = tr("PIN protection enabled offline.", "قفل پین فعال شد.")
                             val pinDisabledText = tr("PIN lock disabled.", "قفل پین غیرفعال شد.")
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            ChipFlowGroup {
                                 GlassButton(
                                     label = tr("Enable / Update PIN", "فعال‌سازی پین"),
                                     enabled = newPin.length >= 4,

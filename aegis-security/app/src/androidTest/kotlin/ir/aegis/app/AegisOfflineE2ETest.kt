@@ -37,7 +37,6 @@ class AegisOfflineE2ETest {
         assertFalse("App must NEVER declare ACCESS_NETWORK_STATE", "android.permission.ACCESS_NETWORK_STATE" in perms)
         assertFalse("App must NEVER declare ACCESS_WIFI_STATE", "android.permission.ACCESS_WIFI_STATE" in perms)
 
-        // Verify offline WorkManager scheduling works without ACCESS_NETWORK_STATE
         val app = ctx.applicationContext as AegisApplication
         val rem = SecurityReminder(
             id = "e2e-rem-1",
@@ -54,7 +53,7 @@ class AegisOfflineE2ETest {
     }
 
     @Test
-    fun offlineDashboardLanguageToggleAndModuleFlowsWork() {
+    fun offlineDashboardLanguageMapRoutingAndModulesWork() {
         composeRule.waitForIdle()
         composeRule.onNodeWithText("AegisGuard").assertIsDisplayed()
         composeRule.onNodeWithText("100% OFFLINE · NO CLOUD").assertIsDisplayed()
@@ -66,6 +65,21 @@ class AegisOfflineE2ETest {
         composeRule.onNodeWithText("EN").performClick()
         composeRule.waitForIdle()
         composeRule.onNodeWithText("Offline Readiness Index").assertIsDisplayed()
+
+        // Open Offline Vector Map via Bottom Bar / Quick Launch and verify streets + offline Dijkstra routing
+        composeRule.onNodeWithText("Map").performClick()
+        composeRule.waitForIdle()
+        composeRule.onAllNodesWithText("Interactive Map").onFirst().assertIsDisplayed()
+        composeRule.onAllNodesWithText("Places", substring = true).onFirst().performClick()
+        composeRule.waitUntil(5_000L) {
+            composeRule.onAllNodesWithText("Show & Route on Map").fetchSemanticsNodes().isNotEmpty()
+        }
+        composeRule.onAllNodesWithText("Show & Route on Map").onFirst().performScrollTo().performClick()
+        composeRule.waitForIdle()
+        composeRule.onNodeWithTag("map_tab_lazy_list").performScrollToNode(hasText("Safe Corridor Route", substring = true))
+        composeRule.onAllNodesWithText("Safe Corridor Route", substring = true).onFirst().assertIsDisplayed()
+        composeRule.onNodeWithText("←").performClick()
+        composeRule.waitForIdle()
 
         // Navigate into Emergency Response Center and verify SOS panel
         composeRule.onNodeWithTag("quick_actions_row").performScrollToNode(hasText("Quick SOS"))
@@ -79,7 +93,7 @@ class AegisOfflineE2ETest {
         composeRule.onNodeWithTag("quick_actions_row").performScrollToNode(hasText("Local AI"))
         composeRule.onNodeWithText("Local AI").performClick()
         composeRule.waitForIdle()
-        composeRule.onNodeWithText("earthquake").performClick()
+        composeRule.onNodeWithText("Earthquake").performClick()
         composeRule.waitForIdle()
         composeRule.onNodeWithTag("ai_assistant_list").performScrollToIndex(2)
         composeRule.onAllNodesWithText("Referenced Reviewed Protocols:").onFirst().performScrollTo().assertIsDisplayed()

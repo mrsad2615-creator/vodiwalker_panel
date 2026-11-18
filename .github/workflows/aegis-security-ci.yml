@@ -115,8 +115,8 @@ jobs:
                   total_tests += 1
                   if case.find('failure') is not None or case.find('error') is not None:
                       raise SystemExit(f"::error title=JVM Test Failure::{case.attrib.get('classname')}.{case.attrib.get('name')}")
-          if total_tests < 15:
-              raise SystemExit(f"::error title=JVM Tests::Expected >=15 tests, found {total_tests}")
+          if total_tests < 17:
+              raise SystemExit(f"::error title=JVM Tests::Expected >=17 tests, found {total_tests}")
           print(f"Verified {total_tests} passing JVM unit tests across all modules!")
           PYTHON
 
@@ -217,8 +217,8 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          RELEASE_TAG="aegis-v1.0.0-offline"
-          RELEASE_NOTES="AegisGuard 100% Offline Personal, Family & Community Security Ecosystem (17-module Clean Architecture). Verified zero INTERNET/network permissions via aapt, Room v1->v2 SQLite migration tested, and full Compose E2E suite passed on Android API 35 Emulator in Airplane Mode. Build evidence: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          RELEASE_TAG="aegis-v2.0.0-offline"
+          RELEASE_NOTES="AegisGuard v2.0.0 100% Offline Rebuild: Bundled Vazirmatn RTL/LTR typography, multi-layer offline GeoVector Cartography (roads, highways, parks, rivers, contours, 3D extruded landmarks, collision-free labels, scale bar), Dijkstra hazard-avoidance routing engine, zero-overlap FlowRow Material 3 + Bottom NavigationBar UX, 100% localized FA/EN enums, 20+ JVM tests, zero network permissions via aapt, Room v1->v2 SQLite migration, and full Compose E2E suite passed in Airplane Mode on API 35 emulator. Build evidence: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           gh release delete "$RELEASE_TAG" --repo "${{ github.repository }}" --yes || true
           gh release create "$RELEASE_TAG" \
             dist-apks/app-release.apk \
@@ -226,5 +226,5 @@ jobs:
             dist-apks/SHA256SUMS.txt \
             --repo "${{ github.repository }}" \
             --target "${{ github.sha }}" \
-            --title "AegisGuard v1.0.0 Offline Release APK" \
+            --title "AegisGuard v2.0.0 Offline Release APK (Vector Map + Multi-Engine Rebuild)" \
             --notes "$RELEASE_NOTES"

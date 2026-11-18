@@ -163,8 +163,9 @@ object Projection3D {
         pitchDeg: Float,
     ): ProjectedPoint {
         val aspect = cos(Math.toRadians(centerLat)).coerceAtLeast(0.3)
-        val normX = ((lon - centerLon) * aspect / spanDeg).toFloat() * widthPx * 0.9f * zoom
-        val normY = ((centerLat - lat) / spanDeg).toFloat() * heightPx * 0.9f * zoom
+        val unitPx = (minOf(widthPx, heightPx) * 0.95f * zoom).coerceAtLeast(1f)
+        val normX = (((lon - centerLon) * aspect) / spanDeg).toFloat() * unitPx
+        val normY = ((centerLat - lat) / spanDeg).toFloat() * unitPx
 
         val yawRad = Math.toRadians(yawDeg.toDouble())
         val rx = (normX * cos(yawRad) - normY * sin(yawRad)).toFloat()
@@ -178,8 +179,8 @@ object Projection3D {
 
         val sx = widthPx * 0.5f + rx * perspective
         val sy = heightPx * 0.52f + ry * tiltScaleY * perspective
-        val extrusionScale = (clampedPitch / 58f) * 0.045f * zoom * perspective
-        val extrudedTopY = sy - (elevationMeters.toFloat().coerceAtLeast(0f) * extrusionScale)
+        val extrusionScale = (0.045f + (clampedPitch / 58f) * 0.085f) * zoom * perspective
+        val extrudedTopY = if (clampedPitch <= 0.5f) sy else sy - (elevationMeters.toFloat().coerceAtLeast(0f) * extrusionScale)
 
         return ProjectedPoint(
             x = sx,
@@ -187,5 +188,17 @@ object Projection3D {
             depth = depth,
             extrudedTopY = extrudedTopY,
         )
+    }
+
+    fun metersPerPixel(
+        centerLat: Double,
+        spanDeg: Double,
+        widthPx: Float,
+        heightPx: Float,
+        zoom: Float,
+    ): Double {
+        val unitPx = (minOf(widthPx, heightPx) * 0.95f * zoom).coerceAtLeast(1f)
+        val metersPerSpanLat = 111_195.0 * spanDeg
+        return metersPerSpanLat / unitPx
     }
 }

@@ -32,8 +32,10 @@ fun CrisisManagementScreen(
     isFavorite: Boolean,
     onToggleFavorite: () -> Unit,
     onBack: () -> Unit,
+    showBackButton: Boolean = true,
 ) {
     val colors = LocalObsidianColors.current
+    val lang = LocalAppLanguage.current
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
 
@@ -117,6 +119,7 @@ fun CrisisManagementScreen(
             onBack = onBack,
             isFavorite = isFavorite,
             onToggleFavorite = onToggleFavorite,
+            showBackButton = showBackButton,
         )
 
         GlassTabRow(
@@ -138,26 +141,39 @@ fun CrisisManagementScreen(
                         ObsidianGlassCard {
                             GlassTextField(searchQuery, { searchQuery = it }, tr("Search incidents, locations, keywords...", "جستجوی رخدادها..."))
                             Spacer(Modifier.height(8.dp))
-                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
-                                FilterChip(
+                            ChipFlowGroup {
+                                AegisFilterPill(
+                                    label = tr("Include Archive", "نمایش آرشیو"),
                                     selected = showArchived,
                                     onClick = { showArchived = !showArchived },
-                                    label = { Text(tr("Include Archive", "نمایش آرشیو")) },
                                 )
-                                FilterChip(
+                                AegisFilterPill(
+                                    label = tr("Critical Only", "فقط بحرانی"),
                                     selected = filterPriority == IncidentPriority.CRITICAL,
                                     onClick = {
                                         filterPriority = if (filterPriority == IncidentPriority.CRITICAL) null else IncidentPriority.CRITICAL
                                     },
-                                    label = { Text(tr("Critical Only", "فقط بحرانی")) },
+                                    accent = colors.accentCrimson,
                                 )
                             }
-                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
-                                listOf(null, IncidentCategory.FIRE, IncidentCategory.EARTHQUAKE, IncidentCategory.MEDICAL, IncidentCategory.SECURITY_THREAT).forEach { cat ->
-                                    FilterChip(
+                            Spacer(Modifier.height(6.dp))
+                            ChipFlowGroup {
+                                AegisFilterPill(
+                                    label = tr("All", "همه"),
+                                    selected = filterCategory == null,
+                                    onClick = { filterCategory = null },
+                                )
+                                listOf(
+                                    IncidentCategory.FIRE,
+                                    IncidentCategory.EARTHQUAKE,
+                                    IncidentCategory.FLOOD,
+                                    IncidentCategory.MEDICAL,
+                                    IncidentCategory.SECURITY_THREAT,
+                                ).forEach { cat ->
+                                    AegisFilterPill(
+                                        label = categoryLabel(cat, lang),
                                         selected = filterCategory == cat,
-                                        onClick = { filterCategory = cat },
-                                        label = { Text(cat?.name ?: tr("All", "همه"), style = MaterialTheme.typography.labelSmall) },
+                                        onClick = { filterCategory = if (filterCategory == cat) null else cat },
                                     )
                                 }
                             }
@@ -172,22 +188,35 @@ fun CrisisManagementScreen(
                             IncidentPriority.LOW -> colors.accentTeal
                         }
                         ObsidianGlassCard(
-                            enable3DTilt = true,
                             accentBorderColor = prioColor,
                             onClick = {
                                 selectedIncidentId = inc.id
                                 selectedTab = 2
                             },
                         ) {
-                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
                                 Text(inc.title, style = MaterialTheme.typography.titleMedium, color = colors.textPrimary, modifier = Modifier.weight(1f))
-                                Text(inc.priority.name, style = MaterialTheme.typography.labelSmall, color = prioColor)
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = prioColor.copy(alpha = 0.16f),
+                                ) {
+                                    Text(
+                                        priorityLabel(inc.priority, lang),
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = prioColor,
+                                    )
+                                }
                             }
                             Spacer(Modifier.height(4.dp))
                             Text(inc.description, style = MaterialTheme.typography.bodyMedium, color = colors.textSecondary, maxLines = 2)
                             Spacer(Modifier.height(6.dp))
                             Text(
-                                "${inc.category.name} · ${inc.status.name} · ${inc.locationLabel.ifBlank { "No GPS" }}",
+                                "${categoryLabel(inc.category, lang)} · ${statusLabel(inc.status, lang)} · ${inc.locationLabel.ifBlank { tr("No GPS", "بدون مختصات") }}",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = colors.textMuted,
                             )
@@ -271,15 +300,27 @@ fun CrisisManagementScreen(
 
                             Spacer(Modifier.height(8.dp))
                             Text(tr("Category", "دسته‌بندی"), style = MaterialTheme.typography.labelMedium, color = colors.textSecondary)
-                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Spacer(Modifier.height(4.dp))
+                            ChipFlowGroup {
                                 listOf(IncidentCategory.FIRE, IncidentCategory.EARTHQUAKE, IncidentCategory.FLOOD, IncidentCategory.MEDICAL, IncidentCategory.SECURITY_THREAT).forEach { cat ->
-                                    FilterChip(selected = category == cat, onClick = { category = cat }, label = { Text(cat.name, style = MaterialTheme.typography.labelSmall) })
+                                    AegisFilterPill(
+                                        label = categoryLabel(cat, lang),
+                                        selected = category == cat,
+                                        onClick = { category = cat },
+                                    )
                                 }
                             }
+                            Spacer(Modifier.height(8.dp))
                             Text(tr("Priority", "اولویت"), style = MaterialTheme.typography.labelMedium, color = colors.textSecondary)
-                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Spacer(Modifier.height(4.dp))
+                            ChipFlowGroup {
                                 IncidentPriority.entries.forEach { p ->
-                                    FilterChip(selected = priority == p, onClick = { priority = p }, label = { Text(p.name, style = MaterialTheme.typography.labelSmall) })
+                                    AegisFilterPill(
+                                        label = priorityLabel(p, lang),
+                                        selected = priority == p,
+                                        onClick = { priority = p },
+                                        accent = if (p == IncidentPriority.CRITICAL) colors.accentCrimson else colors.accentCyan,
+                                    )
                                 }
                             }
 
@@ -346,15 +387,17 @@ fun CrisisManagementScreen(
                         item {
                             ObsidianGlassCard(elevated = true) {
                                 Text(target.title, style = MaterialTheme.typography.titleLarge, color = colors.textPrimary)
-                                Text("${target.category.name} · ${target.priority.name} · ${target.status.name}", style = MaterialTheme.typography.labelMedium, color = colors.accentCyan)
+                                Text("${categoryLabel(target.category, lang)} · ${priorityLabel(target.priority, lang)} · ${statusLabel(target.status, lang)}", style = MaterialTheme.typography.labelMedium, color = colors.accentCyan)
                                 Spacer(Modifier.height(6.dp))
                                 Text(target.description, style = MaterialTheme.typography.bodyMedium, color = colors.textSecondary)
                                 Spacer(Modifier.height(10.dp))
 
                                 Text(tr("Update Status:", "تغییر وضعیت:"), style = MaterialTheme.typography.labelMedium, color = colors.textMuted)
-                                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Spacer(Modifier.height(4.dp))
+                                ChipFlowGroup {
                                     listOf(IncidentStatus.OPEN, IncidentStatus.INVESTIGATING, IncidentStatus.CONTAINED, IncidentStatus.RESOLVED).forEach { st ->
-                                        FilterChip(
+                                        AegisFilterPill(
+                                            label = statusLabel(st, lang),
                                             selected = target.status == st,
                                             onClick = {
                                                 scope.launch {
@@ -362,13 +405,12 @@ fun CrisisManagementScreen(
                                                     repository.updateIncident(target.copy(status = st, updatedAtMillis = now), timelineNote = "Status updated to ${st.name}")
                                                 }
                                             },
-                                            label = { Text(st.name, style = MaterialTheme.typography.labelSmall) },
                                         )
                                     }
                                 }
 
-                                Spacer(Modifier.height(8.dp))
-                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Spacer(Modifier.height(10.dp))
+                                ChipFlowGroup {
                                     GlassButton(
                                         label = if (target.isArchived) tr("Restore", "بازیابی") else tr("Archive", "آرشیو"),
                                         accent = colors.accentAmber,
@@ -416,7 +458,7 @@ fun CrisisManagementScreen(
                             ObsidianGlassCard {
                                 Text(tr("Evidence Attachments (${attachments.size})", "فایل‌های شواهد (${attachments.size})"), style = MaterialTheme.typography.titleMedium, color = colors.accentViolet)
                                 Spacer(Modifier.height(8.dp))
-                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                ChipFlowGroup {
                                     GlassButton(
                                         label = tr("Attach Device File", "پیوست فایل"),
                                         accent = colors.accentViolet,

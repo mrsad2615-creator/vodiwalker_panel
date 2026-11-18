@@ -3,18 +3,16 @@ package ir.aegis.core.ui
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -29,9 +27,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -47,10 +44,10 @@ fun ObsidianBackground(
 ) {
     val colors = LocalObsidianColors.current
     val pulse by rememberInfiniteTransition(label = "bg-orb").animateFloat(
-        initialValue = 0.85f,
-        targetValue = 1.15f,
+        initialValue = 0.88f,
+        targetValue = 1.12f,
         animationSpec = infiniteRepeatable(
-            animation = tween(6500, easing = FastOutSlowInEasing),
+            animation = tween(7000, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse,
         ),
         label = "orb-pulse",
@@ -68,20 +65,20 @@ fun ObsidianBackground(
                 drawCircle(
                     brush = Brush.radialGradient(
                         listOf(colors.orbCyan, Color.Transparent),
-                        center = Offset(size.width * 0.18f, size.height * 0.14f),
-                        radius = size.width * 0.72f * pulse,
+                        center = Offset(size.width * 0.16f, size.height * 0.14f),
+                        radius = size.width * 0.68f * pulse,
                     ),
-                    center = Offset(size.width * 0.18f, size.height * 0.14f),
-                    radius = size.width * 0.72f * pulse,
+                    center = Offset(size.width * 0.16f, size.height * 0.14f),
+                    radius = size.width * 0.68f * pulse,
                 )
                 drawCircle(
                     brush = Brush.radialGradient(
                         listOf(colors.orbViolet, Color.Transparent),
-                        center = Offset(size.width * 0.86f, size.height * 0.78f),
-                        radius = size.width * 0.68f * pulse,
+                        center = Offset(size.width * 0.86f, size.height * 0.80f),
+                        radius = size.width * 0.64f * pulse,
                     ),
-                    center = Offset(size.width * 0.86f, size.height * 0.78f),
-                    radius = size.width * 0.68f * pulse,
+                    center = Offset(size.width * 0.86f, size.height * 0.80f),
+                    radius = size.width * 0.64f * pulse,
                 )
             },
         content = content,
@@ -91,7 +88,7 @@ fun ObsidianBackground(
 @Composable
 fun ObsidianGlassCard(
     modifier: Modifier = Modifier,
-    cornerRadius: Dp = 20.dp,
+    cornerRadius: Dp = 18.dp,
     elevated: Boolean = false,
     enable3DTilt: Boolean = false,
     accentBorderColor: Color? = null,
@@ -101,72 +98,38 @@ fun ObsidianGlassCard(
 ) {
     val colors = LocalObsidianColors.current
     val shape = RoundedCornerShape(cornerRadius)
-    var pressed by remember { mutableStateOf(false) }
-
-    val scale by animateFloatAsState(
-        targetValue = if (pressed && enable3DTilt) 0.985f else 1f,
-        animationSpec = spring(stiffness = 500f),
-        label = "card-scale",
-    )
-    val rotX by animateFloatAsState(
-        targetValue = if (pressed && enable3DTilt) 4.5f else 0f,
-        animationSpec = spring(stiffness = 450f),
-        label = "card-rotx",
-    )
-
     val rimBrush = Brush.linearGradient(
         colors = listOf(
-            accentBorderColor?.copy(alpha = 0.65f) ?: colors.glassRimStart,
+            accentBorderColor?.copy(alpha = 0.72f) ?: colors.glassRimStart,
             colors.glassRimEnd,
-            accentBorderColor?.copy(alpha = 0.25f) ?: colors.glassRimEnd,
+            accentBorderColor?.copy(alpha = 0.30f) ?: colors.glassRimEnd,
         ),
     )
 
     val fillBrush = Brush.verticalGradient(
         listOf(
             if (elevated) colors.glassElevated else colors.glassSurface,
-            colors.glassSurface.copy(alpha = if (colors.isDark) 0.78f else 0.92f),
+            colors.glassSurface.copy(alpha = if (colors.isDark) 0.88f else 0.96f),
         ),
     )
 
-    var cardModifier = modifier
-        .graphicsLayer {
-            scaleX = scale
-            scaleY = scale
-            rotationX = rotX
-            cameraDistance = 16f * density
-        }
+    val baseModifier = modifier
         .clip(shape)
         .background(fillBrush)
         .border(width = 1.dp, brush = rimBrush, shape = shape)
         .drawBehind {
             drawLine(
                 color = colors.glassTopSheen,
-                start = Offset(size.width * 0.08f, 1.5f),
-                end = Offset(size.width * 0.92f, 1.5f),
-                strokeWidth = 2f,
+                start = Offset(size.width * 0.06f, 1.5f),
+                end = Offset(size.width * 0.94f, 1.5f),
+                strokeWidth = 1.8f,
             )
         }
-
-    if (onClick != null) {
-        cardModifier = cardModifier
-            .pointerInput(enable3DTilt) {
-                if (enable3DTilt) {
-                    detectTapGestures(
-                        onPress = {
-                            pressed = true
-                            tryAwaitRelease()
-                            pressed = false
-                        },
-                        onTap = { onClick() },
-                    )
-                }
-            }
-            .let { if (!enable3DTilt) it.clickable(onClick = onClick) else it }
-    }
+        .let { if (onClick != null) it.clickable(onClick = onClick) else it }
 
     Column(
-        modifier = cardModifier.padding(contentPadding),
+        modifier = baseModifier.padding(contentPadding),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
         content = content,
     )
 }
@@ -186,14 +149,13 @@ fun Hero3DSecurityShield(
     )
 
     Box(
-        modifier = modifier.size(104.dp),
+        modifier = modifier.size(100.dp),
         contentAlignment = Alignment.Center,
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             val c = Offset(size.width / 2f, size.height / 2f)
             val r = size.minDimension * 0.42f
 
-            // Outer 3D tilted gyroscope ring
             drawCircle(
                 color = colors.accentCyan.copy(alpha = 0.22f),
                 radius = r * 1.06f,
@@ -210,7 +172,6 @@ fun Hero3DSecurityShield(
                 style = Stroke(width = 4.5f, cap = StrokeCap.Round),
             )
 
-            // 3D beveled shield body
             val shield = Path().apply {
                 moveTo(c.x, c.y - r * 0.78f)
                 lineTo(c.x + r * 0.64f, c.y - r * 0.48f)
@@ -235,7 +196,6 @@ fun Hero3DSecurityShield(
                 style = Stroke(width = 3f),
             )
 
-            // Orbital satellite dot
             val rad = Math.toRadians(orbitAngle.toDouble())
             drawCircle(
                 color = colors.accentEmerald,
@@ -271,11 +231,11 @@ fun OfflineStatusPill(
     val tone = if (isWarning) colors.accentAmber else colors.accentEmerald
     Surface(
         shape = RoundedCornerShape(50),
-        color = tone.copy(alpha = 0.15f),
-        border = BorderStroke(1.dp, tone.copy(alpha = 0.45f)),
+        color = tone.copy(alpha = 0.16f),
+        border = BorderStroke(1.dp, tone.copy(alpha = 0.48f)),
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
@@ -289,6 +249,92 @@ fun OfflineStatusPill(
                 text = text,
                 style = MaterialTheme.typography.labelSmall,
                 color = tone,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
+
+@Composable
+fun SectionHeader(
+    title: String,
+    badge: String? = null,
+    modifier: Modifier = Modifier,
+) {
+    val colors = LocalObsidianColors.current
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(vertical = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = colors.textPrimary,
+            modifier = Modifier.weight(1f),
+        )
+        if (!badge.isNullOrBlank()) {
+            Surface(
+                shape = RoundedCornerShape(10.dp),
+                color = colors.accentCyan.copy(alpha = 0.14f),
+                border = BorderStroke(1.dp, colors.accentCyan.copy(alpha = 0.35f)),
+            ) {
+                Text(
+                    text = badge,
+                    modifier = Modifier.padding(horizontal = 9.dp, vertical = 3.dp),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = colors.accentCyan,
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun ChipFlowGroup(
+    modifier: Modifier = Modifier,
+    horizontalSpacing: Dp = 8.dp,
+    verticalSpacing: Dp = 8.dp,
+    content: @Composable FlowRowScope.() -> Unit,
+) {
+    FlowRow(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(horizontalSpacing),
+        verticalArrangement = Arrangement.spacedBy(verticalSpacing),
+        content = content,
+    )
+}
+
+@Composable
+fun AegisFilterPill(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    accent: Color = LocalObsidianColors.current.accentCyan,
+) {
+    val colors = LocalObsidianColors.current
+    Surface(
+        onClick = onClick,
+        modifier = modifier.defaultMinSize(minHeight = 36.dp),
+        shape = RoundedCornerShape(12.dp),
+        color = if (selected) accent.copy(alpha = 0.22f) else colors.glassElevated.copy(alpha = 0.65f),
+        border = BorderStroke(1.dp, if (selected) accent else colors.divider),
+    ) {
+        Box(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                color = if (selected) accent else colors.textSecondary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -331,28 +377,31 @@ fun ModuleTopBar(
     isFavorite: Boolean,
     onToggleFavorite: () -> Unit,
     extraBadge: String? = null,
+    showBackButton: Boolean = true,
 ) {
     val colors = LocalObsidianColors.current
     val lang = LocalAppLanguage.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Surface(
-            onClick = onBack,
-            shape = RoundedCornerShape(12.dp),
-            color = colors.glassElevated,
-            border = BorderStroke(1.dp, colors.glassRimEnd),
-        ) {
-            Text(
-                text = if (lang == AppLanguage.FA) "→" else "←",
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                style = MaterialTheme.typography.titleMedium,
-                color = colors.textPrimary,
-            )
+        if (showBackButton) {
+            Surface(
+                onClick = onBack,
+                shape = RoundedCornerShape(12.dp),
+                color = colors.glassElevated,
+                border = BorderStroke(1.dp, colors.glassRimEnd),
+            ) {
+                Text(
+                    text = if (lang == AppLanguage.FA) "→" else "←",
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = colors.textPrimary,
+                )
+            }
         }
         AegisModuleIcon(module = module, tint = colors.accentCyan, size = 26.dp)
         Column(modifier = Modifier.weight(1f)) {
@@ -395,7 +444,7 @@ fun GlassTabRow(
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalObsidianColors.current
-    androidx.compose.foundation.lazy.LazyRow(
+    LazyRow(
         modifier = modifier.fillMaxWidth(),
         contentPadding = PaddingValues(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -404,19 +453,25 @@ fun GlassTabRow(
             val selected = idx == selectedIndex
             Surface(
                 onClick = { onSelect(idx) },
-                shape = RoundedCornerShape(14.dp),
-                color = if (selected) colors.accentCyan.copy(alpha = 0.22f) else colors.glassSurface,
+                modifier = Modifier.defaultMinSize(minHeight = 40.dp),
+                shape = RoundedCornerShape(12.dp),
+                color = if (selected) colors.accentCyan.copy(alpha = 0.24f) else colors.glassSurface,
                 border = BorderStroke(
                     1.dp,
                     if (selected) colors.accentCyan else colors.glassRimEnd,
                 ),
             ) {
-                Text(
-                    text = tabs[idx],
+                Box(
                     modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = if (selected) colors.accentCyan else colors.textSecondary,
-                )
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = tabs[idx],
+                        style = MaterialTheme.typography.labelLarge,
+                        color = if (selected) colors.accentCyan else colors.textSecondary,
+                        maxLines = 1,
+                    )
+                }
             }
         }
     }
@@ -433,18 +488,25 @@ fun GlassButton(
     Button(
         onClick = onClick,
         enabled = enabled,
-        modifier = modifier,
-        shape = RoundedCornerShape(14.dp),
+        modifier = modifier.defaultMinSize(minHeight = 44.dp),
+        shape = RoundedCornerShape(13.dp),
         colors = ButtonDefaults.buttonColors(
-            containerColor = accent.copy(alpha = 0.24f),
+            containerColor = accent.copy(alpha = 0.22f),
             contentColor = accent,
             disabledContainerColor = accent.copy(alpha = 0.08f),
             disabledContentColor = accent.copy(alpha = 0.45f),
         ),
         border = BorderStroke(1.dp, accent.copy(alpha = if (enabled) 0.65f else 0.2f)),
-        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp),
+        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp),
     ) {
-        Text(text = label, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
 
@@ -471,8 +533,8 @@ fun GlassTextField(
             unfocusedBorderColor = colors.divider,
             focusedTextColor = colors.textPrimary,
             unfocusedTextColor = colors.textPrimary,
-            focusedContainerColor = colors.glassSurface.copy(alpha = 0.55f),
-            unfocusedContainerColor = colors.glassSurface.copy(alpha = 0.40f),
+            focusedContainerColor = colors.glassSurface.copy(alpha = 0.65f),
+            unfocusedContainerColor = colors.glassSurface.copy(alpha = 0.45f),
         ),
     )
 }

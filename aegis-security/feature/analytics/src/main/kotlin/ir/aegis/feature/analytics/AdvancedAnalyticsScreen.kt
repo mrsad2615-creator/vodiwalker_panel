@@ -24,8 +24,10 @@ fun AdvancedAnalyticsScreen(
     isFavorite: Boolean,
     onToggleFavorite: () -> Unit,
     onBack: () -> Unit,
+    showBackButton: Boolean = true,
 ) {
     val colors = LocalObsidianColors.current
+    val lang = LocalAppLanguage.current
     val context = LocalContext.current
 
     val allIncidents by repository.observeIncidents(includeArchived = true).collectAsState(initial = emptyList())
@@ -84,6 +86,7 @@ fun AdvancedAnalyticsScreen(
             onBack = onBack,
             isFavorite = isFavorite,
             onToggleFavorite = onToggleFavorite,
+            showBackButton = showBackButton,
         )
 
         LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -91,14 +94,28 @@ fun AdvancedAnalyticsScreen(
                 ObsidianGlassCard {
                     Text(tr("Custom Analytics Filters", "فیلترهای تحلیلی سفارشی"), style = MaterialTheme.typography.titleMedium, color = colors.accentCyan)
                     Spacer(Modifier.height(6.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        listOf(7 to "7D", 30 to "30D", 3650 to "ALL").forEach { (d, lbl) ->
-                            FilterChip(selected = daysWindow == d, onClick = { daysWindow = d }, label = { Text(lbl) })
+                    ChipFlowGroup {
+                        listOf(
+                            7 to tr("7 Days", "۷ روز"),
+                            30 to tr("30 Days", "۳۰ روز"),
+                            3650 to tr("All Time", "همه"),
+                        ).forEach { (d, lbl) ->
+                            AegisFilterPill(label = lbl, selected = daysWindow == d, onClick = { daysWindow = d })
                         }
                     }
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        listOf(null, IncidentCategory.FIRE, IncidentCategory.EARTHQUAKE, IncidentCategory.SECURITY_THREAT).forEach { cat ->
-                            FilterChip(selected = categoryFilter == cat, onClick = { categoryFilter = cat }, label = { Text(cat?.name ?: tr("All", "همه"), style = MaterialTheme.typography.labelSmall) })
+                    Spacer(Modifier.height(6.dp))
+                    ChipFlowGroup {
+                        AegisFilterPill(
+                            label = tr("All Categories", "همه دسته‌ها"),
+                            selected = categoryFilter == null,
+                            onClick = { categoryFilter = null },
+                        )
+                        listOf(IncidentCategory.FIRE, IncidentCategory.EARTHQUAKE, IncidentCategory.FLOOD, IncidentCategory.SECURITY_THREAT).forEach { cat ->
+                            AegisFilterPill(
+                                label = categoryLabel(cat, lang),
+                                selected = categoryFilter == cat,
+                                onClick = { categoryFilter = cat },
+                            )
                         }
                     }
                 }
@@ -117,7 +134,7 @@ fun AdvancedAnalyticsScreen(
                         color = colors.textPrimary,
                     )
                     Spacer(Modifier.height(8.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    ChipFlowGroup {
                         GlassButton(
                             label = tr("Export PDF Report", "خروجی PDF"),
                             accent = colors.accentCyan,
@@ -204,7 +221,7 @@ fun AdvancedAnalyticsScreen(
                     val total = filtered.size.coerceAtLeast(1)
                     categoryCounts.forEach { (cat, count) ->
                         val frac = count.toFloat() / total
-                        Text("${cat.name}: $count (${(frac * 100).toInt()}%)", style = MaterialTheme.typography.bodyMedium, color = colors.textPrimary)
+                        Text("${categoryLabel(cat, lang)}: $count (${(frac * 100).toInt()}%)", style = MaterialTheme.typography.bodyMedium, color = colors.textPrimary)
                         LinearProgressIndicator(progress = { frac }, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), color = colors.accentViolet)
                     }
                 }

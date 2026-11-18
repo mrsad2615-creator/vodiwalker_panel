@@ -1,0 +1,555 @@
+{
+  "packageId": "pack-bavaria-nuremberg",
+  "baseElevationMeters": 310.0,
+  "waterways": [
+    {
+      "id": "w-pegnitz",
+      "nameEn": "Pegnitz River",
+      "nameFa": "رودخانه پگنیتز",
+      "widthMeters": 34.0,
+      "points": [
+        {
+          "lat": 49.4565,
+          "lon": 11.145
+        },
+        {
+          "lat": 49.4535,
+          "lon": 11.115
+        },
+        {
+          "lat": 49.4518,
+          "lon": 11.088
+        },
+        {
+          "lat": 49.453,
+          "lon": 11.065
+        },
+        {
+          "lat": 49.4585,
+          "lon": 11.02
+        }
+      ]
+    }
+  ],
+  "waterBodies": [
+    {
+      "id": "wb-wohrder",
+      "nameEn": "Wöhrder See",
+      "nameFa": "دریاچه ووردر زِه",
+      "kind": "water",
+      "points": [
+        {
+          "lat": 49.4525,
+          "lon": 11.102
+        },
+        {
+          "lat": 49.4525,
+          "lon": 11.124
+        },
+        {
+          "lat": 49.4565,
+          "lon": 11.124
+        },
+        {
+          "lat": 49.4565,
+          "lon": 11.102
+        }
+      ]
+    }
+  ],
+  "parks": [
+    {
+      "id": "pk-wohrd",
+      "nameEn": "Wöhrder Wiese",
+      "nameFa": "پارک ووردر ویزه",
+      "kind": "park",
+      "points": [
+        {
+          "lat": 49.45,
+          "lon": 11.089
+        },
+        {
+          "lat": 49.45,
+          "lon": 11.101
+        },
+        {
+          "lat": 49.4545,
+          "lon": 11.101
+        },
+        {
+          "lat": 49.4545,
+          "lon": 11.089
+        }
+      ]
+    },
+    {
+      "id": "pk-stadtpark",
+      "nameEn": "Stadtpark",
+      "nameFa": "استادت‌پارک",
+      "kind": "park",
+      "points": [
+        {
+          "lat": 49.4615,
+          "lon": 11.083
+        },
+        {
+          "lat": 49.4615,
+          "lon": 11.093
+        },
+        {
+          "lat": 49.4685,
+          "lon": 11.093
+        },
+        {
+          "lat": 49.4685,
+          "lon": 11.083
+        }
+      ]
+    },
+    {
+      "id": "pk-lutz",
+      "nameEn": "Dutzendteich Green",
+      "nameFa": "فضای سبز دوتزندتایش",
+      "kind": "park",
+      "points": [
+        {
+          "lat": 49.423,
+          "lon": 11.108
+        },
+        {
+          "lat": 49.423,
+          "lon": 11.128
+        },
+        {
+          "lat": 49.436,
+          "lon": 11.128
+        },
+        {
+          "lat": 49.436,
+          "lon": 11.108
+        }
+      ]
+    }
+  ],
+  "contours": [
+    {
+      "elevationMeters": 305,
+      "points": [
+        {
+          "lat": 49.452,
+          "lon": 11.015
+        },
+        {
+          "lat": 49.45,
+          "lon": 11.08
+        },
+        {
+          "lat": 49.453,
+          "lon": 11.145
+        }
+      ]
+    },
+    {
+      "elevationMeters": 340,
+      "points": [
+        {
+          "lat": 49.459,
+          "lon": 11.045
+        },
+        {
+          "lat": 49.457,
+          "lon": 11.078
+        },
+        {
+          "lat": 49.464,
+          "lon": 11.12
+        }
+      ]
+    }
+  ],
+  "buildings": [
+    {
+      "id": "bn-burg",
+      "nameEn": "Kaiserburg Castle",
+      "nameFa": "قلعه کایزربورگ",
+      "kind": "landmark",
+      "heightMeters": 85.0,
+      "footprint": [
+        {
+          "lat": 49.4568,
+          "lon": 11.0742
+        },
+        {
+          "lat": 49.4568,
+          "lon": 11.0785
+        },
+        {
+          "lat": 49.459,
+          "lon": 11.0785
+        },
+        {
+          "lat": 49.459,
+          "lon": 11.0742
+        }
+      ]
+    },
+    {
+      "id": "bn-klinikum",
+      "nameEn": "Klinikum Nord",
+      "nameFa": "بیمارستان کلینیکوم",
+      "kind": "hospital",
+      "heightMeters": 60.0,
+      "footprint": [
+        {
+          "lat": 49.4575,
+          "lon": 11.0605
+        },
+        {
+          "lat": 49.4575,
+          "lon": 11.0655
+        },
+        {
+          "lat": 49.4608,
+          "lon": 11.0655
+        },
+        {
+          "lat": 49.4608,
+          "lon": 11.0605
+        }
+      ]
+    },
+    {
+      "id": "bn-hbf",
+      "nameEn": "Hauptbahnhof",
+      "nameFa": "ایستگاه مرکزی",
+      "kind": "civic",
+      "heightMeters": 44.0,
+      "footprint": [
+        {
+          "lat": 49.4448,
+          "lon": 11.0802
+        },
+        {
+          "lat": 49.4448,
+          "lon": 11.085
+        },
+        {
+          "lat": 49.447,
+          "lon": 11.085
+        },
+        {
+          "lat": 49.447,
+          "lon": 11.0802
+        }
+      ]
+    },
+    {
+      "id": "bn-altstadt",
+      "nameEn": "Altstadt Historic Core",
+      "nameFa": "بخش تاریخی آلتشتات",
+      "kind": "commercial",
+      "heightMeters": 34.0,
+      "footprint": [
+        {
+          "lat": 49.4495,
+          "lon": 11.073
+        },
+        {
+          "lat": 49.4495,
+          "lon": 11.0815
+        },
+        {
+          "lat": 49.4545,
+          "lon": 11.0815
+        },
+        {
+          "lat": 49.4545,
+          "lon": 11.073
+        }
+      ]
+    }
+  ],
+  "roads": [
+    {
+      "id": "rn-b4r",
+      "nameEn": "Nordring / B4R",
+      "nameFa": "کمربندی شمال B4R",
+      "tier": "HIGHWAY",
+      "points": [
+        {
+          "lat": 49.462,
+          "lon": 11.02
+        },
+        {
+          "lat": 49.466,
+          "lon": 11.065
+        },
+        {
+          "lat": 49.465,
+          "lon": 11.105
+        },
+        {
+          "lat": 49.455,
+          "lon": 11.14
+        }
+      ]
+    },
+    {
+      "id": "rn-fsw",
+      "nameEn": "Frankenschnellweg (A73)",
+      "nameFa": "بزرگراه A73",
+      "tier": "HIGHWAY",
+      "points": [
+        {
+          "lat": 49.475,
+          "lon": 11.042
+        },
+        {
+          "lat": 49.448,
+          "lon": 11.052
+        },
+        {
+          "lat": 49.42,
+          "lon": 11.062
+        }
+      ]
+    },
+    {
+      "id": "rn-fuerther",
+      "nameEn": "Fürther Straße",
+      "nameFa": "خیابان فورت",
+      "tier": "PRIMARY",
+      "points": [
+        {
+          "lat": 49.455,
+          "lon": 11.015
+        },
+        {
+          "lat": 49.45,
+          "lon": 11.045
+        },
+        {
+          "lat": 49.4486,
+          "lon": 11.0635
+        },
+        {
+          "lat": 49.4458,
+          "lon": 11.0825
+        }
+      ]
+    },
+    {
+      "id": "rn-franken",
+      "nameEn": "Frankenstraße",
+      "nameFa": "خیابان فرانکن",
+      "tier": "PRIMARY",
+      "points": [
+        {
+          "lat": 49.426,
+          "lon": 11.06
+        },
+        {
+          "lat": 49.4275,
+          "lon": 11.0865
+        },
+        {
+          "lat": 49.431,
+          "lon": 11.115
+        }
+      ]
+    },
+    {
+      "id": "rn-koenig",
+      "nameEn": "Königstraße - Burgstraße",
+      "nameFa": "کونیگ‌اشتراسه",
+      "tier": "SECONDARY",
+      "points": [
+        {
+          "lat": 49.4458,
+          "lon": 11.0825
+        },
+        {
+          "lat": 49.4512,
+          "lon": 11.0772
+        },
+        {
+          "lat": 49.4578,
+          "lon": 11.076
+        }
+      ]
+    },
+    {
+      "id": "rn-sulzbacher",
+      "nameEn": "Sulzbacher Straße",
+      "nameFa": "زولتسباخر اشتراسه",
+      "tier": "PRIMARY",
+      "points": [
+        {
+          "lat": 49.4525,
+          "lon": 11.088
+        },
+        {
+          "lat": 49.4565,
+          "lon": 11.106
+        },
+        {
+          "lat": 49.461,
+          "lon": 11.132
+        }
+      ]
+    }
+  ],
+  "districts": [
+    {
+      "nameEn": "ALTSTADT",
+      "nameFa": "آلتشتات",
+      "lat": 49.452,
+      "lon": 11.077,
+      "importance": 1
+    },
+    {
+      "nameEn": "WÖHRDER SEE",
+      "nameFa": "ووردر زِه",
+      "lat": 49.454,
+      "lon": 11.11,
+      "importance": 1
+    },
+    {
+      "nameEn": "KLINIKUM",
+      "nameFa": "کلینیکوم",
+      "lat": 49.459,
+      "lon": 11.063,
+      "importance": 2
+    },
+    {
+      "nameEn": "SÜDSTADT",
+      "nameFa": "زوداشتات",
+      "lat": 49.432,
+      "lon": 11.086,
+      "importance": 1
+    }
+  ],
+  "graphNodes": [
+    {
+      "id": "nn-hbf",
+      "labelEn": "Hauptbahnhof Hub",
+      "labelFa": "ایستگاه مرکزی",
+      "lat": 49.4458,
+      "lon": 11.0825
+    },
+    {
+      "id": "nn-altstadt",
+      "labelEn": "Altstadt / Lorenz",
+      "labelFa": "بخش مرکزی آلتشتات",
+      "lat": 49.4512,
+      "lon": 11.0772
+    },
+    {
+      "id": "nn-burg",
+      "labelEn": "Kaiserburg Plateau",
+      "labelFa": "تپه امن کایزربورگ",
+      "lat": 49.4578,
+      "lon": 11.076
+    },
+    {
+      "id": "nn-klinikum",
+      "labelEn": "Klinikum Nord",
+      "labelFa": "بیمارستان کلینیکوم نورد",
+      "lat": 49.459,
+      "lon": 11.063
+    },
+    {
+      "id": "nn-wohrd",
+      "labelEn": "Wöhrder Wiese",
+      "labelFa": "منطقه مرتفع ووردر ویزه",
+      "lat": 49.4525,
+      "lon": 11.0955
+    },
+    {
+      "id": "nn-stadtpark",
+      "labelEn": "Stadtpark Assembly",
+      "labelFa": "استادت‌پارک (محل تجمع)",
+      "lat": 49.4648,
+      "lon": 11.0882
+    },
+    {
+      "id": "nn-fuerth",
+      "labelEn": "Plärrer / Fürther Str",
+      "labelFa": "پلرر / خیابان فورت",
+      "lat": 49.4486,
+      "lon": 11.0635
+    },
+    {
+      "id": "nn-sud",
+      "labelEn": "Südstadt / Frankenstr",
+      "labelFa": "زوداشتات / فرانکن‌اشتراسه",
+      "lat": 49.4275,
+      "lon": 11.0865
+    }
+  ],
+  "graphEdges": [
+    {
+      "fromId": "nn-hbf",
+      "toId": "nn-altstadt",
+      "roadNameEn": "Königstraße",
+      "roadNameFa": "کونیگ‌اشتراسه",
+      "isWideCorridor": true
+    },
+    {
+      "fromId": "nn-altstadt",
+      "toId": "nn-burg",
+      "roadNameEn": "Burgstraße",
+      "roadNameFa": "بورگ‌اشتراسه",
+      "isWideCorridor": true
+    },
+    {
+      "fromId": "nn-burg",
+      "toId": "nn-klinikum",
+      "roadNameEn": "Johannisstraße",
+      "roadNameFa": "یوهانیس‌اشتراسه",
+      "isWideCorridor": true
+    },
+    {
+      "fromId": "nn-fuerth",
+      "toId": "nn-klinikum",
+      "roadNameEn": "Johannis / B4R",
+      "roadNameFa": "یوهانیس / کمربندی",
+      "isWideCorridor": true
+    },
+    {
+      "fromId": "nn-hbf",
+      "toId": "nn-fuerth",
+      "roadNameEn": "Frauentorgraben",
+      "roadNameFa": "فراون‌تورگرابن",
+      "isWideCorridor": true
+    },
+    {
+      "fromId": "nn-altstadt",
+      "toId": "nn-wohrd",
+      "roadNameEn": "Rathenauplatz / Sulzbacher",
+      "roadNameFa": "راتناوپلاتز",
+      "isWideCorridor": true
+    },
+    {
+      "fromId": "nn-wohrd",
+      "toId": "nn-stadtpark",
+      "roadNameEn": "Bayreuther Straße",
+      "roadNameFa": "بایروتر اشتراسه",
+      "isWideCorridor": true
+    },
+    {
+      "fromId": "nn-burg",
+      "toId": "nn-stadtpark",
+      "roadNameEn": "Maxtorgraben",
+      "roadNameFa": "ماکس‌تورگرابن",
+      "isWideCorridor": true
+    },
+    {
+      "fromId": "nn-hbf",
+      "toId": "nn-sud",
+      "roadNameEn": "Pillenreuther / Frankenstr",
+      "roadNameFa": "فرانکن‌اشتراسه",
+      "isWideCorridor": true
+    }
+  ]
+}

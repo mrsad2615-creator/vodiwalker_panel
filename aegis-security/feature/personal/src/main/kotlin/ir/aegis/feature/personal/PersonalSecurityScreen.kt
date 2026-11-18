@@ -34,6 +34,7 @@ fun PersonalSecurityScreen(
     isFavorite: Boolean,
     onToggleFavorite: () -> Unit,
     onBack: () -> Unit,
+    showBackButton: Boolean = true,
 ) {
     val colors = LocalObsidianColors.current
     val scope = rememberCoroutineScope()
@@ -63,6 +64,7 @@ fun PersonalSecurityScreen(
             onBack = onBack,
             isFavorite = isFavorite,
             onToggleFavorite = onToggleFavorite,
+            showBackButton = showBackButton,
         )
         GlassTabRow(tabs = tabs, selectedIndex = selectedTab, onSelect = { selectedTab = it })
         Spacer(Modifier.height(10.dp))
@@ -392,6 +394,7 @@ private fun EncryptedVaultTab(
     onDeleteItem: (String) -> Unit,
 ) {
     val colors = LocalObsidianColors.current
+    val lang = LocalAppLanguage.current
     var title by remember { mutableStateOf("") }
     var secret by remember { mutableStateOf("") }
     var passphrase by remember { mutableStateOf("") }
@@ -410,12 +413,13 @@ private fun EncryptedVaultTab(
                 Spacer(Modifier.height(8.dp))
                 GlassTextField(title, { title = it }, tr("Document / Record Title", "عنوان سند"))
                 Spacer(Modifier.height(8.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    listOf(VaultCategory.IDENTITY, VaultCategory.MEDICAL, VaultCategory.ACCESS_KEY).forEach { cat ->
-                        FilterChip(
+                ChipFlowGroup {
+                    listOf(VaultCategory.IDENTITY, VaultCategory.MEDICAL, VaultCategory.ACCESS_KEY, VaultCategory.FINANCIAL).forEach { cat ->
+                        AegisFilterPill(
+                            label = vaultCategoryLabel(cat, lang),
                             selected = selectedCat == cat,
                             onClick = { selectedCat = cat },
-                            label = { Text(cat.name, style = MaterialTheme.typography.labelSmall) },
+                            accent = colors.accentViolet,
                         )
                     }
                 }
@@ -452,42 +456,43 @@ private fun EncryptedVaultTab(
 
         items(items, key = { it.id }) { item ->
             ObsidianGlassCard {
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(item.title, style = MaterialTheme.typography.titleMedium, color = colors.textPrimary)
-                        Text("${item.category.name} · SHA256: ${item.sha256Checksum.take(12)}...", style = MaterialTheme.typography.labelSmall, color = colors.textMuted)
-                    }
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        TextButton(
-                            onClick = {
-                                if (unlockKey.length < 4) {
-                                    decryptError = "Enter vault passphrase above first."
-                                } else {
-                                    runCatching {
-                                        CryptoEngine.decryptText(item.encryptedPayloadBase64, item.ivBase64, item.saltBase64, unlockKey)
-                                    }.onSuccess { plain ->
-                                        decryptedPreview = decryptedPreview + (item.id to plain)
-                                        decryptError = null
-                                    }.onFailure {
-                                        decryptError = "Decryption failed for '${item.title}' (wrong passphrase or tampered payload)."
-                                    }
-                                }
-                            },
-                        ) { Text(tr("Decrypt", "باز کردن")) }
-                        TextButton(onClick = { onDeleteItem(item.id) }) {
-                            Text(tr("Delete", "حذف"), color = colors.accentCrimson)
-                        }
-                    }
-                }
+                Text(item.title, style = MaterialTheme.typography.titleMedium, color = colors.textPrimary)
+                Text("${vaultCategoryLabel(item.category, lang)} · SHA256: ${item.sha256Checksum.take(12)}...", style = MaterialTheme.typography.labelSmall, color = colors.textMuted)
                 val unlocked = decryptedPreview[item.id]
                 if (unlocked != null) {
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(6.dp))
                     Surface(shape = RoundedCornerShape(10.dp), color = colors.accentEmerald.copy(alpha = 0.14f)) {
                         Text(unlocked, modifier = Modifier.padding(10.dp), style = MaterialTheme.typography.bodyMedium, color = colors.accentEmerald)
                     }
                 } else {
                     Spacer(Modifier.height(4.dp))
                     Text("Ciphertext: ${item.encryptedPayloadBase64.take(36)}...", style = MaterialTheme.typography.labelSmall, color = colors.textMuted)
+                }
+                Spacer(Modifier.height(8.dp))
+                ChipFlowGroup {
+                    GlassButton(
+                        label = tr("Decrypt", "باز کردن"),
+                        accent = colors.accentCyan,
+                        onClick = {
+                            if (unlockKey.length < 4) {
+                                decryptError = tr("Enter vault passphrase above first.", "ابتدا رمز گاوصندوق را در کادر بالا وارد کنید.")
+                            } else {
+                                runCatching {
+                                    CryptoEngine.decryptText(item.encryptedPayloadBase64, item.ivBase64, item.saltBase64, unlockKey)
+                                }.onSuccess { plain ->
+                                    decryptedPreview = decryptedPreview + (item.id to plain)
+                                    decryptError = null
+                                }.onFailure {
+                                    decryptError = tr("Decryption failed for '${item.title}'.", "رمزگشایی '${item.title}' ناموفق بود.")
+                                }
+                            }
+                        },
+                    )
+                    GlassButton(
+                        label = tr("Delete", "حذف"),
+                        accent = colors.accentCrimson,
+                        onClick = { onDeleteItem(item.id) },
+                    )
                 }
             }
         }
@@ -635,8 +640,9 @@ private fun SecurityRemindersTab(
                 Spacer(Modifier.height(8.dp))
                 GlassTextField(title, { title = it }, tr("Reminder Title", "عنوان یادآور"))
                 Spacer(Modifier.height(8.dp))
+                GlassTextField(category, { category = it }, tr("Category", "دسته‌بندی"))
+                Spacer(Modifier.height(8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    GlassTextField(category, { category = it }, tr("Category", "دسته"), modifier = Modifier.weight(1f))
                     GlassTextField(minutesStr, { minutesStr = it }, tr("Due (mins)", "دقیقه تا یادآوری"), modifier = Modifier.weight(1f))
                     GlassTextField(recurDaysStr, { recurDaysStr = it }, tr("Repeat (days)", "تکرار (روز)"), modifier = Modifier.weight(1f))
                 }
@@ -674,6 +680,7 @@ private fun PrivateJournalTab(
     onDeleteEntry: (String) -> Unit,
 ) {
     val colors = LocalObsidianColors.current
+    val lang = LocalAppLanguage.current
     var title by remember { mutableStateOf("") }
     var body by remember { mutableStateOf("") }
     var threat by remember { mutableStateOf(ThreatMoodLevel.CAUTIOUS) }
@@ -690,9 +697,14 @@ private fun PrivateJournalTab(
                 Spacer(Modifier.height(8.dp))
                 GlassTextField(body, { body = it }, tr("Private Observation / Log", "شرح محرمانه"), singleLine = false, minLines = 3)
                 Spacer(Modifier.height(8.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                ChipFlowGroup {
                     ThreatMoodLevel.entries.forEach { lvl ->
-                        FilterChip(selected = threat == lvl, onClick = { threat = lvl }, label = { Text(lvl.name, style = MaterialTheme.typography.labelSmall) })
+                        AegisFilterPill(
+                            label = threatMoodLabel(lvl, lang),
+                            selected = threat == lvl,
+                            onClick = { threat = lvl },
+                            accent = if (lvl == ThreatMoodLevel.CRITICAL) colors.accentCrimson else colors.accentCyan,
+                        )
                     }
                 }
                 Spacer(Modifier.height(8.dp))
@@ -722,7 +734,7 @@ private fun PrivateJournalTab(
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(entry.title, style = MaterialTheme.typography.titleMedium, color = colors.textPrimary)
-                        Text("${entry.threatLevel.name} · ${if (entry.isEncrypted) "AES-256 Encrypted" else "Local Note"}", style = MaterialTheme.typography.labelSmall, color = colors.accentAmber)
+                        Text("${threatMoodLabel(entry.threatLevel, lang)} · ${if (entry.isEncrypted) tr("AES-256 Encrypted", "رمزنگاری AES-256") else tr("Local Note", "یادداشت محلی")}", style = MaterialTheme.typography.labelSmall, color = colors.accentAmber)
                     }
                     Row {
                         if (entry.isEncrypted) {

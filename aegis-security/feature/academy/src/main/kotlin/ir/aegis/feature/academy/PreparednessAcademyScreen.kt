@@ -20,8 +20,10 @@ fun PreparednessAcademyScreen(
     isFavorite: Boolean,
     onToggleFavorite: () -> Unit,
     onBack: () -> Unit,
+    showBackButton: Boolean = true,
 ) {
     val colors = LocalObsidianColors.current
+    val lang = LocalAppLanguage.current
     val scope = rememberCoroutineScope()
     val progressList by repository.observeAcademyProgress().collectAsState(initial = emptyList())
     val progressMap = remember(progressList) { progressList.associateBy { it.courseId } }
@@ -38,6 +40,7 @@ fun PreparednessAcademyScreen(
             onBack = onBack,
             isFavorite = isFavorite,
             onToggleFavorite = onToggleFavorite,
+            showBackButton = showBackButton,
         )
 
         LazyRow(
@@ -46,12 +49,10 @@ fun PreparednessAcademyScreen(
         ) {
             items(AcademyCurriculum.courses, key = { it.id }) { c ->
                 val cp = progressMap[c.id]
-                FilterChip(
+                AegisFilterPill(
+                    label = "${academyDomainLabel(c.domain, lang)}${if (cp?.badgeEarned == true) " ★" else ""}",
                     selected = c.id == selectedCourseId,
                     onClick = { selectedCourseId = c.id },
-                    label = {
-                        Text("${c.domain.name}${if (cp?.badgeEarned == true) " ★" else ""}", style = MaterialTheme.typography.labelSmall)
-                    },
                 )
             }
         }

@@ -39,6 +39,7 @@ fun EmergencyResponseScreen(
     isFavorite: Boolean,
     onToggleFavorite: () -> Unit,
     onBack: () -> Unit,
+    showBackButton: Boolean = true,
 ) {
     val colors = LocalObsidianColors.current
     val context = LocalContext.current
@@ -107,7 +108,8 @@ fun EmergencyResponseScreen(
             onBack = onBack,
             isFavorite = isFavorite,
             onToggleFavorite = onToggleFavorite,
-            extraBadge = if (sosActive) "SOS BEACON ACTIVE" else "AIRPLANE-MODE READY",
+            extraBadge = if (sosActive) tr("SOS BEACON ACTIVE", "آژیر SOS فعال") else tr("AIRPLANE-MODE READY", "آماده در حالت هواپیما"),
+            showBackButton = showBackButton,
         )
         GlassTabRow(
             tabs = listOf(
@@ -169,11 +171,15 @@ fun EmergencyResponseScreen(
                         ObsidianGlassCard {
                             Text(tr("Quick Emergency Dialer (Native Phone App)", "شماره‌گیری سریع امدادی"), style = MaterialTheme.typography.titleMedium, color = colors.accentCyan)
                             Spacer(Modifier.height(8.dp))
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                listOf("112" to "SOS", "115" to "EMS", "125" to "Fire", "110" to "Police").forEach { (num, label) ->
+                            ChipFlowGroup {
+                                listOf(
+                                    "112" to tr("SOS / Red Crescent", "امداد ۱۱۲"),
+                                    "115" to tr("Medical EMS", "اورژانس ۱۱۵"),
+                                    "125" to tr("Fire Dept", "آتش‌نشانی ۱۲۵"),
+                                    "110" to tr("Police", "پلیس ۱۱۰"),
+                                ).forEach { (num, label) ->
                                     GlassButton(
                                         label = "$label ($num)",
-                                        modifier = Modifier.weight(1f),
                                         accent = colors.accentCrimson,
                                         onClick = {
                                             runCatching {
@@ -219,7 +225,7 @@ fun EmergencyResponseScreen(
                             }
                             Spacer(Modifier.height(8.dp))
                             val copiedText = tr("Copied to clipboard offline.", "در حافظه موقت کپی شد.")
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            ChipFlowGroup {
                                 GlassButton(
                                     label = tr("Copy Message", "کپی پیام"),
                                     onClick = {

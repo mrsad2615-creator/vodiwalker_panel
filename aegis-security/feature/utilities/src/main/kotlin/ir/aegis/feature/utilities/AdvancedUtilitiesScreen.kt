@@ -15,6 +15,7 @@ fun AdvancedUtilitiesScreen(
     isFavorite: Boolean,
     onToggleFavorite: () -> Unit,
     onBack: () -> Unit,
+    showBackButton: Boolean = true,
 ) {
     var selectedTab by remember { mutableIntStateOf(0) }
 
@@ -24,7 +25,8 @@ fun AdvancedUtilitiesScreen(
             onBack = onBack,
             isFavorite = isFavorite,
             onToggleFavorite = onToggleFavorite,
-            extraBadge = "12 OFFLINE SURVIVAL & FIELD TOOLS",
+            extraBadge = tr("12 OFFLINE SURVIVAL & FIELD TOOLS", "۱۲ ابزار تخصصی آفلاین"),
+            showBackButton = showBackButton,
         )
         GlassTabRow(
             tabs = listOf(

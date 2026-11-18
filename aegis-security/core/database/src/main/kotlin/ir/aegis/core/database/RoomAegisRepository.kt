@@ -228,11 +228,21 @@ class RoomAegisRepository(private val db: AegisDatabase) : AegisRepository {
     }
 
     suspend fun ensureSeeded() {
-        if (dao.countMapPackages() > 0) return
+        val existingPacks = dao.getMapPackagesOnce()
+        val needsMapRefresh = existingPacks.none { it.versionTag == "2026.11-VECTOR-V2" }
+        if (needsMapRefresh) {
+            val installedById = existingPacks.associate { it.id to it.isInstalled }
+            dao.upsertMapPackages(
+                OfflineMapSeeds.bundledPackages().map { pkg ->
+                    val preserved = installedById[pkg.id] ?: pkg.isInstalled
+                    MapPackageEntity.fromDomain(pkg.copy(isInstalled = preserved))
+                },
+            )
+            dao.upsertMapMarkers(OfflineMapSeeds.bundledMarkers().map { MapMarkerEntity.fromDomain(it) })
+            dao.upsertSavedRoutes(OfflineMapSeeds.bundledRoutes().map { SavedRouteEntity.fromDomain(it) })
+        }
+        if (existingPacks.isNotEmpty()) return
         val now = System.currentTimeMillis()
-        dao.upsertMapPackages(OfflineMapSeeds.bundledPackages().map { MapPackageEntity.fromDomain(it) })
-        dao.upsertMapMarkers(OfflineMapSeeds.bundledMarkers().map { MapMarkerEntity.fromDomain(it) })
-        dao.upsertSavedRoutes(OfflineMapSeeds.bundledRoutes().map { SavedRouteEntity.fromDomain(it) })
 
         dao.upsertSecurityProfile(
             SecurityProfileEntity.fromDomain(

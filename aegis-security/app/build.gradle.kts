@@ -12,8 +12,8 @@ android {
         applicationId = "ir.aegis.security"
         minSdk = libs.versions.min.sdk.get().toInt()
         targetSdk = libs.versions.compile.sdk.get().toInt()
-        versionCode = 10000
-        versionName = "1.0.0-offline"
+        versionCode = 20000
+        versionName = "2.0.0-offline"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 

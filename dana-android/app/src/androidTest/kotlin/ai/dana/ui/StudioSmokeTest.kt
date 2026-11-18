@@ -5,6 +5,7 @@ import ai.dana.R
 import android.content.Intent
 import android.graphics.Bitmap
 import android.os.Bundle
+import android.view.KeyEvent
 import androidx.annotation.StringRes
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.test.ExperimentalTestApi
@@ -53,6 +54,8 @@ class StudioSmokeTest {
         visible(R.string.account_email_title)
         enter(R.string.account_email, "fixture@dana.example.test")
         compose.onNodeWithText(label(R.string.account_send)).assertIsNotEnabled()
+        // The bottom bar intentionally hides while the keyboard is open.
+        InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
 
         click(R.string.tab_engines)
         visible(R.string.engines_title)

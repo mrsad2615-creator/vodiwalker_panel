@@ -80,14 +80,25 @@ jobs:
           import sys
           from pathlib import Path
           lines = Path(sys.argv[1]).read_text(errors='replace').splitlines()
-          diagnostics = [line for line in lines if line.lstrip().startswith(('e:', 'Caused by:', '* What went wrong'))
-                         or 'Error:' in line or 'FAILED' in line or line.startswith(('> Lint', '> Could not', '> Execution failed'))]
+          diagnostics = []
           for index, line in enumerate(lines):
-              if ' > ' in line and 'FAILED' in line:
-                  diagnostics.extend(lines[index:index + 4])
+              if (
+                  line.lstrip().startswith(('e:', 'Caused by:', 'FAILURE:', '* What went wrong'))
+                  or 'Error:' in line
+                  or 'FAILED' in line
+                  or line.startswith(('> ', 'Execution failed'))
+              ):
+                  diagnostics.extend(lines[index:index + 6])
           for report in Path('.').glob('**/build/reports/lint-results-debug.txt'):
-              diagnostics.extend(line for line in report.read_text(errors='replace').splitlines() if 'Error:' in line)
-          message = '\n'.join(dict.fromkeys(diagnostics or lines[-40:]))[:6200]
+              diagnostics.extend(
+                  line for line in report.read_text(errors='replace').splitlines()
+                  if 'Error:' in line or 'Fatal' in line
+              )
+          if not diagnostics:
+              diagnostics = lines[-50:]
+          else:
+              diagnostics.extend(lines[-25:])
+          message = '\n'.join(dict.fromkeys(diagnostics))[:6200]
           message = message.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
           print(f'::error title=AegisGuard Gradle build failed::{message}')
           PYTHON

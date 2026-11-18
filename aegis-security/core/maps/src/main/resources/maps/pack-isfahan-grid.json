@@ -1,0 +1,280 @@
+{
+  "packageId": "pack-isfahan-grid",
+  "baseElevationMeters": 1575.0,
+  "waterways": [
+    {
+      "id": "wi-zayandeh",
+      "nameEn": "Zayandeh Rud River",
+      "nameFa": "زاینده‌رود",
+      "widthMeters": 46.0,
+      "points": [
+        {
+          "lat": 32.638,
+          "lon": 51.61
+        },
+        {
+          "lat": 32.642,
+          "lon": 51.648
+        },
+        {
+          "lat": 32.643,
+          "lon": 51.668
+        },
+        {
+          "lat": 32.64,
+          "lon": 51.695
+        },
+        {
+          "lat": 32.634,
+          "lon": 51.725
+        }
+      ]
+    }
+  ],
+  "waterBodies": [],
+  "parks": [
+    {
+      "id": "pi-nazhvan",
+      "nameEn": "Nazhvan Forest Park",
+      "nameFa": "پارک جنگلی ناژوان",
+      "kind": "park",
+      "points": [
+        {
+          "lat": 32.632,
+          "lon": 51.612
+        },
+        {
+          "lat": 32.632,
+          "lon": 51.638
+        },
+        {
+          "lat": 32.644,
+          "lon": 51.638
+        },
+        {
+          "lat": 32.644,
+          "lon": 51.612
+        }
+      ]
+    },
+    {
+      "id": "pi-sofeh",
+      "nameEn": "Sofeh Mountain Park",
+      "nameFa": "پارک کوهستانی صفه",
+      "kind": "park",
+      "points": [
+        {
+          "lat": 32.592,
+          "lon": 51.645
+        },
+        {
+          "lat": 32.592,
+          "lon": 51.665
+        },
+        {
+          "lat": 32.606,
+          "lon": 51.665
+        },
+        {
+          "lat": 32.606,
+          "lon": 51.645
+        }
+      ]
+    }
+  ],
+  "contours": [],
+  "buildings": [
+    {
+      "id": "bi-zahra",
+      "nameEn": "Al-Zahra Medical Center",
+      "nameFa": "مرکز پزشکی الزهرا",
+      "kind": "hospital",
+      "heightMeters": 56.0,
+      "footprint": [
+        {
+          "lat": 32.606,
+          "lon": 51.664
+        },
+        {
+          "lat": 32.606,
+          "lon": 51.672
+        },
+        {
+          "lat": 32.613,
+          "lon": 51.672
+        },
+        {
+          "lat": 32.613,
+          "lon": 51.664
+        }
+      ]
+    },
+    {
+      "id": "bi-naqsh",
+      "nameEn": "Naqsh-e Jahan Square",
+      "nameFa": "میدان نقش جهان",
+      "kind": "landmark",
+      "heightMeters": 45.0,
+      "footprint": [
+        {
+          "lat": 32.654,
+          "lon": 51.674
+        },
+        {
+          "lat": 32.654,
+          "lon": 51.68
+        },
+        {
+          "lat": 32.661,
+          "lon": 51.68
+        },
+        {
+          "lat": 32.661,
+          "lon": 51.674
+        }
+      ]
+    }
+  ],
+  "roads": [
+    {
+      "id": "ri-chaharbagh",
+      "nameEn": "Chaharbagh Blvd",
+      "nameFa": "خیابان چهارباغ",
+      "tier": "PRIMARY",
+      "points": [
+        {
+          "lat": 32.67,
+          "lon": 51.668
+        },
+        {
+          "lat": 32.652,
+          "lon": 51.668
+        },
+        {
+          "lat": 32.643,
+          "lon": 51.667
+        },
+        {
+          "lat": 32.615,
+          "lon": 51.667
+        }
+      ]
+    },
+    {
+      "id": "ri-sheikh",
+      "nameEn": "Keshvari / Khorram Expwy",
+      "nameFa": "بزرگراه شهید خرازی",
+      "tier": "HIGHWAY",
+      "points": [
+        {
+          "lat": 32.675,
+          "lon": 51.635
+        },
+        {
+          "lat": 32.655,
+          "lon": 51.64
+        },
+        {
+          "lat": 32.625,
+          "lon": 51.645
+        }
+      ]
+    },
+    {
+      "id": "ri-bozorgmehr",
+      "nameEn": "Bozorgmehr Blvd",
+      "nameFa": "خیابان بزرگمهر",
+      "tier": "PRIMARY",
+      "points": [
+        {
+          "lat": 32.656,
+          "lon": 51.682
+        },
+        {
+          "lat": 32.642,
+          "lon": 51.692
+        },
+        {
+          "lat": 32.628,
+          "lon": 51.695
+        }
+      ]
+    }
+  ],
+  "districts": [
+    {
+      "nameEn": "NAQSH-E JAHAN",
+      "nameFa": "نقش جهان",
+      "lat": 32.657,
+      "lon": 51.677,
+      "importance": 1
+    },
+    {
+      "nameEn": "SI-O-SE POL",
+      "nameFa": "سی‌وسه‌پل",
+      "lat": 32.644,
+      "lon": 51.667,
+      "importance": 1
+    },
+    {
+      "nameEn": "SOFEH",
+      "nameFa": "صفه",
+      "lat": 32.602,
+      "lon": 51.662,
+      "importance": 2
+    }
+  ],
+  "graphNodes": [
+    {
+      "id": "i1",
+      "labelEn": "Naqsh-e Jahan",
+      "labelFa": "نقش جهان",
+      "lat": 32.657,
+      "lon": 51.677
+    },
+    {
+      "id": "i2",
+      "labelEn": "Si-o-se-pol Bridge",
+      "labelFa": "سی‌وسه‌پل",
+      "lat": 32.644,
+      "lon": 51.667
+    },
+    {
+      "id": "i3",
+      "labelEn": "Azadi Sq",
+      "labelFa": "دروازه شیراز / آزادی",
+      "lat": 32.624,
+      "lon": 51.667
+    },
+    {
+      "id": "i4",
+      "labelEn": "Al-Zahra Hospital",
+      "labelFa": "بیمارستان الزهرا",
+      "lat": 32.61,
+      "lon": 51.668
+    }
+  ],
+  "graphEdges": [
+    {
+      "fromId": "i1",
+      "toId": "i2",
+      "roadNameEn": "Chaharbagh Abbasi",
+      "roadNameFa": "چهارباغ عباسی",
+      "isWideCorridor": true
+    },
+    {
+      "fromId": "i2",
+      "toId": "i3",
+      "roadNameEn": "Chaharbagh Bala",
+      "roadNameFa": "چهارباغ بالا",
+      "isWideCorridor": true
+    },
+    {
+      "fromId": "i3",
+      "toId": "i4",
+      "roadNameEn": "Hezar Jarib Blvd",
+      "roadNameFa": "بلوار هزارجریب",
+      "isWideCorridor": true
+    }
+  ]
+}

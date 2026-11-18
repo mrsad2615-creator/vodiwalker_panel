@@ -64,7 +64,7 @@ class DataStorePreferencesRepository(private val context: Context) : Preferences
 
         AppPreferences(
             themeMode = p[Keys.THEME]?.let { runCatching { ThemeMode.valueOf(it) }.getOrNull() } ?: ThemeMode.DARK,
-            language = p[Keys.LANGUAGE]?.let { runCatching { AppLanguage.valueOf(it) }.getOrNull() } ?: AppLanguage.EN,
+            language = p[Keys.LANGUAGE]?.let { runCatching { AppLanguage.valueOf(it) }.getOrNull() } ?: AppLanguage.FA,
             pinEnabled = p[Keys.PIN_ENABLED] ?: false,
             pinSaltBase64 = p[Keys.PIN_SALT] ?: "",
             pinHashBase64 = p[Keys.PIN_HASH] ?: "",

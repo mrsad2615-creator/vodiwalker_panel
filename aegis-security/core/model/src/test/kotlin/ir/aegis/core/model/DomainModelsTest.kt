@@ -18,7 +18,7 @@ class DomainModelsTest {
         assertTrue(prefs.sensitiveNotificationRedacted)
         assertFalse(prefs.localDeviceSharingConsent)
         assertEquals(ThemeMode.DARK, prefs.themeMode)
-        assertEquals(AppLanguage.EN, prefs.language)
+        assertEquals(AppLanguage.FA, prefs.language)
     }
 
     @Test

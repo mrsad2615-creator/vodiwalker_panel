@@ -1,6 +1,7 @@
 package ir.aegis.core.maps
 
 import ir.aegis.core.model.LatLonPoint
+import ir.aegis.core.model.MapMarker
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -48,7 +49,7 @@ data class VectorRoad(
     val id: String,
     val nameEn: String,
     val nameFa: String,
-    val tier: String, // HIGHWAY | PRIMARY | SECONDARY | TRAIL
+    val tier: String,
     val points: List<GeoCoord>,
 )
 
@@ -58,7 +59,7 @@ data class DistrictLabel(
     val nameFa: String,
     val lat: Double,
     val lon: Double,
-    val importance: Int = 2, // 1 = major district, 2 = neighborhood, 3 = landmark
+    val importance: Int = 2,
 )
 
 @Serializable
@@ -94,6 +95,38 @@ data class VectorMapBundle(
     val graphEdges: List<RoadGraphEdge> = emptyList(),
 )
 
+@Serializable
+data class AtlasCountry(
+    val name: String,
+    val rings: List<List<GeoCoord>>,
+)
+
+@Serializable
+data class AtlasProvince(
+    val nameEn: String,
+    val nameFa: String,
+    val centerLat: Double,
+    val centerLon: Double,
+    val rings: List<List<GeoCoord>>,
+)
+
+@Serializable
+data class AtlasCity(
+    val nameEn: String,
+    val nameFa: String,
+    val lat: Double,
+    val lon: Double,
+    val tier: Int = 2,
+)
+
+@Serializable
+data class BaseAtlasBundle(
+    val countries: List<AtlasCountry> = emptyList(),
+    val iranProvinces: List<AtlasProvince> = emptyList(),
+    val cities: List<AtlasCity> = emptyList(),
+    val nationalHighways: List<List<GeoCoord>> = emptyList(),
+)
+
 data class OfflineNavigationStep(
     val instructionEn: String,
     val instructionFa: String,
@@ -108,4 +141,13 @@ data class OfflineRouteResult(
     val estimatedWalkMinutes: Int,
     val avoidedHazardCount: Int,
     val isGraphRouted: Boolean,
+)
+
+data class SmartMapRecommendation(
+    val marker: MapMarker,
+    val reasonEn: String,
+    val reasonFa: String,
+    val distanceMeters: Double,
+    val bearingDegrees: Double,
+    val walkMinutes: Int,
 )

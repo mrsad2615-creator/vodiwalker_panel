@@ -65,20 +65,20 @@ fun ObsidianBackground(
                 drawCircle(
                     brush = Brush.radialGradient(
                         listOf(colors.orbCyan, Color.Transparent),
-                        center = Offset(size.width * 0.16f, size.height * 0.14f),
-                        radius = size.width * 0.68f * pulse,
+                        center = Offset(size.width * 0.20f, size.height * 0.12f),
+                        radius = size.width * 0.72f * pulse,
                     ),
-                    center = Offset(size.width * 0.16f, size.height * 0.14f),
-                    radius = size.width * 0.68f * pulse,
+                    center = Offset(size.width * 0.20f, size.height * 0.12f),
+                    radius = size.width * 0.72f * pulse,
                 )
                 drawCircle(
                     brush = Brush.radialGradient(
                         listOf(colors.orbViolet, Color.Transparent),
-                        center = Offset(size.width * 0.86f, size.height * 0.80f),
-                        radius = size.width * 0.64f * pulse,
+                        center = Offset(size.width * 0.84f, size.height * 0.82f),
+                        radius = size.width * 0.68f * pulse,
                     ),
-                    center = Offset(size.width * 0.86f, size.height * 0.80f),
-                    radius = size.width * 0.64f * pulse,
+                    center = Offset(size.width * 0.84f, size.height * 0.82f),
+                    radius = size.width * 0.68f * pulse,
                 )
             },
         content = content,
@@ -88,48 +88,54 @@ fun ObsidianBackground(
 @Composable
 fun ObsidianGlassCard(
     modifier: Modifier = Modifier,
-    cornerRadius: Dp = 18.dp,
+    cornerRadius: Dp = 22.dp,
     elevated: Boolean = false,
     enable3DTilt: Boolean = false,
     accentBorderColor: Color? = null,
     onClick: (() -> Unit)? = null,
-    contentPadding: PaddingValues = PaddingValues(16.dp),
+    contentPadding: PaddingValues = PaddingValues(18.dp),
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val colors = LocalObsidianColors.current
     val shape = RoundedCornerShape(cornerRadius)
     val rimBrush = Brush.linearGradient(
         colors = listOf(
-            accentBorderColor?.copy(alpha = 0.72f) ?: colors.glassRimStart,
+            accentBorderColor?.copy(alpha = 0.65f) ?: colors.glassRimStart,
             colors.glassRimEnd,
-            accentBorderColor?.copy(alpha = 0.30f) ?: colors.glassRimEnd,
+            accentBorderColor?.copy(alpha = 0.24f) ?: colors.glassRimEnd.copy(alpha = 0.35f),
         ),
     )
 
-    val fillBrush = Brush.verticalGradient(
-        listOf(
-            if (elevated) colors.glassElevated else colors.glassSurface,
-            colors.glassSurface.copy(alpha = if (colors.isDark) 0.88f else 0.96f),
+    val fillBrush = Brush.linearGradient(
+        colors = listOf(
+            (if (elevated) colors.glassElevated else colors.glassSurface),
+            colors.glassSurface.copy(alpha = if (colors.isDark) 0.56f else 0.78f),
         ),
     )
 
     val baseModifier = modifier
         .clip(shape)
         .background(fillBrush)
-        .border(width = 1.dp, brush = rimBrush, shape = shape)
+        .border(width = 0.9.dp, brush = rimBrush, shape = shape)
         .drawBehind {
             drawLine(
                 color = colors.glassTopSheen,
-                start = Offset(size.width * 0.06f, 1.5f),
-                end = Offset(size.width * 0.94f, 1.5f),
-                strokeWidth = 1.8f,
+                start = Offset(size.width * 0.08f, 1.2f),
+                end = Offset(size.width * 0.92f, 1.2f),
+                strokeWidth = 1.6f,
+            )
+            drawLine(
+                color = colors.divider.copy(alpha = 0.25f),
+                start = Offset(size.width * 0.12f, size.height - 1.2f),
+                end = Offset(size.width * 0.88f, size.height - 1.2f),
+                strokeWidth = 1.0f,
             )
         }
         .let { if (onClick != null) it.clickable(onClick = onClick) else it }
 
     Column(
         modifier = baseModifier.padding(contentPadding),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
         content = content,
     )
 }
@@ -214,9 +220,9 @@ fun Hero3DSecurityShield(
                 color = colors.textPrimary,
             )
             Text(
-                text = tr("READY", "آمادگی"),
+                text = tr("SECURE", "امنیت"),
                 style = MaterialTheme.typography.labelSmall,
-                color = colors.accentTeal,
+                color = colors.accentCyan,
             )
         }
     }
@@ -224,7 +230,7 @@ fun Hero3DSecurityShield(
 
 @Composable
 fun OfflineStatusPill(
-    text: String = tr("100% OFFLINE · NO CLOUD", "۱۰۰٪ آفلاین · بدون اینترنت"),
+    text: String = tr("100% OFFLINE · ZERO NETWORK", "۱۰۰٪ آفلاین · بدون اینترنت"),
     isWarning: Boolean = false,
 ) {
     val colors = LocalObsidianColors.current

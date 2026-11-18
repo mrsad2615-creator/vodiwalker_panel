@@ -54,124 +54,130 @@ data class ObsidianColors(
     val divider: Color,
 )
 
+/**
+ * Smoked Jade & Mineral Pearl Frosted Glass (Minimalist Dark Glass)
+ */
 val DarkObsidianColors = ObsidianColors(
     isDark = true,
-    canvasTop = Color(0xFF060911),
-    canvasMid = Color(0xFF0B1221),
-    canvasBottom = Color(0xFF070B14),
-    orbCyan = Color(0x2438BDF8),
-    orbViolet = Color(0x1E8B5CF6),
-    glassSurface = Color(0xD8111B2E),
-    glassElevated = Color(0xEC18253E),
-    glassTopSheen = Color(0x28FFFFFF),
-    glassRimStart = Color(0x4CFFFFFF),
-    glassRimEnd = Color(0x2438BDF8),
-    textPrimary = Color(0xFFF8FAFC),
-    textSecondary = Color(0xFFC2CFE0),
-    textMuted = Color(0xFF8C9DB5),
-    accentCyan = Color(0xFF38BDF8),
-    accentTeal = Color(0xFF2DD4BF),
-    accentEmerald = Color(0xFF34D399),
-    accentAmber = Color(0xFFFBBF24),
-    accentCrimson = Color(0xFFFB7185),
-    accentViolet = Color(0xFFA78BFA),
-    chipFill = Color(0x2838BDF8),
-    divider = Color(0x2994A3B8),
+    canvasTop = Color(0xFF070A0E),
+    canvasMid = Color(0xFF0C1219),
+    canvasBottom = Color(0xFF090D13),
+    orbCyan = Color(0x1E5EEAD4),       // Soft Glacial Jade Mist
+    orbViolet = Color(0x16E8D8C3),     // Warm Champagne Quartz Frost
+    glassSurface = Color(0xA6141C25),  // True translucent smoked frost
+    glassElevated = Color(0xBF1C2632), // Elevated frosted sheet
+    glassTopSheen = Color(0x3EFFFFFF), // Specular glass lip highlight
+    glassRimStart = Color(0x4CFFFFFF), // Top-left light refraction bevel
+    glassRimEnd = Color(0x225EEAD4),   // Subtle glacial mint refraction tail
+    textPrimary = Color(0xFFF3F6F9),
+    textSecondary = Color(0xFFBAC6D4),
+    textMuted = Color(0xFF7D8C9D),
+    accentCyan = Color(0xFF5EEAD4),    // Glacial Jade (Signature Primary)
+    accentTeal = Color(0xFF7DD3FC),    // Ice Sky Quartz
+    accentEmerald = Color(0xFF6EE7B7), // Mineral Sage
+    accentAmber = Color(0xFFFCD34D),   // Soft Warm Gold
+    accentCrimson = Color(0xFFFB7185), // Rose Coral Alert
+    accentViolet = Color(0xFFC4B5FD),  // Frosted Iris
+    chipFill = Color(0x205EEAD4),
+    divider = Color(0x26CBD5E1),
 )
 
+/**
+ * Porcelain Alabaster & Botanical Jade Frosted Glass (Minimalist Light Glass)
+ */
 val LightObsidianColors = ObsidianColors(
     isDark = false,
-    canvasTop = Color(0xFFEAF0F8),
-    canvasMid = Color(0xFFF4F7FC),
-    canvasBottom = Color(0xFFE3ECF6),
-    orbCyan = Color(0x1E0284C7),
-    orbViolet = Color(0x167C3AED),
-    glassSurface = Color(0xF2FFFFFF),
-    glassElevated = Color(0xFFFFFFFF),
-    glassTopSheen = Color(0xE6FFFFFF),
-    glassRimStart = Color(0xD9FFFFFF),
-    glassRimEnd = Color(0x360F172A),
-    textPrimary = Color(0xFF0B1324),
-    textSecondary = Color(0xFF334155),
-    textMuted = Color(0xFF64748B),
-    accentCyan = Color(0xFF0284C7),
-    accentTeal = Color(0xFF0D9488),
-    accentEmerald = Color(0xFF059669),
-    accentAmber = Color(0xFFD97706),
-    accentCrimson = Color(0xFFE11D48),
-    accentViolet = Color(0xFF7C3AED),
-    chipFill = Color(0x180284C7),
-    divider = Color(0x240F172A),
+    canvasTop = Color(0xFFF1F4F7),
+    canvasMid = Color(0xFFE9EFF4),
+    canvasBottom = Color(0xFFF4F6F9),
+    orbCyan = Color(0x1C0F766E),       // Soft Jade Mist
+    orbViolet = Color(0x16B45309),     // Warm Sand Pearl
+    glassSurface = Color(0xC2FFFFFF),  // Translucent Porcelain Frost
+    glassElevated = Color(0xDEFFFFFF), // Elevated Satin Frost
+    glassTopSheen = Color(0xF0FFFFFF), // Pure porcelain top sheen
+    glassRimStart = Color(0xE8FFFFFF), // Crisp frosted border start
+    glassRimEnd = Color(0x280F766E),   // Botanical jade rim tail
+    textPrimary = Color(0xFF0D1721),
+    textSecondary = Color(0xFF3E4E5E),
+    textMuted = Color(0xFF6B7B8C),
+    accentCyan = Color(0xFF0F766E),    // Deep Botanical Jade
+    accentTeal = Color(0xFF0369A1),    // Nordic Slate Sapphire
+    accentEmerald = Color(0xFF15803D), // Clean Forest Sage
+    accentAmber = Color(0xFFB45309),   // Burnished Ochre
+    accentCrimson = Color(0xFFBE123C), // Deep Ruby Rose
+    accentViolet = Color(0xFF6D28D9),  // Smoked Amethyst
+    chipFill = Color(0x160F766E),
+    divider = Color(0x220F172A),
 )
 
 val LocalObsidianColors = staticCompositionLocalOf { DarkObsidianColors }
-val LocalAppLanguage = staticCompositionLocalOf { AppLanguage.EN }
+val LocalAppLanguage = staticCompositionLocalOf { AppLanguage.FA }
 
 private val AegisTypography = Typography(
     headlineLarge = TextStyle(
         fontFamily = AegisFontFamily,
-        fontSize = 24.sp,
-        lineHeight = 35.sp,
+        fontSize = 23.sp,
+        lineHeight = 36.sp,
         fontWeight = FontWeight.Bold,
     ),
     headlineMedium = TextStyle(
         fontFamily = AegisFontFamily,
-        fontSize = 20.sp,
-        lineHeight = 30.sp,
+        fontSize = 19.sp,
+        lineHeight = 31.sp,
         fontWeight = FontWeight.Bold,
     ),
     titleLarge = TextStyle(
         fontFamily = AegisFontFamily,
-        fontSize = 17.sp,
-        lineHeight = 26.sp,
+        fontSize = 16.5.sp,
+        lineHeight = 27.sp,
         fontWeight = FontWeight.SemiBold,
     ),
     titleMedium = TextStyle(
         fontFamily = AegisFontFamily,
         fontSize = 15.sp,
-        lineHeight = 24.sp,
+        lineHeight = 25.sp,
         fontWeight = FontWeight.SemiBold,
     ),
     titleSmall = TextStyle(
         fontFamily = AegisFontFamily,
         fontSize = 13.5.sp,
-        lineHeight = 21.sp,
+        lineHeight = 22.sp,
         fontWeight = FontWeight.SemiBold,
     ),
     bodyLarge = TextStyle(
         fontFamily = AegisFontFamily,
-        fontSize = 15.sp,
-        lineHeight = 24.sp,
+        fontSize = 14.5.sp,
+        lineHeight = 25.sp,
         fontWeight = FontWeight.Normal,
     ),
     bodyMedium = TextStyle(
         fontFamily = AegisFontFamily,
-        fontSize = 13.5.sp,
-        lineHeight = 21.sp,
+        fontSize = 13.sp,
+        lineHeight = 22.sp,
         fontWeight = FontWeight.Normal,
     ),
     bodySmall = TextStyle(
         fontFamily = AegisFontFamily,
         fontSize = 12.sp,
-        lineHeight = 18.sp,
+        lineHeight = 19.sp,
         fontWeight = FontWeight.Normal,
     ),
     labelLarge = TextStyle(
         fontFamily = AegisFontFamily,
         fontSize = 13.sp,
-        lineHeight = 19.sp,
+        lineHeight = 20.sp,
         fontWeight = FontWeight.SemiBold,
     ),
     labelMedium = TextStyle(
         fontFamily = AegisFontFamily,
         fontSize = 12.sp,
-        lineHeight = 17.sp,
+        lineHeight = 18.sp,
         fontWeight = FontWeight.Medium,
     ),
     labelSmall = TextStyle(
         fontFamily = AegisFontFamily,
         fontSize = 11.sp,
-        lineHeight = 16.sp,
+        lineHeight = 17.sp,
         fontWeight = FontWeight.Medium,
     ),
 )
@@ -197,7 +203,7 @@ fun AegisTheme(
             background = obsidian.canvasTop,
             surface = obsidian.glassSurface,
             surfaceVariant = obsidian.glassElevated,
-            onPrimary = Color(0xFF04121E),
+            onPrimary = Color(0xFF041714),
             onBackground = obsidian.textPrimary,
             onSurface = obsidian.textPrimary,
             onSurfaceVariant = obsidian.textSecondary,

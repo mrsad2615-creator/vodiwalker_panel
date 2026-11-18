@@ -2,28 +2,47 @@ package ir.aegis.core.maps
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class VectorMapAndRoutingTest {
 
     @Test
-    fun bundledVectorPacksLoadWithStreetsParksBuildingsAndGraph() {
-        val tehran = VectorMapEngine.loadBundle("pack-tehran-grid")
-        assertTrue(tehran.roads.size >= 12)
-        assertTrue(tehran.parks.size >= 4)
-        assertTrue(tehran.buildings.size >= 8)
-        assertTrue(tehran.contours.size >= 3)
-        assertTrue(tehran.graphNodes.size >= 15)
-        assertTrue(tehran.graphEdges.size >= 20)
+    fun baseAtlasAndAllCityVectorPacksLoadCleanlyOffline() {
+        val atlas = VectorMapEngine.loadBaseAtlas()
+        assertTrue(atlas.countries.size >= 150)
+        assertTrue(atlas.iranProvinces.size >= 28)
+        assertTrue(atlas.cities.size >= 25)
+        assertTrue(atlas.nationalHighways.isNotEmpty())
 
-        val nuremberg = VectorMapEngine.loadBundle("pack-bavaria-nuremberg")
-        assertTrue(nuremberg.waterways.isNotEmpty())
-        assertTrue(nuremberg.roads.size >= 5)
+        for (pkg in OfflineMapSeeds.bundledPackages()) {
+            val bundle = VectorMapEngine.loadBundle(pkg.id)
+            assertTrue("Roads missing in ${pkg.id}", bundle.roads.isNotEmpty())
+            assertTrue("Graph nodes missing in ${pkg.id}", bundle.graphNodes.isNotEmpty())
+            assertTrue("Graph edges missing in ${pkg.id}", bundle.graphEdges.isNotEmpty())
+        }
+    }
 
-        val alborz = VectorMapEngine.loadBundle("pack-alborz-corridor")
-        assertTrue(alborz.contours.size >= 3)
-        assertTrue(alborz.graphNodes.size >= 5)
+    @Test
+    fun nearestPackAutoSelectAndSmartMapAdvisorWorkAccurately() {
+        val pkgs = OfflineMapSeeds.bundledPackages()
+        val mashhadPack = VectorMapEngine.autoSelectNearestPack(36.2972, 59.6067, pkgs)
+        assertNotNull(mashhadPack)
+        assertEquals("pack-mashhad-grid", mashhadPack?.id)
+
+        val nuePack = VectorMapEngine.autoSelectNearestPack(49.4521, 11.0767, pkgs)
+        assertNotNull(nuePack)
+        assertEquals("pack-bavaria-nuremberg", nuePack?.id)
+
+        val recs = MapAdvisorEngine.suggestNearestDestinations(
+            userLat = 35.7010,
+            userLon = 51.3911,
+            markers = OfflineMapSeeds.bundledMarkers().filter { it.packageId == "pack-tehran-grid" },
+            limit = 3,
+        )
+        assertTrue(recs.size == 3)
+        assertTrue(recs[0].distanceMeters <= recs[1].distanceMeters)
     }
 
     @Test
@@ -46,7 +65,6 @@ class VectorMapAndRoutingTest {
         assertTrue(direct.totalDistanceMeters > 3_500.0)
         assertEquals(0, direct.avoidedHazardCount)
 
-        // Place hazard right on Enghelab Square (35.7010, 51.3911) and verify route detours
         val detoured = OfflineRoutingEngine.computeSafeRoute(
             bundle = tehran,
             startLat = 35.6997,

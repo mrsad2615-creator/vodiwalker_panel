@@ -1,0 +1,217 @@
+{
+  "packageId": "pack-tabriz-grid",
+  "baseElevationMeters": 1350.0,
+  "waterways": [
+    {
+      "id": "wt-mehrane",
+      "nameEn": "Mehranrud Channel",
+      "nameFa": "مهران‌رود",
+      "widthMeters": 20.0,
+      "points": [
+        {
+          "lat": 38.07,
+          "lon": 46.335
+        },
+        {
+          "lat": 38.079,
+          "lon": 46.295
+        },
+        {
+          "lat": 38.084,
+          "lon": 46.255
+        }
+      ]
+    }
+  ],
+  "waterBodies": [],
+  "parks": [
+    {
+      "id": "pt-elgoli",
+      "nameEn": "El-Goli Park",
+      "nameFa": "پارک ائل‌گلی",
+      "kind": "park",
+      "points": [
+        {
+          "lat": 38.024,
+          "lon": 46.36
+        },
+        {
+          "lat": 38.024,
+          "lon": 46.372
+        },
+        {
+          "lat": 38.033,
+          "lon": 46.372
+        },
+        {
+          "lat": 38.033,
+          "lon": 46.36
+        }
+      ]
+    }
+  ],
+  "contours": [],
+  "buildings": [
+    {
+      "id": "bt-imam",
+      "nameEn": "Imam Reza Trauma Hub",
+      "nameFa": "بیمارستان امام رضا تبریز",
+      "kind": "hospital",
+      "heightMeters": 58.0,
+      "footprint": [
+        {
+          "lat": 38.055,
+          "lon": 46.322
+        },
+        {
+          "lat": 38.055,
+          "lon": 46.328
+        },
+        {
+          "lat": 38.06,
+          "lon": 46.328
+        },
+        {
+          "lat": 38.06,
+          "lon": 46.322
+        }
+      ]
+    },
+    {
+      "id": "bt-saat",
+      "nameEn": "Saat Square Complex",
+      "nameFa": "میدان ساعت",
+      "kind": "landmark",
+      "heightMeters": 52.0,
+      "footprint": [
+        {
+          "lat": 38.073,
+          "lon": 46.292
+        },
+        {
+          "lat": 38.073,
+          "lon": 46.298
+        },
+        {
+          "lat": 38.077,
+          "lon": 46.298
+        },
+        {
+          "lat": 38.077,
+          "lon": 46.292
+        }
+      ]
+    }
+  ],
+  "roads": [
+    {
+      "id": "rt-imam",
+      "nameEn": "Imam Khomeini St",
+      "nameFa": "خیابان امام خمینی",
+      "tier": "PRIMARY",
+      "points": [
+        {
+          "lat": 38.082,
+          "lon": 46.255
+        },
+        {
+          "lat": 38.075,
+          "lon": 46.295
+        },
+        {
+          "lat": 38.068,
+          "lon": 46.33
+        }
+      ]
+    },
+    {
+      "id": "rt-pasdaran",
+      "nameEn": "Pasdaran Expwy",
+      "nameFa": "بزرگراه پاسداران",
+      "tier": "HIGHWAY",
+      "points": [
+        {
+          "lat": 38.105,
+          "lon": 46.275
+        },
+        {
+          "lat": 38.095,
+          "lon": 46.32
+        },
+        {
+          "lat": 38.075,
+          "lon": 46.365
+        }
+      ]
+    }
+  ],
+  "districts": [
+    {
+      "nameEn": "SAAT SQ",
+      "nameFa": "میدان ساعت",
+      "lat": 38.075,
+      "lon": 46.295,
+      "importance": 1
+    },
+    {
+      "nameEn": "EL-GOLI",
+      "nameFa": "ائل‌گلی",
+      "lat": 38.028,
+      "lon": 46.366,
+      "importance": 1
+    }
+  ],
+  "graphNodes": [
+    {
+      "id": "t1",
+      "labelEn": "Saat Sq",
+      "labelFa": "میدان ساعت",
+      "lat": 38.075,
+      "lon": 46.295
+    },
+    {
+      "id": "t2",
+      "labelEn": "Abrasan Sq",
+      "labelFa": "آبرسان",
+      "lat": 38.067,
+      "lon": 46.325
+    },
+    {
+      "id": "t3",
+      "labelEn": "Imam Reza Hospital",
+      "labelFa": "بیمارستان امام رضا",
+      "lat": 38.058,
+      "lon": 46.325
+    },
+    {
+      "id": "t4",
+      "labelEn": "El-Goli Shelter",
+      "labelFa": "ائل‌گلی",
+      "lat": 38.028,
+      "lon": 46.366
+    }
+  ],
+  "graphEdges": [
+    {
+      "fromId": "t1",
+      "toId": "t2",
+      "roadNameEn": "Imam Khomeini St",
+      "roadNameFa": "خیابان امام",
+      "isWideCorridor": true
+    },
+    {
+      "fromId": "t2",
+      "toId": "t3",
+      "roadNameEn": "Golgasht St",
+      "roadNameFa": "خیابان گلگشت",
+      "isWideCorridor": true
+    },
+    {
+      "fromId": "t3",
+      "toId": "t4",
+      "roadNameEn": "El-Goli Blvd",
+      "roadNameFa": "بلوار ائل‌گلی",
+      "isWideCorridor": true
+    }
+  ]
+}

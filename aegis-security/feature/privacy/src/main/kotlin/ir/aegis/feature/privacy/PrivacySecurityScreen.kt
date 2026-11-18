@@ -1,6 +1,7 @@
 package ir.aegis.feature.privacy
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -297,46 +298,74 @@ fun PrivacySecurityScreen(
             }
 
             2 -> {
-                val permChecks = remember(context) {
-                    buildList {
-                        add("Fine Location (Optional Offline Map GPS)" to (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED))
-                        add("Camera (Torch SOS & Document Scanner)" to (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED))
-                        add("Microphone (Offline Voice Notes)" to (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED))
-                        if (Build.VERSION.SDK_INT >= 33) {
-                            add("Notifications (Local WorkManager Reminders)" to (ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED))
-                        }
-                        add("INTERNET Permission" to false)
-                    }
+                var selectedPerm by remember { mutableStateOf("android.permission.CAMERA") }
+                val permOptions = listOf(
+                    "android.permission.CAMERA" to tr("Camera", "دوربین"),
+                    "android.permission.RECORD_AUDIO" to tr("Microphone", "میکروفون"),
+                    "android.permission.READ_SMS" to tr("SMS / OTP", "پیامک"),
+                    "android.permission.ACCESS_BACKGROUND_LOCATION" to tr("BG Location", "مکان دائم"),
+                    "android.permission.SYSTEM_ALERT_WINDOW" to tr("Overlay", "روی صفحه"),
+                    "android.permission.REQUEST_INSTALL_PACKAGES" to tr("Install APK", "نصب برنامه"),
+                )
+                val appsWithPerm = remember(context, selectedPerm) {
+                    queryAppsForPermission(context, selectedPerm)
                 }
                 val fmt = remember { SimpleDateFormat("MM-dd HH:mm:ss", Locale.US) }
 
                 LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     item {
-                        ObsidianGlassCard {
-                            Text(tr("Permission & Zero-Network Audit", "ممیزی مجوزها و عدم دسترسی به اینترنت"), style = MaterialTheme.typography.titleMedium, color = colors.accentCyan)
+                        ObsidianGlassCard(elevated = true, accentBorderColor = colors.accentCyan) {
+                            SectionHeader(
+                                title = tr("App Privacy Permission Auditor", "ممیزی مجوزهای حساس برنامه‌های نصب‌شده"),
+                                badge = "${appsWithPerm.size} " + tr("apps", "برنامه"),
+                            )
+                            Text(
+                                text = tr(
+                                    "Zero-network design verified: AegisGuard has NO INTERNET permission. Audit which third-party apps access sensitive hardware below:",
+                                    "دسترسی اینترنت در ایجیس‌گارد صفر است. با انتخاب هر مجوز، برنامه‌های شخص‌ثالث دارای آن دسترسی را ببینید و مدیریت کنید:",
+                                ),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = colors.textSecondary,
+                            )
                             Spacer(Modifier.height(6.dp))
-                            permChecks.forEach { (label, granted) ->
-                                val statusText = if (label.startsWith("INTERNET")) "ABSENT BY DESIGN" else if (granted) "GRANTED" else "DENIED / OPTIONAL"
-                                val tone = if (label.startsWith("INTERNET") || granted) colors.accentEmerald else colors.accentAmber
-                                Text("• $label: $statusText", style = MaterialTheme.typography.bodyMedium, color = tone)
+                            ChipFlowGroup {
+                                permOptions.forEach { (perm, title) ->
+                                    AegisFilterPill(
+                                        label = title,
+                                        selected = selectedPerm == perm,
+                                        onClick = { selectedPerm = perm },
+                                        accent = colors.accentCyan,
+                                    )
+                                }
                             }
-                            Spacer(Modifier.height(8.dp))
+                        }
+                    }
+
+                    items(appsWithPerm, key = { it.first }) { (pkgName, appLabel, granted) ->
+                        ObsidianGlassCard(accentBorderColor = if (granted) colors.accentAmber else colors.divider) {
+                            SectionHeader(
+                                title = appLabel,
+                                badge = if (granted) tr("GRANTED", "مجوز فعال") else tr("REQUESTED", "درخواست‌شده"),
+                            )
+                            Text(pkgName, style = MaterialTheme.typography.labelSmall, color = colors.textMuted)
+                            Spacer(Modifier.height(4.dp))
                             GlassButton(
-                                label = tr("Open System App Permissions", "تنظیمات مجوزهای اندروید"),
+                                label = tr("Manage / Revoke in System", "لغو یا بررسی در تنظیمات اندروید"),
                                 onClick = {
                                     runCatching {
                                         context.startActivity(
-                                            Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", context.packageName, null))
+                                            Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", pkgName, null))
                                                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
                                         )
                                     }
                                 },
+                                accent = if (granted) colors.accentAmber else colors.accentTeal,
                             )
                         }
                     }
 
                     item {
-                        Text(tr("Local Activity History (${auditLogs.size})", "تاریخچه فعالیت محلی (${auditLogs.size})"), style = MaterialTheme.typography.titleMedium, color = colors.textPrimary)
+                        Text(tr("Local Security Audit History (${auditLogs.size})", "تاریخچه ممیزی و عملیات (${auditLogs.size})"), style = MaterialTheme.typography.titleMedium, color = colors.textPrimary)
                     }
                     items(auditLogs, key = { it.id }) { log ->
                         ObsidianGlassCard {
@@ -349,4 +378,29 @@ fun PrivacySecurityScreen(
             }
         }
     }
+}
+
+@SuppressLint("QueryPermissionsNeeded")
+@Suppress("DEPRECATION")
+private fun queryAppsForPermission(context: android.content.Context, selectedPerm: String): List<Triple<String, String, Boolean>> {
+    val pm = context.packageManager
+    val pkgs = runCatching {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            pm.getInstalledPackages(PackageManager.PackageInfoFlags.of(PackageManager.GET_PERMISSIONS.toLong()))
+        } else {
+            pm.getInstalledPackages(PackageManager.GET_PERMISSIONS)
+        }
+    }.getOrDefault(emptyList())
+    return pkgs.filter { pkg ->
+        val isSys = ((pkg.applicationInfo?.flags ?: 0) and android.content.pm.ApplicationInfo.FLAG_SYSTEM) != 0
+        !isSys && (pkg.requestedPermissions?.contains(selectedPerm) == true)
+    }.map { pkg ->
+        val lbl = pkg.applicationInfo?.let { runCatching { pm.getApplicationLabel(it).toString() }.getOrNull() } ?: pkg.packageName
+        val granted = pkg.requestedPermissions?.let { perms ->
+            val idx = perms.indexOf(selectedPerm)
+            val flags = pkg.requestedPermissionsFlags
+            idx >= 0 && flags != null && (flags[idx] and android.content.pm.PackageInfo.REQUESTED_PERMISSION_GRANTED) != 0
+        } ?: false
+        Triple(pkg.packageName, lbl, granted)
+    }.sortedByDescending { it.third }
 }

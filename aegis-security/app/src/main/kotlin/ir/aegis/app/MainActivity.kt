@@ -16,6 +16,8 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -24,7 +26,6 @@ import androidx.fragment.app.FragmentActivity
 import ir.aegis.core.model.*
 import ir.aegis.core.ui.AegisModuleIcon
 import ir.aegis.core.ui.AegisTheme
-import ir.aegis.core.ui.LocalAppLanguage
 import ir.aegis.core.ui.LocalObsidianColors
 import ir.aegis.core.ui.ObsidianBackground
 import ir.aegis.core.ui.tr
@@ -81,7 +82,6 @@ class MainActivity : FragmentActivity() {
                         onUnlocked = { isLocked = false },
                     )
                 } else {
-                    val colors = LocalObsidianColors.current
                     ObsidianBackground {
                         Scaffold(
                             containerColor = Color.Transparent,
@@ -118,7 +118,7 @@ class MainActivity : FragmentActivity() {
                                             scope.launch { container.preferencesRepository.updateThemeMode(next) }
                                         },
                                         onToggleLanguage = {
-                                            val next = if (prefs.language == AppLanguage.EN) AppLanguage.FA else AppLanguage.EN
+                                            val next = if (prefs.language == AppLanguage.FA) AppLanguage.EN else AppLanguage.FA
                                             scope.launch { container.preferencesRepository.updateLanguage(next) }
                                         },
                                         onToggleWidget = { w ->
@@ -215,23 +215,32 @@ private fun AegisBottomNavBar(
     val colors = LocalObsidianColors.current
     val items = listOf(
         AegisModule.HOME to tr("Home", "خانه"),
+        AegisModule.EMERGENCY to tr("Anti-Hack", "ضد هک"),
+        AegisModule.UTILITIES to tr("Scanner", "آنتی‌ویروس"),
+        AegisModule.AI to tr("Phishing", "فیشینگ"),
         AegisModule.MAPS to tr("Map", "نقشه"),
-        AegisModule.EMERGENCY to tr("SOS", "SOS"),
-        AegisModule.CRISIS to tr("Crisis", "بحران"),
-        AegisModule.UTILITIES to tr("Tools", "ابزار"),
     )
 
     val selectedTab = when (currentModule) {
         AegisModule.HOME -> AegisModule.HOME
-        AegisModule.MAPS -> AegisModule.MAPS
         AegisModule.EMERGENCY -> AegisModule.EMERGENCY
-        AegisModule.CRISIS, AegisModule.FAMILY -> AegisModule.CRISIS
-        else -> AegisModule.UTILITIES
+        AegisModule.UTILITIES -> AegisModule.UTILITIES
+        AegisModule.AI -> AegisModule.AI
+        AegisModule.MAPS -> AegisModule.MAPS
+        else -> AegisModule.HOME
     }
 
     NavigationBar(
-        containerColor = if (colors.isDark) Color(0xEE0B1322) else Color(0xF5FFFFFF),
-        tonalElevation = 8.dp,
+        containerColor = if (colors.isDark) Color(0xDC0D141C) else Color(0xECFFFFFF),
+        tonalElevation = 0.dp,
+        modifier = Modifier.drawBehind {
+            drawLine(
+                color = colors.glassTopSheen,
+                start = Offset(0f, 1f),
+                end = Offset(size.width, 1f),
+                strokeWidth = 1.5f,
+            )
+        },
     ) {
         items.forEach { (mod, label) ->
             val selected = selectedTab == mod
@@ -243,7 +252,7 @@ private fun AegisBottomNavBar(
                     AegisModuleIcon(
                         module = mod,
                         tint = if (selected) activeAccent else colors.textSecondary,
-                        size = 22.dp,
+                        size = 21.dp,
                     )
                 },
                 label = {

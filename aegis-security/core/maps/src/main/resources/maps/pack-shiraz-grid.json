@@ -1,0 +1,241 @@
+{
+  "packageId": "pack-shiraz-grid",
+  "baseElevationMeters": 1500.0,
+  "waterways": [
+    {
+      "id": "ws-khoshk",
+      "nameEn": "Khoshk Seasonal River",
+      "nameFa": "رودخانه خشک",
+      "widthMeters": 22.0,
+      "points": [
+        {
+          "lat": 29.645,
+          "lon": 52.495
+        },
+        {
+          "lat": 29.622,
+          "lon": 52.535
+        },
+        {
+          "lat": 29.612,
+          "lon": 52.565
+        }
+      ]
+    }
+  ],
+  "waterBodies": [],
+  "parks": [
+    {
+      "id": "ps-eram",
+      "nameEn": "Eram Garden Safe Zone",
+      "nameFa": "باغ ارم شیراز",
+      "kind": "park",
+      "points": [
+        {
+          "lat": 29.633,
+          "lon": 52.522
+        },
+        {
+          "lat": 29.633,
+          "lon": 52.529
+        },
+        {
+          "lat": 29.639,
+          "lon": 52.529
+        },
+        {
+          "lat": 29.639,
+          "lon": 52.522
+        }
+      ]
+    },
+    {
+      "id": "ps-azadi",
+      "nameEn": "Azadi Park",
+      "nameFa": "پارک آزادی",
+      "kind": "park",
+      "points": [
+        {
+          "lat": 29.624,
+          "lon": 52.548
+        },
+        {
+          "lat": 29.624,
+          "lon": 52.556
+        },
+        {
+          "lat": 29.631,
+          "lon": 52.556
+        },
+        {
+          "lat": 29.631,
+          "lon": 52.548
+        }
+      ]
+    }
+  ],
+  "contours": [],
+  "buildings": [
+    {
+      "id": "bs-namazi",
+      "nameEn": "Namazi Hospital",
+      "nameFa": "بیمارستان نمازی",
+      "kind": "hospital",
+      "heightMeters": 55.0,
+      "footprint": [
+        {
+          "lat": 29.618,
+          "lon": 52.521
+        },
+        {
+          "lat": 29.618,
+          "lon": 52.527
+        },
+        {
+          "lat": 29.623,
+          "lon": 52.527
+        },
+        {
+          "lat": 29.623,
+          "lon": 52.521
+        }
+      ]
+    },
+    {
+      "id": "bs-hafez",
+      "nameEn": "Hafezieh Cultural Zone",
+      "nameFa": "حافظیه",
+      "kind": "landmark",
+      "heightMeters": 40.0,
+      "footprint": [
+        {
+          "lat": 29.624,
+          "lon": 52.557
+        },
+        {
+          "lat": 29.624,
+          "lon": 52.561
+        },
+        {
+          "lat": 29.628,
+          "lon": 52.561
+        },
+        {
+          "lat": 29.628,
+          "lon": 52.557
+        }
+      ]
+    }
+  ],
+  "roads": [
+    {
+      "id": "rs-zand",
+      "nameEn": "Karimkhan Zand Blvd",
+      "nameFa": "بلوار کریمخان زند",
+      "tier": "PRIMARY",
+      "points": [
+        {
+          "lat": 29.62,
+          "lon": 52.522
+        },
+        {
+          "lat": 29.616,
+          "lon": 52.542
+        },
+        {
+          "lat": 29.613,
+          "lon": 52.562
+        }
+      ]
+    },
+    {
+      "id": "rs-chamran",
+      "nameEn": "Shahid Chamran Blvd",
+      "nameFa": "بلوار شهید چمران",
+      "tier": "HIGHWAY",
+      "points": [
+        {
+          "lat": 29.665,
+          "lon": 52.482
+        },
+        {
+          "lat": 29.64,
+          "lon": 52.502
+        },
+        {
+          "lat": 29.624,
+          "lon": 52.518
+        }
+      ]
+    }
+  ],
+  "districts": [
+    {
+      "nameEn": "NAMAZI SQ",
+      "nameFa": "میدان نمازی",
+      "lat": 29.62,
+      "lon": 52.523,
+      "importance": 1
+    },
+    {
+      "nameEn": "ZAND CENTRAL",
+      "nameFa": "مرکز زند",
+      "lat": 29.616,
+      "lon": 52.544,
+      "importance": 1
+    }
+  ],
+  "graphNodes": [
+    {
+      "id": "s1",
+      "labelEn": "Chamran Hub",
+      "labelFa": "بلوار چمران",
+      "lat": 29.64,
+      "lon": 52.502
+    },
+    {
+      "id": "s2",
+      "labelEn": "Namazi Hospital",
+      "labelFa": "بیمارستان نمازی",
+      "lat": 29.62,
+      "lon": 52.523
+    },
+    {
+      "id": "s3",
+      "labelEn": "Setad / Zand Central",
+      "labelFa": "ستاد / بلوار زند",
+      "lat": 29.616,
+      "lon": 52.543
+    },
+    {
+      "id": "s4",
+      "labelEn": "Azadi Park",
+      "labelFa": "پارک آزادی",
+      "lat": 29.627,
+      "lon": 52.552
+    }
+  ],
+  "graphEdges": [
+    {
+      "fromId": "s1",
+      "toId": "s2",
+      "roadNameEn": "Chamran / Daneshjoo",
+      "roadNameFa": "چمران / دانشجو",
+      "isWideCorridor": true
+    },
+    {
+      "fromId": "s2",
+      "toId": "s3",
+      "roadNameEn": "Zand Blvd",
+      "roadNameFa": "بلوار زند",
+      "isWideCorridor": true
+    },
+    {
+      "fromId": "s3",
+      "toId": "s4",
+      "roadNameEn": "Azadi Blvd",
+      "roadNameFa": "بلوار آزادی",
+      "isWideCorridor": true
+    }
+  ]
+}

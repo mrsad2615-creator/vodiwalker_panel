@@ -1,4 +1,5 @@
 -keep class ir.aegis.core.model.** { *; }
 -keep class ir.aegis.core.maps.** { *; }
+-keep class ir.aegis.core.ai.** { *; }
 -keepattributes *Annotation*,Signature,InnerClasses,EnclosingMethod
 -dontwarn kotlinx.serialization.**

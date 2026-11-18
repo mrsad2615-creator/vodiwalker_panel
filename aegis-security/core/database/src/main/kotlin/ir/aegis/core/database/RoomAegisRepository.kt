@@ -229,7 +229,7 @@ class RoomAegisRepository(private val db: AegisDatabase) : AegisRepository {
 
     suspend fun ensureSeeded() {
         val existingPacks = dao.getMapPackagesOnce()
-        val needsMapRefresh = existingPacks.none { it.versionTag == "2026.11-VECTOR-V2" }
+        val needsMapRefresh = existingPacks.none { it.versionTag == "2026.11-PRO-V3" }
         if (needsMapRefresh) {
             val installedById = existingPacks.associate { it.id to it.isInstalled }
             dao.upsertMapPackages(
@@ -248,14 +248,14 @@ class RoomAegisRepository(private val db: AegisDatabase) : AegisRepository {
             SecurityProfileEntity.fromDomain(
                 SecurityProfile(
                     id = "primary",
-                    fullName = "Aegis Local Guardian",
-                    aliasOrCallsign = "UNIT-01",
-                    homeRegionLabel = "Central District (Offline Anchor)",
+                    fullName = "نگهبان امنیتی ایجیس",
+                    aliasOrCallsign = "SHIELD-01",
+                    homeRegionLabel = "تهران · مرکز آفلاین",
                     homeLatitude = 35.6892,
                     homeLongitude = 51.3890,
                     safeCheckInCode = "GREEN-7",
                     duressCode = "AMBER-9",
-                    emergencyNote = "Offline Emergency Profile — review & customize with your personal details.",
+                    emergencyNote = "پروفیل امنیت موبایل و دفاع در برابر نفوذ — ۱۰۰٪ آفلاین",
                     updatedAtMillis = now,
                 ),
             ),
@@ -264,17 +264,17 @@ class RoomAegisRepository(private val db: AegisDatabase) : AegisRepository {
             EmergencyCardEntity.fromDomain(
                 EmergencyIdentityCard(
                     id = "primary-card",
-                    fullName = "Aegis Local Guardian",
-                    dateOfBirth = "1994-05-12",
+                    fullName = "کاربر اصلی AegisGuard",
+                    dateOfBirth = "1373-02-22",
                     bloodType = "O+",
-                    allergies = "None reported (Edit in Personal Security)",
-                    medications = "None",
-                    medicalConditions = "None",
-                    primaryIceContactName = "Emergency Coordinator",
-                    primaryIceContactPhone = "112",
+                    allergies = "بدون مورد خاص",
+                    medications = "ندارد",
+                    medicalConditions = "ندارد",
+                    primaryIceContactName = "پلیس فتا / تماس اضطراری",
+                    primaryIceContactPhone = "096380",
                     organDonor = false,
-                    languagesSpoken = "English, Persian",
-                    insuranceOrIdNumber = "LOCAL-ICE-001",
+                    languagesSpoken = "فارسی، انگلیسی",
+                    insuranceOrIdNumber = "AEGIS-SEC-01",
                     updatedAtMillis = now,
                 ),
             ),
@@ -283,14 +283,14 @@ class RoomAegisRepository(private val db: AegisDatabase) : AegisRepository {
             TrustedContactEntity.fromDomain(
                 TrustedContact(
                     id = "tc-starter-1",
-                    name = "Civil Emergency Dispatch",
-                    relation = "Public Emergency",
-                    phone = "112",
-                    alternateChannel = "Local UHF / SMS",
-                    addressOrZone = "Regional Hub",
+                    name = "پلیس فتا (رسیدگی به جرایم سایبری)",
+                    relation = "مرکز رسمی امنیت سایبری",
+                    phone = "096380",
+                    alternateChannel = "شماره تماس مستقیم",
+                    addressOrZone = "سراسر کشور",
                     priorityRank = 1,
                     canReceiveSosMessage = true,
-                    notes = "Standard universal emergency number (offline dialer)",
+                    notes = "شماره رسمی گزارش فیشینگ، کلاهبرداری پیامکی و هک حساب",
                     createdAtMillis = now,
                 ),
             ),
@@ -299,17 +299,17 @@ class RoomAegisRepository(private val db: AegisDatabase) : AegisRepository {
             SafetyPlanEntity.fromDomain(
                 PersonalSafetyPlan(
                     id = "sp-starter-eq",
-                    title = "72-Hour Urban Seismic Response Plan",
-                    scenarioType = "EARTHQUAKE",
-                    triggerConditions = "Strong ground shaking > 5 seconds or structural alarm",
+                    title = "پروتکل مهار نفوذ و پاک‌سازی موبایل (NIST IR)",
+                    scenarioType = "CYBER_INCIDENT",
+                    triggerConditions = "فعالیت مشکوک Accessibility، پیامک OTP ناخواسته یا نصب APK جعلی",
                     actionSteps = listOf(
-                        "Drop, Cover under sturdy desk, Hold On until shaking stops",
-                        "Wear sturdy shoes & grab flashlight + Go-Bag beside exit",
-                        "Avoid elevators; check gas odor before shutting main valve",
-                        "Walk via saved Primary Evacuation Corridor to Open Assembly Point",
+                        "قرار دادن فوری گوشی در حالت پرواز (Airplane Mode) برای قطع C2 مهاجم",
+                        "اجرای اسکنر بدافزار و بازرس ضد هک در AegisGuard و ذخیره گزارش PDF",
+                        "لغو دسترسی Accessibility و Device Admin برنامه مشکوک و حذف آن",
+                        "تغییر رمزهای ایمیل، بانکی و بستن نشست‌های فعال از یک دستگاه پاک دیگر",
                     ),
-                    primarySafeLocation = "Laleh Park Open Assembly Shelter",
-                    backupSafeLocation = "South Underground Reinforced Shelter",
+                    primarySafeLocation = "قرنطینه آفلاین دستگاه",
+                    backupSafeLocation = "پشتیبان‌گیری رمزنگاری AES-256",
                     updatedAtMillis = now,
                 ),
             ),
@@ -318,12 +318,12 @@ class RoomAegisRepository(private val db: AegisDatabase) : AegisRepository {
             FamilyPlanEntity.fromDomain(
                 FamilyPlan(
                     id = "family-plan-main",
-                    planTitle = "Household Reunification & Offline Comms Plan",
-                    evacuationProtocol = "If separated during an urban emergency, walk to Primary Meeting Point within 45 minutes or wait at Secondary Point if corridor blocked.",
-                    communicationProtocol = "Use concise SMS with coordinates + check-in status code; preserve phone battery in Airplane Mode between check-ins.",
-                    outOfAreaContactName = "Out-of-Region Relay Contact",
-                    outOfAreaContactPhone = "+49 911 000000",
-                    rallyWindowMinutes = 45,
+                    planTitle = "طرح ایمنی سایبری و تماس امن خانواده",
+                    evacuationProtocol = "در صورت دریافت پیامک جعلی یا مشکوک شدن به هک، از نصب هرگونه فایل خودداری و موضوع را در AegisGuard بررسی کنید.",
+                    communicationProtocol = "برای احراز هویت اضطراری بین اعضا از کد تایید اختصاصی استفاده شود تا فریب کلاهبرداری تلفنی نخورید.",
+                    outOfAreaContactName = "پلیس فتا / تماس پشتیبان",
+                    outOfAreaContactPhone = "096380",
+                    rallyWindowMinutes = 30,
                     updatedAtMillis = now,
                 ),
             ),
@@ -332,13 +332,13 @@ class RoomAegisRepository(private val db: AegisDatabase) : AegisRepository {
             MeetingPointEntity.fromDomain(
                 FamilyMeetingPoint(
                     id = "mp-primary",
-                    name = "Primary Park Open Assembly Zone",
+                    name = "نقطه قرار امن پارک لاله",
                     isPrimary = true,
                     latitude = 35.7106,
                     longitude = 51.3919,
-                    addressNote = "Central Boulevard North Gate",
-                    landmarkNote = "Open plaza away from overhead wires & glass towers",
-                    instructions = "Wait near main fountain north side; leave chalk note if moving to backup.",
+                    addressNote = "ضلع شمالی بلوار کشاورز",
+                    landmarkNote = "فضای باز مرکزی روی نقشه آفلاین",
+                    instructions = "مسیریابی مستقیم از بخش نقشه آفلاین ایجیس",
                 ),
             ),
         )
@@ -346,29 +346,29 @@ class RoomAegisRepository(private val db: AegisDatabase) : AegisRepository {
             MeetingPointEntity.fromDomain(
                 FamilyMeetingPoint(
                     id = "mp-backup",
-                    name = "Secondary Reinforced Shelter Hub",
+                    name = "نقطه امن جایگزین بوستان ملت",
                     isPrimary = false,
-                    latitude = 35.6762,
-                    longitude = 51.3678,
-                    addressNote = "South Sector Community Hall",
-                    landmarkNote = "Concrete underground entrance",
-                    instructions = "Use if primary assembly zone is obstructed or severe storm hits.",
+                    latitude = 35.7785,
+                    longitude = 51.4098,
+                    addressNote = "خیابان ولیعصر، پارک ملت",
+                    landmarkNote = "نقطه پشتیبان در شمال شهر",
+                    instructions = "در صورت محدودیت مسیر مرکزی استفاده شود.",
                 ),
             ),
         )
 
         val starterChecklists = listOf(
-            EmergencyChecklist("chk-72h", "72-Hour Go-Bag Readiness Checklist", "EVACUATION", null, false, now) to listOf(
-                ChecklistItem("ci-1", "chk-72h", "Drinking water (3L/person/day) — verified", true, 0),
-                ChecklistItem("ci-2", "chk-72h", "Trauma first-aid kit & pressure dressings", true, 1),
-                ChecklistItem("ci-3", "chk-72h", "Headlamp + spare lithium cells", false, 2),
-                ChecklistItem("ci-4", "chk-72h", "Encrypted ID copies & emergency cash", false, 3),
-                ChecklistItem("ci-5", "chk-72h", "Power bank 20,000 mAh charged to 100%", true, 4),
+            EmergencyChecklist("chk-72h", "چک‌لیست ایمن‌سازی موبایل در برابر هک (OWASP MASVS)", "HARDENING", null, false, now) to listOf(
+                ChecklistItem("ci-1", "chk-72h", "خاموش کردن USB Debugging (ADB) و Developer Options", true, 0),
+                ChecklistItem("ci-2", "chk-72h", "بررسی صفر بودن گواهی کاربری ناشناس (User CA)", true, 1),
+                ChecklistItem("ci-3", "chk-72h", "محدود کردن دسترسی Accessibility و Overlay به برنامه‌های سیستمی", false, 2),
+                ChecklistItem("ci-4", "chk-72h", "فعال‌سازی قفل پین/اثرانگشت + FLAG_SECURE داخل سپر ایجیس", false, 3),
+                ChecklistItem("ci-5", "chk-72h", "تهیه بکاپ رمزنگاری‌شده AES-256-GCM آفلاین", true, 4),
             ),
-            EmergencyChecklist("chk-fire", "Home Fire & Gas Immediate Check", "FIRE", null, false, now) to listOf(
-                ChecklistItem("ci-6", "chk-fire", "Test bedroom & corridor smoke alarms", true, 0),
-                ChecklistItem("ci-7", "chk-fire", "Verify ABC extinguisher pressure gauge in green", false, 1),
-                ChecklistItem("ci-8", "chk-fire", "Keep main gas shutoff wrench accessible", true, 2),
+            EmergencyChecklist("chk-fire", "چک‌لیست فوری مقابله با فیشینگ پیامکی و سرقت OTP", "PHISHING", null, false, now) to listOf(
+                ChecklistItem("ci-6", "chk-fire", "تحلیل لینک پیامکی مشکوک در آزمایشگاه ضد فیشینگ", true, 0),
+                ChecklistItem("ci-7", "chk-fire", "پاک‌سازی Notification Listeners برای جلوگیری از سرقت OTP", false, 1),
+                ChecklistItem("ci-8", "chk-fire", "بررسی بسته‌های نصب‌شده خارج از گوگل‌پلی و کافه‌بازار", true, 2),
             ),
         )
         starterChecklists.forEach { (chk, items) ->
@@ -377,39 +377,37 @@ class RoomAegisRepository(private val db: AegisDatabase) : AegisRepository {
         }
 
         val starterInventory = listOf(
-            InventoryItem("inv-water", "Potable Drinking Water", "Water", 18.0, "Liters", 12.0, now + 180L * 86_400_000L, "Hallway Closet", now),
-            InventoryItem("inv-kit", "Trauma First Aid + Tourniquet", "Medical", 1.0, "Kit", 1.0, now + 360L * 86_400_000L, "Go-Bag Front Pocket", now),
-            InventoryItem("inv-light", "LED Tactical Flashlight + Spare Cells", "Power & Light", 2.0, "Units", 1.0, null, "Bedside & Go-Bag", now),
-            InventoryItem("inv-bank", "20,000 mAh Power Bank", "Power & Light", 1.0, "Unit", 1.0, null, "Entryway Shelf", now),
+            InventoryItem("inv-water", "کلیدهای بازیابی رمزنگاری‌شده", "Security", 1.0, "Vault", 1.0, now + 180L * 86_400_000L, "AES-256 Vault", now),
+            InventoryItem("inv-kit", "بکاپ آفلاین .aegisbak", "Backup", 1.0, "Archive", 1.0, now + 90L * 86_400_000L, "Local Storage", now),
         )
         starterInventory.forEach { dao.upsertInventoryItem(InventoryItemEntity.fromDomain(it)) }
 
         val starterIncidents = listOf(
             Incident(
                 id = "inc-sample-1",
-                title = "Grid Outage Drill — Sector 2 Transformer",
-                description = "Sample offline readiness incident: simulated 6-hour evening power outage drill to test backup lighting and offline emergency navigation.",
-                category = IncidentCategory.UTILITY_OUTAGE,
-                priority = IncidentPriority.MEDIUM,
+                title = "نمونه ممیزی: تلاش فیشینگ پیامکی با لینک APK جعلی",
+                description = "نمونه گزارش آموزشی برای جرم‌یابی: شناسایی پیامک با دامنه غیررسمی .xyz و پسوند دوگانه .pdf.apk — مهار‌شده به‌صورت کاملاً آفلاین.",
+                category = IncidentCategory.SECURITY_THREAT,
+                priority = IncidentPriority.HIGH,
                 status = IncidentStatus.CONTAINED,
                 latitude = 35.6941,
                 longitude = 51.3755,
-                locationLabel = "Sector 2 Drill Zone",
-                aiSuggestedCategory = "UTILITY_OUTAGE",
+                locationLabel = "آزمایشگاه فیشینگ محلی",
+                aiSuggestedCategory = "SECURITY_THREAT",
                 createdAtMillis = now - 86_400_000L * 3,
                 updatedAtMillis = now - 86_400_000L * 2,
             ),
             Incident(
                 id = "inc-sample-2",
-                title = "Stairwell Smoke Alarm False Trigger Inspection",
-                description = "Sample historical log: inspected stairwell detector battery and cleared dust sensor; documented evacuation corridor timing.",
-                category = IncidentCategory.FIRE,
+                title = "نمونه ممیزی: بررسی مجوز Accessibility و گواهی CA",
+                description = "گزارش دوره‌ای سلامت سیستم: بررسی سرویس‌های Accessibility، سرپرست دستگاه و گواهی‌های کاربری مطابق OWASP MASVS.",
+                category = IncidentCategory.UTILITY_OUTAGE,
                 priority = IncidentPriority.LOW,
                 status = IncidentStatus.RESOLVED,
                 latitude = 35.7024,
                 longitude = 51.3912,
-                locationLabel = "North Stairwell",
-                aiSuggestedCategory = "FIRE",
+                locationLabel = "بازرسی هسته اندروید",
+                aiSuggestedCategory = "UTILITY_OUTAGE",
                 createdAtMillis = now - 86_400_000L * 8,
                 updatedAtMillis = now - 86_400_000L * 7,
             ),
@@ -420,8 +418,8 @@ class RoomAegisRepository(private val db: AegisDatabase) : AegisRepository {
                 IncidentTimelineEntity(
                     id = "tl-seed-${inc.id}",
                     incidentId = inc.id,
-                    eventType = "SEEDED_DRILL",
-                    summary = "Offline starter drill record initialized",
+                    eventType = "CYBER_AUDIT",
+                    summary = "گزارش نمونه امنیت موبایل ثبت شد",
                     createdAtMillis = inc.createdAtMillis,
                 ),
             )
@@ -430,13 +428,13 @@ class RoomAegisRepository(private val db: AegisDatabase) : AegisRepository {
         dao.upsertOfflineNote(
             OfflineNoteEntity(
                 id = "note-seed-1",
-                title = "Legacy Alert Baseline → Full Security Ecosystem",
-                body = "Quick SOS Alert & Emergency Beacon remain one tap away while Personal Security, Crisis Management, Offline Maps, Local AI, Family Safety, Preparedness Academy, Analytics, Privacy Vault & Utilities all operate 100% offline.",
-                category = "System",
+                title = "سپر امنیتی ایجیس v3 — ۱۰۰٪ آفلاین و بدون دسترسی اینترنت",
+                body = "تمام موتورهای ضد هک، آنتی‌ویروس بررسی بسته‌های APK، تحلیلگر فیشینگ و نقشه کامل جهان و ایران بدون هیچ مجوز شبکه‌ای درون دستگاه اجرا می‌شوند.",
+                category = "Security",
                 isPinned = true,
                 updatedAtMillis = now,
             ),
         )
-        logActivity("SYSTEM_INIT", "Core", "Initialized 100% offline database & bundled emergency packs")
+        logActivity("SYSTEM_INIT", "Core", "Initialized v3.0.0 offline cybersecurity & multi-scale map engine")
     }
 }

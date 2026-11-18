@@ -37,34 +37,47 @@ fun CommandHomeScreen(
     val incidents by repository.observeIncidents(includeArchived = false).collectAsState(initial = emptyList())
     val family by repository.observeFamilyMembers().collectAsState(initial = emptyList())
     val checklists by repository.observeChecklists().collectAsState(initial = emptyList())
-    val inventory by repository.observeInventoryItems().collectAsState(initial = emptyList())
-    val reminders by repository.observeReminders().collectAsState(initial = emptyList())
     val academyProgress by repository.observeAcademyProgress().collectAsState(initial = emptyList())
     val mapMarkers by repository.observeMapMarkers().collectAsState(initial = emptyList())
+    val mapPackages by repository.observeMapPackages().collectAsState(initial = emptyList())
+    val auditLogs by repository.observeAuditLogs().collectAsState(initial = emptyList())
 
     var searchQuery by remember { mutableStateOf("") }
     var customizeWidgetsOpen by remember { mutableStateOf(false) }
 
-    val readinessScore = remember(checklists, family, academyProgress, preferences, inventory) {
+    val securityPostureScore = remember(checklists, academyProgress, preferences, incidents) {
         val allChecklistItems = checklists.flatMap { it.items }
-        val clPart = if (allChecklistItems.isNotEmpty()) (allChecklistItems.count { it.isChecked } * 30) / allChecklistItems.size else 15
-        val famPart = if (family.isNotEmpty()) (family.count { it.checkInStatus == FamilyCheckInStatus.SAFE } * 20) / family.size else 10
+        val clPart = if (allChecklistItems.isNotEmpty()) (allChecklistItems.count { it.isChecked } * 30) / allChecklistItems.size else 18
         val acaPart = (academyProgress.count { it.badgeEarned } * 5).coerceAtMost(20)
-        val invPart = if (inventory.isNotEmpty()) (inventory.count { it.quantity >= it.minimumThreshold } * 15) / inventory.size else 10
-        val secPart = if (preferences.pinEnabled) 15 else 8
-        (clPart + famPart + acaPart + invPart + secPart).coerceIn(10, 100)
+        val pinPart = if (preferences.pinEnabled) 18 else 8
+        val flagPart = if (preferences.flagSecureEnabled) 15 else 5
+        val openCriticalPenalty = (incidents.count { it.priority == IncidentPriority.CRITICAL && it.status != IncidentStatus.RESOLVED } * 8).coerceAtMost(20)
+        (22 + clPart + acaPart + pinPart + flagPart - openCriticalPenalty).coerceIn(15, 100)
     }
 
-    val allModules = remember { AegisModule.entries.filter { it != AegisModule.HOME } }
+    val orderedModules = remember {
+        listOf(
+            AegisModule.EMERGENCY, // Anti-Hack OS Inspector
+            AegisModule.UTILITIES, // App Antivirus & Malware Scanner
+            AegisModule.AI,        // Phishing & Password Lab
+            AegisModule.MAPS,      // Pro Offline Map & GNSS
+            AegisModule.PRIVACY,   // App Permissions, Lock & AES Backup
+            AegisModule.CRISIS,    // Security Incidents & Forensics
+            AegisModule.PERSONAL,  // AES-256 Key Vault
+            AegisModule.ACADEMY,   // Cyber Defense Academy
+            AegisModule.ANALYTICS, // Risk & Audit Analytics
+            AegisModule.FAMILY,    // Family Cyber Hygiene
+        )
+    }
     val favoriteModules = remember(preferences.favoriteModules) {
-        allModules.filter { it in preferences.favoriteModules }
+        orderedModules.filter { it in preferences.favoriteModules }
     }
 
     val searchMatches = remember(searchQuery, incidents, lang) {
         if (searchQuery.isBlank()) {
             Triple(emptyList<AegisModule>(), emptyList<Incident>(), emptyList<KnowledgeSearchHit>())
         } else {
-            val modHits = allModules.filter {
+            val modHits = orderedModules.filter {
                 moduleTitle(it, lang).contains(searchQuery, ignoreCase = true) ||
                     moduleSubtitle(it, lang).contains(searchQuery, ignoreCase = true)
             }
@@ -82,17 +95,17 @@ fun CommandHomeScreen(
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        // 1. Clean Top Executive Bar (Zero Crowding)
+        // 1. Minimalist Frosted Top Header
         item {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                     Text(
-                        text = "AegisGuard",
-                        style = MaterialTheme.typography.headlineLarge,
+                        text = tr("AegisGuard Cyber Shield", "سپر امنیتی ایجیس"),
+                        style = MaterialTheme.typography.headlineMedium,
                         fontWeight = FontWeight.ExtraBold,
                         color = colors.textPrimary,
                     )
@@ -101,9 +114,9 @@ fun CommandHomeScreen(
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     Surface(
                         onClick = onToggleTheme,
-                        shape = RoundedCornerShape(12.dp),
+                        shape = RoundedCornerShape(14.dp),
                         color = colors.glassElevated,
-                        border = BorderStroke(1.dp, colors.glassRimEnd),
+                        border = BorderStroke(1.dp, colors.glassRimStart.copy(alpha = 0.45f)),
                     ) {
                         Text(
                             text = when (preferences.themeMode) {
@@ -117,9 +130,9 @@ fun CommandHomeScreen(
                     }
                     Surface(
                         onClick = onToggleLanguage,
-                        shape = RoundedCornerShape(12.dp),
+                        shape = RoundedCornerShape(14.dp),
                         color = colors.glassElevated,
-                        border = BorderStroke(1.dp, colors.glassRimEnd),
+                        border = BorderStroke(1.dp, colors.glassRimStart.copy(alpha = 0.45f)),
                     ) {
                         Text(
                             text = if (lang == AppLanguage.FA) "EN" else "فا",
@@ -132,19 +145,19 @@ fun CommandHomeScreen(
             }
         }
 
-        // 2. Global Offline Search
+        // 2. Global Offline Search Bar
         item {
             GlassTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
-                label = tr("Search modules, incidents, offline guides...", "جستجوی سراسری ماژول‌ها، رخدادها، راهنماها..."),
+                label = tr("Search scanners, phishing, threats, guides...", "جستجوی ضد هک، آنتی‌ویروس، فیشینگ و راهنماها..."),
             )
         }
 
         if (searchQuery.isNotBlank()) {
             item {
                 ObsidianGlassCard(elevated = true) {
-                    Text(tr("Offline Global Search Results", "نتایج جستجوی سراسری آفلاین"), style = MaterialTheme.typography.titleMedium, color = colors.accentCyan)
+                    Text(tr("Offline Search Results", "نتایج جستجوی آفلاین"), style = MaterialTheme.typography.titleMedium, color = colors.accentCyan)
                     Spacer(Modifier.height(6.dp))
                     searchMatches.first.forEach { mod ->
                         TextButton(onClick = { onOpenModule(mod) }) { Text("${tr("Module", "ماژول")}: ${moduleTitle(mod, lang)}") }
@@ -155,7 +168,7 @@ fun CommandHomeScreen(
                         }
                     }
                     searchMatches.third.forEach { hit ->
-                        TextButton(onClick = { onOpenModule(AegisModule.AI) }) { Text("${tr("Guide", "راهنما")}: ${hit.doc.title}") }
+                        TextButton(onClick = { onOpenModule(AegisModule.AI) }) { Text("${tr("Playbook", "پلی‌بوک")}: ${hit.doc.title}") }
                     }
                     if (searchMatches.first.isEmpty() && searchMatches.second.isEmpty() && searchMatches.third.isEmpty()) {
                         Text(tr("No offline matches found.", "موردی یافت نشد."), style = MaterialTheme.typography.bodyMedium, color = colors.textMuted)
@@ -164,7 +177,7 @@ fun CommandHomeScreen(
             }
         }
 
-        // 3. Spacious Hero Security Readiness Card
+        // 3. Minimalist Smoked/Porcelain Frosted Hero Security Card
         if (DashboardWidgetId.PREPAREDNESS_SCORE !in preferences.disabledWidgets) {
             item {
                 ObsidianGlassCard(elevated = true, accentBorderColor = colors.accentCyan) {
@@ -174,55 +187,55 @@ fun CommandHomeScreen(
                         horizontalArrangement = Arrangement.spacedBy(14.dp),
                     ) {
                         Hero3DSecurityShield(
-                            readinessScore = readinessScore,
+                            readinessScore = securityPostureScore,
                             activeAlertsCount = incidents.count { it.priority == IncidentPriority.CRITICAL && it.status != IncidentStatus.RESOLVED },
                         )
                         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Text(
-                                text = tr("Offline Readiness Index", "شاخص آمادگی آفلاین"),
+                                text = tr("Device Security Posture", "شاخص امنیت و دفاع آفلاین"),
                                 style = MaterialTheme.typography.titleMedium,
                                 color = colors.textPrimary,
                             )
                             Text(
-                                text = "${incidents.count { it.status != IncidentStatus.RESOLVED }} ${tr("active alerts", "هشدار فعال")} · ${family.count { it.checkInStatus == FamilyCheckInStatus.SAFE }}/${family.size} ${tr("family safe", "خانواده امن")}",
+                                text = "${incidents.count { it.status != IncidentStatus.RESOLVED }} ${tr("open threats", "تهدید باز")} · ${auditLogs.size} ${tr("audits logged", "ممیزی ثبت‌شده")}",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = colors.textSecondary,
                             )
                             Text(
-                                text = "${mapMarkers.size} ${tr("offline shelters & POIs ready", "پناهگاه و نقطه امدادی آماده")}",
+                                text = "${mapPackages.size} ${tr("offline city packs + Global Atlas", "بسته شهری و نقشه کامل جهان")} (${mapMarkers.size} POI)",
                                 style = MaterialTheme.typography.labelSmall,
-                                color = colors.accentTeal,
+                                color = colors.accentCyan,
                             )
                         }
                     }
                     Spacer(Modifier.height(10.dp))
                     ChipFlowGroup {
                         GlassButton(
-                            label = tr("Emergency SOS Center", "مرکز اضطراری SOS"),
+                            label = tr("Run Anti-Hack Audit", "بازرسی ضد هک سیستم"),
                             accent = colors.accentCrimson,
                             onClick = { onOpenModule(AegisModule.EMERGENCY) },
                         )
                         GlassButton(
-                            label = tr("Open Offline Map", "باز کردن نقشه آفلاین"),
-                            accent = colors.accentTeal,
-                            onClick = { onOpenModule(AegisModule.MAPS) },
+                            label = tr("Scan Apps & APKs", "اسکن بدافزار برنامه‌ها"),
+                            accent = colors.accentCyan,
+                            onClick = { onOpenModule(AegisModule.UTILITIES) },
                         )
                     }
                 }
             }
         }
 
-        // 4. Quick Launch Row (Preserved E2E testTag & crisp labels)
+        // 4. Quick Launch Row (Preserved E2E testTag)
         item {
             LazyRow(
                 modifier = Modifier.testTag("quick_actions_row"),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                item { GlassButton(label = tr("Quick SOS", "SOS فوری"), accent = colors.accentCrimson, onClick = { onOpenModule(AegisModule.EMERGENCY) }) }
+                item { GlassButton(label = tr("Anti-Hack Audit", "ضد هک سیستم"), accent = colors.accentCrimson, onClick = { onOpenModule(AegisModule.EMERGENCY) }) }
+                item { GlassButton(label = tr("Malware Scan", "آنتی‌ویروس"), accent = colors.accentCyan, onClick = { onOpenModule(AegisModule.UTILITIES) }) }
+                item { GlassButton(label = tr("Phishing Lab", "تشخیص فیشینگ"), accent = colors.accentViolet, onClick = { onOpenModule(AegisModule.AI) }) }
                 item { GlassButton(label = tr("Offline Map", "نقشه آفلاین"), accent = colors.accentTeal, onClick = { onOpenModule(AegisModule.MAPS) }) }
                 item { GlassButton(label = tr("Log Incident", "ثبت رخداد"), accent = colors.accentAmber, onClick = { onOpenModule(AegisModule.CRISIS) }) }
-                item { GlassButton(label = tr("Local AI", "هوش محلی"), accent = colors.accentViolet, onClick = { onOpenModule(AegisModule.AI) }) }
-                item { GlassButton(label = tr("Torch & Tools", "ابزارها"), accent = colors.accentCyan, onClick = { onOpenModule(AegisModule.UTILITIES) }) }
             }
         }
 
@@ -230,11 +243,11 @@ fun CommandHomeScreen(
         if (favoriteModules.isNotEmpty()) {
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text(tr("Pinned Favorites ★", "علاقه‌مندی‌ها ★"), style = MaterialTheme.typography.titleMedium, color = colors.accentAmber)
+                    Text(tr("Pinned Tools ★", "ابزارهای برگزیده ★"), style = MaterialTheme.typography.titleMedium, color = colors.accentAmber)
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         items(favoriteModules, key = { it.name }) { mod ->
                             ObsidianGlassCard(
-                                cornerRadius = 14.dp,
+                                cornerRadius = 16.dp,
                                 contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp),
                                 onClick = { onOpenModule(mod) },
                             ) {
@@ -249,10 +262,10 @@ fun CommandHomeScreen(
             }
         }
 
-        // 6. Live Offline Widgets (100% Bilingual FA + EN)
+        // 6. Live Offline Widgets
         item {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text(tr("Live Offline Widgets", "ویجت‌های زنده آفلاین"), style = MaterialTheme.typography.titleMedium, color = colors.textPrimary)
+                Text(tr("Live Security Widgets", "ویجت‌های زنده امنیتی"), style = MaterialTheme.typography.titleMedium, color = colors.textPrimary)
                 TextButton(onClick = { customizeWidgetsOpen = !customizeWidgetsOpen }) {
                     Text(if (customizeWidgetsOpen) tr("Done", "بستن") else tr("Customize", "شخصی‌سازی"))
                 }
@@ -275,10 +288,10 @@ fun CommandHomeScreen(
                 if (DashboardWidgetId.CRISIS_PULSE !in preferences.disabledWidgets) {
                     val topInc = incidents.firstOrNull { it.status != IncidentStatus.RESOLVED }
                     ObsidianGlassCard(onClick = { onOpenModule(AegisModule.CRISIS) }) {
-                        Text(tr("Active Crisis Feed", "وضعیت بحران‌های فعال"), style = MaterialTheme.typography.labelMedium, color = colors.accentCrimson)
+                        Text(tr("Active Threat Feed", "گزارش رخدادهای امنیتی فعال"), style = MaterialTheme.typography.labelMedium, color = colors.accentCrimson)
                         Text(
                             topInc?.let { "${it.title} (${priorityLabel(it.priority, lang)} · ${statusLabel(it.status, lang)})" }
-                                ?: tr("No open incidents — stay vigilant.", "هیچ بحران بازی ثبت نشده است."),
+                                ?: tr("No open incidents — stay vigilant.", "هیچ رخداد بازی ثبت نشده است."),
                             style = MaterialTheme.typography.bodyMedium,
                             color = colors.textPrimary,
                         )
@@ -286,31 +299,9 @@ fun CommandHomeScreen(
                 }
                 if (DashboardWidgetId.FAMILY_CHECKIN !in preferences.disabledWidgets) {
                     ObsidianGlassCard(onClick = { onOpenModule(AegisModule.FAMILY) }) {
-                        Text(tr("Family Check-In", "وضعیت خانواده"), style = MaterialTheme.typography.labelMedium, color = colors.accentTeal)
+                        Text(tr("Family Device Status", "وضعیت ایمنی خانواده"), style = MaterialTheme.typography.labelMedium, color = colors.accentTeal)
                         Text(
-                            "${family.count { it.checkInStatus == FamilyCheckInStatus.SAFE }} ${tr("Safe", "امن")} · ${family.count { it.checkInStatus != FamilyCheckInStatus.SAFE }} ${tr("Pending/Help", "در انتظار / نیازمند کمک")}",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = colors.textPrimary,
-                        )
-                    }
-                }
-                if (DashboardWidgetId.REMINDERS_AND_INVENTORY !in preferences.disabledWidgets) {
-                    val lowCount = inventory.count { it.quantity < it.minimumThreshold }
-                    val nextRem = reminders.firstOrNull { !it.completed }
-                    ObsidianGlassCard(onClick = { onOpenModule(AegisModule.UTILITIES) }) {
-                        Text(tr("Supplies & Next Reminder", "تجهیزات و یادآور بعدی"), style = MaterialTheme.typography.labelMedium, color = colors.accentAmber)
-                        Text(
-                            "${if (lowCount > 0) tr("$lowCount low supply item(s)", "$lowCount قلم موجودی کم") else tr("All supplies stocked", "تمامی اقلام تکمیل")} · ${nextRem?.title ?: tr("No pending reminders", "یادآور فعالی وجود ندارد")}",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = colors.textPrimary,
-                        )
-                    }
-                }
-                if (DashboardWidgetId.INCIDENT_SPARKLINE !in preferences.disabledWidgets) {
-                    ObsidianGlassCard(onClick = { onOpenModule(AegisModule.ANALYTICS) }) {
-                        Text(tr("Analytics Snapshot", "خلاصه تحلیلی"), style = MaterialTheme.typography.labelMedium, color = colors.accentViolet)
-                        Text(
-                            "${incidents.size} ${tr("total logged", "کل ثبت‌شده")} · ${incidents.count { it.priority == IncidentPriority.CRITICAL }} ${tr("critical", "بحرانی")}",
+                            "${family.count { it.checkInStatus == FamilyCheckInStatus.SAFE }} ${tr("Safe", "امن")} · ${family.count { it.checkInStatus != FamilyCheckInStatus.SAFE }} ${tr("Review", "بررسی")}",
                             style = MaterialTheme.typography.bodyMedium,
                             color = colors.textPrimary,
                         )
@@ -319,14 +310,14 @@ fun CommandHomeScreen(
             }
         }
 
-        // 7. Full-Width Spacious Module Directory Cards (ZERO cramped 2-column clipping!)
+        // 7. Full Frosted Glass Security Modules Directory
         item {
             SectionHeader(
-                title = tr("Security & Crisis Ecosystem Modules", "ماژول‌های اکوسیستم امنیت و بحران"),
-                badge = "${allModules.size} ${tr("Modules", "ماژول")}",
+                title = tr("Cybersecurity & Mapping Suite", "مجموعه کامل امنیت موبایل و نقشه آفلاین"),
+                badge = "${orderedModules.size} ${tr("Modules", "بخش")}",
             )
         }
-        items(allModules, key = { it.name }) { mod ->
+        items(orderedModules, key = { it.name }) { mod ->
             val accent = when (mod) {
                 AegisModule.EMERGENCY, AegisModule.CRISIS -> colors.accentCrimson
                 AegisModule.MAPS, AegisModule.FAMILY -> colors.accentTeal
@@ -385,9 +376,9 @@ fun CommandHomeScreen(
 }
 
 private fun widgetLabel(id: DashboardWidgetId, lang: AppLanguage): String = when (id) {
-    DashboardWidgetId.PREPAREDNESS_SCORE -> if (lang == AppLanguage.FA) "شاخص آمادگی آفلاین" else "Preparedness Score"
-    DashboardWidgetId.CRISIS_PULSE -> if (lang == AppLanguage.FA) "وضعیت بحران‌های فعال" else "Active Crisis Feed"
-    DashboardWidgetId.FAMILY_CHECKIN -> if (lang == AppLanguage.FA) "وضعیت خانواده" else "Family Check-In"
-    DashboardWidgetId.REMINDERS_AND_INVENTORY -> if (lang == AppLanguage.FA) "تجهیزات و یادآورها" else "Supplies & Reminders"
-    DashboardWidgetId.INCIDENT_SPARKLINE -> if (lang == AppLanguage.FA) "خلاصه تحلیلی" else "Analytics Snapshot"
+    DashboardWidgetId.PREPAREDNESS_SCORE -> if (lang == AppLanguage.FA) "شاخص امنیت آفلاین" else "Security Posture Score"
+    DashboardWidgetId.CRISIS_PULSE -> if (lang == AppLanguage.FA) "وضعیت رخدادهای امنیتی" else "Active Threat Feed"
+    DashboardWidgetId.FAMILY_CHECKIN -> if (lang == AppLanguage.FA) "وضعیت دستگاه‌های خانواده" else "Family Cyber Status"
+    DashboardWidgetId.REMINDERS_AND_INVENTORY -> if (lang == AppLanguage.FA) "یادآورهای بکاپ و کلیدها" else "Backup & Key Reminders"
+    DashboardWidgetId.INCIDENT_SPARKLINE -> if (lang == AppLanguage.FA) "تحلیل آماری تهدیدها" else "Threat Analytics Snapshot"
 }

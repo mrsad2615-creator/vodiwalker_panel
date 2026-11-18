@@ -10,7 +10,6 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
-import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTextInput
 import androidx.test.core.app.ApplicationProvider
@@ -40,8 +39,8 @@ class AegisOfflineE2ETest {
         val app = ctx.applicationContext as AegisApplication
         val rem = SecurityReminder(
             id = "e2e-rem-1",
-            title = "Offline Kit Check",
-            category = "Kit",
+            title = "Offline Vault Key Check",
+            category = "Security",
             dueAtMillis = System.currentTimeMillis() + 3_600_000L,
             recurrenceDays = 0,
             enabled = true,
@@ -53,74 +52,85 @@ class AegisOfflineE2ETest {
     }
 
     @Test
-    fun offlineDashboardLanguageMapRoutingAndModulesWork() {
+    fun offlinePersianDefaultDashboardMapAntiHackScannerPhishingAndPermsWork() {
         composeRule.waitForIdle()
-        composeRule.onNodeWithText("AegisGuard").assertIsDisplayed()
-        composeRule.onNodeWithText("100% OFFLINE · NO CLOUD").assertIsDisplayed()
+        // Default primary language is Persian (RTL)
+        composeRule.onNodeWithText("سپر امنیتی ایجیس").assertIsDisplayed()
+        composeRule.onNodeWithText("۱۰۰٪ آفلاین · بدون اینترنت").assertIsDisplayed()
 
-        // Switch EN -> FA (RTL) and back to EN
-        composeRule.onNodeWithText("فا").performClick()
-        composeRule.waitForIdle()
-        composeRule.onNodeWithText("شاخص آمادگی آفلاین").assertIsDisplayed()
+        // Toggle FA -> EN -> FA cleanly
         composeRule.onNodeWithText("EN").performClick()
         composeRule.waitForIdle()
-        composeRule.onNodeWithText("Offline Readiness Index").assertIsDisplayed()
+        composeRule.onNodeWithText("Device Security Posture").assertIsDisplayed()
+        composeRule.onNodeWithText("فا").performClick()
+        composeRule.waitForIdle()
+        composeRule.onNodeWithText("شاخص امنیت و دفاع آفلاین").assertIsDisplayed()
 
-        // Open Offline Vector Map via Bottom Bar / Quick Launch and verify streets + offline Dijkstra routing
+        // Switch to EN for clean deterministic label assertions across sub-screens
+        composeRule.onNodeWithText("EN").performClick()
+        composeRule.waitForIdle()
+
+        // 1. Pro Multi-Scale Offline Map + Smart Suggestions + Directory Routing
         composeRule.onNodeWithText("Map").performClick()
         composeRule.waitForIdle()
-        composeRule.onAllNodesWithText("Interactive Map").onFirst().assertIsDisplayed()
-        composeRule.onAllNodesWithText("Places", substring = true).onFirst().performClick()
+        composeRule.onAllNodesWithText("Pro Map & GNSS").onFirst().assertIsDisplayed()
+        composeRule.onAllNodesWithText("Directory", substring = true).onFirst().performClick()
         composeRule.waitUntil(5_000L) {
-            composeRule.onAllNodesWithText("Show & Route on Map").fetchSemanticsNodes().isNotEmpty()
+            composeRule.onAllNodesWithText("Route on Map").fetchSemanticsNodes().isNotEmpty()
         }
-        composeRule.onAllNodesWithText("Show & Route on Map").onFirst().performScrollTo().performClick()
+        composeRule.onAllNodesWithText("Route on Map").onFirst().performScrollTo().performClick()
         composeRule.waitForIdle()
-        composeRule.onNodeWithTag("map_tab_lazy_list").performScrollToNode(hasText("Safe Corridor Route", substring = true))
-        composeRule.onAllNodesWithText("Safe Corridor Route", substring = true).onFirst().assertIsDisplayed()
+        composeRule.onNodeWithTag("map_tab_lazy_list").performScrollToNode(hasText("Offline Corridor Route", substring = true))
+        composeRule.onAllNodesWithText("Offline Corridor Route", substring = true).onFirst().assertIsDisplayed()
         composeRule.onNodeWithText("←").performClick()
         composeRule.waitForIdle()
 
-        // Navigate into Emergency Response Center and verify SOS panel
-        composeRule.onNodeWithTag("quick_actions_row").performScrollToNode(hasText("Quick SOS"))
-        composeRule.onNodeWithText("Quick SOS").performClick()
-        composeRule.waitForIdle()
-        composeRule.onNodeWithText("OFFLINE SOS RESPONSE PANEL").assertIsDisplayed()
+        // 2. Anti-Hack OS Inspector
+        composeRule.onNodeWithText("Anti-Hack").performClick()
+        composeRule.waitUntil(5_000L) {
+            composeRule.onAllNodesWithText("Real-Time Hardware & OS Hardening Audit").fetchSemanticsNodes().isNotEmpty()
+        }
+        composeRule.onNodeWithText("Real-Time Hardware & OS Hardening Audit").assertIsDisplayed()
         composeRule.onNodeWithText("←").performClick()
         composeRule.waitForIdle()
 
-        // Navigate into Local AI and execute an offline BM25 query
-        composeRule.onNodeWithTag("quick_actions_row").performScrollToNode(hasText("Local AI"))
-        composeRule.onNodeWithText("Local AI").performClick()
-        composeRule.waitForIdle()
-        composeRule.onNodeWithText("Earthquake").performClick()
-        composeRule.waitForIdle()
-        composeRule.onNodeWithTag("ai_assistant_list").performScrollToIndex(2)
-        composeRule.onAllNodesWithText("Referenced Reviewed Protocols:").onFirst().performScrollTo().assertIsDisplayed()
+        // 3. Antivirus / App Malware Scanner
+        composeRule.onNodeWithText("Scanner").performClick()
+        composeRule.waitUntil(8_000L) {
+            composeRule.onAllNodesWithText("Antivirus & APK Heuristic Engine").fetchSemanticsNodes().isNotEmpty()
+        }
+        composeRule.onNodeWithText("Antivirus & APK Heuristic Engine").assertIsDisplayed()
         composeRule.onNodeWithText("←").performClick()
         composeRule.waitForIdle()
 
-        // Navigate into Crisis Management and register a real offline incident
+        // 4. Phishing Analyzer & Password Lab
+        composeRule.onNodeWithText("Phishing").performClick()
+        composeRule.waitForIdle()
+        composeRule.onAllNodesWithText("MALICIOUS PHISHING", substring = true).onFirst().assertIsDisplayed()
+        composeRule.onNodeWithText("←").performClick()
+        composeRule.waitForIdle()
+
+        // 5. Security Incident Log
         composeRule.onNodeWithTag("quick_actions_row").performScrollToNode(hasText("Log Incident"))
         composeRule.onNodeWithText("Log Incident").performClick()
         composeRule.waitForIdle()
         composeRule.onNodeWithText("Register New").performClick()
         composeRule.waitForIdle()
-        composeRule.onNodeWithText("Incident Title").performTextInput("Airplane E2E Drill")
+        composeRule.onNodeWithText("Incident Title").performTextInput("Airplane E2E Security Drill")
         composeRule.onNodeWithText("Create Incident + Auto Checklist").performScrollTo().performClick()
         composeRule.waitUntil(5_000L) {
-            composeRule.onAllNodesWithText("Airplane E2E Drill").fetchSemanticsNodes().isNotEmpty()
+            composeRule.onAllNodesWithText("Airplane E2E Security Drill").fetchSemanticsNodes().isNotEmpty()
         }
-        composeRule.onAllNodesWithText("Airplane E2E Drill").onFirst().assertIsDisplayed()
+        composeRule.onAllNodesWithText("Airplane E2E Security Drill").onFirst().assertIsDisplayed()
         composeRule.onNodeWithText("←").performClick()
         composeRule.waitForIdle()
 
-        // Scroll Home LazyColumn to Privacy & Security module card and verify zero-network permission audit
-        composeRule.onNodeWithTag("home_lazy_list").performScrollToNode(hasText("Privacy & Security"))
-        composeRule.onNodeWithText("Privacy & Security").performScrollTo().performClick()
+        // 6. Permission Auditor + Zero Network Verification
+        composeRule.onNodeWithTag("home_lazy_list").performScrollToNode(hasText("Permissions, Lock & Backup"))
+        composeRule.onNodeWithText("Permissions, Lock & Backup").performScrollTo().performClick()
         composeRule.waitForIdle()
         composeRule.onNodeWithText("Audit & Perms").performClick()
         composeRule.waitForIdle()
-        composeRule.onNodeWithText("• INTERNET Permission: ABSENT BY DESIGN").assertIsDisplayed()
+        composeRule.onAllNodesWithText("Zero-network design verified", substring = true).onFirst().assertIsDisplayed()
     }
 }

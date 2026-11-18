@@ -217,8 +217,8 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          RELEASE_TAG="aegis-v2.0.0-offline"
-          RELEASE_NOTES="AegisGuard v2.0.0 100% Offline Rebuild: Bundled Vazirmatn RTL/LTR typography, multi-layer offline GeoVector Cartography (roads, highways, parks, rivers, contours, 3D extruded landmarks, collision-free labels, scale bar), Dijkstra hazard-avoidance routing engine, zero-overlap FlowRow Material 3 + Bottom NavigationBar UX, 100% localized FA/EN enums, 20+ JVM tests, zero network permissions via aapt, Room v1->v2 SQLite migration, and full Compose E2E suite passed in Airplane Mode on API 35 emulator. Build evidence: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          RELEASE_TAG="aegis-v3.0.0-offline"
+          RELEASE_NOTES="AegisGuard v3.0.0 Cybersecurity & Pro Offline Map Overhaul: Minimalist Smoked/Porcelain Frosted Glass UI in Persian-primary RTL, Global/Iran 30-Province + 8-City Offline Vector Map with live GNSS/GPS satellite locator & smart destination recommendations, Android Anti-Hack OS Inspector (Root/ADB/Accessibility/DeviceAdmin/UserCA/VPN), App Antivirus & APK/SHA-256 Malware Scanner, Offline Phishing URL/SMS Analyzer, Password Entropy Lab, and App Permission Auditor — strictly ZERO network permissions verified via aapt and API 35 Airplane Mode emulator E2E. Build evidence: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           gh release delete "$RELEASE_TAG" --repo "${{ github.repository }}" --yes || true
           gh release create "$RELEASE_TAG" \
             dist-apks/app-release.apk \
@@ -226,5 +226,5 @@ jobs:
             dist-apks/SHA256SUMS.txt \
             --repo "${{ github.repository }}" \
             --target "${{ github.sha }}" \
-            --title "AegisGuard v2.0.0 Offline Release APK (Vector Map + Multi-Engine Rebuild)" \
+            --title "AegisGuard v3.0.0 Offline Cybersecurity + Pro Map Release APK" \
             --notes "$RELEASE_NOTES"

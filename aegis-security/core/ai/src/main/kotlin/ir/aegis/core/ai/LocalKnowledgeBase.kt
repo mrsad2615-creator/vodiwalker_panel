@@ -213,7 +213,18 @@ object LocalKnowledgeBase {
         ),
     )
 
-    val knowledgeDocs: List<ReviewedKnowledgeDoc> = firstAidGuides.map { g ->
+    val knowledgeDocs: List<ReviewedKnowledgeDoc> by lazy {
+        CyberKnowledgeBase.playbooks.map { p ->
+            ReviewedKnowledgeDoc(
+                id = p.id,
+                title = "${p.titleFa} (${p.titleEn})",
+                domain = "Cybersecurity & Anti-Hacking",
+                tags = listOf("cyber", "security", "hack", "virus", "malware", "phishing", "trojan", "هک", "ویروس", "بدافزار", "فیشینگ", "جاسوسی", "امنیت", p.mitreTechnique),
+                content = "${p.summaryFa}\n${p.summaryEn}\nIndicators: ${(p.indicatorsFa + p.indicatorsEn).joinToString(" | ")}",
+                actionChecklist = p.stepsFa + p.stepsEn,
+                reviewedSource = p.standardRef,
+            )
+        } + firstAidGuides.map { g ->
         val extraFaTags = when (g.id) {
             "fa-bleeding" -> listOf("bleeding", "tourniquet", "wound", "hemorrhage", "خونریزی", "پانسمان", "تورنیکت", "زخم")
             "fa-cpr" -> listOf("cpr", "cardiac", "resuscitation", "breathing", "احیا", "قلبی", "تنفس")
@@ -292,5 +303,5 @@ object LocalKnowledgeBase {
             ),
             reviewedSource = "Reviewed Offline Material · Poison & Gas Emergency Protocol (Bundled v1.0)",
         ),
-    )
+    ) }
 }

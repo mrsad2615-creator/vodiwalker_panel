@@ -1,0 +1,334 @@
+{
+  "packageId": "pack-mashhad-grid",
+  "baseElevationMeters": 990.0,
+  "waterways": [
+    {
+      "id": "wm-kashaf",
+      "nameEn": "Kashafrud Corridor",
+      "nameFa": "حاشیه کشف‌رود",
+      "widthMeters": 24.0,
+      "points": [
+        {
+          "lat": 36.365,
+          "lon": 59.51
+        },
+        {
+          "lat": 36.355,
+          "lon": 59.59
+        },
+        {
+          "lat": 36.342,
+          "lon": 59.67
+        }
+      ]
+    }
+  ],
+  "waterBodies": [],
+  "parks": [
+    {
+      "id": "pm-mellat",
+      "nameEn": "Mellat Park",
+      "nameFa": "پارک ملت مشهد",
+      "kind": "park",
+      "points": [
+        {
+          "lat": 36.314,
+          "lon": 59.528
+        },
+        {
+          "lat": 36.314,
+          "lon": 59.546
+        },
+        {
+          "lat": 36.326,
+          "lon": 59.546
+        },
+        {
+          "lat": 36.326,
+          "lon": 59.528
+        }
+      ]
+    },
+    {
+      "id": "pm-koohsangi",
+      "nameEn": "Koohsangi Park",
+      "nameFa": "پارک کوهسنگی",
+      "kind": "park",
+      "points": [
+        {
+          "lat": 36.272,
+          "lon": 59.564
+        },
+        {
+          "lat": 36.272,
+          "lon": 59.578
+        },
+        {
+          "lat": 36.283,
+          "lon": 59.578
+        },
+        {
+          "lat": 36.283,
+          "lon": 59.564
+        }
+      ]
+    }
+  ],
+  "contours": [],
+  "buildings": [
+    {
+      "id": "bm-imamreza",
+      "nameEn": "Imam Reza Medical Center",
+      "nameFa": "بیمارستان امام رضا",
+      "kind": "hospital",
+      "heightMeters": 62.0,
+      "footprint": [
+        {
+          "lat": 36.28,
+          "lon": 59.598
+        },
+        {
+          "lat": 36.28,
+          "lon": 59.606
+        },
+        {
+          "lat": 36.286,
+          "lon": 59.606
+        },
+        {
+          "lat": 36.286,
+          "lon": 59.598
+        }
+      ]
+    },
+    {
+      "id": "bm-ghaem",
+      "nameEn": "Ghaem Hospital",
+      "nameFa": "بیمارستان قائم",
+      "kind": "hospital",
+      "heightMeters": 58.0,
+      "footprint": [
+        {
+          "lat": 36.292,
+          "lon": 59.588
+        },
+        {
+          "lat": 36.292,
+          "lon": 59.594
+        },
+        {
+          "lat": 36.297,
+          "lon": 59.594
+        },
+        {
+          "lat": 36.297,
+          "lon": 59.588
+        }
+      ]
+    },
+    {
+      "id": "bm-haram",
+      "nameEn": "Central Plaza",
+      "nameFa": "میدان مرکزی / حرم",
+      "kind": "landmark",
+      "heightMeters": 78.0,
+      "footprint": [
+        {
+          "lat": 36.284,
+          "lon": 59.612
+        },
+        {
+          "lat": 36.284,
+          "lon": 59.622
+        },
+        {
+          "lat": 36.292,
+          "lon": 59.622
+        },
+        {
+          "lat": 36.292,
+          "lon": 59.612
+        }
+      ]
+    }
+  ],
+  "roads": [
+    {
+      "id": "rm-vakil",
+      "nameEn": "Vakilabad Blvd",
+      "nameFa": "بلوار وکیل‌آباد",
+      "tier": "HIGHWAY",
+      "points": [
+        {
+          "lat": 36.338,
+          "lon": 59.465
+        },
+        {
+          "lat": 36.322,
+          "lon": 59.525
+        },
+        {
+          "lat": 36.311,
+          "lon": 59.555
+        }
+      ]
+    },
+    {
+      "id": "rm-kalantari",
+      "nameEn": "Kalantari / 100m Beltway",
+      "nameFa": "بزرگراه کلانتری",
+      "tier": "HIGHWAY",
+      "points": [
+        {
+          "lat": 36.311,
+          "lon": 59.555
+        },
+        {
+          "lat": 36.265,
+          "lon": 59.585
+        },
+        {
+          "lat": 36.275,
+          "lon": 59.645
+        }
+      ]
+    },
+    {
+      "id": "rm-ahmadabad",
+      "nameEn": "Ahmadabad Blvd",
+      "nameFa": "بلوار احمدآباد",
+      "tier": "PRIMARY",
+      "points": [
+        {
+          "lat": 36.295,
+          "lon": 59.562
+        },
+        {
+          "lat": 36.292,
+          "lon": 59.588
+        },
+        {
+          "lat": 36.289,
+          "lon": 59.612
+        }
+      ]
+    },
+    {
+      "id": "rm-imamreza",
+      "nameEn": "Imam Reza Blvd",
+      "nameFa": "بلوار امام رضا",
+      "tier": "PRIMARY",
+      "points": [
+        {
+          "lat": 36.286,
+          "lon": 59.615
+        },
+        {
+          "lat": 36.268,
+          "lon": 59.61
+        },
+        {
+          "lat": 36.252,
+          "lon": 59.605
+        }
+      ]
+    }
+  ],
+  "districts": [
+    {
+      "nameEn": "VAKILABAD",
+      "nameFa": "وکیل‌آباد",
+      "lat": 36.325,
+      "lon": 59.515,
+      "importance": 1
+    },
+    {
+      "nameEn": "AHMADABAD",
+      "nameFa": "احمدآباد",
+      "lat": 36.294,
+      "lon": 59.58,
+      "importance": 1
+    },
+    {
+      "nameEn": "KOOHSANGI",
+      "nameFa": "کوهسنگی",
+      "lat": 36.278,
+      "lon": 59.572,
+      "importance": 2
+    }
+  ],
+  "graphNodes": [
+    {
+      "id": "m1",
+      "labelEn": "Azadi Park / Mellat",
+      "labelFa": "پارک ملت",
+      "lat": 36.318,
+      "lon": 59.538
+    },
+    {
+      "id": "m2",
+      "labelEn": "Ghaem Hospital",
+      "labelFa": "بیمارستان قائم",
+      "lat": 36.295,
+      "lon": 59.591
+    },
+    {
+      "id": "m3",
+      "labelEn": "Imam Reza Hospital",
+      "labelFa": "بیمارستان امام رضا",
+      "lat": 36.283,
+      "lon": 59.602
+    },
+    {
+      "id": "m4",
+      "labelEn": "Koohsangi Hub",
+      "labelFa": "میدان کوهسنگی",
+      "lat": 36.279,
+      "lon": 59.573
+    },
+    {
+      "id": "m5",
+      "labelEn": "Central Plaza",
+      "labelFa": "میدان مرکزی",
+      "lat": 36.288,
+      "lon": 59.616
+    }
+  ],
+  "graphEdges": [
+    {
+      "fromId": "m1",
+      "toId": "m2",
+      "roadNameEn": "Vakilabad - Ahmadabad",
+      "roadNameFa": "وکیل‌آباد / احمدآباد",
+      "isWideCorridor": true
+    },
+    {
+      "fromId": "m2",
+      "toId": "m3",
+      "roadNameEn": "Daneshgah St",
+      "roadNameFa": "خیابان دانشگاه",
+      "isWideCorridor": true
+    },
+    {
+      "fromId": "m2",
+      "toId": "m5",
+      "roadNameEn": "Ahmadabad Blvd",
+      "roadNameFa": "بلوار احمدآباد",
+      "isWideCorridor": true
+    },
+    {
+      "fromId": "m4",
+      "toId": "m3",
+      "roadNameEn": "Alvand / Koohsangi",
+      "roadNameFa": "کوهسنگی / الندشت",
+      "isWideCorridor": true
+    },
+    {
+      "fromId": "m1",
+      "toId": "m4",
+      "roadNameEn": "Azadi / Koohsangi",
+      "roadNameFa": "آزادی / کوهسنگی",
+      "isWideCorridor": true
+    }
+  ]
+}

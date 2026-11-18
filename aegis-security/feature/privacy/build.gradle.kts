@@ -23,6 +23,7 @@ android {
 
 dependencies {
     implementation(project(":core:model"))
+    implementation(project(":core:ai"))
     implementation(project(":core:crypto"))
     implementation(project(":core:ui"))
     implementation(libs.androidx.biometric)

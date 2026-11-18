@@ -1,5 +1,8 @@
 package ir.aegis.feature.ai
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.provider.OpenableColumns
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -11,15 +14,14 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import ir.aegis.core.ai.AiAssistantResponse
-import ir.aegis.core.ai.LocalAiEngine
+import ir.aegis.core.ai.*
 import ir.aegis.core.crypto.CryptoEngine
 import ir.aegis.core.model.*
 import ir.aegis.core.ui.*
 import kotlinx.coroutines.launch
 import java.io.File
-import java.util.UUID
 
 @Composable
 fun LocalAiScreen(
@@ -37,18 +39,26 @@ fun LocalAiScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    val incidents by repository.observeIncidents(includeArchived = false).collectAsState(initial = emptyList())
-    val family by repository.observeFamilyMembers().collectAsState(initial = emptyList())
-    val inventory by repository.observeInventoryItems().collectAsState(initial = emptyList())
-    val academyProgress by repository.observeAcademyProgress().collectAsState(initial = emptyList())
+    var selectedTab by remember { mutableIntStateOf(0) } // 0=Phishing URL/SMS, 1=Password Lab, 2=Cyber AI Assistant
 
-    var selectedTab by remember { mutableIntStateOf(0) }
+    // Tab 0: Phishing Analyzer state
+    var phishingInput by remember {
+        mutableStateOf("ابلاغیه فوری ثنا: http://sana-adliran-portal.xyz/eblagh.apk")
+    }
+    val phishingReport = remember(phishingInput) {
+        PhishingAnalyzer.analyzeTextOrUrl(phishingInput)
+    }
+
+    // Tab 1: Password Entropy & Generator state
+    var pwdInput by remember { mutableStateOf("") }
+    var pwdLength by remember { mutableFloatStateOf(18f) }
+    var copiedMsg by remember { mutableStateOf<String?>(null) }
+    val pwdAudit = remember(pwdInput) { PasswordSecurityEngine.auditPassword(pwdInput) }
+
+    // Tab 2: Cyber AI Assistant & Local Model
     var assistantQuery by remember { mutableStateOf("") }
     var assistantReply by remember { mutableStateOf<AiAssistantResponse?>(null) }
     var kbQuery by remember { mutableStateOf("") }
-    var draftText by remember { mutableStateOf("Thick smoke inside stairwell on floor 3, two neighbors coughing") }
-    var checklistCategory by remember { mutableStateOf(IncidentCategory.EARTHQUAKE) }
-    var checklistSavedNotice by remember { mutableStateOf<String?>(null) }
 
     val modelsDir = remember { File(context.filesDir, "models").apply { mkdirs() } }
     var localModelFiles by remember { mutableStateOf(modelsDir.listFiles()?.toList().orEmpty()) }
@@ -63,10 +73,14 @@ fun LocalAiScreen(
                 context.contentResolver.openInputStream(uri)?.use { input ->
                     dest.outputStream().use { out -> input.copyTo(out) }
                 }
-                val sha = CryptoEngine.sha256Hex(dest.readBytes())
+                val hash = CryptoEngine.sha256Hex(dest.readBytes())
                 localModelFiles = modelsDir.listFiles()?.toList().orEmpty()
-                onModelImported(dest.absolutePath, dest.name, sha)
-                repository.logActivity("LOCAL_MODEL_IMPORT", "Local AI", "Imported on-device model file ${dest.name}")
+                onModelImported(dest.absolutePath, dest.name, hash)
+                repository.logActivity(
+                    "LOCAL_AI_MODEL_IMPORTED",
+                    "Phishing & Password Lab",
+                    "Model=${dest.name}, SHA256=${hash.take(16)}",
+                )
             }
         }
     }
@@ -77,15 +91,14 @@ fun LocalAiScreen(
             onBack = onBack,
             isFavorite = isFavorite,
             onToggleFavorite = onToggleFavorite,
-            extraBadge = tr("ON-DEVICE NLP & BM25 · ZERO NETWORK", "هوش آفلاین روی دستگاه · بدون اینترنت"),
+            extraBadge = tr("ZERO-NET THREAT LAB", "آزمایشگاه آفلاین ضد فیشینگ"),
             showBackButton = showBackButton,
         )
         GlassTabRow(
             tabs = listOf(
-                tr("Assistant", "دستیار"),
-                tr("KB Search", "جستجوی دانش"),
-                tr("Analyze & Tools", "تحلیل و ابزارها"),
-                tr("Stats & SLM", "آمار و مدل محلی"),
+                tr("Phishing URL/SMS", "تشخیص فیشینگ"),
+                tr("Password Strength", "آزمایشگاه رمز"),
+                tr("Cyber Advisor AI", "مشاور امنیتی آفلاین"),
             ),
             selectedIndex = selectedTab,
             onSelect = { selectedTab = it },
@@ -93,36 +106,213 @@ fun LocalAiScreen(
         Spacer(Modifier.height(10.dp))
 
         when (selectedTab) {
+            // TAB 0: Offline Phishing URL & SMS Forensics
             0 -> {
                 LazyColumn(
-                    modifier = Modifier.testTag("ai_assistant_list"),
+                    modifier = Modifier.fillMaxSize().testTag("ai_tab_lazy_list"),
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     item {
-                        AiSafetyBanner(
-                            text = tr(
-                                "Outputs below are generated offline from local heuristics & reviewed guides. They are suggestions ONLY — verify critical actions with reviewed guides or local emergency services.",
-                                "خروجی‌های زیر به‌صورت آفلاین تولید می‌شوند و صرفاً پیشنهاد هستند؛ برای اقدامات حیاتی به راهنماهای بازبینی‌شده و نیروهای امدادی مراجعه کنید.",
-                            ),
-                        )
+                        ObsidianGlassCard(elevated = true, accentBorderColor = colors.accentCyan) {
+                            SectionHeader(
+                                title = tr("Offline SMS & URL Phishing Analyzer", "تحلیلگر آفلاین پیامک و لینک جعلی فیشینگ"),
+                                badge = "HEURISTIC",
+                            )
+                            Text(
+                                text = tr(
+                                    "Detects Punycode homographs, fake court/bank portals, .apk malware droppers, raw IP links & social-engineering scam keywords without connecting to any server.",
+                                    "تشخیص لینک‌های جعلی ثنا، شاپرک و یارانه، دامنه‌های هموگراف، فایل‌های .apk مخرب و ترفندهای مهندسی اجتماعی بدون ارسال پیامک به اینترنت.",
+                                ),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = colors.textSecondary,
+                            )
+                            Spacer(Modifier.height(6.dp))
+                            GlassTextField(
+                                value = phishingInput,
+                                onValueChange = { phishingInput = it },
+                                label = tr("Paste suspicious SMS or URL here...", "متن پیامک یا لینک مشکوک را اینجا وارد کنید..."),
+                                singleLine = false,
+                                minLines = 3,
+                            )
+                            Spacer(Modifier.height(6.dp))
+                            ChipFlowGroup {
+                                AegisFilterPill(
+                                    label = tr("Sample: Fake Sana", "نمونه: ابلاغیه جعلی"),
+                                    selected = false,
+                                    onClick = { phishingInput = "ابلاغیه فوری ثنا: http://sana-adliran-portal.xyz/eblagh.apk" },
+                                    accent = colors.accentCrimson,
+                                )
+                                AegisFilterPill(
+                                    label = tr("Sample: Fake Bank", "نمونه: درگاه بانکی جعلی"),
+                                    selected = false,
+                                    onClick = { phishingInput = "رفع مسدودی کارت بانکی: http://shaparak-mellat-ir.top/login" },
+                                    accent = colors.accentAmber,
+                                )
+                                AegisFilterPill(
+                                    label = tr("Sample: Official HTTPS", "نمونه: دامنه رسمی امن"),
+                                    selected = false,
+                                    onClick = { phishingInput = "https://shaparak.ir" },
+                                    accent = colors.accentEmerald,
+                                )
+                                AegisFilterPill(
+                                    label = tr("Clear", "پاک کردن"),
+                                    selected = false,
+                                    onClick = { phishingInput = "" },
+                                )
+                            }
+                        }
                     }
+
                     item {
-                        ObsidianGlassCard(elevated = true) {
-                            Text(tr("Ask Offline Assistant", "پرسش از دستیار آفلاین"), style = MaterialTheme.typography.titleMedium, color = colors.accentCyan)
+                        val tone = when (phishingReport.verdict) {
+                            PhishingVerdict.MALICIOUS_PHISHING -> colors.accentCrimson
+                            PhishingVerdict.SUSPICIOUS -> colors.accentAmber
+                            PhishingVerdict.SAFE -> colors.accentEmerald
+                        }
+                        val verdictText = when (phishingReport.verdict) {
+                            PhishingVerdict.MALICIOUS_PHISHING -> tr("MALICIOUS PHISHING (${phishingReport.riskScore}%)", "فیشینگ خطرناک (${phishingReport.riskScore}٪)")
+                            PhishingVerdict.SUSPICIOUS -> tr("SUSPICIOUS (${phishingReport.riskScore}%)", "مشکوک (${phishingReport.riskScore}٪)")
+                            PhishingVerdict.SAFE -> tr("SAFE (${phishingReport.riskScore}%)", "سالم / امن (${phishingReport.riskScore}٪)")
+                        }
+                        ObsidianGlassCard(elevated = true, accentBorderColor = tone) {
+                            SectionHeader(title = tr("Forensic Verdict", "نتیجه تحلیل امنیتی"), badge = verdictText)
+                            Text(
+                                text = if (isFa) phishingReport.recommendationFa else phishingReport.recommendationEn,
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = tone,
+                            )
+                            if (phishingReport.extractedUrls.isNotEmpty()) {
+                                Spacer(Modifier.height(6.dp))
+                                Text(
+                                    text = tr("Extracted URLs:", "لینک‌های استخراج‌شده:") + " " + phishingReport.extractedUrls.joinToString(", "),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = colors.textMuted,
+                                )
+                            }
+                            if (phishingReport.signals.isNotEmpty()) {
+                                Spacer(Modifier.height(6.dp))
+                                phishingReport.signals.forEach { sig ->
+                                    Text(
+                                        text = "• (+${sig.points}) ${if (isFa) sig.titleFa else sig.titleEn}",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = colors.textPrimary,
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // TAB 1: Offline Password Entropy Lab & Generator
+            1 -> {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    item {
+                        val tone = when (pwdAudit.grade) {
+                            PasswordGrade.FORTRESS, PasswordGrade.STRONG -> colors.accentEmerald
+                            PasswordGrade.FAIR -> colors.accentAmber
+                            else -> colors.accentCrimson
+                        }
+                        val gradeLabel = when (pwdAudit.grade) {
+                            PasswordGrade.FORTRESS -> tr("FORTRESS (${pwdAudit.entropyBits} bits)", "بسیار مستحکم (${pwdAudit.entropyBits} بیت)")
+                            PasswordGrade.STRONG -> tr("STRONG (${pwdAudit.entropyBits} bits)", "قوی (${pwdAudit.entropyBits} بیت)")
+                            PasswordGrade.FAIR -> tr("FAIR (${pwdAudit.entropyBits} bits)", "متوسط (${pwdAudit.entropyBits} بیت)")
+                            PasswordGrade.WEAK -> tr("WEAK (${pwdAudit.entropyBits} bits)", "ضعیف (${pwdAudit.entropyBits} بیت)")
+                            PasswordGrade.CRITICAL_WEAK -> tr("CRITICAL WEAK (${pwdAudit.entropyBits} bits)", "بسیار ضعیف (${pwdAudit.entropyBits} بیت)")
+                        }
+
+                        ObsidianGlassCard(elevated = true, accentBorderColor = tone) {
+                            SectionHeader(title = tr("Password Entropy & Breach Check", "ارزیابی قدرت و آنتروپی رمز عبور"), badge = gradeLabel)
+                            GlassTextField(
+                                value = pwdInput,
+                                onValueChange = { pwdInput = it },
+                                label = tr("Type or paste password to audit offline...", "رمز عبور را برای بررسی محلی وارد کنید..."),
+                            )
                             Spacer(Modifier.height(8.dp))
-                            GlassTextField(assistantQuery, { assistantQuery = it }, tr("Ask about bleeding, earthquake, evacuation, fire...", "سوال خود را بنویسید..."))
+                            LinearProgressIndicator(
+                                progress = { pwdAudit.scorePercent / 100f },
+                                modifier = Modifier.fillMaxWidth().height(8.dp),
+                                color = tone,
+                                trackColor = colors.divider,
+                            )
+                            Spacer(Modifier.height(6.dp))
+                            val warnings = if (isFa) pwdAudit.warningsFa else pwdAudit.warningsEn
+                            if (warnings.isEmpty() && pwdInput.isNotEmpty()) {
+                                Text(tr("Excellent password resistance against offline brute-force.", "مقاومت عالی در برابر حملات شکستن رمز!"), style = MaterialTheme.typography.bodySmall, color = colors.accentEmerald)
+                            } else {
+                                warnings.forEach { w ->
+                                    Text("• $w", style = MaterialTheme.typography.bodySmall, color = tone)
+                                }
+                            }
+                            Spacer(Modifier.height(8.dp))
+                            Text(tr("Generator Length: ${pwdLength.toInt()} chars", "طول رمز تولیدی: ${pwdLength.toInt()} کاراکتر"), style = MaterialTheme.typography.labelSmall, color = colors.textSecondary)
+                            Slider(value = pwdLength, onValueChange = { pwdLength = it }, valueRange = 12f..30f)
+                            ChipFlowGroup {
+                                GlassButton(
+                                    label = tr("Generate Secure Password", "تولید رمز تصادفی فوق‌قوی"),
+                                    onClick = {
+                                        pwdInput = PasswordSecurityEngine.generateStrongPassword(pwdLength.toInt())
+                                        copiedMsg = null
+                                    },
+                                    accent = colors.accentCyan,
+                                )
+                                GlassButton(
+                                    label = tr("Copy Password", "کپی رمز"),
+                                    onClick = {
+                                        if (pwdInput.isNotEmpty()) {
+                                            val cb = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+                                            cb?.setPrimaryClip(ClipData.newPlainText("AegisPass", pwdInput))
+                                            copiedMsg = trText(lang, "Copied to clipboard.", "رمز در کلیپ‌بورد کپی شد.")
+                                        }
+                                    },
+                                    accent = colors.accentEmerald,
+                                    enabled = pwdInput.isNotEmpty(),
+                                )
+                            }
+                            copiedMsg?.let { Text(it, style = MaterialTheme.typography.labelSmall, color = colors.accentEmerald) }
+                        }
+                    }
+                }
+            }
+
+            // TAB 2: Cyber AI Advisor + Local GGUF Model Importer
+            else -> {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    item {
+                        ObsidianGlassCard(elevated = true, accentBorderColor = colors.accentCyan) {
+                            SectionHeader(
+                                title = tr("Offline Cyber Defense Assistant", "دستیار آفلاین مقابله با هک و تهدیدها"),
+                                badge = tr("OFFLINE AI", "هوش محلی"),
+                            )
+                            GlassTextField(
+                                value = assistantQuery,
+                                onValueChange = { assistantQuery = it },
+                                label = tr("Ask about trojans, phishing, MITM CA certs, ADB...", "بپرسید: تروجان بانکی، فیشینگ ثنا، گواهی CA، استاکرور..."),
+                                singleLine = false,
+                                minLines = 2,
+                            )
                             Spacer(Modifier.height(8.dp))
                             ChipFlowGroup {
-                                listOf(
-                                    "earthquake" to tr("Earthquake", "زلزله"),
-                                    "bleeding" to tr("Bleeding", "خونریزی"),
-                                    "fire" to tr("Fire", "آتش‌سوزی"),
-                                    "flood" to tr("Flood", "سیل"),
-                                ).forEach { (preset, label) ->
+                                val presets = listOf(
+                                    tr("Banking Trojan", "تروجان بانکی و Accessibility"),
+                                    tr("Stalkerware", "کشف استاکرور و شنود"),
+                                    tr("SMS Phishing", "فیشینگ پیامکی و سرقت OTP"),
+                                    tr("Device Hacked IR", "اقدام فوری هنگام هک شدن"),
+                                )
+                                presets.forEach { preset ->
                                     AegisFilterPill(
-                                        label = label,
-                                        selected = assistantQuery.equals(preset, ignoreCase = true),
+                                        label = preset,
+                                        selected = false,
                                         onClick = {
                                             assistantQuery = preset
                                             assistantReply = LocalAiEngine.answerQuery(preset, preferences.localModelName, isFa)
@@ -132,190 +322,65 @@ fun LocalAiScreen(
                             }
                             Spacer(Modifier.height(8.dp))
                             GlassButton(
-                                label = tr("Run Local Inference", "تحلیل آفلاین"),
-                                enabled = assistantQuery.isNotBlank(),
+                                label = tr("Analyze Offline Knowledge Base", "تحلیل از دانشنامه امنیتی آفلاین"),
                                 onClick = {
                                     assistantReply = LocalAiEngine.answerQuery(assistantQuery, preferences.localModelName, isFa)
                                 },
+                                accent = colors.accentCyan,
                             )
                         }
                     }
+
                     assistantReply?.let { reply ->
                         item {
                             ObsidianGlassCard(accentBorderColor = colors.accentTeal) {
-                                Text("${tr("Suggestion Summary", "خلاصه پیشنهادی")} (${reply.confidencePercent}%)", style = MaterialTheme.typography.titleMedium, color = colors.accentTeal)
-                                Text(reply.engineLabel, style = MaterialTheme.typography.labelSmall, color = colors.textMuted)
+                                SectionHeader(title = reply.engineLabel, badge = "${reply.confidencePercent}%")
+                                Text(reply.summaryAnswer, style = MaterialTheme.typography.bodyMedium, color = colors.textPrimary)
                                 Spacer(Modifier.height(4.dp))
-                                Text(reply.safetyDisclaimer, style = MaterialTheme.typography.labelSmall, color = colors.accentAmber)
-                                Spacer(Modifier.height(6.dp))
-                                Text(reply.summaryAnswer, style = MaterialTheme.typography.bodyLarge, color = colors.textPrimary)
-                                if (reply.suggestedSteps.isNotEmpty()) {
-                                    Spacer(Modifier.height(8.dp))
-                                    Text(tr("Suggested Action Steps:", "مراحل پیشنهادی:"), style = MaterialTheme.typography.labelMedium, color = colors.accentCyan)
-                                    reply.suggestedSteps.forEachIndexed { idx, s ->
-                                        Text("${idx + 1}. $s", style = MaterialTheme.typography.bodyMedium, color = colors.textSecondary)
-                                    }
+                                reply.suggestedSteps.forEachIndexed { idx, s ->
+                                    Text("${idx + 1}. $s", style = MaterialTheme.typography.bodySmall, color = colors.textSecondary)
                                 }
                                 if (reply.citedSources.isNotEmpty()) {
-                                    Spacer(Modifier.height(8.dp))
-                                    Text(tr("Referenced Reviewed Protocols:", "پروتکل‌های بازبینی‌شده مرتبط:"), style = MaterialTheme.typography.labelMedium, color = colors.accentEmerald)
-                                    reply.citedSources.forEach { src ->
-                                        Text("• $src", style = MaterialTheme.typography.labelSmall, color = colors.textSecondary)
-                                    }
+                                    Spacer(Modifier.height(4.dp))
+                                    Text(tr("Standards: ", "استانداردها: ") + reply.citedSources.joinToString(" | "), style = MaterialTheme.typography.labelSmall, color = colors.accentCyan)
                                 }
                             }
                         }
                     }
-                }
-            }
 
-            1 -> {
-                val hits = remember(kbQuery) { LocalAiEngine.searchKnowledge(kbQuery, limit = 8) }
-                LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     item {
                         ObsidianGlassCard {
-                            GlassTextField(kbQuery, { kbQuery = it }, tr("BM25 Search Reviewed Guides (EN / FA keywords)...", "جستجو در کتابخانه دانش..."))
+                            SectionHeader(title = tr("Search Security Knowledge Library", "جستجو در دانشنامه امنیت موبایل"))
+                            GlassTextField(value = kbQuery, onValueChange = { kbQuery = it }, label = tr("Filter playbooks...", "فیلتر راهنماها..."))
                         }
                     }
+                    val hits = LocalAiEngine.searchKnowledge(kbQuery, limit = 6)
                     items(hits, key = { it.doc.id }) { hit ->
                         ObsidianGlassCard {
-                            Text("${hit.doc.title}  [Score ${"%.2f".format(hit.score)}]", style = MaterialTheme.typography.titleMedium, color = colors.accentCyan)
-                            Text("${hit.doc.domain} · ${hit.doc.reviewedSource}", style = MaterialTheme.typography.labelSmall, color = colors.accentEmerald)
-                            Spacer(Modifier.height(6.dp))
-                            hit.doc.actionChecklist.forEachIndexed { idx, step ->
-                                Text("${idx + 1}. $step", style = MaterialTheme.typography.bodyMedium, color = colors.textSecondary)
-                            }
+                            Text(hit.doc.title, style = MaterialTheme.typography.titleMedium, color = colors.textPrimary)
+                            Text(hit.doc.reviewedSource, style = MaterialTheme.typography.labelSmall, color = colors.accentCyan)
+                            Text(hit.doc.content, style = MaterialTheme.typography.bodySmall, color = colors.textSecondary)
                         }
                     }
-                }
-            }
 
-            2 -> {
-                val cls = remember(draftText, isFa) { LocalAiEngine.classifyIncident(draftText, "", isFa) }
-                val summary = remember(draftText) { LocalAiEngine.summarizeText("Draft Incident", draftText, maxSentences = 2) }
-                val duplicates = remember(draftText, cls, incidents) {
-                    LocalAiEngine.findPotentialDuplicates(draftText, "", cls.suggestedCategory, null, null, incidents)
-                }
-                val genChecklistPair = remember(checklistCategory, family, inventory) {
-                    LocalAiEngine.generateChecklist(checklistCategory, family, inventory)
-                }
-
-                LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     item {
                         ObsidianGlassCard {
-                            Text(tr("Classifier, Summarizer & Duplicate Detector", "دسته‌بند، خلاصه‌ساز و تشخیص تکرار"), style = MaterialTheme.typography.titleMedium, color = colors.accentCyan)
-                            Spacer(Modifier.height(8.dp))
-                            GlassTextField(draftText, { draftText = it }, tr("Paste Incident Report Text", "متن گزارش را وارد کنید"), singleLine = false, minLines = 3)
-                            Spacer(Modifier.height(8.dp))
-                            Text("Suggested: ${cls.suggestedCategory.name} / ${cls.suggestedPriority.name} (${cls.confidencePercent}%)", style = MaterialTheme.typography.labelLarge, color = colors.accentAmber)
-                            Text("Signals: ${cls.matchedSignals.joinToString(", ")}", style = MaterialTheme.typography.labelSmall, color = colors.textSecondary)
-                            Spacer(Modifier.height(6.dp))
-                            Text("Extractive Summary: $summary", style = MaterialTheme.typography.bodyMedium, color = colors.textPrimary)
-                            Spacer(Modifier.height(6.dp))
+                            SectionHeader(title = tr("Optional Local GGUF Model Importer", "مدل زبانی محلی آفلاین (اختیاری)"))
                             Text(
-                                if (duplicates.isEmpty()) "Duplicate Scan: No similar active reports in Room."
-                                else "Potential duplicates: ${duplicates.joinToString { "${it.incident.title} (${it.similarityPercent}%)" }}",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = if (duplicates.isEmpty()) colors.accentEmerald else colors.accentCrimson,
-                            )
-                        }
-                    }
-
-                    item {
-                        ObsidianGlassCard {
-                            Text(tr("Emergency Checklist Generator (Draft Suggestion)", "تولیدگر چک‌لیست اضطراری"), style = MaterialTheme.typography.titleMedium, color = colors.accentTeal)
-                            Spacer(Modifier.height(6.dp))
-                            ChipFlowGroup {
-                                listOf(IncidentCategory.EARTHQUAKE, IncidentCategory.FIRE, IncidentCategory.FLOOD, IncidentCategory.MEDICAL).forEach { cat ->
-                                    AegisFilterPill(
-                                        label = categoryLabel(cat, lang),
-                                        selected = checklistCategory == cat,
-                                        onClick = { checklistCategory = cat },
-                                        accent = colors.accentTeal,
-                                    )
-                                }
-                            }
-                            Spacer(Modifier.height(6.dp))
-                            genChecklistPair.second.forEachIndexed { idx, line ->
-                                Text("${idx + 1}. ${line.label}", style = MaterialTheme.typography.bodyMedium, color = colors.textSecondary)
-                            }
-                            Spacer(Modifier.height(8.dp))
-                            GlassButton(
-                                label = tr("Save Generated Checklist to Room", "ذخیره چک‌لیست"),
-                                accent = colors.accentTeal,
-                                onClick = {
-                                    scope.launch {
-                                        val id = "cl-ai-${UUID.randomUUID().toString().take(8)}"
-                                        val finalPair = LocalAiEngine.generateChecklist(checklistCategory, family, inventory, checklistId = id)
-                                        repository.upsertChecklistWithItems(finalPair.first, finalPair.second)
-                                        checklistSavedNotice = "Saved to Crisis Checklists."
-                                    }
+                                text = if (preferences.localModelName.isBlank()) {
+                                    tr("Using built-in deterministic cybersecurity engine.", "هم‌اکنون از موتور هوشمند قطعی آفلاین استفاده می‌شود.")
+                                } else {
+                                    "${preferences.localModelName} (${preferences.localModelSha256.take(14)}…)"
                                 },
-                            )
-                            if (checklistSavedNotice != null) {
-                                Text(checklistSavedNotice!!, style = MaterialTheme.typography.labelSmall, color = colors.accentEmerald)
-                            }
-                        }
-                    }
-                }
-            }
-
-            3 -> {
-                val report = remember(incidents, inventory, family, academyProgress, isFa) {
-                    LocalAiEngine.analyzeStatistics(incidents, inventory, family, academyProgress, isPersian = isFa)
-                }
-                LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    item {
-                        ObsidianGlassCard(elevated = true) {
-                            Text(tr("Local Statistical Risk & Trend Analysis", "تحلیل آماری محلی داده‌ها"), style = MaterialTheme.typography.titleMedium, color = colors.accentCyan)
-                            Spacer(Modifier.height(6.dp))
-                            Text(report.safetyDisclaimer, style = MaterialTheme.typography.labelSmall, color = colors.accentAmber)
-                            Spacer(Modifier.height(6.dp))
-                            Text("Total: ${report.totalIncidents} · Open: ${report.openCount} · Critical: ${report.criticalCount} · Resolution: ${report.resolutionRatePercent}%", style = MaterialTheme.typography.bodyLarge, color = colors.textPrimary)
-                            Text("Preparedness Index: ${report.preparednessIndex}% · Top Category: ${report.topCategory?.name ?: "None"}", style = MaterialTheme.typography.bodyMedium, color = colors.accentTeal)
-                            Spacer(Modifier.height(6.dp))
-                            report.insights.forEach { line ->
-                                Text("• $line", style = MaterialTheme.typography.bodyMedium, color = colors.textSecondary)
-                            }
-                        }
-                    }
-
-                    item {
-                        ObsidianGlassCard {
-                            Text(tr("Optional On-Device Local Model (SLM Pack)", "مدل زبانی اختیاری روی دستگاه"), style = MaterialTheme.typography.titleMedium, color = colors.accentViolet)
-                            Spacer(Modifier.height(6.dp))
-                            Text(
-                                tr("Import an offline GGUF/TFLite model from local storage (zero downloads). Built-in BM25 & deterministic NLP always run reliably without an external model.", "می‌توانید فایل مدل آفلاین (.gguf/.tflite) را از حافظه دستگاه وارد کنید. موتور محلی بدون مدل خارجی نیز کاملاً فعال است."),
-                                style = MaterialTheme.typography.bodyMedium,
+                                style = MaterialTheme.typography.bodySmall,
                                 color = colors.textSecondary,
                             )
-                            if (preferences.localModelName.isNotBlank()) {
-                                Spacer(Modifier.height(4.dp))
-                                Text("Active Model: ${preferences.localModelName} (${preferences.localModelSha256.take(12)}...)", style = MaterialTheme.typography.labelMedium, color = colors.accentEmerald)
-                            }
-                            Spacer(Modifier.height(8.dp))
-                            ChipFlowGroup {
-                                GlassButton(
-                                    label = tr("Import Local Model (.gguf / .bin)", "انتخاب فایل مدل آفلاین"),
-                                    accent = colors.accentViolet,
-                                    onClick = { modelPicker.launch(arrayOf("*/*")) },
-                                )
-                                if (preferences.localModelName.isNotBlank()) {
-                                    GlassButton(
-                                        label = tr("Clear Model", "حذف مدل"),
-                                        accent = colors.accentAmber,
-                                        onClick = { onModelImported("", "", "") },
-                                    )
-                                }
-                            }
-                            Spacer(Modifier.height(8.dp))
-                            if (localModelFiles.isEmpty()) {
-                                Text(tr("No external SLM file imported yet (Built-in deterministic engine active).", "مدل خارجی نصب نشده — موتور هوشمند داخلی فعال است."), style = MaterialTheme.typography.labelSmall, color = colors.textMuted)
-                            } else {
-                                localModelFiles.forEach { mf ->
-                                    Text("• ${mf.name} (${mf.length() / 1024} KB)", style = MaterialTheme.typography.labelSmall, color = colors.accentEmerald)
-                                }
-                            }
+                            Spacer(Modifier.height(6.dp))
+                            GlassButton(
+                                label = tr("Import Local .gguf / .tflite", "افزودن فایل مدل محلی"),
+                                onClick = { modelPicker.launch(arrayOf("*/*")) },
+                                accent = colors.accentViolet,
+                            )
                         }
                     }
                 }

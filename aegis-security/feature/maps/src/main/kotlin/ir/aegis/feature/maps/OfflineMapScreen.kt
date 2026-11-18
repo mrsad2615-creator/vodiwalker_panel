@@ -8,9 +8,12 @@ import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
+import android.location.GnssStatus
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
+import android.os.Build
+import android.os.Looper
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
@@ -26,7 +29,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -34,11 +36,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
-import ir.aegis.core.maps.GeoCoord
-import ir.aegis.core.maps.GeoMath
-import ir.aegis.core.maps.OfflineRouteResult
-import ir.aegis.core.maps.OfflineRoutingEngine
-import ir.aegis.core.maps.VectorMapEngine
+import ir.aegis.core.maps.*
 import ir.aegis.core.model.*
 import ir.aegis.core.ui.*
 import kotlinx.coroutines.launch
@@ -64,9 +62,11 @@ fun OfflineMapScreen(
     val routes by repository.observeSavedRoutes().collectAsState(initial = emptyList())
     val incidents by repository.observeIncidents().collectAsState(initial = emptyList())
 
-    var selectedTab by remember { mutableIntStateOf(0) } // 0=Vector Map, 1=Directory & Search, 2=Regions & Routes
-    var is3DMode by remember { mutableStateOf(false) } // Default crisp 2D Topo so labels/streets are immediately crystal clear; 1 tap to 3D!
+    var selectedTab by remember { mutableIntStateOf(0) } // 0=Map + Smart Advisor, 1=Places, 2=Regions & Saved
+    var is3DMode by remember { mutableStateOf(false) }
     var activePackId by remember { mutableStateOf("pack-tehran-grid") }
+    var isNationalViewMode by remember { mutableStateOf(false) } // Can zoom out to full Iran or World Atlas!
+    var viewMode by remember { mutableStateOf("CITY") } // "CITY", "IRAN", "WORLD"
     var yawDeg by remember { mutableFloatStateOf(16f) }
     var pitchDeg by remember { mutableFloatStateOf(44f) }
     var zoomScale by remember { mutableFloatStateOf(1.15f) }
@@ -93,6 +93,7 @@ fun OfflineMapScreen(
     var rulerStart by remember { mutableStateOf<MapMarker?>(null) }
     var rulerEnd by remember { mutableStateOf<MapMarker?>(null) }
 
+    // Hardware Compass + Magnetometer Bearing
     var compassAzimuth by remember { mutableFloatStateOf(0f) }
     DisposableEffect(Unit) {
         val sm = context.getSystemService(Context.SENSOR_SERVICE) as? SensorManager
@@ -120,43 +121,98 @@ fun OfflineMapScreen(
         onDispose { sm?.unregisterListener(listener) }
     }
 
+    // Standard Hardware GPS / GNSS Locator Telemetry
     var currentLat by remember { mutableDoubleStateOf(35.7010) }
     var currentLon by remember { mutableDoubleStateOf(51.3911) }
-    var gpsStatus by remember { mutableStateOf("Offline Vector Anchor") }
+    var gpsAccuracyMeters by remember { mutableFloatStateOf(24f) }
+    var gpsAltitudeMeters by remember { mutableDoubleStateOf(1190.0) }
+    var gpsSpeedKmh by remember { mutableFloatStateOf(0f) }
+    var satsUsed by remember { mutableIntStateOf(0) }
+    var satsVisible by remember { mutableIntStateOf(0) }
+    var hasLiveFix by remember { mutableStateOf(false) }
+    var hasLocationPermission by remember {
+        mutableStateOf(
+            ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED,
+        )
+    }
 
-    val locLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        if (granted) {
-            val lm = context.getSystemService(Context.LOCATION_SERVICE) as? LocationManager
-            val last = runCatching { lm?.getLastKnownLocation(LocationManager.GPS_PROVIDER) ?: lm?.getLastKnownLocation(LocationManager.NETWORK_PROVIDER) }.getOrNull()
-            if (last != null) {
-                currentLat = last.latitude
-                currentLon = last.longitude
-                gpsStatus = "GPS Fix (±${last.accuracy.toInt()}m)"
-            } else {
-                runCatching {
-                    lm?.requestSingleUpdate(LocationManager.GPS_PROVIDER, object : LocationListener {
-                        override fun onLocationChanged(location: Location) {
-                            currentLat = location.latitude
-                            currentLon = location.longitude
-                            gpsStatus = "GPS Fix (±${location.accuracy.toInt()}m)"
-                        }
-                    }, null)
+    fun applyGpsLocation(loc: Location) {
+        currentLat = loc.latitude
+        currentLon = loc.longitude
+        gpsAccuracyMeters = if (loc.hasAccuracy()) loc.accuracy else 20f
+        if (loc.hasAltitude()) gpsAltitudeMeters = loc.altitude
+        if (loc.hasSpeed()) gpsSpeedKmh = loc.speed * 3.6f
+        hasLiveFix = true
+        val packPool = packages.ifEmpty { OfflineMapSeeds.bundledPackages() }
+        val nearestPack = VectorMapEngine.autoSelectNearestPack(loc.latitude, loc.longitude, packPool)?.id
+        if (nearestPack != null && nearestPack != activePackId) {
+            activePackId = nearestPack
+            panLatOffset = 0.0
+            panLonOffset = 0.0
+        }
+    }
+
+    DisposableEffect(hasLocationPermission) {
+        if (!hasLocationPermission) return@DisposableEffect onDispose {}
+        val lm = context.getSystemService(Context.LOCATION_SERVICE) as? LocationManager
+        val locListener = LocationListener { loc -> applyGpsLocation(loc) }
+        val gnssCallback = object : GnssStatus.Callback() {
+            override fun onSatelliteStatusChanged(status: GnssStatus) {
+                var used = 0
+                for (i in 0 until status.satelliteCount) {
+                    if (status.usedInFix(i)) used++
                 }
+                satsVisible = status.satelliteCount
+                satsUsed = used
             }
         }
+        runCatching {
+            val lastGps = lm?.getLastKnownLocation(LocationManager.GPS_PROVIDER)
+            val lastNet = lm?.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
+            val best = listOfNotNull(lastGps, lastNet).minByOrNull { it.accuracy }
+            if (best != null) applyGpsLocation(best)
+
+            if (lm?.isProviderEnabled(LocationManager.GPS_PROVIDER) == true) {
+                lm.requestLocationUpdates(LocationManager.GPS_PROVIDER, 2500L, 2f, locListener, Looper.getMainLooper())
+            }
+            if (lm?.isProviderEnabled(LocationManager.NETWORK_PROVIDER) == true) {
+                lm.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 4000L, 5f, locListener, Looper.getMainLooper())
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                lm?.registerGnssStatusCallback(gnssCallback, android.os.Handler(Looper.getMainLooper()))
+            }
+        }
+        onDispose {
+            runCatching { lm?.removeUpdates(locListener) }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                runCatching { lm?.unregisterGnssStatusCallback(gnssCallback) }
+            }
+        }
+    }
+
+    val locLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        hasLocationPermission = granted
     }
 
     var pinTitle by remember { mutableStateOf("") }
     var pinCategory by remember { mutableStateOf(MarkerCategory.CUSTOM) }
     var statusMsg by remember { mutableStateOf<String?>(null) }
 
+    val baseAtlas = remember { VectorMapEngine.loadBaseAtlas() }
     val activePack = packages.firstOrNull { it.id == activePackId } ?: packages.firstOrNull()
     val vectorBundle = remember(activePackId) { VectorMapEngine.loadBundle(activePackId) }
-    val baseLat = ((activePack?.minLat ?: 35.64) + (activePack?.maxLat ?: 35.755)) / 2.0
-    val baseLon = ((activePack?.minLon ?: 51.31) + (activePack?.maxLon ?: 51.46)) / 2.0
+
+    val (baseLat, baseLon, spanDeg) = when (viewMode) {
+        "WORLD" -> Triple(28.0, 38.0, 72.0)
+        "IRAN" -> Triple(32.5, 53.6, 13.5)
+        else -> Triple(
+            ((activePack?.minLat ?: 35.64) + (activePack?.maxLat ?: 35.755)) / 2.0,
+            ((activePack?.minLon ?: 51.31) + (activePack?.maxLon ?: 51.46)) / 2.0,
+            activePack?.let { maxOf(abs(it.maxLat - it.minLat), abs(it.maxLon - it.minLon)) } ?: 0.14,
+        )
+    }
     val centerLat = baseLat + panLatOffset
     val centerLon = baseLon + panLonOffset
-    val spanDeg = activePack?.let { maxOf(abs(it.maxLat - it.minLat), abs(it.maxLon - it.minLon)) } ?: 0.14
 
     val filteredMarkers = remember(markers, activePackId, showEmergencyLayer, showCustomLayer, categoryFilter, searchQuery) {
         markers.filter { mk ->
@@ -173,13 +229,30 @@ fun OfflineMapScreen(
                 .map { GeoCoord(it.latitude!!, it.longitude!!) }
     }
 
+    // Smart Offline Destination Recommendations relative to live user position
+    val smartRecommendations = remember(currentLat, currentLon, markers, activePackId) {
+        val scoped = markers.filter { it.packageId == activePackId && it.category != MarkerCategory.HAZARD }
+            .ifEmpty { markers.filter { it.category != MarkerCategory.HAZARD } }
+        MapAdvisorEngine.suggestNearestDestinations(
+            userLat = currentLat,
+            userLon = currentLon,
+            markers = scoped,
+            limit = 3,
+        )
+    }
+
     fun routeToMarker(mk: MapMarker) {
+        viewMode = "CITY"
+        if (mk.packageId != activePackId) {
+            activePackId = mk.packageId
+        }
+        val targetBundle = VectorMapEngine.loadBundle(mk.packageId)
         val result = OfflineRoutingEngine.computeSafeRoute(
-            bundle = vectorBundle,
+            bundle = targetBundle,
             startLat = currentLat,
             startLon = currentLon,
-            startLabelEn = "Your Position",
-            startLabelFa = "موقعیت شما",
+            startLabelEn = "Your GPS Anchor",
+            startLabelFa = "موقعیت فعلی شما",
             destLat = mk.latitude,
             destLon = mk.longitude,
             destLabelEn = mk.title,
@@ -190,8 +263,20 @@ fun OfflineMapScreen(
         activeRoute = result
         activeRouteTitle = mk.title
         selectedMarker = mk
-        panLatOffset = ((mk.latitude + currentLat) / 2.0) - baseLat
-        panLonOffset = ((mk.longitude + currentLon) / 2.0) - baseLon
+        val p = packages.firstOrNull { it.id == mk.packageId }
+        val pLat = ((p?.minLat ?: 35.64) + (p?.maxLat ?: 35.755)) / 2.0
+        val pLon = ((p?.minLon ?: 51.31) + (p?.maxLon ?: 51.46)) / 2.0
+        panLatOffset = ((mk.latitude + currentLat) / 2.0) - pLat
+        panLonOffset = ((mk.longitude + currentLon) / 2.0) - pLon
+    }
+
+    val gpsStatusLabel = if (hasLiveFix) {
+        tr(
+            "GPS ±${gpsAccuracyMeters.toInt()}m · $satsUsed/$satsVisible sats",
+            "GPS فعال ±${gpsAccuracyMeters.toInt()}m · $satsUsed/$satsVisible ماهواره",
+        )
+    } else {
+        tr("Offline GNSS Anchor", "مکان‌یاب آفلاین آماده")
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -200,15 +285,15 @@ fun OfflineMapScreen(
             onBack = onBack,
             isFavorite = isFavorite,
             onToggleFavorite = onToggleFavorite,
-            extraBadge = activePack?.regionCode ?: "OFFLINE GIS",
+            extraBadge = gpsStatusLabel,
             showBackButton = showBackButton,
         )
 
         GlassTabRow(
             tabs = listOf(
-                tr("Interactive Map", "نقشه تعاملی"),
-                tr("Places (${filteredMarkers.size})", "مکان‌ها (${filteredMarkers.size})"),
-                tr("Regions & Saved", "بسته‌ها و مسیرها"),
+                tr("Pro Map & GNSS", "نقشه کامل و مکان‌یاب"),
+                tr("Directory (${filteredMarkers.size})", "فهرست مکان‌ها (${filteredMarkers.size})"),
+                tr("City Packs (${packages.size})", "بسته‌های نقشه (${packages.size})"),
             ),
             selectedIndex = selectedTab,
             onSelect = { selectedTab = it },
@@ -223,78 +308,72 @@ fun OfflineMapScreen(
                     contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
-                    // Compact Search + Pack Switcher + Expandable Category Filters
+                    // Scale Selector (City / Iran Provinces / World Atlas) + City Selector + Search
                     item {
-                        ObsidianGlassCard(contentPadding = PaddingValues(12.dp)) {
+                        ObsidianGlassCard(contentPadding = PaddingValues(14.dp)) {
                             GlassTextField(
                                 value = searchQuery,
                                 onValueChange = { searchQuery = it },
-                                label = tr("Search hospitals, shelters, streets...", "جستجوی بیمارستان، پناهگاه، خیابان..."),
+                                label = tr("Search hospital, police, safe zone, street...", "جستجوی مرکز درمانی، امنیت، منطقه امن یا خیابان..."),
                             )
                             Spacer(modifier = Modifier.height(6.dp))
                             ChipFlowGroup {
+                                AegisFilterPill(
+                                    label = tr("World Atlas", "نقشه کل جهان"),
+                                    selected = viewMode == "WORLD",
+                                    onClick = {
+                                        viewMode = "WORLD"
+                                        panLatOffset = 0.0
+                                        panLonOffset = 0.0
+                                        zoomScale = 1.0f
+                                    },
+                                    accent = colors.accentViolet,
+                                )
+                                AegisFilterPill(
+                                    label = tr("All Iran (30 Prov)", "کل ایران (۳۰ استان)"),
+                                    selected = viewMode == "IRAN",
+                                    onClick = {
+                                        viewMode = "IRAN"
+                                        panLatOffset = 0.0
+                                        panLonOffset = 0.0
+                                        zoomScale = 1.0f
+                                    },
+                                    accent = colors.accentTeal,
+                                )
                                 packages.forEach { pack ->
                                     AegisFilterPill(
                                         label = pack.regionCode,
-                                        selected = pack.id == activePackId,
+                                        selected = viewMode == "CITY" && pack.id == activePackId,
                                         onClick = {
+                                            viewMode = "CITY"
                                             activePackId = pack.id
                                             panLatOffset = 0.0
                                             panLonOffset = 0.0
                                             zoomScale = 1.15f
                                             activeRoute = null
                                             selectedMarker = null
-                                            if (!gpsStatus.startsWith("GPS Fix")) {
+                                            if (!hasLiveFix) {
                                                 currentLat = (pack.minLat + pack.maxLat) / 2.0
                                                 currentLon = (pack.minLon + pack.maxLon) / 2.0
                                             }
                                         },
                                     )
                                 }
-                                AegisFilterPill(
-                                    label = if (categoryFilter == null) tr("Filter POIs", "فیلتر نقاط") else markerCategoryLabel(categoryFilter!!, lang),
-                                    selected = showCategoryFilters || categoryFilter != null,
-                                    onClick = { showCategoryFilters = !showCategoryFilters },
-                                    accent = colors.accentTeal,
-                                )
-                            }
-                            if (showCategoryFilters) {
-                                Spacer(modifier = Modifier.height(6.dp))
-                                ChipFlowGroup {
-                                    AegisFilterPill(
-                                        label = tr("All", "همه"),
-                                        selected = categoryFilter == null,
-                                        onClick = { categoryFilter = null },
-                                    )
-                                    listOf(
-                                        MarkerCategory.HOSPITAL,
-                                        MarkerCategory.SHELTER,
-                                        MarkerCategory.ASSEMBLY_POINT,
-                                        MarkerCategory.WATER_POINT,
-                                        MarkerCategory.FIRE_STATION,
-                                    ).forEach { cat ->
-                                        AegisFilterPill(
-                                            label = markerCategoryLabel(cat, lang),
-                                            selected = categoryFilter == cat,
-                                            onClick = { categoryFilter = if (categoryFilter == cat) null else cat },
-                                            accent = markerColor(cat, colors),
-                                        )
-                                    }
-                                }
                             }
                         }
                     }
 
-                    // FULL HIGH-CONTRAST INTERACTIVE CARTOGRAPHIC CANVAS
+                    // FULL MULTI-SCALE INTERACTIVE MAP VIEWPORT (470dp tall!)
                     item {
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(430.dp)
-                                .clip(RoundedCornerShape(20.dp))
-                                .border(1.5.dp, colors.accentCyan.copy(alpha = 0.45f), RoundedCornerShape(20.dp)),
+                                .height(470.dp)
+                                .clip(RoundedCornerShape(24.dp))
+                                .border(1.2.dp, colors.accentCyan.copy(alpha = 0.42f), RoundedCornerShape(24.dp)),
                         ) {
                             OfflineVectorMapCanvas(
+                                atlas = baseAtlas,
                                 bundle = vectorBundle,
                                 centerLat = centerLat,
                                 centerLon = centerLon,
@@ -313,15 +392,18 @@ fun OfflineMapScreen(
                                 incidents = incidents,
                                 userLat = currentLat,
                                 userLon = currentLon,
+                                gpsAccuracyMeters = gpsAccuracyMeters,
+                                compassAzimuthDeg = compassAzimuth,
                                 selectedMarkerId = selectedMarker?.id,
                                 rulerStart = rulerStart,
                                 rulerEnd = rulerEnd,
                                 onTransformGesture = { pan, zoom ->
-                                    val newZoom = (zoomScale * zoom).coerceIn(0.65f, 4.5f)
+                                    val newZoom = (zoomScale * zoom).coerceIn(0.45f, 5.5f)
                                     zoomScale = newZoom
                                     val degPerPx = spanDeg / (340.0 * newZoom)
-                                    panLatOffset = (panLatOffset + pan.y * degPerPx).coerceIn(-0.08, 0.08)
-                                    panLonOffset = (panLonOffset - pan.x * degPerPx).coerceIn(-0.08, 0.08)
+                                    val maxPan = (spanDeg * 0.9).coerceAtLeast(0.15)
+                                    panLatOffset = (panLatOffset + pan.y * degPerPx).coerceIn(-maxPan, maxPan)
+                                    panLonOffset = (panLonOffset - pan.x * degPerPx).coerceIn(-maxPan, maxPan)
                                 },
                                 onSelectMarker = { mk ->
                                     if (rulerMode) {
@@ -338,42 +420,42 @@ fun OfflineMapScreen(
                                 modifier = Modifier.fillMaxSize(),
                             )
 
-                            // Top-left live Compass & Region badge
+                            // Top-start Frosted GPS & Compass HUD
                             Surface(
                                 modifier = Modifier
                                     .align(Alignment.TopStart)
                                     .padding(10.dp),
-                                shape = RoundedCornerShape(12.dp),
-                                color = Color(0xCC0A1220),
-                                border = BorderStroke(1.dp, colors.accentCyan.copy(alpha = 0.4f)),
+                                shape = RoundedCornerShape(14.dp),
+                                color = Color(0xCC0A1118),
+                                border = BorderStroke(1.dp, colors.accentCyan.copy(alpha = 0.35f)),
                             ) {
-                                Column(modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)) {
+                                Column(modifier = Modifier.padding(horizontal = 11.dp, vertical = 7.dp)) {
                                     Text(
-                                        text = "${activePack?.regionCode ?: "MAP"} · ${GeoMath.formatBearing(compassAzimuth.toDouble())}",
+                                        text = "${if (viewMode == "WORLD") tr("WORLD", "جهان") else if (viewMode == "IRAN") tr("IRAN", "ایران") else activePack?.regionCode ?: "CITY"} · ${GeoMath.formatBearing(compassAzimuth.toDouble())}",
                                         style = MaterialTheme.typography.labelSmall,
-                                        color = Color(0xFF38BDF8),
+                                        color = colors.accentCyan,
                                         fontWeight = FontWeight.Bold,
                                     )
                                     Text(
-                                        text = "${vectorBundle.roads.size} ${tr("streets", "خیابان")} · ${filteredMarkers.size} POI",
+                                        text = "${"%.4f".format(currentLat)}, ${"%.4f".format(currentLon)} · ${gpsAltitudeMeters.toInt()}m",
                                         style = MaterialTheme.typography.labelSmall,
-                                        color = Color(0xFFCBD5E1),
+                                        color = Color(0xFFD5E1EC),
                                     )
                                 }
                             }
 
-                            // Top-right HUD Controls (2D/3D, +, -, Center)
+                            // Top-end Frosted HUD Controls (2D/3D, +, -, Locate GPS)
                             Column(
                                 modifier = Modifier
                                     .align(Alignment.TopEnd)
                                     .padding(10.dp),
-                                verticalArrangement = Arrangement.spacedBy(6.dp),
+                                verticalArrangement = Arrangement.spacedBy(7.dp),
                                 horizontalAlignment = Alignment.End,
                             ) {
                                 Surface(
                                     onClick = { is3DMode = !is3DMode },
                                     shape = RoundedCornerShape(12.dp),
-                                    color = if (is3DMode) colors.accentCyan else Color(0xCC0A1220),
+                                    color = if (is3DMode) colors.accentCyan else Color(0xCC0A1118),
                                     border = BorderStroke(1.dp, colors.accentCyan),
                                 ) {
                                     Text(
@@ -381,57 +463,57 @@ fun OfflineMapScreen(
                                         modifier = Modifier.padding(horizontal = 11.dp, vertical = 6.dp),
                                         style = MaterialTheme.typography.labelMedium,
                                         fontWeight = FontWeight.Bold,
-                                        color = if (is3DMode) Color(0xFF04121E) else Color.White,
+                                        color = if (is3DMode) Color(0xFF041412) else Color.White,
                                     )
                                 }
                                 Surface(
-                                    onClick = { zoomScale = (zoomScale * 1.32f).coerceAtMost(4.5f) },
+                                    onClick = { zoomScale = (zoomScale * 1.35f).coerceAtMost(5.5f) },
                                     shape = CircleShape,
-                                    color = Color(0xCC0A1220),
+                                    color = Color(0xCC0A1118),
                                     border = BorderStroke(1.dp, colors.glassRimEnd),
                                 ) {
                                     Text("+", modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp), color = Color.White, fontWeight = FontWeight.Bold)
                                 }
                                 Surface(
-                                    onClick = { zoomScale = (zoomScale / 1.32f).coerceAtLeast(0.65f) },
+                                    onClick = { zoomScale = (zoomScale / 1.35f).coerceAtLeast(0.45f) },
                                     shape = CircleShape,
-                                    color = Color(0xCC0A1220),
+                                    color = Color(0xCC0A1118),
                                     border = BorderStroke(1.dp, colors.glassRimEnd),
                                 ) {
                                     Text("−", modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp), color = Color.White, fontWeight = FontWeight.Bold)
                                 }
                                 Surface(
                                     onClick = {
-                                        panLatOffset = 0.0
-                                        panLonOffset = 0.0
-                                        zoomScale = 1.15f
-                                        if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-                                            val lm = context.getSystemService(Context.LOCATION_SERVICE) as? LocationManager
-                                            val last = runCatching { lm?.getLastKnownLocation(LocationManager.GPS_PROVIDER) }.getOrNull()
-                                            if (last != null) {
-                                                currentLat = last.latitude
-                                                currentLon = last.longitude
-                                                gpsStatus = "GPS Fix (±${last.accuracy.toInt()}m)"
-                                            }
-                                        } else {
+                                        if (!hasLocationPermission) {
                                             locLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+                                        } else {
+                                            viewMode = "CITY"
+                                            val packPool = packages.ifEmpty { OfflineMapSeeds.bundledPackages() }
+                                            val nearest = VectorMapEngine.autoSelectNearestPack(currentLat, currentLon, packPool)?.id ?: activePackId
+                                            activePackId = nearest
+                                            val p = packPool.firstOrNull { it.id == nearest }
+                                            val pLat = ((p?.minLat ?: currentLat) + (p?.maxLat ?: currentLat)) / 2.0
+                                            val pLon = ((p?.minLon ?: currentLon) + (p?.maxLon ?: currentLon)) / 2.0
+                                            panLatOffset = currentLat - pLat
+                                            panLonOffset = currentLon - pLon
+                                            zoomScale = 1.35f
                                         }
                                     },
                                     shape = RoundedCornerShape(12.dp),
-                                    color = Color(0xCC0A1220),
-                                    border = BorderStroke(1.dp, colors.accentTeal),
+                                    color = Color(0xCC0A1118),
+                                    border = BorderStroke(1.dp, colors.accentCyan),
                                 ) {
-                                    Text("◎", modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp), color = colors.accentTeal, fontWeight = FontWeight.Bold)
+                                    Text("◎", modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp), color = colors.accentCyan, fontWeight = FontWeight.Bold)
                                 }
                             }
 
-                            // Bottom-right quick Legend Pill
+                            // Bottom-end Map Legend
                             Surface(
                                 modifier = Modifier
                                     .align(Alignment.BottomEnd)
                                     .padding(10.dp),
                                 shape = RoundedCornerShape(10.dp),
-                                color = Color(0xCC0A1220),
+                                color = Color(0xCC0A1118),
                                 border = BorderStroke(1.dp, colors.divider),
                             ) {
                                 Row(
@@ -439,15 +521,79 @@ fun OfflineMapScreen(
                                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                                     verticalAlignment = Alignment.CenterVertically,
                                 ) {
-                                    LegendDot(colors.accentCrimson, tr("Hosp", "بیمارستان"))
-                                    LegendDot(colors.accentEmerald, tr("Safe", "پناهگاه"))
-                                    LegendDot(colors.accentTeal, tr("Water", "آب"))
+                                    LegendDot(colors.accentCrimson, tr("Hosp", "درمانی"))
+                                    LegendDot(colors.accentEmerald, tr("Safe", "منطقه امن"))
+                                    LegendDot(colors.accentCyan, tr("Sec", "امنیتی"))
                                 }
                             }
                         }
                     }
 
-                    // Active Selected POI Callout Card + 1-Tap Offline Routing
+                    // SMART SELF-DIRECTED RECOMMENDATIONS CARD (پیشنهاد هوشمند مقصد و مکان‌یابی)
+                    item {
+                        ObsidianGlassCard(elevated = true, accentBorderColor = colors.accentCyan) {
+                            SectionHeader(
+                                title = tr("Smart Offline Navigator", "پیشنهاد هوشمند مکان‌یاب آفلاین"),
+                                badge = if (hasLiveFix) tr("GPS Live", "GPS دقیق") else tr("Anchor Mode", "حالت آفلاین"),
+                            )
+                            Text(
+                                text = tr(
+                                    "Nearest hazard-screened sanctuaries calculated locally from your coordinates (${"%.4f".format(currentLat)}, ${"%.4f".format(currentLon)}):",
+                                    "بهترین نقاط امن و مراکز امدادی نزدیک موقعیت فعلی شما با فیلتر مسیر امن:",
+                                ),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = colors.textSecondary,
+                            )
+                            Spacer(modifier = Modifier.height(6.dp))
+                            smartRecommendations.forEachIndexed { idx, rec ->
+                                val tag = if (lang == AppLanguage.FA) rec.reasonFa else rec.reasonEn
+                                Surface(
+                                    onClick = { routeToMarker(rec.marker) },
+                                    modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
+                                    shape = RoundedCornerShape(14.dp),
+                                    color = colors.glassElevated.copy(alpha = 0.72f),
+                                    border = BorderStroke(1.dp, if (idx == 0) colors.accentCyan.copy(alpha = 0.55f) else colors.divider),
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(12.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(10.dp)
+                                                .clip(CircleShape)
+                                                .background(markerColor(rec.marker.category, colors)),
+                                        )
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(rec.marker.title, style = MaterialTheme.typography.titleSmall, color = colors.textPrimary)
+                                            Text(
+                                                "$tag · ${GeoMath.formatDistance(rec.distanceMeters)} · ~${rec.walkMinutes} ${tr("min", "دقیقه")}",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = colors.accentCyan,
+                                            )
+                                        }
+                                        Text(
+                                            text = tr("Route →", "مسیر ←"),
+                                            style = MaterialTheme.typography.labelMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = colors.accentEmerald,
+                                        )
+                                    }
+                                }
+                            }
+                            if (!hasLocationPermission) {
+                                Spacer(modifier = Modifier.height(6.dp))
+                                GlassButton(
+                                    label = tr("Enable Hardware GPS / GNSS Fix", "فعال‌سازی مکان‌یاب استاندارد GPS/GNSS"),
+                                    onClick = { locLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION) },
+                                    accent = colors.accentCyan,
+                                )
+                            }
+                        }
+                    }
+
+                    // Active Selected POI Card
                     selectedMarker?.let { mk ->
                         item {
                             val dist = GeoMath.haversineMeters(currentLat, currentLon, mk.latitude, mk.longitude)
@@ -458,12 +604,7 @@ fun OfflineMapScreen(
                                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                                     verticalAlignment = Alignment.CenterVertically,
                                 ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(12.dp)
-                                            .clip(CircleShape)
-                                            .background(markerColor(mk.category, colors)),
-                                    )
+                                    Box(modifier = Modifier.size(12.dp).clip(CircleShape).background(markerColor(mk.category, colors)))
                                     Column(modifier = Modifier.weight(1f)) {
                                         Text(mk.title, style = MaterialTheme.typography.titleMedium, color = colors.textPrimary)
                                         Text(
@@ -472,16 +613,10 @@ fun OfflineMapScreen(
                                             color = colors.accentTeal,
                                         )
                                     }
-                                    TextButton(onClick = { selectedMarker = null }) {
-                                        Text("✕", color = colors.textMuted)
-                                    }
+                                    TextButton(onClick = { selectedMarker = null }) { Text("✕", color = colors.textMuted) }
                                 }
                                 Text(mk.description, style = MaterialTheme.typography.bodyMedium, color = colors.textSecondary)
-                                Text(
-                                    "${GeoMath.formatDms(mk.latitude, mk.longitude)} · ${mk.elevationMeters.toInt()} m",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = colors.textMuted,
-                                )
+                                Text("${GeoMath.formatDms(mk.latitude, mk.longitude)} · ${mk.elevationMeters.toInt()} m", style = MaterialTheme.typography.labelSmall, color = colors.textMuted)
                                 Spacer(modifier = Modifier.height(6.dp))
                                 ChipFlowGroup {
                                     GlassButton(
@@ -490,11 +625,10 @@ fun OfflineMapScreen(
                                         accent = colors.accentCyan,
                                     )
                                     GlassButton(
-                                        label = tr("Set as Anchor", "تنظیم به‌عنوان مبدأ"),
+                                        label = tr("Set as My Anchor", "تنظیم به‌عنوان مبدأ من"),
                                         onClick = {
                                             currentLat = mk.latitude
                                             currentLon = mk.longitude
-                                            gpsStatus = mk.title
                                             activeRoute = null
                                         },
                                         accent = colors.accentEmerald,
@@ -504,24 +638,14 @@ fun OfflineMapScreen(
                         }
                     }
 
-                    // Active Route Summary & Turn-by-Turn Steps
+                    // Active Turn-by-Turn Route Summary
                     activeRoute?.let { route ->
                         item {
                             ObsidianGlassCard(elevated = true, accentBorderColor = colors.accentCyan) {
                                 SectionHeader(
-                                    title = tr("Safe Corridor Route", "مسیر ایمن آفلاین") + (activeRouteTitle?.let { " → $it" } ?: ""),
+                                    title = tr("Offline Corridor Route", "مسیر ایمن آفلاین") + (activeRouteTitle?.let { " ← $it" } ?: ""),
                                     badge = "${GeoMath.formatDistance(route.totalDistanceMeters)} · ${route.estimatedWalkMinutes} ${tr("min", "دقیقه")}",
                                 )
-                                if (route.avoidedHazardCount > 0) {
-                                    Text(
-                                        text = tr(
-                                            "Detoured around ${route.avoidedHazardCount} active hazard/incident node(s).",
-                                            "مسیر از کنار ${route.avoidedHazardCount} نقطه پرخطر دور شد.",
-                                        ),
-                                        style = MaterialTheme.typography.labelMedium,
-                                        color = colors.accentEmerald,
-                                    )
-                                }
                                 route.steps.take(if (showStepsDialog) 20 else 3).forEachIndexed { idx, step ->
                                     Text(
                                         text = "${idx + 1}. ${if (lang == AppLanguage.FA) step.instructionFa else step.instructionEn}",
@@ -532,17 +656,14 @@ fun OfflineMapScreen(
                                 ChipFlowGroup {
                                     if (route.steps.size > 3) {
                                         GlassButton(
-                                            label = if (showStepsDialog) tr("Compact Steps", "خلاصه مراحل") else tr("All ${route.steps.size} Steps", "تمام ${route.steps.size} مرحله"),
+                                            label = if (showStepsDialog) tr("Compact", "خلاصه") else tr("All ${route.steps.size} Steps", "تمام ${route.steps.size} مرحله"),
                                             onClick = { showStepsDialog = !showStepsDialog },
                                             accent = colors.accentTeal,
                                         )
                                     }
                                     GlassButton(
                                         label = tr("Clear Route", "پاک کردن مسیر"),
-                                        onClick = {
-                                            activeRoute = null
-                                            activeRouteTitle = null
-                                        },
+                                        onClick = { activeRoute = null; activeRouteTitle = null },
                                         accent = colors.accentAmber,
                                     )
                                 }
@@ -550,79 +671,42 @@ fun OfflineMapScreen(
                         }
                     }
 
-                    // Map Tool & Layer Controls Card (Zero Overlap FlowRow!)
+                    // Layers & Custom Pin Card
                     item {
                         ObsidianGlassCard {
                             SectionHeader(
-                                title = tr("Layers, 3D Orbit & Ruler", "لایه‌ها، نمای سه‌بعدی و خط‌کش"),
-                                badge = gpsStatus,
+                                title = tr("Layers, 3D Orbit & Geodesic Ruler", "لایه‌های نقشه، سه‌بعدی و خط‌کش"),
+                                badge = "${gpsSpeedKmh.toInt()} km/h",
                             )
                             if (is3DMode) {
-                                Text(
-                                    tr("Camera Yaw (${yawDeg.toInt()}°) & Pitch (${pitchDeg.toInt()}°)", "زاویه افق (${yawDeg.toInt()}°) و شیب (${pitchDeg.toInt()}°)"),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = colors.textSecondary,
-                                )
+                                Text(tr("Yaw (${yawDeg.toInt()}°) & Pitch (${pitchDeg.toInt()}°)", "چرخش (${yawDeg.toInt()}°) و شیب (${pitchDeg.toInt()}°)"), style = MaterialTheme.typography.labelSmall, color = colors.textSecondary)
                                 Slider(value = yawDeg, onValueChange = { yawDeg = it }, valueRange = -180f..180f)
                                 Slider(value = pitchDeg, onValueChange = { pitchDeg = it }, valueRange = 15f..60f)
                             }
                             ChipFlowGroup {
                                 AegisFilterPill(tr("Streets", "خیابان‌ها"), showStreets, { showStreets = !showStreets })
                                 AegisFilterPill(tr("3D Blocks", "ساختمان‌ها"), showBuildings, { showBuildings = !showBuildings })
-                                AegisFilterPill(tr("Contours", "تراز ارتفاع"), showContours, { showContours = !showContours })
-                                AegisFilterPill(tr("Avoid Hazards", "دوری از خطر"), avoidHazards, { avoidHazards = !avoidHazards }, accent = colors.accentEmerald)
-                                AegisFilterPill(tr("Ruler Mode", "حالت خط‌کش"), rulerMode, {
+                                AegisFilterPill(tr("Contours", "خطوط تراز"), showContours, { showContours = !showContours })
+                                AegisFilterPill(tr("Avoid Risk", "دوری از ریسک"), avoidHazards, { avoidHazards = !avoidHazards }, accent = colors.accentEmerald)
+                                AegisFilterPill(tr("Ruler", "خط‌کش"), rulerMode, {
                                     rulerMode = !rulerMode
-                                    if (!rulerMode) {
-                                        rulerStart = null
-                                        rulerEnd = null
-                                    }
+                                    if (!rulerMode) { rulerStart = null; rulerEnd = null }
                                 }, accent = colors.accentAmber)
                             }
-                            if (rulerMode) {
-                                Spacer(modifier = Modifier.height(6.dp))
-                                if (rulerStart != null && rulerEnd != null) {
-                                    val dist = GeoMath.haversineMeters(rulerStart!!.latitude, rulerStart!!.longitude, rulerEnd!!.latitude, rulerEnd!!.longitude)
-                                    val brg = GeoMath.bearingDegrees(rulerStart!!.latitude, rulerStart!!.longitude, rulerEnd!!.latitude, rulerEnd!!.longitude)
-                                    Text(
-                                        text = "${rulerStart!!.title} ↔ ${rulerEnd!!.title}: ${GeoMath.formatDistance(dist)} · ${GeoMath.formatBearing(brg)} (~${GeoMath.estimateWalkingMinutes(dist)} ${tr("min walk", "دقیقه پیاده")})",
-                                        style = MaterialTheme.typography.titleSmall,
-                                        color = colors.accentAmber,
-                                    )
-                                } else {
-                                    Text(
-                                        text = tr("Tap two markers on the map to measure geodesic distance & bearing.", "دو نقطه روی نقشه لمس کنید تا فاصله و جهت دقیق محاسبه شود."),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = colors.accentAmber,
-                                    )
-                                }
+                            if (rulerMode && rulerStart != null && rulerEnd != null) {
+                                val dist = GeoMath.haversineMeters(rulerStart!!.latitude, rulerStart!!.longitude, rulerEnd!!.latitude, rulerEnd!!.longitude)
+                                val brg = GeoMath.bearingDegrees(rulerStart!!.latitude, rulerStart!!.longitude, rulerEnd!!.latitude, rulerEnd!!.longitude)
+                                Text(
+                                    text = "${rulerStart!!.title} ↔ ${rulerEnd!!.title}: ${GeoMath.formatDistance(dist)} · ${GeoMath.formatBearing(brg)}",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    color = colors.accentAmber,
+                                )
                             }
-                        }
-                    }
-
-                    // Quick Custom Pin Adder
-                    item {
-                        ObsidianGlassCard {
-                            SectionHeader(title = tr("Drop Offline Marker Pin", "ثبت نشانگر جدید روی نقشه"))
-                            GlassTextField(
-                                value = pinTitle,
-                                onValueChange = { pinTitle = it },
-                                label = tr("Marker name (saved locally)", "عنوان نقطه امن یا هشدار"),
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            ChipFlowGroup {
-                                listOf(MarkerCategory.CUSTOM, MarkerCategory.SHELTER, MarkerCategory.WATER_POINT, MarkerCategory.HAZARD).forEach { cat ->
-                                    AegisFilterPill(
-                                        label = markerCategoryLabel(cat, lang),
-                                        selected = pinCategory == cat,
-                                        onClick = { pinCategory = cat },
-                                        accent = markerColor(cat, colors),
-                                    )
-                                }
-                            }
-                            Spacer(modifier = Modifier.height(8.dp))
+                            Spacer(modifier = Modifier.height(10.dp))
+                            GlassTextField(value = pinTitle, onValueChange = { pinTitle = it }, label = tr("Save custom pin at map center", "عنوان نشانگر جدید روی مرکز نقشه"))
+                            Spacer(modifier = Modifier.height(6.dp))
                             GlassButton(
-                                label = tr("Save Pin at Map Center", "ذخیره نشانگر در مرکز نقشه"),
+                                label = tr("Save Pin Offline", "ذخیره نشانگر در نقشه آفلاین"),
                                 onClick = {
                                     if (pinTitle.isNotBlank()) {
                                         scope.launch {
@@ -630,34 +714,31 @@ fun OfflineMapScreen(
                                                 id = "mk-${UUID.randomUUID().toString().take(8)}",
                                                 packageId = activePackId,
                                                 title = pinTitle.trim(),
-                                                description = "Custom offline marker (${GeoMath.formatDecimalDegrees(centerLat, centerLon)})",
+                                                description = GeoMath.formatDecimalDegrees(centerLat, centerLon),
                                                 category = pinCategory,
                                                 latitude = centerLat,
                                                 longitude = centerLon,
                                                 elevationMeters = vectorBundle.baseElevationMeters + 15.0,
-                                                isEmergencyResource = pinCategory != MarkerCategory.CUSTOM,
+                                                isEmergencyResource = true,
                                                 isCustom = true,
                                                 createdAtMillis = System.currentTimeMillis(),
                                             )
                                             repository.upsertMapMarker(mk)
                                             selectedMarker = mk
                                             pinTitle = ""
-                                            statusMsg = trText(lang, "Pin saved to offline Room map storage.", "نشانگر با موفقیت در نقشه آفلاین ذخیره شد.")
+                                            statusMsg = trText(lang, "Saved locally.", "نشانگر با موفقیت ذخیره شد.")
                                         }
                                     }
                                 },
                                 accent = colors.accentEmerald,
                             )
-                            statusMsg?.let { msg ->
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(msg, style = MaterialTheme.typography.labelMedium, color = colors.accentEmerald)
-                            }
+                            statusMsg?.let { Text(it, style = MaterialTheme.typography.labelMedium, color = colors.accentEmerald) }
                         }
                     }
                 }
             }
 
-            // Tab 1: Searchable Places & Distances Directory
+            // Tab 1: Searchable Places Directory
             1 -> {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
@@ -668,7 +749,7 @@ fun OfflineMapScreen(
                         GlassTextField(
                             value = searchQuery,
                             onValueChange = { searchQuery = it },
-                            label = tr("Filter shelters, hospitals, water points...", "فیلتر پناهگاه‌ها، بیمارستان‌ها و منابع آب..."),
+                            label = tr("Filter locations across selected city...", "جستجو در نقاط امن، مراکز درمانی و امنیتی..."),
                         )
                     }
                     items(filteredMarkers, key = { it.id }) { mk ->
@@ -680,29 +761,21 @@ fun OfflineMapScreen(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(10.dp),
                             ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(12.dp)
-                                        .clip(CircleShape)
-                                        .background(markerColor(mk.category, colors)),
-                                )
+                                Box(modifier = Modifier.size(12.dp).clip(CircleShape).background(markerColor(mk.category, colors)))
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(mk.title, style = MaterialTheme.typography.titleMedium, color = colors.textPrimary)
                                     Text(
                                         "${markerCategoryLabel(mk.category, lang)} · ${GeoMath.formatDistance(dist)} · ${GeoMath.formatBearing(brg)}",
                                         style = MaterialTheme.typography.labelMedium,
-                                        color = colors.accentTeal,
+                                        color = colors.accentCyan,
                                     )
                                 }
                             }
                             Text(mk.description, style = MaterialTheme.typography.bodyMedium, color = colors.textSecondary)
                             ChipFlowGroup {
                                 GlassButton(
-                                    label = tr("Show & Route on Map", "نمایش و مسیریابی روی نقشه"),
-                                    onClick = {
-                                        routeToMarker(mk)
-                                        selectedTab = 0
-                                    },
+                                    label = tr("Route on Map", "مسیریابی روی نقشه"),
+                                    onClick = { routeToMarker(mk); selectedTab = 0 },
                                     accent = colors.accentCyan,
                                 )
                                 if (mk.isCustom) {
@@ -718,16 +791,14 @@ fun OfflineMapScreen(
                 }
             }
 
-            // Tab 2: Bundled Offline Vector Regions & Saved Corridor Routes
+            // Tab 2: All 8 Bundled Iran & Global Offline Packs
             else -> {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    item {
-                        SectionHeader(title = tr("Offline Vector Map Packs", "بسته‌های نقشه وکتور آفلاین"))
-                    }
+                    item { SectionHeader(title = tr("Offline Map Packs (${packages.size} Cities)", "بسته‌های نقشه آفلاین (${packages.size} شهر و منطقه)")) }
                     items(packages, key = { it.id }) { pack ->
                         ObsidianGlassCard(elevated = pack.id == activePackId, accentBorderColor = if (pack.id == activePackId) colors.accentCyan else null) {
                             Text(pack.regionName, style = MaterialTheme.typography.titleMedium, color = colors.textPrimary)
@@ -737,16 +808,12 @@ fun OfflineMapScreen(
                                 style = MaterialTheme.typography.labelMedium,
                                 color = colors.accentTeal,
                             )
-                            Text(
-                                "SHA-256: ${pack.sha256Checksum.take(20)}…",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = colors.textMuted,
-                            )
                             Spacer(modifier = Modifier.height(6.dp))
                             ChipFlowGroup {
                                 GlassButton(
-                                    label = if (pack.id == activePackId) tr("Viewing on Map", "در حال نمایش") else tr("Open on Map", "باز کردن روی نقشه"),
+                                    label = if (viewMode == "CITY" && pack.id == activePackId) tr("Viewing", "در حال نمایش") else tr("Open City Map", "نمایش روی نقشه"),
                                     onClick = {
+                                        viewMode = "CITY"
                                         activePackId = pack.id
                                         panLatOffset = 0.0
                                         panLonOffset = 0.0
@@ -758,45 +825,13 @@ fun OfflineMapScreen(
                                     accent = colors.accentCyan,
                                 )
                                 GlassButton(
-                                    label = if (pack.isInstalled) tr("Installed Offline", "نصب شده آفلاین") else tr("Enable Pack", "فعال‌سازی بسته"),
+                                    label = if (pack.isInstalled) tr("Offline Ready", "نصب شده آفلاین") else tr("Enable Pack", "فعال‌سازی"),
                                     onClick = {
                                         scope.launch {
-                                            repository.upsertMapPackage(
-                                                pack.copy(
-                                                    isInstalled = !pack.isInstalled,
-                                                    updatedAtMillis = System.currentTimeMillis(),
-                                                ),
-                                            )
+                                            repository.upsertMapPackage(pack.copy(isInstalled = !pack.isInstalled, updatedAtMillis = System.currentTimeMillis()))
                                         }
                                     },
                                     accent = if (pack.isInstalled) colors.accentEmerald else colors.accentAmber,
-                                )
-                            }
-                        }
-                    }
-
-                    item {
-                        SectionHeader(title = tr("Saved Evacuation Corridors", "مسیرهای تخلیه ذخیره‌شده"))
-                    }
-                    items(routes, key = { it.id }) { route ->
-                        ObsidianGlassCard {
-                            Text(route.name, style = MaterialTheme.typography.titleMedium, color = colors.textPrimary)
-                            Text(route.description, style = MaterialTheme.typography.bodyMedium, color = colors.textSecondary)
-                            Text(
-                                "${GeoMath.formatDistance(route.totalDistanceMeters)} · ~${route.estimatedWalkMinutes} ${tr("min", "دقیقه")} · ${route.waypoints.size} ${tr("waypoints", "نقطه")}",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = colors.accentTeal,
-                            )
-                            ChipFlowGroup {
-                                GlassButton(
-                                    label = tr("Focus Corridor on Map", "نمایش مسیر روی نقشه"),
-                                    onClick = {
-                                        activePackId = route.packageId
-                                        panLatOffset = 0.0
-                                        panLonOffset = 0.0
-                                        selectedTab = 0
-                                    },
-                                    accent = colors.accentCyan,
                                 )
                             }
                         }

@@ -8,6 +8,9 @@ import ir.aegis.core.model.AppLanguage
 fun tr(en: String, fa: String): String =
     if (LocalAppLanguage.current == AppLanguage.FA) fa else en
 
+fun trText(lang: AppLanguage, en: String, fa: String): String =
+    if (lang == AppLanguage.FA) fa else en
+
 fun moduleTitle(module: AegisModule, lang: AppLanguage): String = when (module) {
     AegisModule.HOME -> if (lang == AppLanguage.FA) "مرکز فرماندهی" else "Command Home"
     AegisModule.PERSONAL -> if (lang == AppLanguage.FA) "امنیت شخصی" else "Personal Security"

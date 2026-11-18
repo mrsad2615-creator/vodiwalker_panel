@@ -29,7 +29,7 @@ import ir.aegis.core.maps.Projection3D
 import ir.aegis.core.maps.VectorBuilding
 import ir.aegis.core.maps.VectorMapBundle
 import ir.aegis.core.model.AppLanguage
-import ir.aegis.core.model.CrisisIncident
+import ir.aegis.core.model.Incident
 import ir.aegis.core.model.MapMarker
 import ir.aegis.core.model.MarkerCategory
 import ir.aegis.core.model.SavedRoute
@@ -63,7 +63,7 @@ internal fun OfflineVectorMapCanvas(
     markers: List<MapMarker>,
     routes: List<SavedRoute>,
     activeRoute: OfflineRouteResult?,
-    incidents: List<CrisisIncident>,
+    incidents: List<Incident>,
     userLat: Double,
     userLon: Double,
     selectedMarkerId: String?,

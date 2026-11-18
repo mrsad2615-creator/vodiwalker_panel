@@ -642,7 +642,7 @@ fun OfflineMapScreen(
                                             repository.saveMapMarker(mk)
                                             selectedMarker = mk
                                             pinTitle = ""
-                                            statusMsg = tr("Pin saved to offline Room map storage.", "نشانگر با موفقیت در نقشه آفلاین ذخیره شد.")
+                                            statusMsg = trText(lang, "Pin saved to offline Room map storage.", "نشانگر با موفقیت در نقشه آفلاین ذخیره شد.")
                                         }
                                     }
                                 },

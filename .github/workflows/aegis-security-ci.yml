@@ -82,11 +82,11 @@ jobs:
           lines = Path(sys.argv[1]).read_text(errors='replace').splitlines()
           diagnostics = []
           for index, line in enumerate(lines):
+              stripped = line.lstrip()
               if (
-                  line.lstrip().startswith(('e:', 'Caused by:', 'FAILURE:', '* What went wrong'))
+                  stripped.startswith(('e:', 'Caused by:', 'FAILURE:', '* What went wrong', 'Execution failed', '> A failure', '> Run '))
                   or 'Error:' in line
                   or 'FAILED' in line
-                  or line.startswith(('> ', 'Execution failed'))
               ):
                   diagnostics.extend(lines[index:index + 6])
           for report in Path('.').glob('**/build/reports/lint-results-debug.txt'):

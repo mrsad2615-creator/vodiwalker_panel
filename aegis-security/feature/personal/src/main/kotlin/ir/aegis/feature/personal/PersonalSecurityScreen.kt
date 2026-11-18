@@ -475,7 +475,7 @@ private fun EncryptedVaultTab(
                         accent = colors.accentCyan,
                         onClick = {
                             if (unlockKey.length < 4) {
-                                decryptError = tr("Enter vault passphrase above first.", "ابتدا رمز گاوصندوق را در کادر بالا وارد کنید.")
+                                decryptError = trText(lang, "Enter vault passphrase above first.", "ابتدا رمز گاوصندوق را در کادر بالا وارد کنید.")
                             } else {
                                 runCatching {
                                     CryptoEngine.decryptText(item.encryptedPayloadBase64, item.ivBase64, item.saltBase64, unlockKey)
@@ -483,7 +483,7 @@ private fun EncryptedVaultTab(
                                     decryptedPreview = decryptedPreview + (item.id to plain)
                                     decryptError = null
                                 }.onFailure {
-                                    decryptError = tr("Decryption failed for '${item.title}'.", "رمزگشایی '${item.title}' ناموفق بود.")
+                                    decryptError = trText(lang, "Decryption failed for '${item.title}'.", "رمزگشایی '${item.title}' ناموفق بود.")
                                 }
                             }
                         },

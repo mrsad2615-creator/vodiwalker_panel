@@ -4,6 +4,7 @@ import ai.dana.MainActivity
 import ai.dana.R
 import android.content.Intent
 import android.graphics.Bitmap
+import android.os.Bundle
 import androidx.annotation.StringRes
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.test.ExperimentalTestApi
@@ -36,6 +37,7 @@ class StudioSmokeTest {
 
     @Test
     fun homeAccountFreeEngineAndSharedNoteWorkOnFreshInstall() {
+        trace("Activity resumed; wait for Studio semantics")
         visible(R.string.studio_hello)
         visible(R.string.hub_heading)
         capture("home")
@@ -107,7 +109,14 @@ class StudioSmokeTest {
         compose.onNode(enter).assertIsDisplayed().performTextReplacement(value)
     }
 
+    private fun trace(message: String) {
+        InstrumentationRegistry.getInstrumentation().sendStatus(2, Bundle().apply {
+            putString("stream", "\nDana smoke: $message\n")
+        })
+    }
+
     private fun capture(name: String) {
+        trace("Capture $name")
         val directory = File(context.filesDir, "ci-screens").apply { mkdirs() }
         File(directory, "$name.png").outputStream().use { output ->
             assertTrue(compose.onRoot().captureToImage().asAndroidBitmap().compress(Bitmap.CompressFormat.PNG, 100, output))

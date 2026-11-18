@@ -55,6 +55,6 @@ OpenRouter در [مستندات مسیر رایگان](https://openrouter.ai/doc
 | فرم حساب، کد، خطاها و خروج | `app/src/main/kotlin/ai/dana/ui/Account{Screen,ViewModel}.kt` |
 | قرارداد OTP، نگهداری نشست و کنترل آفلاین | `core/domain/.../Account.kt` و `core/data/src/main/kotlin/ai/dana/data/account/` |
 | محدودیت مقصد رایگان و انتخاب خودکار | `core/domain/.../{Provider,ConversationInput}.kt` و `core/data/.../network/` |
-| آزمون‌ها | `AccountAndFreeTest.kt`، `AccountAndFreeTransportTest.kt`، `EmailAccountStorageTest.kt` و `ci/test-emulator.sh` |
+| آزمون‌ها | `AccountAndFreeTest.kt`، `AccountAndFreeTransportTest.kt`، `EmailAccountStorageTest.kt`، `StudioSmokeTest.kt` و `ci/email-otp/` |
 
-تست‌های قرارداد از پاسخ‌های کنترل‌شده در HTTPS محلی استفاده می‌کنند. آزمون پایگاه داده و Keystore روی شبیه‌ساز اجرا می‌شود. بیلد CI با امضای debug برای ارزیابی است؛ انتشار فروشگاه یا تأیید کارکرد میکروفون و ضبط صفحه روی گوشی فیزیکی را نشان نمی‌دهد. برای گزارش نقص، نسخهٔ اندروید، مدل گوشی، صفحه، کاری که زدید و متن خطا را بنویسید؛ نشانی ایمیل، توکن، کلید و تصویر حساس را ارسال نکنید.
+تست‌های قرارداد از پاسخ‌های کنترل‌شده در HTTPS محلی استفاده می‌کنند. آزمون ثبت‌نام و ورود، کد اشتباه و مصرف‌شده و ابطال نشست را با GoTrue واقعی و صندوق SMTP ایزوله بررسی می‌کند. تحویل ایمیل به صندوق عمومی در این آزمون نیست. آزمون رابط روی همان APK نصب‌شده، و آزمون پایگاه داده و Keystore روی شبیه‌ساز اجرا می‌شوند. بیلد CI با امضای debug برای ارزیابی است؛ انتشار فروشگاه یا تأیید کارکرد میکروفون و ضبط صفحه روی گوشی فیزیکی را نشان نمی‌دهد. برای گزارش نقص، نسخهٔ اندروید، مدل گوشی، صفحه، کاری که زدید و متن خطا را بنویسید؛ نشانی ایمیل، توکن، کلید و تصویر حساس را ارسال نکنید.

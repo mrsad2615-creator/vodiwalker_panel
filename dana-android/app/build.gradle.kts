@@ -23,6 +23,9 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
+    sourceSets.getByName("main").assets.srcDir(layout.buildDirectory.dir("bundled-assets"))
+    androidResources.noCompress += "litertlm"
+
     buildFeatures {
         compose = true
     }
@@ -60,6 +63,7 @@ dependencies {
     implementation(libs.coroutines.android)
     implementation(libs.hilt.android)
     implementation(libs.tesseract.android)
+    implementation(libs.litertlm.android)
     androidTestImplementation(libs.androidx.test.core)
     androidTestImplementation(libs.okhttp.client)
     androidTestImplementation(libs.hilt.android.testing)

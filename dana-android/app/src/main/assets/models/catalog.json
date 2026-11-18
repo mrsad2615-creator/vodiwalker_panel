@@ -1,0 +1,16 @@
+{
+  "qwen3-0.6b": {
+    "repository": "litert-community/Qwen3-0.6B",
+    "revision": "2670e142a0d16a1b685be6604e5b4f2b31a826d7",
+    "file": "Qwen3-0.6B_dynamic_wi4b32_afp32.litertlm",
+    "bytes": 343490560,
+    "sha256": "bf1aba9ce8d963124407353c6aa4cbf72eba78db21ae133de983eac672ce83e0"
+  },
+  "smollm2-135m": {
+    "repository": "litert-community/SmolLM2-135M-Instruct",
+    "revision": "749fc23bc8d7ef89db031d075004289c88f41c2f",
+    "file": "SmolLM2_135M_Instruct.litertlm",
+    "bytes": 142819328,
+    "sha256": "ccdc5c85735743f081b7d44ca309cab569f76c0f2f0e8e163449a63721969c37"
+  }
+}

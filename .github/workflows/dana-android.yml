@@ -51,6 +51,8 @@ jobs:
             "$manager" --sdk_root="$sdk" 'platforms;android-36' 'build-tools;36.0.0'
           fi
           printf 'ANDROID_HOME=%s\n' "$sdk" >> "$GITHUB_ENV"
+      - name: Provision and verify pinned offline model weights
+        run: python3 ci/bundled-models.py
       - name: Test, lint and assemble
         shell: bash
         run: |
@@ -116,6 +118,7 @@ jobs:
           "$tools/apksigner" verify --verbose --print-certs "$apk"
           "$tools/zipalign" -c -P 16 4 "$apk"
           python3 ci/check-native-alignment.py "$apk"
+          python3 ci/bundled-models.py --apk "$apk"
           badging=$("$tools/aapt" dump badging "$apk")
           grep -Fq "package: name='ai.dana.mrsad.workspace' versionCode='8' versionName='0.8.0-preview'" <<< "$badging"
           digest=$(sha256sum "$apk" | cut -d' ' -f1)

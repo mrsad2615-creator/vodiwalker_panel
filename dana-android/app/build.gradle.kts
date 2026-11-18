@@ -24,7 +24,7 @@ android {
     }
 
     sourceSets.getByName("main").assets.srcDir(layout.buildDirectory.dir("bundled-assets"))
-    androidResources.noCompress += "litertlm"
+    androidResources { noCompress.add("litertlm") }
 
     buildFeatures {
         compose = true

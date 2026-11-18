@@ -66,6 +66,8 @@ jobs:
           diagnostics = [line for line in lines if line.lstrip().startswith(('e:', 'Caused by:', '* What went wrong'))
                          or 'Error:' in line or 'FAILED' in line or line.startswith(('> Lint', '> Could not', '> Execution failed'))]
           for index, line in enumerate(lines):
+              if line.startswith(('* What went wrong:', '* Where:')):
+                  diagnostics.extend(lines[index:index + 13])
               if ' > ' in line and 'FAILED' in line:
                   diagnostics.extend(lines[index:index + 4])
           for report in Path('.').glob('**/build/reports/lint-results-debug.txt'):

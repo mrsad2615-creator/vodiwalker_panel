@@ -1,18 +1,12 @@
 package ai.dana.ui
 
 import ai.dana.R
-import ai.dana.media.MediaViewModel
 import ai.dana.domain.NetworkStatus
 import ai.dana.domain.ProviderNetwork
 import ai.dana.domain.ProviderProfile
 import ai.dana.domain.ProviderProtocol
+import ai.dana.media.MediaViewModel
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -23,6 +17,8 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
@@ -34,7 +30,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -46,155 +41,127 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
+private val rootTabs = listOf(
+    DashboardTab.HOME to Mark.HOME,
+    DashboardTab.CHAT to Mark.CHAT,
+    DashboardTab.SETTINGS to Mark.ENGINES,
+    DashboardTab.ACCOUNT to Mark.ACCOUNT,
+)
+
 @Composable
-internal fun DanaApp(model: DanaViewModel, chat: ChatViewModel, media: MediaViewModel) {
+internal fun DanaApp(model: DanaViewModel, chat: ChatViewModel, media: MediaViewModel, account: AccountViewModel) {
     val state by model.uiState.collectAsStateWithLifecycle()
     val session = state.session
+    val offline = (state.offline as? Reading.Ready)?.value != false
+    val ime = WindowInsets.ime.getBottom(LocalDensity.current) > 0
+    val secondary = session.tab == DashboardTab.COMPARE || session.tab == DashboardTab.NOTES
     val dispatch: (DanaIntent) -> Unit = { intent ->
-        if (intent is DanaIntent.Navigate && intent.tab != DashboardTab.CHAT) { chat.background(); media.close() }
+        if (intent is DanaIntent.Navigate && !session.busy) {
+            if (intent.tab != DashboardTab.CHAT) { chat.background(); media.close() }
+            if (intent.tab != DashboardTab.ACCOUNT) account.background()
+        }
         model.dispatch(intent)
     }
-
-    BackHandler(enabled = session.tab != DashboardTab.HOME && session.editor == null && !session.busy) {
-        dispatch(DanaIntent.Navigate(DashboardTab.HOME))
-    }
+    val goHome = { dispatch(DanaIntent.Navigate(DashboardTab.HOME)) }
+    val allowNetwork = { dispatch(DanaIntent.SetOffline(false)) }
+    BackHandler(enabled = session.tab != DashboardTab.HOME && session.editor == null && !session.busy && !ime, onBack = goHome)
     Scaffold(
         containerColor = Obsidian,
         contentWindowInsets = WindowInsets.safeDrawing,
+        topBar = { StudioHeader(session.tab, offline, secondary, goHome) },
         bottomBar = {
-            NavigationBar(containerColor = Color(0xFF101522)) {
-                DashboardTab.entries.forEach { tab ->
-                    val selected = session.tab == tab
+            if (!ime) NavigationBar(containerColor = MaterialTheme.colorScheme.surfaceContainerLow) {
+                rootTabs.forEach { (tab, mark) ->
+                    val selected = session.tab == tab || (tab == DashboardTab.HOME && secondary)
                     NavigationBarItem(
-                        selected = selected,
-                        enabled = !session.busy,
+                        selected = selected, enabled = !session.busy,
                         onClick = { dispatch(DanaIntent.Navigate(tab)) },
-                        icon = { TabGlyph(tab, if (selected) Ice else Titanium) },
-                        label = { Text(stringResource(tab.label)) },
-                        colors = NavigationBarItemDefaults.colors(indicatorColor = Color(0xFF253957)),
+                        icon = { StudioMark(mark, if (selected) Mint else Titanium) },
+                        label = { Text(stringResource(tab.label), maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                        colors = NavigationBarItemDefaults.colors(selectedTextColor = Mint, unselectedTextColor = Titanium,
+                            indicatorColor = MaterialTheme.colorScheme.primaryContainer),
                     )
                 }
             }
         },
     ) { insets ->
-        Box(
-            Modifier.fillMaxSize()
-                .background(Brush.verticalGradient(listOf(Color(0xFF111A2D), Obsidian, Obsidian)))
-                .padding(insets)
-                .consumeWindowInsets(insets),
-            contentAlignment = Alignment.TopCenter,
-        ) {
+        Box(Modifier.fillMaxSize().padding(insets).consumeWindowInsets(insets), contentAlignment = Alignment.TopCenter) {
             key(session.tab) {
                 if (session.tab == DashboardTab.CHAT) {
                     ChatScreen(chat, media, state, onSettings = { dispatch(DanaIntent.Navigate(DashboardTab.SETTINGS)) },
-                        modifier = Modifier.widthIn(max = 720.dp).imePadding())
+                        modifier = Modifier.widthIn(max = 740.dp).imePadding())
                 } else LazyColumn(
-                    modifier = Modifier.widthIn(max = 640.dp).fillMaxSize(),
-                    contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 18.dp, bottom = 24.dp),
+                    modifier = Modifier.widthIn(max = 680.dp).fillMaxSize().imePadding(),
+                    contentPadding = PaddingValues(start = 18.dp, end = 18.dp, top = 8.dp, bottom = 26.dp),
                     verticalArrangement = Arrangement.spacedBy(14.dp),
                 ) {
-                    item { DanaWordmark() }
                     if (session.editor == null) {
                         session.error?.let { message -> item { ReadError(message) } }
+                        session.notice?.let { message -> item {
+                            Text(stringResource(message), color = Mint,
+                                modifier = Modifier.padding(8.dp).semantics { liveRegion = LiveRegionMode.Polite })
+                        } }
                     }
                     when (session.tab) {
-                        DashboardTab.CHAT -> Unit // Chat owns its scroll and fixed composer.
-                        DashboardTab.HOME -> home(state, dispatch)
+                        DashboardTab.CHAT -> Unit
+                        DashboardTab.HOME -> home(state, dispatch, onMedia = {
+                            chat.page(ChatPage.CONVERSATION)
+                            dispatch(DanaIntent.Navigate(DashboardTab.CHAT))
+                            media.open()
+                        })
                         DashboardTab.COMPARE -> comparison(state, dispatch)
                         DashboardTab.NOTES -> notes(state, dispatch)
                         DashboardTab.SETTINGS -> settings(state, dispatch)
+                        DashboardTab.ACCOUNT -> item { AccountScreen(account, offline, !session.busy && state.offline is Reading.Ready, allowNetwork) }
                     }
                 }
             }
         }
     }
     session.editor?.let { editor ->
-        key(editor) { DanaEditor(editor, session, (state.offline as? Reading.Ready)?.value != false, dispatch) }
+        key(editor) { DanaEditor(editor, session, offline, dispatch) }
     }
 }
 
-@Composable
-private fun DanaWordmark() {
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        Icon(painterResource(R.drawable.ic_dana), null, Modifier.size(45.dp), tint = Color.Unspecified)
-        Column {
-            Text(stringResource(R.string.app_name), style = MaterialTheme.typography.headlineSmall, color = Ice)
-            Text(
-                stringResource(R.string.app_wordmark),
-                style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 2.8.sp, textDirection = TextDirection.Ltr),
-                color = Titanium,
-            )
-        }
-    }
-}
-
-private fun LazyListScope.home(state: DashboardState, dispatch: (DanaIntent) -> Unit) {
-    val offline = (state.offline as? Reading.Ready)?.value != false
-    val connected = state.network == NetworkStatus.INTERNET_VALIDATED
+private fun LazyListScope.home(state: DashboardState, dispatch: (DanaIntent) -> Unit, onMedia: () -> Unit) {
+    fun open(tab: DashboardTab): () -> Unit = { dispatch(DanaIntent.Navigate(tab)) }
+    item { StudioHero(open(DashboardTab.CHAT)) }
     item {
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            LiquidOrb(animated = connected && !offline)
-            Text(stringResource(R.string.hub_local), style = MaterialTheme.typography.labelMedium, color = Ice)
-            Text(
-                stringResource(R.string.hub_heading),
-                textAlign = TextAlign.Center,
-                style = MaterialTheme.typography.headlineSmall,
-            )
-            Text(
-                stringResource(R.string.hub_description),
-                textAlign = TextAlign.Center,
-                style = MaterialTheme.typography.bodyMedium,
-                color = Titanium,
-            )
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = { dispatch(DanaIntent.Navigate(DashboardTab.CHAT)) }, enabled = !state.session.busy) {
-                    Text(stringResource(R.string.hub_begin_chat))
-                }
-                OutlinedButton(onClick = { dispatch(DanaIntent.Navigate(DashboardTab.COMPARE)) }, enabled = !state.session.busy) {
-                    Text(stringResource(R.string.tab_compare))
-                }
-            }
-        }
+        Text(stringResource(R.string.hub_heading), style = MaterialTheme.typography.titleLarge)
     }
     item {
-        GlassCard(Modifier.fillMaxWidth()) {
-            Text(stringResource(R.string.studio_quick_tasks), style = MaterialTheme.typography.titleMedium)
-            TaskChoices(null, !state.session.busy) {
-                dispatch(DanaIntent.ChooseTask(it, openWorkspace = true))
-            }
-        }
+        ActionPair(
+            StudioAction(R.string.studio_free, R.string.studio_free_hint, Mark.ENGINES, open(DashboardTab.SETTINGS)),
+            StudioAction(R.string.studio_read_image, R.string.studio_read_image_hint, Mark.IMAGE, onMedia),
+        )
     }
     item {
-        GlassCard(Modifier.fillMaxWidth()) {
-            Text(stringResource(R.string.status_heading), style = MaterialTheme.typography.titleMedium)
-            NetworkLine(state.network)
-            if (offline) {
-                Text(stringResource(R.string.offline_active), style = MaterialTheme.typography.labelMedium, color = Ice)
-            }
+        ActionPair(
+            StudioAction(R.string.tab_notes, R.string.studio_notes_hint, Mark.NOTES, open(DashboardTab.NOTES)),
+            StudioAction(R.string.tab_compare, R.string.studio_compare_hint, Mark.COMPARE, open(DashboardTab.COMPARE)),
+        )
+    }
+    val configured = (state.profiles as? Reading.Ready)?.value?.size ?: 0
+    item {
+        Row(Modifier.fillMaxWidth().padding(horizontal = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(stringResource(R.string.studio_local_privacy), style = MaterialTheme.typography.bodySmall, color = Titanium, modifier = Modifier.weight(1f))
+            StudioPill(stringResource(R.string.studio_engines_count, faDigits(configured)), Titanium)
         }
     }
 }
@@ -229,57 +196,57 @@ private fun LazyListScope.notes(state: DashboardState, dispatch: (DanaIntent) ->
 }
 
 private fun LazyListScope.settings(state: DashboardState, dispatch: (DanaIntent) -> Unit) {
-    val busy = state.session.busy
+    val enabled = !state.session.busy && state.profiles is Reading.Ready
+    item { SectionIntro(R.string.engines_title, R.string.studio_engines_blurb) }
     item {
         GlassCard(Modifier.fillMaxWidth()) {
-            when (val offline = state.offline) {
-                Reading.Loading -> Loading()
-                is Reading.Failed -> ReadError(offline.message) { dispatch(DanaIntent.Reload) }
-                is Reading.Ready -> ToggleLine(R.string.offline_title, offline.value, !busy) {
-                    dispatch(DanaIntent.SetOffline(it))
-                }
+            StudioPill(stringResource(R.string.studio_free_pill))
+            Text(stringResource(R.string.engine_openrouter), style = MaterialTheme.typography.titleLarge)
+            Text(stringResource(R.string.engine_free_intro), style = MaterialTheme.typography.bodyMedium, color = Titanium)
+            Button(onClick = { dispatch(DanaIntent.EditProvider(null, ProviderProtocol.OPENROUTER_FREE)) },
+                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp), enabled = enabled) { Text(stringResource(R.string.engine_add_free)) }
+        }
+    }
+    when (val mode = state.offline) {
+        Reading.Loading -> item { Loading() }
+        is Reading.Failed -> item { ReadError(mode.message) { dispatch(DanaIntent.Reload) } }
+        is Reading.Ready -> if (mode.value) item {
+            OfflinePanel(R.string.engine_network_help, !state.session.busy) { dispatch(DanaIntent.SetOffline(false)) }
+        } else item {
+            GlassCard(Modifier.fillMaxWidth()) {
+                ToggleLine(R.string.offline_title, false, !state.session.busy) { dispatch(DanaIntent.SetOffline(it)) }
+                NetworkLine(state.network)
+                Text(stringResource(R.string.status_disclaimer), style = MaterialTheme.typography.bodySmall, color = Titanium)
             }
-            Text(stringResource(R.string.offline_description), style = MaterialTheme.typography.bodyMedium, color = Titanium)
-            NetworkLine(state.network)
-            Text(stringResource(R.string.status_disclaimer), style = MaterialTheme.typography.bodySmall, color = Titanium)
         }
     }
     item {
-        SectionIntro(R.string.engines_title, R.string.engines_description)
-    }
-    item {
         GlassCard(Modifier.fillMaxWidth()) {
-            Text(stringResource(R.string.engine_presets), style = MaterialTheme.typography.titleMedium, color = Ice)
-            val enabled = !busy && state.profiles is Reading.Ready
-            Button(
-                onClick = { dispatch(DanaIntent.EditProvider(null, ProviderProtocol.GEMINI_NATIVE)) },
-                enabled = enabled,
-                modifier = Modifier.fillMaxWidth(),
-            ) { Text(stringResource(R.string.engine_add_gemini)) }
-            OutlinedButton(
-                onClick = { dispatch(DanaIntent.EditProvider(null, ProviderProtocol.APPLE_MAC)) },
-                enabled = enabled,
-                modifier = Modifier.fillMaxWidth(),
-            ) { Text(stringResource(R.string.engine_add_apple)) }
-            OutlinedButton(
-                onClick = { dispatch(DanaIntent.EditProvider(null, lanPreset = true)) },
-                enabled = enabled, modifier = Modifier.fillMaxWidth(),
-            ) { Text(stringResource(R.string.engine_add_lan)) }
-            TextButton(
-                onClick = { dispatch(DanaIntent.EditProvider(null)) },
-                enabled = enabled,
-                modifier = Modifier.fillMaxWidth(),
-            ) { Text(stringResource(R.string.engine_add_custom)) }
+            Text(stringResource(R.string.studio_engine_more_title), style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(R.string.engine_gemini_tier), color = Titanium, style = MaterialTheme.typography.bodyMedium)
+            OutlinedButton(onClick = { dispatch(DanaIntent.EditProvider(null, ProviderProtocol.GEMINI_NATIVE)) },
+                enabled = enabled, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text(stringResource(R.string.engine_add_gemini)) }
+            var expanded by remember { mutableStateOf(false) }
+            TextButton(onClick = { expanded = !expanded }) { Text(stringResource(if (expanded) R.string.studio_advanced_hide else R.string.studio_advanced)) }
+            if (expanded) {
+                TextButton(onClick = { dispatch(DanaIntent.EditProvider(null, lanPreset = true)) }, enabled = enabled) { Text(stringResource(R.string.engine_add_lan)) }
+                TextButton(onClick = { dispatch(DanaIntent.EditProvider(null)) }, enabled = enabled) { Text(stringResource(R.string.engine_add_custom)) }
+                TextButton(onClick = { dispatch(DanaIntent.EditProvider(null, ProviderProtocol.APPLE_MAC)) }, enabled = enabled) { Text(stringResource(R.string.engine_add_apple)) }
+            }
         }
     }
     when (val profiles = state.profiles) {
         Reading.Loading -> item { Loading() }
         is Reading.Failed -> item { ReadError(profiles.message) { dispatch(DanaIntent.Reload) } }
         is Reading.Ready -> {
+            item { Text(stringResource(R.string.studio_saved_engines), style = MaterialTheme.typography.titleLarge) }
             if (profiles.value.isEmpty()) item { EmptyCard(R.string.engines_empty) }
-            items(profiles.value, key = { it.id }) { profile ->
-                ProfileCard(profile, busy, dispatch)
-            }
+            items(profiles.value, key = { it.id }) { profile -> ProfileCard(profile, state.session.busy, dispatch) }
+        }
+    }
+    item {
+        TextButton(onClick = { dispatch(DanaIntent.Navigate(DashboardTab.COMPARE)) }, enabled = !state.session.busy) {
+            Text(stringResource(R.string.tab_compare))
         }
     }
 }
@@ -312,6 +279,7 @@ private fun ProfileCard(profile: ProviderProfile, busy: Boolean, dispatch: (Dana
 
 internal fun protocolLabel(protocol: ProviderProtocol): Int = when (protocol) {
     ProviderProtocol.OPENAI_COMPATIBLE -> R.string.engine_openai
+    ProviderProtocol.OPENROUTER_FREE -> R.string.engine_openrouter
     ProviderProtocol.GEMINI_NATIVE -> R.string.engine_gemini
     ProviderProtocol.APPLE_MAC -> R.string.engine_apple
 }
@@ -341,7 +309,7 @@ private fun RecordActions(enabled: Boolean, onEdit: () -> Unit, onDelete: () -> 
 }
 
 @Composable
-private fun SectionIntro(title: Int, body: Int) {
+internal fun SectionIntro(title: Int, body: Int) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(stringResource(title), style = MaterialTheme.typography.headlineSmall)
         Text(stringResource(body), style = MaterialTheme.typography.bodyMedium, color = Titanium)
@@ -354,7 +322,7 @@ private fun EmptyCard(message: Int) {
 }
 
 @Composable
-private fun Loading() {
+internal fun Loading() {
     Box(Modifier.fillMaxWidth().padding(10.dp), contentAlignment = Alignment.Center) {
         CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp)
     }
@@ -380,98 +348,5 @@ private fun NetworkLine(status: NetworkStatus) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Box(Modifier.size(8.dp).background(tint, CircleShape))
         Text(stringResource(label), style = MaterialTheme.typography.bodyMedium, color = tint)
-    }
-}
-
-@Composable
-private fun LiquidOrb(animated: Boolean) {
-    val shimmer = if (animated) {
-        rememberInfiniteTransition(label = "Dana orbit").animateFloat(
-            initialValue = 0f,
-            targetValue = 1f,
-            animationSpec = infiniteRepeatable(tween(2_800), RepeatMode.Reverse),
-            label = "Ambient light",
-        )
-    } else null
-    Canvas(Modifier.size(208.dp)) {
-        val pulse = shimmer?.value ?: 0.2f
-        val r = size.minDimension * 0.335f
-        val focus = center
-        val rim = Color(0xFF87B9FF)
-        drawCircle(Brush.radialGradient(listOf(rim.copy(alpha = 0.22f + pulse * 0.08f), Color.Transparent), focus, r * 1.48f), r * 1.48f)
-        drawCircle(rim.copy(alpha = 0.23f), r * 1.21f, style = Stroke(1.dp.toPx()))
-        drawCircle(rim.copy(alpha = 0.14f + pulse * 0.1f), r * 1.35f, style = Stroke(0.75.dp.toPx()))
-        drawCircle(
-            brush = Brush.radialGradient(
-                0f to Color(0xFF415D97), 0.42f to Color(0xFF252F5A), 0.76f to Color(0xFF121B38), 1f to Color(0xFF526C9D),
-                center = focus + Offset(-r * 0.12f, -r * 0.16f), radius = r * 1.26f,
-            ),
-            radius = r,
-        )
-        drawCircle(
-            brush = Brush.sweepGradient(listOf(rim.copy(alpha = 0.18f), Ice, rim.copy(alpha = 0.34f), Color.White, rim.copy(alpha = 0.18f)), focus),
-            radius = r,
-            style = Stroke(1.5.dp.toPx()),
-        )
-        val arm = r * (0.33f + 0.035f * pulse)
-        val spark = Path().apply {
-            moveTo(focus.x, focus.y - arm)
-            quadraticTo(focus.x + arm * 0.15f, focus.y - arm * 0.15f, focus.x + arm, focus.y)
-            quadraticTo(focus.x + arm * 0.15f, focus.y + arm * 0.15f, focus.x, focus.y + arm)
-            quadraticTo(focus.x - arm * 0.15f, focus.y + arm * 0.15f, focus.x - arm, focus.y)
-            quadraticTo(focus.x - arm * 0.15f, focus.y - arm * 0.15f, focus.x, focus.y - arm)
-            close()
-        }
-        drawCircle(Brush.radialGradient(listOf(Ice.copy(alpha = 0.55f), Color.Transparent), focus, r * 0.67f), r * 0.67f)
-        drawPath(spark, Ice)
-    }
-}
-
-@Composable
-private fun TabGlyph(tab: DashboardTab, tint: Color) {
-    Canvas(Modifier.size(22.dp)) {
-        val t = size.minDimension / 24f
-        val stroke = 1.7f * t
-        fun point(x: Float, y: Float) = Offset(x * t, y * t)
-        fun line(x: Float, y: Float, ex: Float, ey: Float) = drawLine(tint, point(x, y), point(ex, ey), stroke, StrokeCap.Round)
-        when (tab) {
-            DashboardTab.HOME -> {
-                val outline = Path().apply {
-                    moveTo(3 * t, 11 * t)
-                    lineTo(12 * t, 3 * t)
-                    lineTo(21 * t, 11 * t)
-                    lineTo(21 * t, 20 * t)
-                    lineTo(3 * t, 20 * t)
-                    close()
-                }
-                drawPath(outline, tint, style = Stroke(stroke))
-                drawCircle(tint, 1.5f * t, point(12f, 12f))
-            }
-            DashboardTab.CHAT -> {
-                drawRoundRect(tint, point(3f, 4f), Size(18f * t, 13f * t), CornerRadius(4 * t), style = Stroke(stroke))
-                line(8f, 17f, 8f, 21f)
-                line(8f, 21f, 12f, 17f)
-                line(8f, 10f, 16f, 10f)
-            }
-            DashboardTab.COMPARE -> {
-                drawRoundRect(tint, point(2f, 5f), Size(9f * t, 13f * t), CornerRadius(2 * t), style = Stroke(stroke))
-                drawRoundRect(tint, point(13f, 5f), Size(9f * t, 13f * t), CornerRadius(2 * t), style = Stroke(stroke))
-                line(4.5f, 10f, 8.5f, 10f)
-                line(15.5f, 10f, 19.5f, 10f)
-            }
-            DashboardTab.NOTES -> {
-                drawRoundRect(tint, point(5f, 3f), Size(14f * t, 18f * t), CornerRadius(2 * t), style = Stroke(stroke))
-                line(8f, 9f, 16f, 9f)
-                line(8f, 14f, 14f, 14f)
-            }
-            DashboardTab.SETTINGS -> {
-                line(3f, 6f, 21f, 6f)
-                line(3f, 12f, 21f, 12f)
-                line(3f, 18f, 21f, 18f)
-                drawCircle(tint, 2.5f * t, point(8f, 6f))
-                drawCircle(tint, 2.5f * t, point(15f, 12f))
-                drawCircle(tint, 2.5f * t, point(10f, 18f))
-            }
-        }
     }
 }

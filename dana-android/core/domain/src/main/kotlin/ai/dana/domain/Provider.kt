@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.Flow
 
 enum class ProviderProtocol {
     OPENAI_COMPATIBLE,
+    OPENROUTER_FREE,
     GEMINI_NATIVE,
     APPLE_MAC,
 }
@@ -17,6 +18,8 @@ enum class ProviderNetwork {
 }
 
 const val GOOGLE_GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta"
+const val OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
+const val OPENROUTER_FREE_MODEL = "openrouter/free"
 const val APPLE_MAC_MODEL = "apple-foundation-on-device"
 
 /** Validated independently of the model, so discovery cannot require a guessed model ID. */
@@ -35,7 +38,11 @@ data class ProviderEndpoint private constructor(
             if (protocol == ProviderProtocol.APPLE_MAC && network != ProviderNetwork.LOCAL_NETWORK) {
                 reject(InputIssue.INVALID_BASE_URL)
             }
-            return ProviderEndpoint(protocol, network, canonicalUrl(baseUrl))
+            val url = canonicalUrl(baseUrl)
+            if (protocol == ProviderProtocol.OPENROUTER_FREE &&
+                (network != ProviderNetwork.INTERNET || url != OPENROUTER_BASE_URL)
+            ) reject(InputIssue.INVALID_BASE_URL)
+            return ProviderEndpoint(protocol, network, url)
         }
 
         private fun canonicalUrl(raw: String): String {
@@ -104,6 +111,9 @@ data class ProviderConfig private constructor(
                 reject(InputIssue.INVALID_MODEL)
             }
             if (protocol == ProviderProtocol.APPLE_MAC && cleanModel != APPLE_MAC_MODEL) {
+                reject(InputIssue.INVALID_MODEL)
+            }
+            if (protocol == ProviderProtocol.OPENROUTER_FREE && cleanModel != OPENROUTER_FREE_MODEL) {
                 reject(InputIssue.INVALID_MODEL)
             }
             val endpoint = ProviderEndpoint.create(protocol, network, baseUrl)

@@ -36,6 +36,7 @@ internal object DanaErrorHandler {
         EngineProblem.CONFIGURATION -> R.string.error_engine_config
         EngineProblem.CREDENTIAL_STORE -> R.string.error_vault
         EngineProblem.AUTHENTICATION -> R.string.error_engine_auth
+        EngineProblem.PAYMENT_REQUIRED -> R.string.error_engine_payment
         EngineProblem.FORBIDDEN -> R.string.error_engine_forbidden
         EngineProblem.RATE_LIMIT -> R.string.error_engine_quota
         EngineProblem.NETWORK -> R.string.error_engine_network

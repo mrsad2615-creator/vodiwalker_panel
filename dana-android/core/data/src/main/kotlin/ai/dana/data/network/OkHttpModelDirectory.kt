@@ -7,6 +7,7 @@ import ai.dana.domain.DirectoryModel
 import ai.dana.domain.EngineFailure
 import ai.dana.domain.EngineProblem
 import ai.dana.domain.ModelDirectory
+import ai.dana.domain.OPENROUTER_FREE_MODEL
 import ai.dana.domain.ProviderConfig
 import ai.dana.domain.ProviderEndpoint
 import ai.dana.domain.ProviderNetwork
@@ -31,6 +32,15 @@ internal class OkHttpModelDirectory(
 
     private suspend fun collect(endpoint: ProviderEndpoint, key: ApiCredential?): List<DirectoryModel> {
         val protocol = endpoint.protocol
+        if (protocol == ProviderProtocol.OPENROUTER_FREE) {
+            // Credential check only: this route has one fixed model and requires no priced catalog.
+            val builder = Request.Builder().url(EngineProtocol.url(endpoint).addPathSegment("key").build())
+                .get().header("Accept", "application/json")
+            EngineProtocol.authenticate(builder, protocol, key)
+            val root = client.readCatalog(builder.build(), protocol)
+            if (root["data"] !is JsonObject) throw EngineFailure(EngineProblem.PROTOCOL)
+            return listOf(DirectoryModel(OPENROUTER_FREE_MODEL, "OpenRouter Free"))
+        }
         val gemini = protocol == ProviderProtocol.GEMINI_NATIVE
         val models = LinkedHashMap<String, DirectoryModel>()
         val usedTokens = mutableSetOf<String>()

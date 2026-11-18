@@ -156,7 +156,9 @@ class ChatRoute private constructor(val input: ConversationInput, val candidates
     companion object {
         fun select(input: ConversationInput, profiles: List<ProviderProfile>, manualId: String?): ChatRoute? {
             val available = profiles.filter(input::fits).distinctBy { it.id }
-            val ordered = if (manualId == null) available.sortedWith(
+            // "Automatic" keeps the free preset's cost boundary even when paid/custom profiles coexist.
+            val preferred = available.filter { it.config.protocol == ProviderProtocol.OPENROUTER_FREE }.ifEmpty { available }
+            val ordered = if (manualId == null) preferred.sortedWith(
                 compareBy<ProviderProfile> { it.config.network != ProviderNetwork.LOCAL_NETWORK }
                     .thenBy { it.config.protocol != ProviderProtocol.GEMINI_NATIVE }
                     .thenBy { it.config.name.lowercase(Locale.ROOT) }

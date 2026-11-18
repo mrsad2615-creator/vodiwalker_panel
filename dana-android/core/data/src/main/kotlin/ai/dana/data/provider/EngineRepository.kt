@@ -33,6 +33,9 @@ internal class EngineRepository(
         val current = id?.let { requireProfile(it) }
         val profileId = id ?: UUID.randomUUID().toString()
         key.validateFor(current?.profile(), config)
+        if (config.protocol == ProviderProtocol.OPENROUTER_FREE &&
+            (key == CredentialChange.Remove || (key == CredentialChange.Keep && current?.sealedKey == null))
+        ) throw InputRejected(InputIssue.INVALID_API_KEY)
         val sealed = when (key) {
             CredentialChange.Keep -> current?.sealedKey
             CredentialChange.Remove -> null

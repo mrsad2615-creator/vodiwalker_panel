@@ -49,7 +49,8 @@ internal enum class DashboardTab(@StringRes val label: Int) {
     CHAT(R.string.tab_chat),
     COMPARE(R.string.tab_compare),
     NOTES(R.string.tab_notes),
-    SETTINGS(R.string.tab_settings),
+    SETTINGS(R.string.tab_engines),
+    ACCOUNT(R.string.tab_account),
 }
 
 internal sealed interface Reading<out T> {
@@ -77,6 +78,7 @@ internal data class DashboardSession(
     val editor: Editor? = null,
     val busy: Boolean = false,
     @StringRes val error: Int? = null,
+    @StringRes val notice: Int? = null,
     val directory: DirectoryState? = null,
 )
 
@@ -219,7 +221,9 @@ internal class DanaViewModel @Inject constructor(
                 if (current.directory == DirectoryState.Loading) return
                 write(closeEditor = true) {
                     val config = ProviderConfig.create(intent.name, intent.protocol, intent.network, intent.baseUrl, intent.model)
+                    if (config.protocol != editor.initial) return@write
                     providers.save(editor.previous?.id, config, keyChange(intent.key, intent.removeKey))
+                    session.update { it.copy(notice = R.string.engine_saved) }
                 }
             }
             DanaIntent.ConfirmDeletion -> when (val editor = current.editor) {
@@ -308,11 +312,11 @@ internal class DanaViewModel @Inject constructor(
 
     private fun show(editor: Editor?) {
         clearDirectory()
-        session.update { it.copy(editor = editor, error = null) }
+        session.update { it.copy(editor = editor, error = null, notice = null) }
     }
 
     private fun write(closeEditor: Boolean = false, operation: suspend () -> Unit) {
-        session.update { it.copy(busy = true, error = null) }
+        session.update { it.copy(busy = true, error = null, notice = null) }
         viewModelScope.launch {
             try {
                 operation()

@@ -2,6 +2,7 @@ package ai.dana
 
 import ai.dana.media.MediaViewModel
 import ai.dana.media.OneFrameCaptureService
+import ai.dana.ui.AccountViewModel
 import ai.dana.ui.ChatViewModel
 import ai.dana.ui.DashboardTab
 import ai.dana.ui.DanaApp
@@ -22,6 +23,7 @@ import dagger.hilt.android.AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     private val model: DanaViewModel by viewModels()
     private val chat: ChatViewModel by viewModels()
+    private val account: AccountViewModel by viewModels()
     private val media: MediaViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -32,7 +34,7 @@ class MainActivity : ComponentActivity() {
         )
         if (savedInstanceState == null) handleExternal(intent)
         setContent {
-            DanaTheme { DanaApp(model, chat, media) }
+            DanaTheme { DanaApp(model, chat, media, account) }
         }
     }
     override fun onNewIntent(intent: Intent) {
@@ -59,6 +61,7 @@ class MainActivity : ComponentActivity() {
         if (!isChangingConfigurations) {
             model.dispatch(DanaIntent.StopRemoteRequests)
             chat.background()
+            account.background()
         }
         super.onStop()
     }

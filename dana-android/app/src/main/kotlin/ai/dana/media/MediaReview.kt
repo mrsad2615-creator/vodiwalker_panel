@@ -8,6 +8,7 @@ import ai.dana.ui.Ice
 import ai.dana.ui.ReadError
 import ai.dana.ui.Titanium
 import android.app.Activity
+import android.content.pm.PackageManager
 import android.media.projection.MediaProjectionManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -62,6 +63,7 @@ internal fun MediaReview(model: MediaViewModel, chatBusy: Boolean, useText: (Str
     if (!state.open) return
     val ctx = LocalContext.current
     var consent by remember { mutableStateOf(false) }
+    val hasCamera = remember(ctx) { ctx.packageManager.hasSystemFeature(PackageManager.FEATURE_CAMERA_ANY) }
     val choose = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri -> uri?.let(model::uri) }
     val camera = rememberLauncherForActivityResult(ActivityResultContracts.TakePicturePreview()) { bitmap -> bitmap?.let(model::camera) }
     val grant = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
@@ -81,7 +83,7 @@ internal fun MediaReview(model: MediaViewModel, chatBusy: Boolean, useText: (Str
                         runCatching { choose.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }
                             .onFailure { model.error(R.string.media_load_error) }
                     }) { Text(stringResource(R.string.media_pick)) }
-                    TextButton(enabled = ready, onClick = { runCatching { camera.launch(null) }.onFailure { model.error(R.string.media_camera_unavailable) } }) {
+                    TextButton(enabled = ready && hasCamera, onClick = { runCatching { camera.launch(null) }.onFailure { model.error(R.string.media_camera_unavailable) } }) {
                         Text(stringResource(R.string.media_camera))
                     }
                     TextButton(enabled = ready, onClick = { consent = true }) { Text(stringResource(R.string.media_capture)) }

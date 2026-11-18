@@ -5,11 +5,24 @@ plugins {
     alias(libs.plugins.room)
 }
 
+// These are public Supabase client settings, not SMTP or service-role credentials.
+val danaEmailUrl = providers.environmentVariable("DANA_EMAIL_PROJECT_URL").orElse("").get().trim().removeSuffix("/")
+val danaEmailKey = providers.environmentVariable("DANA_EMAIL_PUBLISHABLE_KEY").orElse("").get().trim()
+require((danaEmailUrl.isEmpty() && danaEmailKey.isEmpty()) ||
+    (Regex("https://[a-z0-9]{20}\\.supabase\\.co").matches(danaEmailUrl) &&
+        Regex("sb_publishable_[a-zA-Z0-9_-]{16,96}").matches(danaEmailKey))) {
+    "Set both DANA_EMAIL_PROJECT_URL and a public DANA_EMAIL_PUBLISHABLE_KEY, or leave both unset."
+}
+
 android {
     namespace = "ai.dana.data"
     compileSdk = libs.versions.compile.sdk.get().toInt()
 
+    buildFeatures { buildConfig = true }
+
     defaultConfig {
+        buildConfigField("String", "EMAIL_PROJECT_URL", "\"$danaEmailUrl\"")
+        buildConfigField("String", "EMAIL_PUBLISHABLE_KEY", "\"$danaEmailKey\"")
         minSdk = libs.versions.min.sdk.get().toInt()
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

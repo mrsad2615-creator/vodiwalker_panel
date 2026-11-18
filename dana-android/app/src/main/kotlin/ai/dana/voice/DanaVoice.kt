@@ -48,6 +48,10 @@ internal class DanaVoice(context: Context) : DefaultLifecycleObserver {
     var state by mutableStateOf(VoiceState())
         private set
 
+    fun canListen(): Boolean = Build.VERSION.SDK_INT >= 31 &&
+        runCatching { SpeechRecognizer.isOnDeviceRecognitionAvailable(app) }.getOrDefault(false)
+    fun unavailable() { state = state.copy(status = R.string.voice_not_supported) }
+
     fun permissionDenied() { state = state.copy(status = R.string.voice_denied) }
 
     @SuppressLint("MissingPermission") // Both entry points check permission before requesting microphone access.
@@ -57,7 +61,7 @@ internal class DanaVoice(context: Context) : DefaultLifecycleObserver {
             permissionDenied()
             return
         }
-        if (Build.VERSION.SDK_INT < 31 || !SpeechRecognizer.isOnDeviceRecognitionAvailable(app)) {
+        if (Build.VERSION.SDK_INT < 31 || !canListen()) {
             state = state.copy(status = R.string.voice_not_supported)
             return
         }

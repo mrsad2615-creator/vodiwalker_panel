@@ -56,7 +56,7 @@ python3 - <<'PYTHON'
 from pathlib import Path
 from xml.etree import ElementTree as ET
 
-for module, minimum in [('core/data', 7), ('app', 2)]:
+for module, minimum in [('core/data', 8), ('app', 2)]:
     path = Path(module) / 'build/outputs/androidTest-results'
     reports = list((path / 'connected/debug').rglob('TEST-*.xml')) or list(path.rglob('TEST-*.xml'))
     cases = [case for report in reports for case in ET.parse(report).iter('testcase')]
@@ -115,15 +115,43 @@ PYTHON
   adb shell input tap "$x" "$y"
 }
 
-await_ui 'میز کار دانا' 'The Studio home screen is missing.'
+screen_dir="$RUNNER_TEMP/dana-screens"
+mkdir -p "$screen_dir"
+screenshot() {
+  adb exec-out screencap -p > "$screen_dir/$1.png"
+  test -s "$screen_dir/$1.png"
+}
+
+await_ui 'سلام، من دانام.' 'The redesigned Studio home did not render.'
+await_ui 'میز کار دانا' 'The home shortcuts are missing.'
+screenshot home
+tap_text 'حساب'
+await_ui 'ثبت‌نام با ایمیل' 'The email account screen is missing.'
+await_ui 'پیکربندی ثبت‌نام' 'A clean build did not expose the email service setup.'
+screenshot account
+tap_text 'پیکربندی ثبت‌نام'
+await_ui 'نشانی پروژهٔ Supabase' 'The email service setup did not open.'
+adb shell input keyevent KEYCODE_BACK
+await_ui 'حساب دانا' 'The account page did not resume.'
+tap_text 'موتورها'
+await_ui 'مرکز اتصال موتورها' 'The Engine Hub did not open.'
+await_ui 'راه‌اندازی موتور رایگان' 'The free provider setup is missing.'
+screenshot engines
+tap_text 'راه‌اندازی موتور رایگان'
+await_ui 'کلید شخصی OpenRouter' 'The OpenRouter Free preset did not open.'
+await_ui 'openrouter/free' 'The free-only model is missing.'
+# A fixture key is stored without authorizing the network or contacting OpenRouter.
+tap_text 'کلید شخصی OpenRouter'
+adb shell input text 'sk-or-v1-dana-ci-offline-fixture'
+adb shell input keyevent KEYCODE_BACK
+await_ui 'ذخیرهٔ موتور' 'The preset save control is missing.'
+tap_text 'ذخیرهٔ موتور'
+await_ui 'موتور ذخیره شد' 'The offline engine setup could not store the profile.'
+tap_text 'خانه'
+await_ui 'مقایسه' 'The home comparison shortcut is missing.'
 tap_text 'مقایسه'
 await_ui 'یک سؤال، چند پاسخ' 'The comparison screen did not open.'
-await_ui 'حالت کاملاً آفلاین روشن است' 'A clean install did not display the offline guard.'
-tap_text 'تنظیمات'
-await_ui 'مرکز اتصال موتورها' 'The Engine Hub did not open.'
-tap_text 'راه‌اندازی Gemini'
-await_ui 'نشانی رسمی Gemini آماده است' 'The Gemini preset did not open.'
-adb shell input keyevent KEYCODE_BACK
+await_ui 'حالت کاملاً آفلاین روشن است' 'Engine setup disturbed the offline guard.'
 
 # Use an incoming user share to fill the draft exactly as Android does. It must not send or save automatically.
 opened=$(adb shell "am start -W -n $activity -a android.intent.action.SEND -t text/plain --es android.intent.extra.TEXT 'note DANA_SMOKE_LOCAL'" | tr -d '\r')
@@ -133,7 +161,9 @@ tap_text 'بازبینی'
 await_ui 'این کار را انجام دهیم؟' 'Local command bypassed or failed to open the review.'
 tap_text 'تأیید و اجرا'
 await_ui 'یادداشت روی گوشی ذخیره شد' 'The approved offline note was not saved.'
+tap_text 'خانه'
+await_ui 'یادداشت‌ها' 'The local notes shortcut is missing.'
 tap_text 'یادداشت‌ها'
 await_ui 'DANA_SMOKE_LOCAL' 'The approved offline note is absent from the notes repository.'
 adb shell pidof "$package" >/dev/null || fail 'Dana terminated during the smoke test.'
-printf '\nDana APK installed, opened the Studio, showed the default offline guard, opened the Gemini preset, and saved an approved note while offline.\n'
+printf '\nDana APK installed. New home, account setup, free-engine setup, offline guard and approved note passed. No real email or AI credentials used.\n'

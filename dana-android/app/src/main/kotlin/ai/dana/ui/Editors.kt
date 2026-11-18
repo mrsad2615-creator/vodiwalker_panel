@@ -3,6 +3,8 @@ package ai.dana.ui
 import ai.dana.R
 import ai.dana.domain.APPLE_MAC_MODEL
 import ai.dana.domain.GOOGLE_GEMINI_BASE_URL
+import ai.dana.domain.OPENROUTER_BASE_URL
+import ai.dana.domain.OPENROUTER_FREE_MODEL
 import ai.dana.domain.ApiCredential
 import ai.dana.domain.LocalText
 import ai.dana.domain.ProviderConfig
@@ -21,6 +23,7 @@ import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -53,7 +56,9 @@ internal fun DanaEditor(editor: Editor, session: DashboardSession, offline: Bool
     val dismiss = { dispatch(DanaIntent.DismissEditor) }
     when (editor) {
         is Editor.Note -> NoteEditor(editor, busy, error, dismiss) { dispatch(DanaIntent.SaveNote(it)) }
-        is Editor.Provider -> ProviderEditor(editor, busy, error, session.directory, offline, dismiss, dispatch)
+        is Editor.Provider -> if (editor.initial == ProviderProtocol.OPENROUTER_FREE) {
+            OpenRouterEditor(editor, session, offline, dismiss, dispatch)
+        } else ProviderEditor(editor, busy, error, session.directory, offline, dismiss, dispatch)
         is Editor.ConfirmComparison -> EditorDialog(
             title = R.string.compare_confirm_title,
             button = R.string.compare_send,
@@ -136,6 +141,7 @@ private fun ProviderEditor(
     val hasKey = editor.previous?.hasCredential == true
     val defaultName = when (protocol) {
         ProviderProtocol.GEMINI_NATIVE -> "Gemini"
+        ProviderProtocol.OPENROUTER_FREE -> "OpenRouter Free"
         ProviderProtocol.APPLE_MAC -> "Apple · Mac"
         ProviderProtocol.OPENAI_COMPATIBLE -> if (editor.lanPreset) "Ollama / LM Studio" else ""
     }
@@ -175,6 +181,8 @@ private fun ProviderEditor(
     ) {
         if (gemini) {
             Text(stringResource(R.string.engine_gemini_intro))
+            Text(stringResource(R.string.engine_gemini_tier), color = Titanium, style = MaterialTheme.typography.bodySmall)
+            SetupLink(R.string.engine_pricing_link, "https://ai.google.dev/gemini-api/docs/pricing", formEnabled)
             SetupLink(R.string.engine_gemini_key_link, "https://aistudio.google.com/api-keys", formEnabled)
         } else if (apple) {
             Text(stringResource(R.string.engine_apple_intro))
@@ -237,6 +245,9 @@ private fun ProviderEditor(
             Text(stringResource(R.string.engine_lookup_loading), color = Ice)
             TextButton(onClick = clear) { Text(stringResource(R.string.engine_lookup_cancel)) }
         } else {
+            if (offline) TextButton(onClick = { dispatch(DanaIntent.SetOffline(false)) }, enabled = formEnabled) {
+                Text(stringResource(R.string.studio_allow_network))
+            }
             TextButton(
                 enabled = formEnabled && !offline && baseUrl.isNotBlank() && ((!apple && !gemini) || keyAvailable),
                 onClick = { dispatch(DanaIntent.ReadModels(protocol, network, baseUrl, key, removeKey)) },
@@ -278,6 +289,54 @@ private fun ProviderEditor(
     }
 }
 
+@Composable
+private fun OpenRouterEditor(editor: Editor.Provider, session: DashboardSession, offline: Boolean, dismiss: () -> Unit, dispatch: (DanaIntent) -> Unit) {
+    var key by remember { mutableStateOf("") }
+    val hasKey = editor.previous?.hasCredential == true
+    val checking = session.directory == DirectoryState.Loading
+    val available = !session.busy && !checking
+    val valid = (key.startsWith("sk-or-v1-") && key.length in 24..ApiCredential.LIMIT && key.all { it in '!'..'~' }) || (hasKey && key.isEmpty())
+    EditorDialog(
+        title = R.string.engine_add_free,
+        button = R.string.engine_free_save,
+        enabled = valid && available,
+        busy = session.busy,
+        error = session.error,
+        secure = true,
+        onDismiss = dismiss,
+        onConfirm = { dispatch(DanaIntent.SaveProvider("OpenRouter Free", ProviderProtocol.OPENROUTER_FREE,
+            ProviderNetwork.INTERNET, OPENROUTER_BASE_URL, OPENROUTER_FREE_MODEL, key, removeKey = false)) },
+    ) {
+        Text(stringResource(R.string.engine_free_intro))
+        TechnicalText(OPENROUTER_FREE_MODEL)
+        SetupLink(R.string.engine_openrouter_key_link, "https://openrouter.ai/settings/keys", available)
+        OutlinedTextField(key, { if (it.length <= ApiCredential.LIMIT) { key = it.trim(); dispatch(DanaIntent.ClearDirectory) } },
+            Modifier.fillMaxWidth(), enabled = available, singleLine = true,
+            label = { Text(stringResource(R.string.engine_openrouter_key_label)) },
+            textStyle = MaterialTheme.typography.bodyMedium.copy(textDirection = TextDirection.Ltr),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, autoCorrectEnabled = false),
+            visualTransformation = PasswordVisualTransformation(),
+            supportingText = if (hasKey) { { Text(stringResource(R.string.engine_keep_key)) } } else null)
+        if (offline) {
+            Text(stringResource(R.string.engine_free_offline), color = Titanium, style = MaterialTheme.typography.bodySmall)
+            TextButton(onClick = { dispatch(DanaIntent.SetOffline(false)) }, enabled = available) {
+                Text(stringResource(R.string.studio_allow_network))
+            }
+        } else if (checking) {
+            Text(stringResource(R.string.engine_lookup_loading))
+            TextButton(onClick = { dispatch(DanaIntent.ClearDirectory) }) { Text(stringResource(R.string.engine_lookup_cancel)) }
+        } else TextButton(onClick = { dispatch(DanaIntent.ReadModels(ProviderProtocol.OPENROUTER_FREE, ProviderNetwork.INTERNET,
+            OPENROUTER_BASE_URL, key, removeKey = false)) }, enabled = available && valid) {
+            Text(stringResource(R.string.engine_free_check))
+        }
+        when (val lookup = session.directory) {
+            is DirectoryState.Ready -> Text(stringResource(R.string.engine_free_verified), color = Mint)
+            is DirectoryState.Failed -> { ReadError(lookup.message); lookup.httpStatus?.let { TechnicalText("HTTP $it") } }
+            else -> Unit
+        }
+    }
+}
+
 private const val APPLE_GUIDE_URL =
     "https://github.com/mrsad2615-creator/vodiwalker_panel/blob/arena/13014174-vodiwalker-panel/dana-android/docs/03-engine-guide-fa.md"
 
@@ -295,6 +354,7 @@ internal fun presetLabel(protocol: ProviderProtocol): Int = when (protocol) {
     ProviderProtocol.GEMINI_NATIVE -> R.string.engine_add_gemini
     ProviderProtocol.APPLE_MAC -> R.string.engine_add_apple
     ProviderProtocol.OPENAI_COMPATIBLE -> R.string.engine_add_custom
+    ProviderProtocol.OPENROUTER_FREE -> R.string.engine_add_free
 }
 
 @Composable
@@ -340,7 +400,7 @@ private fun EditorDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = onConfirm, enabled = enabled && !busy) {
+            Button(onClick = onConfirm, enabled = enabled && !busy, modifier = Modifier.heightIn(min = 48.dp)) {
                 Text(stringResource(if (busy) R.string.saving else button))
             }
         },

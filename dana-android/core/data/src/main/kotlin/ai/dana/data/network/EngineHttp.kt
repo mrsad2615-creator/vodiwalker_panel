@@ -24,6 +24,7 @@ internal fun Response.requireSuccess(protocol: ProviderProtocol) {
     val problem = when (code) {
         400, 404, 422 -> EngineProblem.CONFIGURATION
         401 -> EngineProblem.AUTHENTICATION
+        402 -> EngineProblem.PAYMENT_REQUIRED
         403 -> EngineProblem.FORBIDDEN
         408, 504 -> EngineProblem.TIMEOUT
         429 -> EngineProblem.RATE_LIMIT

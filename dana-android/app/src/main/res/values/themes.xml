@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <style name="Theme.Dana" parent="android:style/Theme.Material.NoActionBar">
-        <item name="android:windowBackground">#08090F</item>
-        <item name="android:colorAccent">#BED9FF</item>
+        <item name="android:windowBackground">#0C1212</item>
+        <item name="android:colorAccent">#BDEF9B</item>
         <item name="android:windowLightStatusBar">false</item>
     </style>
 </resources>

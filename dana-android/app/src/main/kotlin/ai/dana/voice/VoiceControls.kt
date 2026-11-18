@@ -53,6 +53,7 @@ internal fun VoiceButton(voice: DanaVoice, enabled: Boolean, onText: (String) ->
         when {
             state.listening -> voice.finishListening()
             state.speaking || state.initializing -> voice.stopPlayback()
+            !voice.canListen() -> voice.unavailable()
             else -> consent = true
         }
     }) {

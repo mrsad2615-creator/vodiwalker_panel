@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -38,6 +39,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -50,6 +52,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
@@ -115,6 +118,7 @@ private fun Dialogue(
     onSettings: () -> Unit,
 ) {
     val voice = rememberDanaVoice()
+    val focus = LocalFocusManager.current
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
@@ -135,11 +139,13 @@ private fun Dialogue(
             if (chat.turns.isEmpty()) {
                 item {
                     GlassCard(Modifier.fillMaxWidth()) {
+                        StudioPill(stringResource(if (offline) R.string.studio_mode_offline else R.string.studio_mode_online),
+                            color = if (offline) Titanium else Mint, dot = true)
                         Text(stringResource(if (offline) R.string.chat_offline_title else R.string.chat_start_title),
-                            style = MaterialTheme.typography.titleMedium, color = Ice)
-                        Text(stringResource(if (offline) R.string.chat_offline_help else R.string.chat_start_body),
+                            style = MaterialTheme.typography.titleLarge, color = Ice)
+                        Text(stringResource(if (offline) R.string.chat_offline_help else if (profiles.isEmpty()) R.string.studio_chat_no_provider else R.string.chat_start_body),
                             style = MaterialTheme.typography.bodyMedium, color = Titanium)
-                        if (offline || profiles.isEmpty()) TextButton(onClick = onSettings) { Text(stringResource(R.string.chat_setup_engines)) }
+                        if (offline || profiles.isEmpty()) TextButton(onClick = { focus.clearFocus(); onSettings() }) { Text(stringResource(R.string.chat_setup_engines)) }
                     }
                 }
             }
@@ -148,26 +154,34 @@ private fun Dialogue(
                     onRead = { voice.read(turn.answer) }, onMemory = { model.memoryFromReply(turn.answer) }, onShare = { model.dialog(ChatDialog.Action(LocalAction.Share(turn.answer), false)) })
             }
         }
-        HorizontalDivider(color = Titanium.copy(alpha = 0.28f))
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            EngineChooser(chat, profiles, model::engine)
-            TaskChooser(chat, model::task)
-        }
-        VoiceStatus(voice.state)
-        if (chat.photo != null) {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Text(stringResource(R.string.chat_image_attached), Modifier.weight(1f), color = Amber)
-                TextButton(onClick = { model.photo(null) }, enabled = !chat.busy) { Text(stringResource(R.string.chat_detach)) }
-            }
-        }
-        OutlinedTextField(chat.draft, model::draft, modifier = Modifier.fillMaxWidth(), enabled = !chat.busy,
-            label = { Text(stringResource(R.string.chat_prompt)) }, maxLines = 4)
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
-            TextButton(onClick = { voice.close(); onMedia() }, enabled = !chat.busy) { Text(stringResource(R.string.media_short)) }
-            VoiceButton(voice, enabled = !chat.busy, onText = { model.importText(listOf(chat.draft, it).filter { part -> part.isNotBlank() }.joinToString(" ")) })
-            if (chat.running) OutlinedButton(model::stop) { Text(stringResource(R.string.compare_stop)) }
-            else Button(onClick = { voice.stopPlayback(); model.review(profiles, offline) }, enabled = !chat.busy && !voice.state.listening && chat.draft.isNotBlank()) {
-                Text(stringResource(R.string.chat_review))
+        Surface(Modifier.fillMaxWidth().padding(bottom = 7.dp), shape = MaterialTheme.shapes.large,
+            color = MaterialTheme.colorScheme.surfaceContainerLow, border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) {
+            Column(Modifier.padding(horizontal = 10.dp, vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(5.dp),
+                    verticalAlignment = Alignment.CenterVertically) {
+                    EngineChooser(chat, profiles, model::engine)
+                    TaskChooser(chat, model::task)
+                }
+                VoiceStatus(voice.state)
+                if (chat.photo != null) {
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Text(stringResource(R.string.chat_image_attached), Modifier.weight(1f), color = Amber)
+                        TextButton(onClick = { model.photo(null) }, enabled = !chat.busy) { Text(stringResource(R.string.chat_detach)) }
+                    }
+                }
+                OutlinedTextField(chat.draft, model::draft, modifier = Modifier.fillMaxWidth(), enabled = !chat.busy,
+                    label = { Text(stringResource(R.string.chat_prompt)) }, maxLines = 3)
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(3.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Row(Modifier.weight(1f).horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically) {
+                        TextButton(onClick = { focus.clearFocus(); voice.close(); onMedia() }, enabled = !chat.busy) { Text(stringResource(R.string.media_short)) }
+                        VoiceButton(voice, enabled = !chat.busy, onText = { model.importText(listOf(chat.draft, it).filter { part -> part.isNotBlank() }.joinToString(" ")) })
+                    }
+                    if (chat.running) OutlinedButton(model::stop, modifier = Modifier.heightIn(min = 48.dp)) { Text(stringResource(R.string.compare_stop)) }
+                    else Button(onClick = { focus.clearFocus(); voice.stopPlayback(); model.review(profiles, offline) },
+                        modifier = Modifier.heightIn(min = 48.dp), enabled = !chat.busy && !voice.state.listening && chat.draft.isNotBlank()) {
+                        Text(stringResource(R.string.chat_review))
+                    }
+                }
             }
         }
     }
@@ -344,6 +358,9 @@ private fun ChatOverlay(dialog: ChatDialog, chat: ChatState, model: ChatViewMode
         is ChatDialog.Send -> ChatModal(R.string.chat_destinations, R.string.compare_send, !offline, chat, dismiss, { model.send(offline) }, secure = true) {
             val data = dialog.route.input
             Text(stringResource(R.string.chat_transfer_notice))
+            if (dialog.route.candidates.all { it.config.protocol == ProviderProtocol.OPENROUTER_FREE }) {
+                Text(stringResource(R.string.engine_free_review), color = Mint)
+            }
             dialog.route.candidates.forEachIndexed { index, target ->
                 Text(stringResource(if (index == 0) R.string.chat_preferred else R.string.chat_fallback, target.config.name), color = Ice)
                 TechnicalText(target.config.baseUrl, maxLines = 4)

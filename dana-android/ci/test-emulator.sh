@@ -33,38 +33,6 @@ PYTHON
 trap 'code=$?; printf "::error title=Dana emulator script::Failed at line %s (exit %s).\n" "$LINENO" "$code"' ERR
 printf '::notice title=Dana emulator booted::Android API %s is visible to adb.\n' "$(adb shell getprop ro.build.version.sdk | tr -d '\r')"
 adb shell svc power stayon true
-if ! ./gradlew --no-daemon --console=plain :core:data:connectedDebugAndroidTest :app:connectedDebugAndroidTest 2>&1 | tee "$RUNNER_TEMP/dana-device.log"; then
-  python3 - "$RUNNER_TEMP/dana-device.log" <<'PYTHON'
-import sys
-from pathlib import Path
-from xml.etree import ElementTree as ET
-
-messages = []
-for report in sorted(Path('.').glob('**/build/outputs/androidTest-results/**/TEST-*.xml')):
-    for case in ET.parse(report).iter('testcase'):
-        for node in case.findall('failure') + case.findall('error'):
-            messages.append(f"{case.get('name')}: {node.get('message', '')}\n{(node.text or '')[:1000]}")
-lines = Path(sys.argv[1]).read_text(errors='replace').splitlines()
-important = [line for line in lines if line.startswith(('e:', '> ', 'Caused by:', 'Error:', '* What went wrong')) and not line.startswith('> Task')]
-message = '\n'.join(messages + (important or lines[-25:]))[:3800]
-print('::error title=Dana device test failed::' + message.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A'))
-PYTHON
-  exit 1
-fi
-printf '::notice title=Dana device test execution::Storage and native OCR instrumentation finished successfully.\n'
-python3 - <<'PYTHON'
-from pathlib import Path
-from xml.etree import ElementTree as ET
-
-for module, minimum in [('core/data', 8), ('app', 2)]:
-    path = Path(module) / 'build/outputs/androidTest-results'
-    reports = list((path / 'connected/debug').rglob('TEST-*.xml')) or list(path.rglob('TEST-*.xml'))
-    cases = [case for report in reports for case in ET.parse(report).iter('testcase')]
-    if len(cases) < minimum or any(case.find('skipped') is not None or case.find('failure') is not None or case.find('error') is not None for case in cases):
-        raise SystemExit(f'::error title=Dana device tests::{module}: expected at least {minimum} passing tests with no failures/skips.')
-    print(f'{len(cases)} Android tests in {module} executed successfully')
-PYTHON
-
 package=ai.dana.preview
 activity="$package/ai.dana.MainActivity"
 xml_path=/sdcard/dana-smoke.xml
@@ -74,9 +42,19 @@ adb install -r "$RUNNER_TEMP/dana-verified/DANA-AI-preview.apk"
 adb shell input keyevent KEYCODE_WAKEUP
 adb shell wm dismiss-keyguard
 adb shell pm clear "$package" | grep -Fq Success
-start=$(adb shell am start -W -a android.intent.action.MAIN -c android.intent.category.LAUNCHER -n "$activity" | tr -d '\r')
-printf '%s\n' "$start"
-grep -q '^Status: ok$' <<< "$start" || fail 'The APK did not launch successfully.'
+launch() {
+  local output='' attempt
+  for attempt in 1 2 3; do
+    if output=$(timeout 28s adb shell am start -W -a android.intent.action.MAIN -c android.intent.category.LAUNCHER -n "$activity" 2>&1 | tr -d '\r') &&
+      grep -q '^Status: ok$' <<< "$output"; then
+      printf '%s\n' "$output"
+      return
+    fi
+    sleep 2
+  done
+  fail "The APK did not launch successfully. adb: ${output:0:950}"
+}
+launch
 
 await_ui() {
   local expected="$1" message="$2" attempt
@@ -100,7 +78,9 @@ import re
 import sys
 from xml.etree import ElementTree as ET
 
-nodes = [n for n in ET.parse(sys.argv[1]).iter('node') if n.get('text') == sys.argv[2]]
+needle = sys.argv[2]
+visible = list(ET.parse(sys.argv[1]).iter('node'))
+nodes = [n for n in visible if n.get('text') == needle] + [n for n in visible if n.get('text', '').startswith((needle + ', ', needle + '\n'))]
 for node in nodes:
     match = re.fullmatch(r'\[(\d+),(\d+)\]\[(\d+),(\d+)\]', node.get('bounds', ''))
     if match:
@@ -167,3 +147,37 @@ tap_text 'یادداشت‌ها'
 await_ui 'DANA_SMOKE_LOCAL' 'The approved offline note is absent from the notes repository.'
 adb shell pidof "$package" >/dev/null || fail 'Dana terminated during the smoke test.'
 printf '\nDana APK installed. New home, account setup, free-engine setup, offline guard and approved note passed. No real email or AI credentials used.\n'
+
+# Exercise the APK's launch on a fresh install before the instrumentation runner can alter the UI/task state.
+adb shell am force-stop "$package"
+if ! ./gradlew --no-daemon --console=plain :core:data:connectedDebugAndroidTest :app:connectedDebugAndroidTest 2>&1 | tee "$RUNNER_TEMP/dana-device.log"; then
+  python3 - "$RUNNER_TEMP/dana-device.log" <<'PYTHON'
+import sys
+from pathlib import Path
+from xml.etree import ElementTree as ET
+
+messages = []
+for report in sorted(Path('.').glob('**/build/outputs/androidTest-results/**/TEST-*.xml')):
+    for case in ET.parse(report).iter('testcase'):
+        for node in case.findall('failure') + case.findall('error'):
+            messages.append(f"{case.get('name')}: {node.get('message', '')}\n{(node.text or '')[:1000]}")
+lines = Path(sys.argv[1]).read_text(errors='replace').splitlines()
+important = [line for line in lines if line.startswith(('e:', '> ', 'Caused by:', 'Error:', '* What went wrong')) and not line.startswith('> Task')]
+message = '\n'.join(messages + (important or lines[-25:]))[:3800]
+print('::error title=Dana device test failed::' + message.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A'))
+PYTHON
+  exit 1
+fi
+printf '::notice title=Dana device test execution::Storage and native OCR instrumentation finished successfully.\n'
+python3 - <<'PYTHON'
+from pathlib import Path
+from xml.etree import ElementTree as ET
+
+for module, minimum in [('core/data', 8), ('app', 2)]:
+    path = Path(module) / 'build/outputs/androidTest-results'
+    reports = list((path / 'connected/debug').rglob('TEST-*.xml')) or list(path.rglob('TEST-*.xml'))
+    cases = [case for report in reports for case in ET.parse(report).iter('testcase')]
+    if len(cases) < minimum or any(case.find('skipped') is not None or case.find('failure') is not None or case.find('error') is not None for case in cases):
+        raise SystemExit(f'::error title=Dana device tests::{module}: expected at least {minimum} passing tests with no failures/skips.')
+    print(f'{len(cases)} Android tests in {module} executed successfully')
+PYTHON

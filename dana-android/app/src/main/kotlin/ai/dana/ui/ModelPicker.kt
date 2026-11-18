@@ -104,6 +104,9 @@ internal fun ModelPicker(
                 }
             }
             item {
+                if (freeAccount != null) TextButton(onClick = {
+                    signIn((selected as? ChatDestination.OnlineFree)?.model ?: RouterFreeModel.Automatic)
+                }, modifier = Modifier.heightIn(min = 48.dp)) { Text(stringResource(R.string.models_sign_in_again)) }
                 if (profiles.size >= 2 && !offline) TextButton(onClick = onTeam, modifier = Modifier.heightIn(min = 48.dp)) {
                     Text(stringResource(R.string.chat_team_select))
                 }

@@ -167,8 +167,8 @@ private fun Dialogue(
         fetch = { dispatch(DanaIntent.ReadFreeModels) }, onSettings = { dismissPicker(); onSettings() },
         onTeam = { dismissPicker(); model.dialog(ChatDialog.PickTeam) }, dismiss = dismissPicker)
     val useSystemSpeech = deviceModel == null && systemSpeech && !offline && chat.voiceOpen
-    LaunchedEffect(offline, chat.voiceOpen) {
-        if ((offline || !chat.voiceOpen) && systemSpeech) {
+    LaunchedEffect(offline, chat.voiceOpen, deviceModel) {
+        if ((deviceModel != null || offline || !chat.voiceOpen) && systemSpeech) {
             systemSpeech = false
             voice.close()
         }
@@ -180,7 +180,7 @@ private fun Dialogue(
             voice.read(done.answer)
         }
     }
-    if (setupVoice) VoiceSetup(voice, offline, useSystemSpeech, onSystemSpeech = { systemSpeech = it }, onClose = { setupVoice = false })
+    if (setupVoice) VoiceSetup(voice, offline || deviceModel != null, useSystemSpeech, onSystemSpeech = { systemSpeech = it }, onClose = { setupVoice = false })
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         var menu by remember { mutableStateOf(false) }
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {

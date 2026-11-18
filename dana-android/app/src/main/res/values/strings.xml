@@ -461,7 +461,7 @@
     <string name="quick_default">موتور پیش‌فرض گفتگو</string>
     <string name="quick_add_other">اتصال به موتور دیگر</string>
     <string name="quick_no_account">ورود با ایمیل mrsad برای اتصال به موتور لازم نیست.</string>
-    <string name="quick_offline_help">حالت آفلاین ارسال به AI را قطع می‌کند. فقط با زدن «تست و اتصال»، آزمایش انتخابی انجام می‌شود.</string>
+    <string name="quick_offline_help">حالت آفلاین ارسال پیام به مدل‌های آنلاین را قطع می‌کند. فقط وقتی خودت فهرست آنلاین، ورود یا تست اتصال را بزنی با سرویس ارتباط برقرار می‌شود.</string>
     <string name="send_allow">اجازه بده و بفرست</string>
     <string name="send_revoke">لغو اجازه‌های ارسال مستقیم</string>
     <string name="send_revoked">اجازه‌های قبلی لغو شدند. ارسال بعدی یک بار بازبینی می‌شود.</string>
@@ -566,6 +566,7 @@
     <string name="models_empty_catalog">فعلاً مدل رایگان دیگری در فهرست نیست.</string>
     <string name="models_saved">سرویس‌های شخصیِ متصل</string>
     <string name="models_other_services">سرویس‌های دیگر در تنظیمات</string>
+    <string name="models_sign_in_again">ورود دوباره به OpenRouter</string>
     <string name="models_sign_in">ورود به OpenRouter</string>
     <string name="models_sign_in_help">ورود در مرورگر رسمی انجام می‌شود. بعد از تأیید به مرصاد برگرد. این کار پیامی ارسال نمی‌کند؛ اتصال فقط وقتی فعال می‌شود که ورود کامل شود.</string>
     <string name="models_sign_in_wait">منتظر تأیید از مرورگر…</string>

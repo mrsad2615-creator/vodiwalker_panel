@@ -48,7 +48,7 @@ internal sealed interface DeviceText {
     data class Delta(val value: String) : DeviceText
 }
 
-internal class DeviceModelProblem(@StringRes val message: Int) : Exception()
+internal class DeviceModelProblem(@StringRes val messageRes: Int) : Exception()
 
 /** CPU-only runtime. It has no credentials, URLs, network transport, or tools. Only one native session at a time. */
 @Singleton

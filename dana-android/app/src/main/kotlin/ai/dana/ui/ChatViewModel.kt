@@ -338,7 +338,7 @@ internal class ChatViewModel @Inject constructor(
                 reviseTurn(turn.index) { if (it.complete) it else it.copy(interrupted = true) }
                 throw canceled
             } catch (problem: DeviceModelProblem) {
-                error(problem.message)
+                error(problem.messageRes)
             } catch (_: LinkageError) {
                 error(R.string.models_device_unsupported)
             } catch (problem: Exception) {

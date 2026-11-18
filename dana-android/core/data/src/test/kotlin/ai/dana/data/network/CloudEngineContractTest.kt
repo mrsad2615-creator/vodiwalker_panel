@@ -93,11 +93,11 @@ class CloudEngineContractTest {
 
     @Test
     fun streamOnlyShowsVisibleTextAndDoesNotMarkTruncationComplete() {
-        val source = Buffer().writeUtf8("""data: {"choices":[{"delta":{"content":[{"type":"thinking","text":"hidden"},{"type":"text","text":"پاسخ ناقص"}]}}]}
+        val source = Buffer().writeUtf8("""
+            data: {"choices":[{"delta":{"content":[{"type":"thinking","text":"hidden"},{"type":"text","text":"پاسخ ناقص"}]}}]}
 
             data: {"choices":[{"delta":{},"finish_reason":"length"}]}
-
-        """.trimIndent().replace("            data:", "data:") + "\n\n")
+        """.trimIndent() + "\n\n")
         val chunks = mutableListOf<String>()
         assertEquals(EngineProblem.OUTPUT_LIMIT, assertThrows(EngineFailure::class.java) {
             EngineProtocol.read(source, format) { chunks.add(it.value) }

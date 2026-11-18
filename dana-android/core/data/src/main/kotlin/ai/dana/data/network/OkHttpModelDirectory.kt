@@ -87,6 +87,7 @@ internal class OkHttpModelDirectory(
         if (id.isEmpty() || id.length > ProviderConfig.MODEL_LIMIT || id.any { it.isWhitespace() || it.isISOControl() || it in BIDI }) return null
         if (gemini) {
             if (!id.startsWith("models/") || !EngineProtocol.geminiId.matches(id.removePrefix("models/"))) return null
+            if (listOf("embedding", "native-audio", "-tts", "-image", "-live").any { it in id }) return null
             val methods = this["supportedGenerationMethods"] as? JsonArray ?: return null
             if (methods.none { it.string() == "generateContent" || it.string() == "streamGenerateContent" }) return null
         }

@@ -140,7 +140,7 @@ private fun Dialogue(
             voice.close()
         }
     }
-    val notice = chat.notice?.takeIf { chat.voiceOpen && chat.options.readReplies }
+    val notice = chat.notice?.takeIf { chat.speakNotice && chat.voiceOpen && chat.options.readReplies }
     val noticeText = notice?.let { res -> chat.noticePercent?.let { stringResource(res, faDigits(it)) } ?: stringResource(res) }
     val done = chat.turns.lastOrNull()?.takeIf { it.complete && it.readWhenDone && !chat.running }
     LaunchedEffect(done?.index) {
@@ -149,7 +149,12 @@ private fun Dialogue(
             voice.read(done.answer)
         }
     }
-    LaunchedEffect(noticeText) { noticeText?.let(voice::read) }
+    LaunchedEffect(noticeText) {
+        if (noticeText != null) {
+            model.noticeSpoken()
+            voice.read(noticeText)
+        }
+    }
     if (setupVoice) VoiceSetup(voice, offline, useSystemSpeech, onSystemSpeech = { systemSpeech = it }, onClose = { setupVoice = false })
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -197,7 +202,7 @@ private fun Dialogue(
             }
             items(chat.turns, key = { it.index }) { turn ->
                 DialogueTurn(turn, team == null && chat.running && chat.turns.lastOrNull()?.index == turn.index, !chat.busy,
-                    onRead = { voice.read(turn.answer) }, onMemory = { model.memoryFromReply(turn.answer) }, onShare = { model.dialog(ChatDialog.Action(LocalAction.Share(turn.answer), false)) })
+                    onRead = { voice.stopPlayback(); voice.read(turn.answer) }, onMemory = { model.memoryFromReply(turn.answer) }, onShare = { model.dialog(ChatDialog.Action(LocalAction.Share(turn.answer), false)) })
             }
             if (team != null) {
                 item(key = "team-${team.index}") {
@@ -397,7 +402,8 @@ private fun ToolPanel(chat: ChatState, model: ChatViewModel, onMedia: () -> Unit
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(stringResource(R.string.chat_tools_title), style = MaterialTheme.typography.headlineSmall)
         Text(stringResource(R.string.chat_tools_help), color = Titanium)
-        Button(onClick = { model.page(ChatPage.CONVERSATION); onMedia() }, enabled = !chat.busy) { Text(stringResource(R.string.media_title)) }
+        Button(onClick = { model.assistant(local = true) }, enabled = !chat.busy) { Text(stringResource(R.string.phone_voice_commands)) }
+        TextButton(onClick = { model.page(ChatPage.CONVERSATION); onMedia() }, enabled = !chat.busy) { Text(stringResource(R.string.media_title)) }
         AssistantSetup(enabled = !chat.busy)
         GlassCard(Modifier.fillMaxWidth()) {
             Text(stringResource(R.string.phone_quick), style = MaterialTheme.typography.titleMedium)

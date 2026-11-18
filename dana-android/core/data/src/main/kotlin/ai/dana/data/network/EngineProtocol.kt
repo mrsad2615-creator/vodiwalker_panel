@@ -2,8 +2,10 @@ package ai.dana.data.network
 
 import ai.dana.domain.ApiCredential
 import ai.dana.domain.CloudEngine
+import ai.dana.domain.GOOGLE_GEMINI_BASE_URL
 import ai.dana.domain.PhotoSupport
 import ai.dana.domain.cloudEngine
+import ai.dana.domain.photoSupport
 import ai.dana.domain.requiresCredential
 import ai.dana.domain.AssistantStyle
 import ai.dana.domain.ComparisonLimits
@@ -80,7 +82,12 @@ internal object EngineProtocol {
                     if (cloud == CloudEngine.DEEPSEEK && (config.model == "deepseek-flash" || config.model.startsWith("deepseek-v4-"))) {
                         putJsonObject("thinking") { put("type", "disabled") }
                     }
-                    if (cloud == CloudEngine.GROQ && config.model.startsWith("openai/gpt-oss-")) put("reasoning_effort", "low")
+                    when {
+                        cloud == CloudEngine.GROQ && config.model == "qwen/qwen3.8-27b" -> put("reasoning_effort", "none")
+                        cloud == CloudEngine.CEREBRAS && config.model == "qwen-3.8-27b" -> put("reasoning_effort", "none")
+                        cloud == CloudEngine.GROQ && config.model.startsWith("openai/gpt-oss-") -> put("reasoning_effort", "low")
+                        cloud == CloudEngine.CEREBRAS && config.model == "gpt-oss-120b" -> put("reasoning_effort", "low")
+                    }
                     if (config.protocol == ProviderProtocol.OPENROUTER_FREE) putJsonObject("provider") {
                         putJsonObject("max_price") {
                             put("prompt", 0); put("completion", 0); put("request", 0); put("image", 0)
@@ -127,7 +134,19 @@ internal object EngineProtocol {
                             }
                         })
                     }
-                    putJsonObject("generationConfig") { put("maxOutputTokens", MAX_TOKENS) }
+                    putJsonObject("generationConfig") {
+                        put("maxOutputTokens", MAX_TOKENS)
+                        // Keep a useful visible-answer budget on the official endpoint. Custom proxies retain their previous payload.
+                        if (config.baseUrl == GOOGLE_GEMINI_BASE_URL) when {
+                            id == "gemini-2.5-flash" || id == "gemini-2.5-flash-lite" ->
+                                putJsonObject("thinkingConfig") { put("thinkingBudget", 0) }
+                            id.startsWith("gemini-3.1-flash-lite") || id.startsWith("gemini-3.5-flash-lite") ->
+                                putJsonObject("thinkingConfig") { put("thinkingLevel", "minimal") }
+                            id.startsWith("gemini-3-") || id.startsWith("gemini-3.1-pro") ||
+                                id.startsWith("gemini-3.6-flash") || id.startsWith("gemini-3.8-flash") ->
+                                putJsonObject("thinkingConfig") { put("thinkingLevel", "low") }
+                        }
+                    }
                 }
             }
             ProviderProtocol.APPLE_MAC -> {

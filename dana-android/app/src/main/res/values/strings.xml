@@ -239,7 +239,7 @@
     <string name="voice_read">خواندن متن</string>
     <string name="media_title">خواندن تصویر و صفحه</string>
     <string name="media_short">تصویر</string>
-    <string name="media_local_only">عکس و برش فقط در حافظهٔ برنامه‌اند. استخراج متن آفلاین است. خود تصویر فقط با پیوست کردن و تأیید جداگانهٔ ارسال، به موتور می‌رود.</string>
+    <string name="media_local_only">استخراج متن آفلاین است. عکس دوربین در فایل موقت خصوصی باز و بعد پاک می‌شود. فقط تصویر پردازش‌شده با پیوست و تأیید جداگانهٔ ارسال به موتور می‌رود.</string>
     <string name="media_pick">انتخاب عکس</string>
     <string name="media_camera">دوربین</string>
     <string name="media_capture">گرفتن یک فریم</string>
@@ -347,6 +347,7 @@
     <string name="account_error_local">خواندن یا نگهداری امن نشست روی دستگاه ممکن نبود.</string>
     <string name="phone_mode">فرمان گوشی</string>
     <string name="phone_home_hint">باتری، صدا، چراغ‌قوه و تنظیمات</string>
+    <string name="phone_voice_commands">گفتن فرمان گوشی</string>
     <string name="phone_quick">فرمان‌های آمادهٔ گوشی</string>
     <string name="phone_internet">باز کردن پنل اینترنت</string>
     <string name="phone_battery">خواندن وضعیت باتری</string>
@@ -432,7 +433,7 @@
     <string name="chat_image_compatibility">سازگاری بعضی مقصدها با تصویر مشخص نیست. اگر رد شد، مدل تصویری دیگری انتخاب کنید یا متن تصویر را با OCR استخراج کنید.</string>
     <string name="engine_add_cloud">اتصال %1$s</string>
     <string name="engine_cloud_editor">اتصال موتور ابری</string>
-    <string name="engine_cloud_intro">برای %1$s کلید شخصی لازم است. با «دریافت فهرست مدل‌ها» مدل‌های قابل‌دسترس حساب را بررسی کنید. فهرست به معنی آزمون پاسخ نیست؛ سهمیه و هزینه با ارائه‌دهنده است.</string>
+    <string name="engine_cloud_intro">برای %1$s کلید شخصی لازم است. با «دریافت مدل‌ها از API» مدل‌های قابل‌دسترس حساب را بررسی کنید. فهرست به معنی آزمون پاسخ نیست؛ سهمیه و هزینه با ارائه‌دهنده است.</string>
     <string name="engine_cloud_console">ساخت کلید در کنسول سرویس</string>
     <string name="engine_cloud_key">کلید شخصی API</string>
     <string name="engine_vision">ورودی تصویر</string>

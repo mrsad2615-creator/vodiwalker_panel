@@ -32,7 +32,7 @@ object LocalCommands {
     private val share = Regex("(?:اشتراک|share)\\s+(.+)", RegexOption.DOT_MATCHES_ALL)
     private val dial = Regex("(?:شماره گیری|شماره گیر|تماس با|dial|call)\\s+(\\+?[0-9](?:[0-9 -]{3,22}[0-9])?)(?: را بگیر)?")
     private val volume = Regex("(?:صدای رسانه|ولوم رسانه|صدای موزیک|صدا(?: را| رو)|media volume|volume)\\s+(?:(?:را|رو) )?(?:(?:بذار|بگذار) )?(?:روی )?(.{1,24}?)\\s*(?:درصد|[%٪])?(?: (?:کن|بذار|بگذار|تنظیم کن))?")
-    private val search = Regex("(?:جستجوی وب|جست و جوی وب|جستجو در وب|جستجو کن|search web)\\s+(.+)")
+    private val search = Regex("(?:جستجوی وب|جست و جوی وب|جست وجوی وب|جستجو در وب|جست وجو در وب|جستجو کن|search web)\\s+(.+)")
     private val gaps = Regex("\\s+")
     private val polite = Regex("^لطف[اًا]+[ ،]+")
 

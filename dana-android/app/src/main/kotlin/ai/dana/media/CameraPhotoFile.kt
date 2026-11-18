@@ -20,6 +20,7 @@ internal class CameraPhotoFile private constructor(private val file: File, val u
 
     companion object {
         private const val DIRECTORY = "camera-input"
+        private var swept = false
         internal const val GRANTS = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
 
         fun reserve(context: Context): CameraPhotoFile {
@@ -35,7 +36,10 @@ internal class CameraPhotoFile private constructor(private val file: File, val u
         }
 
         /** A killed process cannot recover a private preview; delete its orphaned temporary inputs. */
+        @Synchronized
         fun discardOrphans(context: Context) {
+            if (swept) return
+            swept = true
             File(context.cacheDir, DIRECTORY).listFiles()?.filter { it.name.startsWith("shot-") && it.extension == "jpg" }?.forEach {
                 runCatching {
                     val uri = FileProvider.getUriForFile(context, "${context.packageName}.camera-photo", it)
@@ -45,6 +49,8 @@ internal class CameraPhotoFile private constructor(private val file: File, val u
         }
     }
 }
+
+class PictureFileProvider : FileProvider()
 
 internal class FullPicture : ActivityResultContracts.TakePicture() {
     override fun createIntent(context: Context, input: Uri): Intent = super.createIntent(context, input).apply {

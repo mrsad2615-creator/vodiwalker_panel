@@ -112,6 +112,7 @@ internal data class ChatState(
     @StringRes val error: Int? = null,
     @StringRes val notice: Int? = null,
     val noticePercent: Int? = null,
+    val speakNotice: Boolean = false,
 ) {
     val busy get() = running || writing
 }
@@ -212,6 +213,9 @@ internal class ChatViewModel @Inject constructor(
 
     @MainThread
     fun speechConsumed(index: Long) = reviseTurn(index) { it.copy(readWhenDone = false) }
+
+    @MainThread
+    fun noticeSpoken() { mutable.update { it.copy(speakNotice = false) } }
 
     @MainThread
     fun task(value: AssistantTask) {
@@ -399,7 +403,11 @@ internal class ChatViewModel @Inject constructor(
     @MainThread
     fun background() {
         stop()
-        if (mutable.value.dialog is ChatDialog.Send || mutable.value.dialog is ChatDialog.Action) mutable.update { it.copy(dialog = null) }
+        mutable.update { st ->
+            st.copy(dialog = st.dialog.takeUnless { it is ChatDialog.Send || it is ChatDialog.Action },
+                speakNotice = false, turns = st.turns.map { if (it.readWhenDone) it.copy(readWhenDone = false) else it },
+                team = st.team?.copy(readWhenPicked = false))
+        }
     }
 
     @MainThread
@@ -464,6 +472,7 @@ internal class ChatViewModel @Inject constructor(
     private fun actionResult(editor: ChatDialog.Action, outcome: DeviceOutcome) {
         mutable.update { it.copy(draft = if (editor.fromText && outcome.ok) "" else it.draft, dialog = null,
             notice = outcome.message.takeIf { outcome.ok }, noticePercent = outcome.percent,
+            speakNotice = outcome.ok && it.voiceOpen && it.options.readReplies && it.page == ChatPage.CONVERSATION,
             error = outcome.message.takeUnless { outcome.ok }) }
     }
 

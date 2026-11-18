@@ -130,7 +130,9 @@ jobs:
         with:
           api-level: 34
           arch: x86_64
-          target: google_apis
+          # The app and tests do not depend on Play services. The Google APIs image
+          # produced a Pixel Launcher ANR overlay that blocked the UI smoke test.
+          target: default
           profile: pixel_6
           working-directory: dana-android
           disable-animations: true

@@ -32,6 +32,7 @@ PYTHON
 
 trap 'code=$?; printf "::error title=Dana emulator script::Failed at line %s (exit %s).\n" "$LINENO" "$code"' ERR
 printf '::notice title=Dana emulator booted::Android API %s is visible to adb.\n' "$(adb shell getprop ro.build.version.sdk | tr -d '\r')"
+adb shell svc power stayon true
 if ! ./gradlew --no-daemon --console=plain :core:data:connectedDebugAndroidTest :app:connectedDebugAndroidTest 2>&1 | tee "$RUNNER_TEMP/dana-device.log"; then
   python3 - "$RUNNER_TEMP/dana-device.log" <<'PYTHON'
 import sys
@@ -72,7 +73,7 @@ snapshot="$RUNNER_TEMP/dana-smoke.xml"
 adb install -r "$RUNNER_TEMP/dana-verified/DANA-AI-preview.apk"
 adb shell input keyevent KEYCODE_WAKEUP
 adb shell wm dismiss-keyguard
-adb shell am force-stop "$package"
+adb shell pm clear "$package" | grep -Fq Success
 start=$(adb shell am start -W -a android.intent.action.MAIN -c android.intent.category.LAUNCHER -n "$activity" | tr -d '\r')
 printf '%s\n' "$start"
 grep -q '^Status: ok$' <<< "$start" || fail 'The APK did not launch successfully.'

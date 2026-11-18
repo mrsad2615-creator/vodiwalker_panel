@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <files-path name="exports" path="exports/" />
+    <files-path name="backups" path="backups/" />
+    <files-path name="shares" path="shares/" />
+    <files-path name="scanned_docs" path="scanned_docs/" />
+    <files-path name="evidence" path="evidence/" />
+</paths>

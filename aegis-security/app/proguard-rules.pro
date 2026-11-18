@@ -1,0 +1,3 @@
+-keep class ir.aegis.core.model.** { *; }
+-keepattributes *Annotation*,Signature,InnerClasses,EnclosingMethod
+-dontwarn kotlinx.serialization.**

@@ -132,23 +132,6 @@ internal fun PhoneScreen(model: PhoneViewModel) {
     var examples by remember { mutableStateOf(false) }
     val flash = remember(context) { context.packageManager.hasSystemFeature(PackageManager.FEATURE_CAMERA_FLASH) }
 
-    state.pending?.let { action ->
-        AlertDialog(onDismissRequest = model::cancel, title = { Text(stringResource(R.string.chat_confirm_action)) }, text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(actionText(action))
-                Text(stringResource(when (action) {
-                    is LocalAction.Timer, is LocalAction.Alarm -> R.string.phone_clock_review
-                    is LocalAction.Dial -> R.string.phone_dial_review
-                    is LocalAction.SmsDraft -> R.string.phone_sms_review
-                    is LocalAction.CalendarDraft -> R.string.phone_calendar_review
-                    is LocalAction.Note -> R.string.chat_note_private
-                    else -> R.string.phone_command_review
-                }), color = Titanium)
-            }
-        }, dismissButton = { TextButton(model::cancel) { Text(stringResource(R.string.cancel)) } },
-            confirmButton = { TextButton(onClick = { model.confirm(execute) }) { Text(stringResource(R.string.chat_execute)) } })
-    }
-    DisposableEffect(model) { onDispose { model.cancel() } }
     if (timer) TimerForm(dismiss = { timer = false }, submit = { timer = false; run(it) })
 
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -215,6 +198,30 @@ internal fun PhoneScreen(model: PhoneViewModel) {
         }
         if (access) PhoneAccess()
     }
+}
+
+/** Stable dialog host, outside the scrolling content that can be recycled during IME transitions. */
+@Composable
+internal fun PhoneActionReview(model: PhoneViewModel) {
+    val state by model.state.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    state.pending?.let { action ->
+        AlertDialog(onDismissRequest = model::cancel, title = { Text(stringResource(R.string.chat_confirm_action)) }, text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(actionText(action))
+                Text(stringResource(when (action) {
+                    is LocalAction.Timer, is LocalAction.Alarm -> R.string.phone_clock_review
+                    is LocalAction.Dial -> R.string.phone_dial_review
+                    is LocalAction.SmsDraft -> R.string.phone_sms_review
+                    is LocalAction.CalendarDraft -> R.string.phone_calendar_review
+                    is LocalAction.Note -> R.string.chat_note_private
+                    else -> R.string.phone_command_review
+                }), color = Titanium)
+            }
+        }, dismissButton = { TextButton(model::cancel) { Text(stringResource(R.string.cancel)) } },
+            confirmButton = { TextButton(onClick = { model.confirm { DeviceActions.execute(context, it) } }) { Text(stringResource(R.string.chat_execute)) } })
+    }
+    DisposableEffect(model) { onDispose { model.cancel() } }
 }
 
 @Composable

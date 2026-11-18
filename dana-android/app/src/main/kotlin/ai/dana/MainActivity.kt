@@ -31,7 +31,8 @@ class MainActivity : ComponentActivity() {
     private val media: MediaViewModel by viewModels()
     private val artDelegate = viewModels<ArtViewModel>()
     private val art by artDelegate
-    private val phone: PhoneViewModel by viewModels()
+    private val phoneDelegate = viewModels<PhoneViewModel>()
+    private val phone by phoneDelegate
 
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
@@ -76,6 +77,7 @@ class MainActivity : ComponentActivity() {
             chat.background()
             if (accountDelegate.isInitialized()) account.background()
             if (artDelegate.isInitialized()) art.stop()
+            if (phoneDelegate.isInitialized()) phone.cancel()
         }
         super.onStop()
     }

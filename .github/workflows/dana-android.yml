@@ -168,6 +168,9 @@ jobs:
           lines = log.read_text(errors='replace').splitlines() if log.exists() else []
           important = [line for line in lines if line.startswith(('Error:', 'FAILURES', 'Caused by:', 'FATAL EXCEPTION')) or 'Exception:' in line or 'AssertionError' in line or 'failed' in line.lower()]
           report = (progress.read_text(errors='replace') if progress.exists() else 'Emulator did not reach the test script.') + '\n' + '\n'.join(dict.fromkeys(important[:12] + lines[-18:]))[:2900]
+          milestones = [line for line in lines if line.startswith('mrsad: ')]
+          if milestones:
+              print('::notice title=mrsad device milestones::' + '%0A'.join(milestones).replace('\r', '')[:2800])
           def annotate(title, report):
               print(f'::error title={title}::' + report[:3900].replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A'))
           annotate('Dana Android test trace', report)

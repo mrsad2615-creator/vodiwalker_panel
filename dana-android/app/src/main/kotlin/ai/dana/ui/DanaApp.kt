@@ -156,6 +156,7 @@ internal fun DanaApp(
             }
         }
     }
+    if (session.tab == DashboardTab.PHONE) PhoneActionReview(phone())
     session.editor?.let { editor ->
         key(editor) { DanaEditor(editor, session, offline, dispatch) }
     }

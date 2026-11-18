@@ -5,7 +5,6 @@ import ai.dana.domain.ComparisonLimits
 import ai.dana.domain.VisionPhoto
 import android.content.Context
 import android.content.Intent
-import android.graphics.Bitmap
 import android.net.Uri
 import androidx.annotation.MainThread
 import androidx.core.content.ContextCompat
@@ -32,6 +31,7 @@ internal data class MediaState(
     val language: OcrLanguage = OcrLanguage.MIXED,
     val working: Boolean = false,
     val capturing: Boolean = false,
+    val awaitingCamera: Boolean = false,
     val error: Int? = null,
 )
 
@@ -45,8 +45,10 @@ internal class MediaViewModel @Inject constructor(
     val state = mutable.asStateFlow()
     private var work: Job? = null
     private var generation = 0L
+    private var pendingCamera: CameraPhotoFile? = null
 
     init {
+        CameraPhotoFile.discardOrphans(context)
         viewModelScope.launch {
             inbox.results.collect { event ->
                 if (event != null && mutable.value.open) {
@@ -69,6 +71,7 @@ internal class MediaViewModel @Inject constructor(
         work?.cancel()
         work = null
         cancelCapture()
+        clearCamera()
         mutable.value = MediaState()
     }
 
@@ -83,7 +86,7 @@ internal class MediaViewModel @Inject constructor(
 
     @MainThread
     fun capture(grant: Intent) {
-        if (!mutable.value.open || mutable.value.capturing || mutable.value.working) return
+        if (!mutable.value.open || mutable.value.capturing || mutable.value.working || mutable.value.awaitingCamera) return
         val ticket = inbox.issue()
         mutable.update { it.copy(capturing = true, error = null) }
         try {
@@ -99,14 +102,43 @@ internal class MediaViewModel @Inject constructor(
     fun uri(uri: Uri) { execute(R.string.media_load_error) { showFrame(withContext(Dispatchers.IO) { FrameCodec.fromUri(context, uri) }) } }
 
     @MainThread
-    fun camera(bitmap: Bitmap) {
-        if (!mutable.value.open || mutable.value.working || mutable.value.capturing) {
-            bitmap.recycle()
+    fun launchCamera(launch: (Uri) -> Unit) {
+        val current = mutable.value
+        if (!current.open || current.working || current.capturing || current.awaitingCamera) return
+        try {
+            val output = CameraPhotoFile.reserve(context)
+            pendingCamera = output
+            mutable.update { it.copy(awaitingCamera = true, error = null) }
+            launch(output.uri)
+        } catch (_: Exception) {
+            clearCamera()
+            error(R.string.media_camera_unavailable)
+        }
+    }
+
+    @MainThread
+    fun cameraResult(saved: Boolean) {
+        val output = pendingCamera ?: return
+        pendingCamera = null
+        mutable.update { it.copy(awaitingCamera = false) }
+        if (!saved || !mutable.value.open || mutable.value.working || mutable.value.capturing) {
+            output.discard(context)
             return
         }
-        execute(R.string.media_load_error) {
-            try { showFrame(withContext(Dispatchers.Default) { FrameCodec.compress(bitmap) }) } finally { bitmap.recycle() }
+        execute(R.string.media_camera_bad_output) {
+            try {
+                showFrame(withContext(Dispatchers.IO) {
+                    check(output.hasContent())
+                    FrameCodec.fromUri(context, output.uri)
+                })
+            } finally { output.discard(context) }
         }
+    }
+
+    private fun clearCamera() {
+        pendingCamera?.discard(context)
+        pendingCamera = null
+        mutable.update { it.copy(awaitingCamera = false) }
     }
 
     @MainThread
@@ -148,7 +180,7 @@ internal class MediaViewModel @Inject constructor(
     private fun showFrame(frame: MemoryFrame) { mutable.update { it.copy(frame = frame, crop = CropBox.Full, recognized = "", capturing = false, error = null) } }
 
     private fun execute(error: Int, operation: suspend () -> Unit) {
-        if (!mutable.value.open || mutable.value.working || mutable.value.capturing) return
+        if (!mutable.value.open || mutable.value.working || mutable.value.capturing || mutable.value.awaitingCamera) return
         val ticket = ++generation
         mutable.update { it.copy(working = true, error = null) }
         work = viewModelScope.launch {
@@ -167,5 +199,5 @@ internal class MediaViewModel @Inject constructor(
         }
     }
 
-    override fun onCleared() { cancelCapture(); super.onCleared() }
+    override fun onCleared() { clearCamera(); cancelCapture(); super.onCleared() }
 }

@@ -4,10 +4,16 @@ import ai.dana.R
 import ai.dana.media.MediaReview
 import ai.dana.media.MediaViewModel
 import ai.dana.voice.VoiceButton
+import ai.dana.voice.VoiceSetup
 import ai.dana.voice.VoiceStatus
 import ai.dana.voice.rememberDanaVoice
 import ai.dana.domain.AssistantStyle
 import ai.dana.domain.AssistantTask
+import ai.dana.domain.ComparisonLimits
+import ai.dana.domain.PhotoSupport
+import ai.dana.domain.photoSupport
+import ai.dana.domain.acceptsCredential
+import ai.dana.domain.cloudEngine
 import ai.dana.domain.LocalAction
 import ai.dana.domain.LocalText
 import ai.dana.domain.MessageRole
@@ -27,10 +33,12 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -55,6 +63,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
@@ -95,7 +104,10 @@ internal fun ChatScreen(
         }
         if (chat.dialog == null) {
             chat.error?.let { ReadError(it) }
-            chat.notice?.let { Text(stringResource(it), color = Mint, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }) }
+            chat.notice?.let { msg ->
+                val text = chat.noticePercent?.let { stringResource(msg, faDigits(it)) } ?: stringResource(msg)
+                Text(text, color = Mint, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
+            }
         }
         when (chat.page) {
             ChatPage.CONVERSATION -> Dialogue(chat, model, media::open, profiles, offline, onSettings)
@@ -105,7 +117,7 @@ internal fun ChatScreen(
         }
     }
     MediaReview(media, chat.busy, model::importText, model::photo)
-    chat.dialog?.let { dialog -> key(dialog) { ChatOverlay(dialog, chat, model, offline) } }
+    chat.dialog?.let { dialog -> key(dialog) { ChatOverlay(dialog, chat, model, offline, profiles) } }
 }
 
 @Composable
@@ -119,6 +131,26 @@ private fun Dialogue(
 ) {
     val voice = rememberDanaVoice()
     val focus = LocalFocusManager.current
+    var setupVoice by remember { mutableStateOf(false) }
+    var systemSpeech by remember { mutableStateOf(false) }
+    val useSystemSpeech = systemSpeech && !offline && chat.voiceOpen
+    LaunchedEffect(offline, chat.voiceOpen) {
+        if ((offline || !chat.voiceOpen) && systemSpeech) {
+            systemSpeech = false
+            voice.close()
+        }
+    }
+    val notice = chat.notice?.takeIf { chat.voiceOpen && chat.options.readReplies }
+    val noticeText = notice?.let { res -> chat.noticePercent?.let { stringResource(res, faDigits(it)) } ?: stringResource(res) }
+    val done = chat.turns.lastOrNull()?.takeIf { it.complete && it.readWhenDone && !chat.running }
+    LaunchedEffect(done?.index) {
+        if (done != null) {
+            model.speechConsumed(done.index)
+            voice.read(done.answer)
+        }
+    }
+    LaunchedEffect(noticeText) { noticeText?.let(voice::read) }
+    if (setupVoice) VoiceSetup(voice, offline, useSystemSpeech, onSystemSpeech = { systemSpeech = it }, onClose = { setupVoice = false })
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
@@ -131,12 +163,26 @@ private fun Dialogue(
             TextButton(onClick = { model.dialog(ChatDialog.Options) }, enabled = !chat.busy) { Text(stringResource(R.string.chat_privacy)) }
         }
         val scroll = rememberLazyListState()
-        LaunchedEffect(chat.turns.lastOrNull()?.index) {
-            if (chat.turns.isNotEmpty()) scroll.scrollToItem(chat.turns.lastIndex)
+        val team = chat.team
+        val itemCount = chat.turns.size + if (team == null) 0 else 2 + team.comparison.lanes.size
+        LaunchedEffect(chat.turns.lastOrNull()?.index, team?.index, chat.voiceOpen) {
+            if (team != null) scroll.scrollToItem(chat.turns.size + if (chat.voiceOpen) 1 else 0)
+            else if (chat.voiceOpen && itemCount <= 1) scroll.scrollToItem(0)
+            else if (itemCount > 0) scroll.scrollToItem(itemCount - 1 + if (chat.voiceOpen) 1 else 0)
         }
         LazyColumn(state = scroll, modifier = Modifier.weight(1f).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp),
             contentPadding = PaddingValues(vertical = 4.dp)) {
-            if (chat.turns.isEmpty()) {
+            if (chat.voiceOpen) item(key = "voice") {
+                GlassCard(Modifier.fillMaxWidth()) {
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Text(stringResource(R.string.voice_conversation), Modifier.weight(1f), style = MaterialTheme.typography.titleMedium, color = Ice)
+                        TextButton(onClick = { voice.close(); setupVoice = true }, enabled = !chat.busy) { Text(stringResource(R.string.voice_setup)) }
+                    }
+                    Text(stringResource(R.string.voice_turn_help), color = Titanium, style = MaterialTheme.typography.bodySmall)
+                    ToggleLine(R.string.voice_read_replies, chat.options.readReplies, !chat.busy) { model.options(chat.options.copy(readReplies = it)) }
+                }
+            }
+            if (chat.turns.isEmpty() && team == null && !chat.voiceOpen) {
                 item {
                     GlassCard(Modifier.fillMaxWidth()) {
                         StudioPill(stringResource(if (offline) R.string.studio_mode_offline else R.string.studio_mode_online),
@@ -150,8 +196,26 @@ private fun Dialogue(
                 }
             }
             items(chat.turns, key = { it.index }) { turn ->
-                DialogueTurn(turn, chat.running && chat.turns.lastOrNull()?.index == turn.index, !chat.busy,
+                DialogueTurn(turn, team == null && chat.running && chat.turns.lastOrNull()?.index == turn.index, !chat.busy,
                     onRead = { voice.read(turn.answer) }, onMemory = { model.memoryFromReply(turn.answer) }, onShare = { model.dialog(ChatDialog.Action(LocalAction.Share(turn.answer), false)) })
+            }
+            if (team != null) {
+                item(key = "team-${team.index}") {
+                    GlassCard(Modifier.fillMaxWidth()) {
+                        Text(stringResource(R.string.chat_team_results), style = MaterialTheme.typography.titleMedium)
+                        SelectionContainer { Text(team.question) }
+                        if (team.includedImage) Text(stringResource(R.string.chat_image_attached), color = Amber)
+                        Text(stringResource(R.string.chat_team_continue_help), color = Titanium, style = MaterialTheme.typography.bodySmall)
+                        team.comparison.problem?.let { ReadError(DanaErrorHandler.messageFor(it)) }
+                    }
+                }
+                items(team.comparison.lanes, key = { "team-lane-${it.profile.id}" }) { lane ->
+                    EngineAnswer(lane, canSave = !chat.busy && lane.status == LaneStatus.COMPLETE,
+                        saveLabel = R.string.chat_team_continue) { model.keepTeamAnswer(lane.profile.id) }
+                }
+                item(key = "team-dismiss") {
+                    if (!chat.running) TextButton(onClick = model::discardTeam, enabled = !chat.busy) { Text(stringResource(R.string.chat_team_discard)) }
+                }
             }
         }
         Surface(Modifier.fillMaxWidth().padding(bottom = 7.dp), shape = MaterialTheme.shapes.large,
@@ -159,8 +223,12 @@ private fun Dialogue(
             Column(Modifier.padding(horizontal = 10.dp, vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                 Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(5.dp),
                     verticalAlignment = Alignment.CenterVertically) {
-                    EngineChooser(chat, profiles, model::engine)
-                    TaskChooser(chat, model::task)
+                    FilterChip(selected = chat.localOnly, enabled = !chat.busy && !voice.state.listening,
+                        onClick = { model.localMode(!chat.localOnly) }, label = { Text(stringResource(R.string.phone_mode)) })
+                    if (!chat.localOnly) {
+                        EngineChooser(chat, profiles, model::engine) { model.dialog(ChatDialog.PickTeam) }
+                        TaskChooser(chat, model::task)
+                    }
                 }
                 VoiceStatus(voice.state)
                 if (chat.photo != null) {
@@ -174,7 +242,15 @@ private fun Dialogue(
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(3.dp), verticalAlignment = Alignment.CenterVertically) {
                     Row(Modifier.weight(1f).horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically) {
                         TextButton(onClick = { focus.clearFocus(); voice.close(); onMedia() }, enabled = !chat.busy) { Text(stringResource(R.string.media_short)) }
-                        VoiceButton(voice, enabled = !chat.busy, onText = { model.importText(listOf(chat.draft, it).filter { part -> part.isNotBlank() }.joinToString(" ")) })
+                        VoiceButton(voice, enabled = !chat.busy, useSystemSpeech = useSystemSpeech, turnMode = chat.voiceOpen, onText = { heard ->
+                            if (chat.voiceOpen) {
+                                model.importText(heard)
+                                model.review(profiles, offline)
+                            } else model.importText(listOf(chat.draft, heard).filter { it.isNotBlank() }.joinToString(" "))
+                        })
+                        TextButton(onClick = { focus.clearFocus(); voice.close(); model.toggleVoice() }, enabled = !chat.busy && !voice.state.listening) {
+                            Text(stringResource(if (chat.voiceOpen) R.string.voice_exit else R.string.voice_conversation))
+                        }
                     }
                     if (chat.running) OutlinedButton(model::stop, modifier = Modifier.heightIn(min = 48.dp)) { Text(stringResource(R.string.compare_stop)) }
                     else Button(onClick = { focus.clearFocus(); voice.stopPlayback(); model.review(profiles, offline) },
@@ -188,16 +264,20 @@ private fun Dialogue(
 }
 
 @Composable
-private fun EngineChooser(chat: ChatState, profiles: List<ProviderProfile>, choose: (String?) -> Unit) {
+private fun EngineChooser(chat: ChatState, profiles: List<ProviderProfile>, choose: (String?) -> Unit, chooseTeam: () -> Unit) {
     var expanded by remember { mutableStateOf(false) }
     val name = profiles.firstOrNull { it.id == chat.manualId }?.config?.name
     Column {
         TextButton(onClick = { expanded = true }, enabled = !chat.busy) {
-            Text(if (chat.manualId == null) stringResource(R.string.chat_auto) else name?.take(24) ?: stringResource(R.string.chat_no_engine_short),
-                maxLines = 1)
+            Text(when {
+                chat.teamIds.isNotEmpty() -> stringResource(R.string.chat_team_count, faDigits(chat.teamIds.size))
+                chat.manualId == null -> stringResource(R.string.chat_auto)
+                else -> name?.take(24) ?: stringResource(R.string.chat_no_engine_short)
+            }, maxLines = 1)
         }
         DropdownMenu(expanded, { expanded = false }) {
             DropdownMenuItem(text = { Text(stringResource(R.string.chat_auto)) }, onClick = { choose(null); expanded = false })
+            DropdownMenuItem(text = { Text(stringResource(R.string.chat_team_select)) }, onClick = { expanded = false; chooseTeam() })
             profiles.take(60).forEach { model -> DropdownMenuItem(text = { Text(model.config.name) }, onClick = { choose(model.id); expanded = false }) }
         }
     }
@@ -317,28 +397,63 @@ private fun ToolPanel(chat: ChatState, model: ChatViewModel, onMedia: () -> Unit
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(stringResource(R.string.chat_tools_title), style = MaterialTheme.typography.headlineSmall)
         Text(stringResource(R.string.chat_tools_help), color = Titanium)
-        Button(onClick = onMedia, enabled = !chat.busy) { Text(stringResource(R.string.media_title)) }
+        Button(onClick = { model.page(ChatPage.CONVERSATION); onMedia() }, enabled = !chat.busy) { Text(stringResource(R.string.media_title)) }
+        AssistantSetup(enabled = !chat.busy)
         GlassCard(Modifier.fillMaxWidth()) {
-            listOf(LocalAction.Wifi, LocalAction.Bluetooth, LocalAction.Sound, LocalAction.Clock).forEach { action ->
-                TextButton(onClick = { model.dialog(ChatDialog.Action(action, false)) }, enabled = !chat.busy) {
-                    Text(actionText(action))
-                }
+            Text(stringResource(R.string.phone_quick), style = MaterialTheme.typography.titleMedium)
+            listOf(LocalAction.Battery, LocalAction.MediaVolume, LocalAction.Torch(true), LocalAction.Torch(false),
+                LocalAction.Internet, LocalAction.Wifi, LocalAction.Bluetooth, LocalAction.Sound, LocalAction.Clock,
+                LocalAction.Panel.DISPLAY, LocalAction.Panel.APPS, LocalAction.Panel.CAMERA, LocalAction.Panel.CALCULATOR,
+                LocalAction.Panel.SETTINGS).forEach { action ->
+                TextButton(onClick = { model.dialog(ChatDialog.Action(action, false)) }, enabled = !chat.busy,
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text(actionText(action)) }
             }
         }
         GlassCard(Modifier.fillMaxWidth()) {
             Text(stringResource(R.string.chat_templates_title), style = MaterialTheme.typography.titleMedium)
-            listOf(R.string.cmd_note, R.string.cmd_timer, R.string.cmd_alarm, R.string.cmd_event, R.string.cmd_sms).forEach { example ->
+            listOf(R.string.cmd_volume, R.string.cmd_timer, R.string.cmd_alarm, R.string.cmd_note, R.string.cmd_dial,
+                R.string.cmd_event, R.string.cmd_web, R.string.cmd_sms).forEach { example ->
                 val sample = stringResource(example)
-                TextButton(onClick = { model.importText(sample) }, enabled = !chat.busy) { Text(sample) }
+                TextButton(onClick = { model.commandExample(sample) }, enabled = !chat.busy) { Text(sample) }
             }
         }
     }
 }
 
 @Composable
-private fun ChatOverlay(dialog: ChatDialog, chat: ChatState, model: ChatViewModel, offline: Boolean) {
+private fun TeamPicker(chat: ChatState, model: ChatViewModel, profiles: List<ProviderProfile>, dismiss: () -> Unit) {
+    val eligible = profiles.filter { it.config.endpoint.acceptsCredential(it.hasCredential) && it.config.cloudEngine?.acceptsChat(it.config.model) != false &&
+        (chat.photo == null || it.config.photoSupport != PhotoSupport.NO) }
+    val visible = eligible.take(60)
+    var choice by remember { mutableStateOf(chat.teamIds.intersect(visible.map { it.id }.toSet())) }
+    ChatModal(R.string.chat_team_select, R.string.chat_team_apply, choice.size in 2..ComparisonLimits.ENGINE_COUNT, chat,
+        dismiss, { model.chooseTeam(choice) }) {
+        Text(stringResource(R.string.chat_team_choose_help), color = Titanium)
+        if (eligible.size < 2) Text(stringResource(R.string.chat_team_need_two), color = Amber)
+        visible.forEach { target ->
+            val selected = target.id in choice
+            val enabled = selected || choice.size < ComparisonLimits.ENGINE_COUNT
+            Row(Modifier.fillMaxWidth().heightIn(min = 48.dp)
+                .toggleable(selected, enabled = enabled, role = Role.Checkbox) {
+                    choice = if (selected) choice - target.id else choice + target.id
+                }, verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(target.config.name, color = Ice)
+                    TechnicalText(target.config.model)
+                    if (target.config.photoSupport == PhotoSupport.YES) Text(stringResource(R.string.engine_vision), color = Mint,
+                        style = MaterialTheme.typography.labelSmall)
+                }
+                Checkbox(selected, onCheckedChange = null, enabled = enabled)
+            }
+        }
+    }
+}
+
+@Composable
+private fun ChatOverlay(dialog: ChatDialog, chat: ChatState, model: ChatViewModel, offline: Boolean, profiles: List<ProviderProfile>) {
     val dismiss = { model.dialog(null) }
     when (dialog) {
+        ChatDialog.PickTeam -> TeamPicker(chat, model, profiles, dismiss)
         ChatDialog.Options -> ChatModal(R.string.chat_privacy, R.string.chat_done, true, chat, dismiss, dismiss) {
             Text(stringResource(R.string.chat_privacy_help))
             ToggleLine(R.string.chat_history_switch, chat.options.autoHistory, !chat.busy) { model.options(chat.options.copy(autoHistory = it)) }
@@ -357,12 +472,17 @@ private fun ChatOverlay(dialog: ChatDialog, chat: ChatState, model: ChatViewMode
         }
         is ChatDialog.Send -> ChatModal(R.string.chat_destinations, R.string.compare_send, !offline, chat, dismiss, { model.send(offline) }, secure = true) {
             val data = dialog.route.input
-            Text(stringResource(R.string.chat_transfer_notice))
+            val parallel = dialog.route.parallel
+            Text(stringResource(if (parallel) R.string.chat_team_transfer else R.string.chat_transfer_notice))
             if (dialog.route.candidates.all { it.config.protocol == ProviderProtocol.OPENROUTER_FREE }) {
                 Text(stringResource(R.string.engine_free_review), color = Mint)
             }
             dialog.route.candidates.forEachIndexed { index, target ->
-                Text(stringResource(if (index == 0) R.string.chat_preferred else R.string.chat_fallback, target.config.name), color = Ice)
+                Text(stringResource(when {
+                    parallel -> R.string.chat_team_target
+                    index == 0 -> R.string.chat_preferred
+                    else -> R.string.chat_fallback
+                }, target.config.name), color = Ice)
                 TechnicalText(target.config.baseUrl, maxLines = 4)
                 TechnicalText(target.config.model)
             }
@@ -379,16 +499,29 @@ private fun ChatOverlay(dialog: ChatDialog, chat: ChatState, model: ChatViewMode
             if (data.omittedPairs > 0) Text(stringResource(R.string.chat_history_limited), color = Titanium)
             if (data.facts.isNotEmpty()) Text(stringResource(R.string.chat_facts_included, data.facts.joinToString("\n")), color = Ice)
             if (data.maskedValues > 0) Text(stringResource(R.string.chat_masked), color = Mint)
-            if (data.photo != null) Text(stringResource(R.string.chat_image_notice), color = Amber)
+            if (data.photo != null) {
+                Text(stringResource(R.string.chat_image_notice), color = Amber)
+                if (dialog.route.candidates.any { it.config.photoSupport == PhotoSupport.UNKNOWN }) {
+                    Text(stringResource(R.string.chat_image_compatibility), color = Amber)
+                }
+            }
             if (offline) ReadError(R.string.chat_offline_help)
         }
         is ChatDialog.Action -> {
             val context = LocalContext.current
-            ChatModal(R.string.chat_confirm_action, R.string.chat_execute, true, chat, dismiss, {
-                model.actionCompleted(dialog.command is LocalAction.Note || DeviceActions.open(context, dialog.command))
-            }, secure = dialog.command is LocalAction.SmsDraft || dialog.command is LocalAction.Share) {
-                Text(actionText(dialog.command))
-                Text(stringResource(if (dialog.command is LocalAction.Note) R.string.chat_note_private else R.string.chat_external_action), color = Titanium)
+            val command = dialog.command
+            val web = command is LocalAction.WebSearch
+            ChatModal(R.string.chat_confirm_action, R.string.chat_execute, !web || !offline, chat, dismiss, {
+                model.executeAction(offline) { DeviceActions.execute(context, it) }
+            }, secure = true) {
+                Text(actionText(command))
+                Text(stringResource(when (command) {
+                    is LocalAction.Note -> R.string.chat_note_private
+                    is LocalAction.Dial -> R.string.phone_dial_review
+                    is LocalAction.WebSearch -> if (offline) R.string.phone_web_offline else R.string.phone_web_review
+                    is LocalAction.SetVolume, is LocalAction.VolumeStep, is LocalAction.Torch, LocalAction.Battery, LocalAction.MediaVolume -> R.string.phone_local_review
+                    else -> R.string.chat_external_action
+                }), color = Titanium)
             }
         }
         is ChatDialog.EditMemory -> ChatTextEditor(R.string.chat_memory_add, dialog.draft, LocalText.MEMORY_LIMIT, chat, dismiss, model::saveMemoryDraft)
@@ -438,4 +571,18 @@ private fun actionText(action: LocalAction): String = when (action) {
     LocalAction.Bluetooth -> stringResource(R.string.chat_action_bluetooth)
     LocalAction.Sound -> stringResource(R.string.chat_action_sound)
     LocalAction.Clock -> stringResource(R.string.chat_action_clock)
+    LocalAction.Internet -> stringResource(R.string.phone_internet)
+    LocalAction.Battery -> stringResource(R.string.phone_battery)
+    LocalAction.MediaVolume -> stringResource(R.string.phone_media_volume)
+    is LocalAction.SetVolume -> stringResource(R.string.phone_set_volume, faDigits(action.percent))
+    LocalAction.VolumeStep.LOWER -> stringResource(R.string.phone_volume_lower)
+    LocalAction.VolumeStep.RAISE -> stringResource(R.string.phone_volume_raise)
+    is LocalAction.Torch -> stringResource(if (action.on) R.string.phone_torch_on else R.string.phone_torch_off)
+    is LocalAction.Dial -> stringResource(R.string.phone_dial, action.number)
+    is LocalAction.WebSearch -> stringResource(R.string.phone_web, action.query)
+    LocalAction.Panel.SETTINGS -> stringResource(R.string.phone_settings)
+    LocalAction.Panel.DISPLAY -> stringResource(R.string.phone_display)
+    LocalAction.Panel.APPS -> stringResource(R.string.phone_apps)
+    LocalAction.Panel.CAMERA -> stringResource(R.string.phone_camera)
+    LocalAction.Panel.CALCULATOR -> stringResource(R.string.phone_calculator)
 }

@@ -42,9 +42,9 @@ class ConversationInput private constructor(
 ) {
     fun fits(profile: ProviderProfile): Boolean {
         val cfg = profile.config
-        if (cfg.protocol != ProviderProtocol.OPENAI_COMPATIBLE && !profile.hasCredential) return false
-        return cfg.protocol != ProviderProtocol.APPLE_MAC ||
-            (photo == null && appleText().length <= ComparisonLimits.PROMPT_CHARS)
+        if (!cfg.endpoint.acceptsCredential(profile.hasCredential) || cfg.cloudEngine?.acceptsChat(cfg.model) == false) return false
+        if (photo != null && cfg.photoSupport == PhotoSupport.NO) return false
+        return cfg.protocol != ProviderProtocol.APPLE_MAC || appleText().length <= ComparisonLimits.PROMPT_CHARS
     }
 
     /** The shipped Mac bridge only accepts a single text prompt, not an OpenAI transcript. */
@@ -152,20 +152,32 @@ object PrivateText {
 }
 
 /** The list is an exact snapshot of the destinations the user will review before sending. */
-class ChatRoute private constructor(val input: ConversationInput, val candidates: List<ProviderProfile>) {
+class ChatRoute private constructor(
+    val input: ConversationInput,
+    val candidates: List<ProviderProfile>,
+    val parallel: Boolean,
+) {
     companion object {
+        /** All reviewed destinations must still exist and be eligible. Never silently shrink/replace a team. */
+        fun parallel(input: ConversationInput, profiles: List<ProviderProfile>, selected: Set<String>): ChatRoute? {
+            if (selected.size !in 2..ComparisonLimits.ENGINE_COUNT) return null
+            val targets = selected.map { id -> profiles.singleOrNull { it.id == id }?.takeIf(input::fits) ?: return null }
+            return ChatRoute(input, targets.toList(), parallel = true)
+        }
+
         fun select(input: ConversationInput, profiles: List<ProviderProfile>, manualId: String?): ChatRoute? {
             val available = profiles.filter(input::fits).distinctBy { it.id }
             // "Automatic" keeps the free preset's cost boundary even when paid/custom profiles coexist.
             val preferred = available.filter { it.config.protocol == ProviderProtocol.OPENROUTER_FREE }.ifEmpty { available }
             val ordered = if (manualId == null) preferred.sortedWith(
                 compareBy<ProviderProfile> { it.config.network != ProviderNetwork.LOCAL_NETWORK }
+                    .thenBy { input.photo != null && it.config.photoSupport != PhotoSupport.YES }
                     .thenBy { it.config.protocol != ProviderProtocol.GEMINI_NATIVE }
                     .thenBy { it.config.name.lowercase(Locale.ROOT) }
                     .thenBy { it.id },
             ).take(ComparisonLimits.ENGINE_COUNT) else available.filter { it.id == manualId }
             if (ordered.isEmpty()) return null
-            return ChatRoute(input, ordered.toList())
+            return ChatRoute(input, ordered.toList(), parallel = false)
         }
     }
 }

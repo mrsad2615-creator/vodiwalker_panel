@@ -65,13 +65,14 @@ internal fun MediaReview(model: MediaViewModel, chatBusy: Boolean, useText: (Str
     var consent by remember { mutableStateOf(false) }
     val hasCamera = remember(ctx) { ctx.packageManager.hasSystemFeature(PackageManager.FEATURE_CAMERA_ANY) }
     val choose = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri -> uri?.let(model::uri) }
-    val camera = rememberLauncherForActivityResult(ActivityResultContracts.TakePicturePreview()) { bitmap -> bitmap?.let(model::camera) }
+    val picture = remember { FullPicture() }
+    val camera = rememberLauncherForActivityResult(picture, model::cameraResult)
     val grant = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         val token = result.data
         if (result.resultCode == Activity.RESULT_OK && token != null) model.capture(token)
         else model.error(R.string.media_capture_denied)
     }
-    val ready = !state.working && !state.capturing && !chatBusy
+    val ready = !state.working && !state.capturing && !state.awaitingCamera && !chatBusy
     AlertDialog(onDismissRequest = model::close,
         properties = DialogProperties(securePolicy = SecureFlagPolicy.SecureOn),
         title = { Text(stringResource(R.string.media_title)) },
@@ -83,7 +84,7 @@ internal fun MediaReview(model: MediaViewModel, chatBusy: Boolean, useText: (Str
                         runCatching { choose.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }
                             .onFailure { model.error(R.string.media_load_error) }
                     }) { Text(stringResource(R.string.media_pick)) }
-                    TextButton(enabled = ready && hasCamera, onClick = { runCatching { camera.launch(null) }.onFailure { model.error(R.string.media_camera_unavailable) } }) {
+                    TextButton(enabled = ready && hasCamera, onClick = { model.launchCamera { camera.launch(it) } }) {
                         Text(stringResource(R.string.media_camera))
                     }
                     TextButton(enabled = ready, onClick = { consent = true }) { Text(stringResource(R.string.media_capture)) }

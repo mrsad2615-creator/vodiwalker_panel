@@ -5,4 +5,9 @@
         <item name="android:colorAccent">#BDEF9B</item>
         <item name="android:windowLightStatusBar">false</item>
     </style>
+    <style name="Theme.Dana.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">#0C1212</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/mrsad_launch</item>
+        <item name="postSplashScreenTheme">@style/Theme.Dana</item>
+    </style>
 </resources>

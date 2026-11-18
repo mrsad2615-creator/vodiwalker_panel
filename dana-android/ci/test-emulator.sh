@@ -3,7 +3,7 @@ set -Eeuo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 
 package=ai.dana.preview
-apk="$RUNNER_TEMP/dana-verified/DANA-AI-preview.apk"
+apk="$RUNNER_TEMP/dana-verified/mrsad-preview.apk"
 test_apk="$PWD/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk"
 test_package="$package.test"
 log="$RUNNER_TEMP/dana-instrumentation.log"
@@ -55,7 +55,7 @@ fi
 DANA_ADB_TIMEOUT=60s device install -r "$apk" >> "$log" 2>&1 || report_failure 'Could not install the verified APK.'
 mark 'Install the instrumentation APK.'
 DANA_ADB_TIMEOUT=60s device install -r -t "$test_apk" >> "$log" 2>&1 || report_failure 'Could not install the test APK.'
-mark 'Run Studio and OCR tests on the exact installed APK.'
+mark 'Run mrsad assistant and OCR tests on the exact installed APK.'
 # Stream only lifecycle and crash tags so a VM transport loss doesn't erase what led to it.
 adb logcat -T 1 -v brief 'ActivityTaskManager:I' 'WindowManager:E' 'AndroidRuntime:E' 'Watchdog:E' 'libc:F' '*:S' > "$RUNNER_TEMP/dana-emulator-guest.log" 2>&1 &
 logcat_pid=$!
@@ -63,8 +63,8 @@ trap 'kill "$logcat_pid" 2>/dev/null || true' EXIT
 if ! DANA_ADB_TIMEOUT=235s device shell am instrument -w "$test_package/androidx.test.runner.AndroidJUnitRunner" 2>&1 | tee "$log"; then
   report_failure 'Could not run Android instrumentation on the verified APK.'
 fi
-if ! grep -Eq '^OK \(([3-9]|[1-9][0-9]+) tests\)' "$log" || grep -Eq 'FAILURES!!!|INSTRUMENTATION_(FAILED|ABORTED)' "$log"; then
-  report_failure 'The installed APK did not pass Studio smoke and native OCR tests.'
+if ! grep -Eq '^OK \(([5-9]|[1-9][0-9]+) tests\)' "$log" || grep -Eq 'FAILURES!!!|INSTRUMENTATION_(FAILED|ABORTED)' "$log"; then
+  report_failure 'The installed APK did not pass assistant, chat and native OCR tests.'
 fi
 
 mark 'App instrumentation passed; copy four screenshots.'
@@ -83,4 +83,4 @@ for p in Path(sys.argv[1]).glob('*.png'):
     if len(header) != 24 or header[:8] != b'\x89PNG\r\n\x1a\n' or min(struct.unpack('>II', header[16:])) < 240:
         raise SystemExit(f'::error title=Dana screenshots::Missing or invalid screenshot: {p.name}')
 PYTHON
-printf '::notice title=Dana installed APK::Studio home, account setup, offline Free engine, Compare guard, Share review, approved note and native OCR passed.\n'
+printf '::notice title=Dana installed APK::Assistant entry, reviewed battery, offline guards, Studio/Account/Free/Share, private camera output and native OCR passed.\n'

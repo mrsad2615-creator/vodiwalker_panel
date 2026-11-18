@@ -2,7 +2,10 @@ package ai.dana.ui
 
 import ai.dana.MainActivity
 import ai.dana.R
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.BatteryManager
 import android.os.Bundle
 import android.os.ParcelFileDescriptor
 import android.view.KeyEvent
@@ -90,6 +93,37 @@ class StudioSmokeTest {
         click(R.string.tab_home)
         click(R.string.tab_notes)
         visible("DANA_SMOKE_LOCAL")
+    }
+
+    @Test
+    fun assistantEntryIgnoresExtrasAndRequiresConfirmationForLocalCommands() {
+        val assist = Intent(Intent.ACTION_ASSIST).setPackage(context.packageName)
+        assertTrue(context.packageManager.queryIntentActivities(assist, PackageManager.MATCH_DEFAULT_ONLY)
+            .any { it.activityInfo.name == MainActivity::class.java.name })
+        compose.activityRule.scenario.onActivity { activity ->
+            activity.startActivity(assist.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                .putExtra(Intent.EXTRA_ASSIST_CONTEXT, Bundle().apply { putString("fixture", "note DO_NOT_IMPORT") }))
+        }
+        visible(R.string.voice_record_turn)
+        compose.onNodeWithText("note DO_NOT_IMPORT").assertDoesNotExist()
+        assertTrue(context.checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED)
+        val battery = checkNotNull(context.getSystemService(BatteryManager::class.java))
+        val percent = battery.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)
+        assertTrue(percent in 0..100)
+        val result = context.getString(if (battery.isCharging) R.string.phone_battery_charging else R.string.phone_battery_result, faDigits(percent))
+        enter(R.string.chat_prompt, "شارژ گوشی چقدره؟")
+        click(R.string.chat_review)
+        visible(R.string.phone_battery)
+        compose.onNodeWithText(result).assertDoesNotExist()
+        click(R.string.chat_execute)
+        visible(result)
+        enter(R.string.chat_prompt, "فرمان ناشناس محلی")
+        click(R.string.chat_review)
+        visible(R.string.phone_unrecognized)
+        enter(R.string.chat_prompt, "جستجوی وب عبارت آزمایشی")
+        click(R.string.chat_review)
+        visible(R.string.phone_web_offline)
+        trace("Assistant entry, reviewed battery read and offline guards passed")
     }
 
     private fun label(@StringRes id: Int) = context.getString(id)

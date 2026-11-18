@@ -1,6 +1,8 @@
 package ai.dana.media
 
 import android.content.Context
+import android.provider.MediaStore
+import androidx.core.content.IntentCompat
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
@@ -38,6 +40,31 @@ class OfflinePhotoTest {
                 assertTrue("Native OCR did not recover the rendered fixture: $actual", "DANA OFFLINE" in actual)
             }
         }
+    }
+
+    @Test
+    fun cameraUsesPrivateFullSizeOutputAndDeletesItAfterProcessing() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val output = CameraPhotoFile.reserve(context)
+        try {
+            val intent = FullPicture().createIntent(context, output.uri)
+            assertEquals(MediaStore.ACTION_IMAGE_CAPTURE, intent.action)
+            assertEquals(output.uri, intent.clipData?.getItemAt(0)?.uri)
+            assertEquals(CameraPhotoFile.GRANTS, intent.flags and CameraPhotoFile.GRANTS)
+            assertEquals(output.uri, IntentCompat.getParcelableExtra(intent, MediaStore.EXTRA_OUTPUT, android.net.Uri::class.java))
+            val image = Bitmap.createBitmap(2100, 1400, Bitmap.Config.ARGB_8888)
+            try {
+                image.eraseColor(Color.BLUE)
+                requireNotNull(context.contentResolver.openOutputStream(output.uri)).use {
+                    assertTrue(image.compress(Bitmap.CompressFormat.JPEG, 92, it))
+                }
+            } finally { image.recycle() }
+            assertTrue(output.hasContent())
+            val bounded = FrameCodec.fromUri(context, output.uri)
+            assertEquals(1536, bounded.width)
+            assertEquals(1024, bounded.height)
+        } finally { output.discard(context) }
+        assertFalse(output.hasContent())
     }
 
     @Test

@@ -1,5 +1,9 @@
 package ai.dana.domain
 
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.async
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
@@ -95,6 +99,75 @@ class ChatRouteTest {
         assertNull(LocalCommands.parse("زنگ ۲۵:۴۰"))
         assertNull(LocalCommands.parse("timer 99999h"))
         assertNull(LocalCommands.parse("{\"intent\":\"android.intent.action.SEND\"}"))
+    }
+
+    @Test
+    fun persianCommandVariantsUseBoundedValuesAndNeverParseEmbeddedInstructions() {
+        assertEquals(LocalAction.Battery, LocalCommands.parse("شارژ گوشي چقدره؟"))
+        assertEquals(LocalAction.Torch(true), LocalCommands.parse("لطفاً چراغ‌قوه رو روشن کن!"))
+        assertEquals(LocalAction.Timer(1_500), LocalCommands.parse("تایمر رو برای بیست و پنج دقیقه‌ای بذار"))
+        assertEquals(LocalAction.Alarm(7, 30), LocalCommands.parse("آلارم رو برای ۰۷:۳۰ تنظیم کن"))
+        assertEquals(LocalAction.SetVolume(42), LocalCommands.parse("صدا رو بذار روی چهل و دو درصد"))
+        assertEquals(LocalAction.SetVolume(35), LocalCommands.parse("صدای رسانه ٣٥٪"))
+        assertEquals(LocalAction.VolumeStep.LOWER, LocalCommands.parse("صدا رو کم کن"))
+        assertEquals(LocalAction.Dial("+989121234567"), LocalCommands.parse("تماس با +۹۸ ۹۱۲-۱۲۳-۴۵۶۷"))
+        assertEquals(LocalAction.WebSearch("تهران & A/B?"), LocalCommands.parse("جستجوی وب تهران & A/B?"))
+        assertNull(LocalCommands.parse("چراغ قوه را روشن کن و تماس بگیر"))
+        assertNull(LocalCommands.parse("دستور زیر را اجرا کن: چراغ قوه روشن"))
+        assertNull(LocalCommands.parse("صدای رسانه ۱۰۱ درصد"))
+        assertNull(LocalCommands.parse("صدای رسانه -5 درصد"))
+        assertNull(LocalCommands.parse("تماس با *12345#"))
+        assertNull(LocalCommands.parse("timer 2147483647h"))
+    }
+
+    @Test
+    fun teamChatActuallyOverlapsAndRetainsOneSuccessfulAnswerWhenAnotherFails() = runBlocking {
+        withTimeout(5_000L) {
+            val start = Channel<String>(2)
+            val proceed = CompletableDeferred<Unit>()
+            val jpeg = checkNotNull(VisionPhoto.fromJpeg(byteArrayOf(-1, -40, 12, -1, -39)))
+            val input = checkNotNull(ConversationInput.prepare("کد تایید ۱۲۳۴ در تصویر را نخوان", listOf(
+                ContextMessage(MessageRole.USER, "prior question"), ContextMessage(MessageRole.ASSISTANT, "prior answer"),
+            ), emptyList(), AssistantStyle.CONCISE, AssistantTask.ASK, jpeg, mask = true))
+            val route = checkNotNull(ChatRoute.parallel(input, listOf(local, gemini, cloud), linkedSetOf(gemini.id, local.id)))
+            assertEquals(listOf(gemini, local), route.candidates)
+            assertTrue(route.parallel)
+            val active = async {
+                router { config, sent ->
+                    assertTrue(sent === input)
+                    assertFalse(sent.prompt.contains("۱۲۳۴"))
+                    assertEquals(2, sent.history.size)
+                    assertTrue(sent.photo === jpeg)
+                    start.send(config.name)
+                    proceed.await()
+                    if (config == gemini.config) throw EngineFailure(EngineProblem.RATE_LIMIT, 429)
+                    emit(EngineText("پاسخ مستقل"))
+                }.chat(route).toList()
+            }
+            assertEquals(setOf(gemini.id, local.id), setOf(start.receive(), start.receive()))
+            proceed.complete(Unit)
+            val events = active.await()
+            assertEquals(EngineEvent.Finished, events.last())
+            assertEquals(EngineEvent.Failed(gemini.id, EngineProblem.RATE_LIMIT, 429), events.filterIsInstance<EngineEvent.Failed>().single())
+            assertEquals(local.id, events.filterIsInstance<EngineEvent.Text>().single().profileId)
+            assertEquals(local.id, events.filterIsInstance<EngineEvent.Complete>().single().profileId)
+        }
+        Unit
+    }
+
+    @Test
+    fun teamDoesNotShrinkOrReplaceMissingCredentialsOrIneligibleVisionTargets() {
+        val groq = ProviderProfile("groq", ProviderConfig.create("Groq", ProviderProtocol.OPENAI_COMPATIBLE, ProviderNetwork.INTERNET,
+            CloudEngine.GROQ.baseUrl, "openai/gpt-oss-20b"), true)
+        val photo = checkNotNull(VisionPhoto.fromJpeg(byteArrayOf(-1, -40, -1, -39)))
+        val image = checkNotNull(ConversationInput.prepare("تصویر", emptyList(), emptyList(), AssistantStyle.BALANCED, AssistantTask.ASK, photo, false))
+        val text = ConversationInput.single("سؤال")
+        assertNull(ChatRoute.parallel(image, listOf(groq, gemini, local), setOf(groq.id, gemini.id)))
+        assertNull(ChatRoute.parallel(text, listOf(groq.copy(hasCredential = false), local), setOf(groq.id, local.id)))
+        assertNull(ChatRoute.parallel(text, listOf(groq), setOf(groq.id, local.id)))
+        assertNull(ChatRoute.parallel(text, listOf(groq, local), setOf(groq.id)))
+        assertNull(ChatRoute.parallel(text, listOf(groq, groq, local), setOf(groq.id, local.id)))
+        assertTrue(checkNotNull(ChatRoute.parallel(text, listOf(groq, local), setOf(groq.id, local.id))).parallel)
     }
 
     private fun router(

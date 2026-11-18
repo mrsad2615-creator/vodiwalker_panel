@@ -1,7 +1,11 @@
 package ai.dana.ui
 
 import ai.dana.R
+import ai.dana.domain.CloudEngine
 import ai.dana.domain.NetworkStatus
+import ai.dana.domain.PhotoSupport
+import ai.dana.domain.cloudEngine
+import ai.dana.domain.photoSupport
 import ai.dana.domain.ProviderNetwork
 import ai.dana.domain.ProviderProfile
 import ai.dana.domain.ProviderProtocol
@@ -124,6 +128,12 @@ internal fun DanaApp(model: DanaViewModel, chat: ChatViewModel, media: MediaView
                             chat.page(ChatPage.CONVERSATION)
                             dispatch(DanaIntent.Navigate(DashboardTab.CHAT))
                             media.open()
+                        }, onVoice = {
+                            chat.assistant()
+                            dispatch(DanaIntent.Navigate(DashboardTab.CHAT))
+                        }, onDevice = {
+                            chat.page(ChatPage.TOOLS)
+                            dispatch(DanaIntent.Navigate(DashboardTab.CHAT))
                         })
                         DashboardTab.COMPARE -> comparison(state, dispatch)
                         DashboardTab.NOTES -> notes(state, dispatch)
@@ -139,7 +149,9 @@ internal fun DanaApp(model: DanaViewModel, chat: ChatViewModel, media: MediaView
     }
 }
 
-private fun LazyListScope.home(state: DashboardState, dispatch: (DanaIntent) -> Unit, onMedia: () -> Unit) {
+private fun LazyListScope.home(
+    state: DashboardState, dispatch: (DanaIntent) -> Unit, onMedia: () -> Unit, onVoice: () -> Unit, onDevice: () -> Unit,
+) {
     fun open(tab: DashboardTab): () -> Unit = { dispatch(DanaIntent.Navigate(tab)) }
     item { StudioHero(open(DashboardTab.CHAT)) }
     item {
@@ -155,6 +167,12 @@ private fun LazyListScope.home(state: DashboardState, dispatch: (DanaIntent) -> 
         ActionPair(
             StudioAction(R.string.tab_notes, R.string.studio_notes_hint, Mark.NOTES, open(DashboardTab.NOTES)),
             StudioAction(R.string.tab_compare, R.string.studio_compare_hint, Mark.COMPARE, open(DashboardTab.COMPARE)),
+        )
+    }
+    item {
+        ActionPair(
+            StudioAction(R.string.voice_conversation, R.string.voice_home_hint, Mark.CHAT, onVoice),
+            StudioAction(R.string.phone_mode, R.string.phone_home_hint, Mark.ENGINES, onDevice),
         )
     }
     val configured = (state.profiles as? Reading.Ready)?.value?.size ?: 0
@@ -226,6 +244,12 @@ private fun LazyListScope.settings(state: DashboardState, dispatch: (DanaIntent)
             Text(stringResource(R.string.engine_gemini_tier), color = Titanium, style = MaterialTheme.typography.bodyMedium)
             OutlinedButton(onClick = { dispatch(DanaIntent.EditProvider(null, ProviderProtocol.GEMINI_NATIVE)) },
                 enabled = enabled, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text(stringResource(R.string.engine_add_gemini)) }
+            CloudEngine.entries.forEach { cloud ->
+                OutlinedButton(onClick = { dispatch(DanaIntent.EditProvider(null, cloud = cloud)) }, enabled = enabled,
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
+                    Text(stringResource(R.string.engine_add_cloud, cloud.label))
+                }
+            }
             var expanded by remember { mutableStateOf(false) }
             TextButton(onClick = { expanded = !expanded }) { Text(stringResource(if (expanded) R.string.studio_advanced_hide else R.string.studio_advanced)) }
             if (expanded) {
@@ -262,6 +286,8 @@ private fun ProfileCard(profile: ProviderProfile, busy: Boolean, dispatch: (Dana
         )
         TechnicalText(profile.config.model)
         TechnicalText(profile.config.baseUrl)
+        if (profile.config.photoSupport == PhotoSupport.YES) Text(stringResource(R.string.engine_vision), color = Mint,
+            style = MaterialTheme.typography.labelMedium)
         val network = if (profile.config.network == ProviderNetwork.LOCAL_NETWORK) R.string.engine_lan else R.string.engine_internet
         Text(stringResource(network), style = MaterialTheme.typography.bodySmall, color = Titanium)
         Text(

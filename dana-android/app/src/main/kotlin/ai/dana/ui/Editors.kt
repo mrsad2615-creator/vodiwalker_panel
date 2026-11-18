@@ -6,6 +6,7 @@ import ai.dana.domain.GOOGLE_GEMINI_BASE_URL
 import ai.dana.domain.OPENROUTER_BASE_URL
 import ai.dana.domain.OPENROUTER_FREE_MODEL
 import ai.dana.domain.ApiCredential
+import ai.dana.domain.PhotoSupport
 import ai.dana.domain.LocalText
 import ai.dana.domain.ProviderConfig
 import ai.dana.domain.ProviderNetwork
@@ -62,14 +63,16 @@ internal fun DanaEditor(editor: Editor, session: DashboardSession, offline: Bool
         is Editor.ConfirmComparison -> EditorDialog(
             title = R.string.compare_confirm_title,
             button = R.string.compare_send,
-            enabled = true,
+            enabled = !offline,
             busy = busy,
             error = error,
+            secure = true,
             onDismiss = dismiss,
             onConfirm = { dispatch(DanaIntent.SendComparison) },
         ) {
             Text(stringResource(R.string.compare_confirm_body))
             Text(stringResource(taskLabel(editor.request.task)), color = Ice)
+            SelectionContainer { Text(editor.request.prompt) }
             if (editor.request.targets.any { it.config.protocol == ProviderProtocol.APPLE_MAC }) {
                 Text(stringResource(R.string.apple_language_note), color = Amber)
             }
@@ -139,7 +142,8 @@ private fun ProviderEditor(
     val apple = protocol == ProviderProtocol.APPLE_MAC
     val gemini = protocol == ProviderProtocol.GEMINI_NATIVE
     val hasKey = editor.previous?.hasCredential == true
-    val defaultName = when (protocol) {
+    val cloud = editor.cloud
+    val defaultName = cloud?.label ?: when (protocol) {
         ProviderProtocol.GEMINI_NATIVE -> "Gemini"
         ProviderProtocol.OPENROUTER_FREE -> "OpenRouter Free"
         ProviderProtocol.APPLE_MAC -> "Apple · Mac"
@@ -148,13 +152,17 @@ private fun ProviderEditor(
     var name by remember { mutableStateOf(previous?.name ?: defaultName) }
     var local by remember { mutableStateOf(apple || editor.lanPreset || previous?.network == ProviderNetwork.LOCAL_NETWORK) }
     var customGemini by remember { mutableStateOf(gemini && previous != null && previous.baseUrl != GOOGLE_GEMINI_BASE_URL) }
-    var baseUrl by remember { mutableStateOf(previous?.baseUrl ?: if (gemini) GOOGLE_GEMINI_BASE_URL else "") }
+    var baseUrl by remember { mutableStateOf(previous?.baseUrl ?: cloud?.baseUrl ?: if (gemini) GOOGLE_GEMINI_BASE_URL else "") }
     var model by remember { mutableStateOf(previous?.model ?: if (apple) APPLE_MAC_MODEL else "") }
     // No rememberSaveable / SavedStateHandle, clipboard helper, or existing key readback.
     var key by remember { mutableStateOf("") }
     var removeKey by remember { mutableStateOf(false) }
     LaunchedEffect(directory) {
-        if (model.isBlank()) (directory as? DirectoryState.Ready)?.result?.models?.singleOrNull()?.let { model = it.id }
+        if (model.isBlank()) {
+            val found = (directory as? DirectoryState.Ready)?.result?.models.orEmpty()
+            val recommended = cloud?.suggested?.firstOrNull { id -> found.any { it.id == id } }
+            model = recommended ?: found.singleOrNull()?.id.orEmpty()
+        }
     }
     val lookup = directory == DirectoryState.Loading
     val formEnabled = !busy && !lookup
@@ -169,10 +177,12 @@ private fun ProviderEditor(
         title = when {
             previous != null -> R.string.engine_edit
             editor.lanPreset -> R.string.engine_add_lan
+            cloud != null -> R.string.engine_cloud_editor
             else -> presetLabel(protocol)
         },
         button = R.string.save,
-        enabled = formEnabled && name.isNotBlank() && baseUrl.isNotBlank() && model.isNotBlank(),
+        enabled = formEnabled && name.isNotBlank() && baseUrl.isNotBlank() && model.isNotBlank() &&
+            (cloud == null || key.isNotBlank() || (hasKey && !removeKey)),
         busy = busy,
         error = error,
         secure = true,
@@ -188,6 +198,9 @@ private fun ProviderEditor(
             Text(stringResource(R.string.engine_apple_intro))
             Text(stringResource(R.string.apple_language_note), style = MaterialTheme.typography.bodySmall, color = Amber)
             SetupLink(R.string.engine_apple_guide, APPLE_GUIDE_URL, formEnabled)
+        } else if (cloud != null) {
+            Text(stringResource(R.string.engine_cloud_intro, cloud.label))
+            SetupLink(R.string.engine_cloud_console, cloud.consoleUrl, formEnabled)
         } else if (editor.lanPreset) Text(stringResource(R.string.engine_lan_intro))
         OutlinedTextField(
             name, { if (it.length <= ProviderConfig.NAME_LIMIT) name = it }, Modifier.fillMaxWidth(),
@@ -203,10 +216,12 @@ private fun ProviderEditor(
                 clear()
             }
         }
-        if (!apple && !editor.lanPreset && (!gemini || customGemini || previous?.network == ProviderNetwork.LOCAL_NETWORK)) {
+        if (cloud == null && !apple && !editor.lanPreset && (!gemini || customGemini || previous?.network == ProviderNetwork.LOCAL_NETWORK)) {
             ToggleLine(R.string.engine_lan, local, formEnabled) { local = it; clear() }
         }
-        if (gemini && !customGemini) {
+        if (cloud != null) {
+            TechnicalText(baseUrl, maxLines = 4)
+        } else if (gemini && !customGemini) {
             // The turnkey preset cannot silently send a Google key to an edited host.
             TechnicalText(GOOGLE_GEMINI_BASE_URL)
         } else {
@@ -219,7 +234,7 @@ private fun ProviderEditor(
             )
         }
         if (customGemini) Text(stringResource(R.string.engine_gemini_proxy_notice), color = Amber)
-        if (hasKey) {
+        if (hasKey && cloud == null) {
             ToggleLine(R.string.engine_remove_key, removeKey, formEnabled) {
                 removeKey = it
                 if (it) key = ""
@@ -231,7 +246,7 @@ private fun ProviderEditor(
             enabled = formEnabled && !removeKey, singleLine = true, textStyle = technical,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, autoCorrectEnabled = false),
             visualTransformation = PasswordVisualTransformation(),
-            label = { Text(stringResource(when { apple -> R.string.engine_apple_token; gemini -> R.string.engine_gemini_key; else -> R.string.engine_key })) },
+            label = { Text(stringResource(when { apple -> R.string.engine_apple_token; gemini -> R.string.engine_gemini_key; cloud != null -> R.string.engine_cloud_key; else -> R.string.engine_key })) },
             supportingText = {
                 if (hasKey) Text(stringResource(R.string.engine_keep_key))
                 else if (!apple && !gemini) Text(stringResource(R.string.engine_key_hint))
@@ -249,7 +264,7 @@ private fun ProviderEditor(
                 Text(stringResource(R.string.studio_allow_network))
             }
             TextButton(
-                enabled = formEnabled && !offline && baseUrl.isNotBlank() && ((!apple && !gemini) || keyAvailable),
+                enabled = formEnabled && !offline && baseUrl.isNotBlank() && ((!apple && !gemini && cloud == null) || keyAvailable),
                 onClick = { dispatch(DanaIntent.ReadModels(protocol, network, baseUrl, key, removeKey)) },
             ) { Text(stringResource(if (apple) R.string.engine_apple_check else R.string.engine_lookup)) }
         }
@@ -266,12 +281,19 @@ private fun ProviderEditor(
                 else if (apple) Text(stringResource(R.string.engine_apple_ready), color = Mint)
                 else {
                     Text(stringResource(R.string.engine_lookup_models), style = MaterialTheme.typography.labelMedium)
+                    val choices = remember(result, cloud) {
+                        if (cloud == null) result.models else result.models.sortedWith(compareBy(
+                            { cloud.suggested.indexOf(it.id).takeIf { index -> index >= 0 } ?: Int.MAX_VALUE },
+                            { it.photoSupport != PhotoSupport.YES }, { it.id }))
+                    }
                     LazyColumn(Modifier.fillMaxWidth().heightIn(max = 180.dp)) {
-                        items(result.models, key = { it.id }) { item ->
+                        items(choices, key = { it.id }) { item ->
                             TextButton(onClick = { model = item.id }, modifier = Modifier.fillMaxWidth(), enabled = formEnabled) {
                                 Column(Modifier.fillMaxWidth()) {
                                     Text(item.label, style = technical, color = if (model == item.id) Mint else Ice)
                                     if (item.label != item.id) TechnicalText(item.id)
+                                    if (item.photoSupport == PhotoSupport.YES) Text(stringResource(R.string.engine_vision),
+                                        style = MaterialTheme.typography.labelSmall, color = Mint)
                                 }
                             }
                         }

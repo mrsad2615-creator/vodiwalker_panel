@@ -52,6 +52,7 @@ internal data class ChatOptions(
     val includeContext: Boolean = true,
     val useMemory: Boolean = false,
     val mask: Boolean = true,
+    val readReplies: Boolean = false,
     val style: AssistantStyle = AssistantStyle.BALANCED,
 )
 
@@ -67,11 +68,23 @@ internal data class ChatTurn(
     val complete: Boolean = false,
     val interrupted: Boolean = false,
     val includedImage: Boolean = false,
+    val readWhenDone: Boolean = false,
     val errors: List<ChatAttempt> = emptyList(),
+)
+
+internal data class TeamTurn(
+    val index: Long,
+    val question: String,
+    val includedImage: Boolean,
+    val historyId: Long?,
+    val store: Boolean,
+    val readWhenPicked: Boolean,
+    val comparison: ComparisonState,
 )
 
 internal sealed interface ChatDialog {
     data object Options : ChatDialog
+    data object PickTeam : ChatDialog
     class Send(val route: ChatRoute, val question: String, val historyId: Long?, val store: Boolean) : ChatDialog
     data class Action(val command: LocalAction, val fromText: Boolean) : ChatDialog
     data class EditMemory(val previous: UserMemory?, val draft: String = previous?.fact.orEmpty()) : ChatDialog
@@ -89,11 +102,16 @@ internal data class ChatState(
     val writing: Boolean = false,
     val options: ChatOptions = ChatOptions(),
     val manualId: String? = null,
+    val teamIds: Set<String> = emptySet(),
+    val team: TeamTurn? = null,
+    val localOnly: Boolean = false,
+    val voiceOpen: Boolean = false,
     val task: AssistantTask = AssistantTask.ASK,
     val photo: VisionPhoto? = null,
     val dialog: ChatDialog? = null,
     @StringRes val error: Int? = null,
     @StringRes val notice: Int? = null,
+    val noticePercent: Int? = null,
 ) {
     val busy get() = running || writing
 }
@@ -150,13 +168,50 @@ internal class ChatViewModel @Inject constructor(
 
     @MainThread
     fun photo(photo: VisionPhoto?) {
-        if (!mutable.value.busy) mutable.update { it.copy(photo = photo, page = ChatPage.CONVERSATION, error = null, dialog = null) }
+        if (!mutable.value.busy) mutable.update { it.copy(photo = photo, page = ChatPage.CONVERSATION, error = null, dialog = null,
+            localOnly = if (photo != null) false else it.localOnly) }
     }
 
     @MainThread
     fun engine(id: String?) {
-        if (!mutable.value.busy) mutable.update { it.copy(manualId = id, error = null) }
+        if (!mutable.value.busy) mutable.update { it.copy(manualId = id, teamIds = emptySet(), error = null) }
     }
+
+    @MainThread
+    fun chooseTeam(ids: Set<String>) {
+        if (!mutable.value.busy && ids.size in 2..ComparisonLimits.ENGINE_COUNT) {
+            mutable.update { it.copy(manualId = null, teamIds = ids.toSet(), dialog = null, error = null) }
+        }
+    }
+
+    @MainThread
+    fun localMode(enabled: Boolean) {
+        if (!mutable.value.busy) mutable.update { it.copy(localOnly = enabled, error = null, notice = null, dialog = null) }
+    }
+
+    @MainThread
+    fun toggleVoice() {
+        if (!mutable.value.busy) mutable.update { it.copy(voiceOpen = !it.voiceOpen, options = it.options.copy(readReplies = !it.voiceOpen)) }
+    }
+
+    @MainThread
+    fun assistant(local: Boolean = false) {
+        if (!mutable.value.busy) mutable.update {
+            it.copy(page = ChatPage.CONVERSATION, voiceOpen = true, localOnly = local, error = null, notice = null, dialog = null,
+                options = it.options.copy(readReplies = true))
+        }
+    }
+
+    @MainThread
+    fun commandExample(text: String) {
+        if (!mutable.value.busy) {
+            importText(text)
+            mutable.update { it.copy(localOnly = true, photo = null) }
+        }
+    }
+
+    @MainThread
+    fun speechConsumed(index: Long) = reviseTurn(index) { it.copy(readWhenDone = false) }
 
     @MainThread
     fun task(value: AssistantTask) {
@@ -196,11 +251,20 @@ internal class ChatViewModel @Inject constructor(
     fun review(profiles: List<ProviderProfile>, offline: Boolean) {
         val chat = mutable.value
         if (chat.busy || chat.dialog != null) return
+        if (chat.draft.isBlank()) return
         if (chat.photo == null) LocalCommands.parse(chat.draft)?.let {
-            dialog(ChatDialog.Action(it, fromText = true))
+            if (offline && it is LocalAction.WebSearch) error(R.string.phone_web_offline)
+            else dialog(ChatDialog.Action(it, fromText = true))
             return
         }
-        if (chat.draft.isBlank()) return
+        if (chat.localOnly) {
+            error(if (chat.photo == null) R.string.phone_unrecognized else R.string.phone_detach_first)
+            return
+        }
+        if (chat.team != null) {
+            error(R.string.chat_team_pick_or_clear)
+            return
+        }
         if (offline) {
             error(R.string.chat_offline_help)
             return
@@ -216,9 +280,10 @@ internal class ChatViewModel @Inject constructor(
                 error(R.string.chat_payload_invalid)
                 return@write
             }
-            val route = ChatRoute.select(input, profiles, chat.manualId)
+            val route = if (chat.teamIds.isEmpty()) ChatRoute.select(input, profiles, chat.manualId)
+                else ChatRoute.parallel(input, profiles, chat.teamIds)
             if (route == null) {
-                error(R.string.chat_no_engine)
+                error(if (chat.teamIds.isEmpty()) R.string.chat_no_engine else R.string.chat_team_unavailable)
                 return@write
             }
             mutable.update { it.copy(dialog = ChatDialog.Send(route, chat.draft.trim(), chat.current?.id, chat.options.autoHistory)) }
@@ -235,7 +300,12 @@ internal class ChatViewModel @Inject constructor(
             error(R.string.chat_offline_help)
             return
         }
-        val turn = ChatTurn(++counter, approved.question, includedImage = approved.route.input.photo != null)
+        if (approved.route.parallel) {
+            startTeam(approved)
+            return
+        }
+        val turn = ChatTurn(++counter, approved.question, includedImage = approved.route.input.photo != null,
+            readWhenDone = chat.options.readReplies)
         mutable.value = chat.copy(draft = "", photo = null, running = true, dialog = null, error = null, notice = null,
             turns = (chat.turns + turn).takeLast(ChatLimits.RETAINED_MESSAGES / 2))
         generation = viewModelScope.launch {
@@ -273,27 +343,82 @@ internal class ChatViewModel @Inject constructor(
         }
     }
 
+    private fun startTeam(approved: ChatDialog.Send) {
+        val chat = mutable.value
+        val team = TeamTurn(++counter, approved.question, approved.route.input.photo != null, approved.historyId,
+            approved.store, chat.options.readReplies,
+            ComparisonState(lanes = approved.route.candidates.map { EngineLane(it) }, running = true))
+        mutable.value = chat.copy(team = team, draft = "", photo = null, running = true, dialog = null, error = null, notice = null)
+        generation = viewModelScope.launch {
+            try {
+                router.chat(approved.route).collect { event -> updateTeam { it.reduce(event) } }
+            } catch (canceled: CancellationException) {
+                throw canceled
+            } catch (_: Exception) {
+                updateTeam { it.copy(problem = EngineProblem.SERVER) }
+            } finally {
+                updateTeam { it.finish() }
+                mutable.update { it.copy(running = false) }
+            }
+        }
+    }
+
+    @MainThread
+    fun discardTeam() {
+        if (!mutable.value.busy) mutable.update { it.copy(team = null, error = null) }
+    }
+
+    @MainThread
+    fun keepTeamAnswer(id: String) {
+        val st = mutable.value
+        val team = st.team ?: return
+        if (st.busy) return
+        val chosen = team.comparison.lanes.firstOrNull { it.profile.id == id && it.status == LaneStatus.COMPLETE } ?: return
+        val answer = ChatTurn(team.index, team.question, chosen.answer, engine = chosen.profile.config.name,
+            firstMillis = chosen.firstTextMillis, elapsedMillis = chosen.elapsedMillis, complete = true,
+            includedImage = team.includedImage, readWhenDone = team.readWhenPicked)
+        write {
+            if (team.store) {
+                val title = team.question.lineSequence().first().take(LocalText.TITLE_LIMIT).trimEnd().ifBlank { "گفتگو" }
+                val cid = history.saveExchange(team.historyId, title, answer.question, answer.answer)
+                mutable.update { it.copy(current = it.current?.takeIf { active -> active.id == cid } ?: Conversation(cid, title, System.currentTimeMillis())) }
+            }
+            mutable.update {
+                it.copy(team = null, turns = (it.turns + answer).takeLast(ChatLimits.RETAINED_MESSAGES / 2))
+            }
+        }
+    }
+
+    private fun updateTeam(transform: (ComparisonState) -> ComparisonState) {
+        mutable.update { st -> st.copy(team = st.team?.let { it.copy(comparison = transform(it.comparison)) }) }
+    }
+
     @MainThread
     fun stop() { generation?.cancel() }
 
     @MainThread
     fun background() {
         stop()
-        if (mutable.value.dialog is ChatDialog.Send) mutable.update { it.copy(dialog = null) }
+        if (mutable.value.dialog is ChatDialog.Send || mutable.value.dialog is ChatDialog.Action) mutable.update { it.copy(dialog = null) }
     }
 
     @MainThread
-    fun actionCompleted(started: Boolean) {
+    fun executeAction(offline: Boolean, execute: (LocalAction) -> DeviceOutcome) {
         val dialog = mutable.value.dialog as? ChatDialog.Action ?: return
+        if (mutable.value.busy) return
+        if (offline && dialog.command is LocalAction.WebSearch) {
+            actionResult(dialog, DeviceOutcome(R.string.phone_web_offline, ok = false))
+            return
+        }
         if (dialog.command is LocalAction.Note) {
             write {
                 notes.save(null, dialog.command.text)
-                actionResult(dialog, R.string.chat_note_saved, null)
+                actionResult(dialog, DeviceOutcome(R.string.chat_note_saved))
             }
-        } else if (started) {
-            actionResult(dialog, R.string.chat_action_opened, null)
         } else {
-            actionResult(dialog, null, R.string.chat_action_unavailable)
+            // Consume the approval first. Repeated button events cannot perform it twice.
+            mutable.update { it.copy(dialog = null) }
+            actionResult(dialog, execute(dialog.command))
         }
     }
 
@@ -336,12 +461,14 @@ internal class ChatViewModel @Inject constructor(
         }
     }
 
-    private fun actionResult(editor: ChatDialog.Action, notice: Int?, error: Int?) {
-        mutable.update { it.copy(draft = if (editor.fromText && error == null) "" else it.draft, dialog = null, notice = notice, error = error) }
+    private fun actionResult(editor: ChatDialog.Action, outcome: DeviceOutcome) {
+        mutable.update { it.copy(draft = if (editor.fromText && outcome.ok) "" else it.draft, dialog = null,
+            notice = outcome.message.takeIf { outcome.ok }, noticePercent = outcome.percent,
+            error = outcome.message.takeUnless { outcome.ok }) }
     }
 
     private fun resetConversation(page: ChatPage) {
-        mutable.update { ChatState(page = page, options = it.options.copy(autoHistory = false), manualId = it.manualId) }
+        mutable.update { ChatState(page = page, options = it.options.copy(autoHistory = false), voiceOpen = it.voiceOpen, localOnly = it.localOnly, manualId = it.manualId, teamIds = it.teamIds) }
     }
 
     private fun error(@StringRes message: Int) { mutable.update { it.copy(error = message, notice = null) } }

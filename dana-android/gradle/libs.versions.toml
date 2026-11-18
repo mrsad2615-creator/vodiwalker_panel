@@ -8,6 +8,7 @@ hilt = "2.60.1"
 room = "2.8.4"
 datastore = "1.2.0"
 core = "1.17.0"
+splashscreen = "1.2.0"
 activity = "1.12.1"
 lifecycle = "2.10.0"
 compose-bom = "2025.12.00"
@@ -22,6 +23,7 @@ tesseract = "4.9.0"
 [libraries]
 tesseract-android = { module = "cz.adaptech.tesseract4android:tesseract4android", version.ref = "tesseract" }
 androidx-core = { module = "androidx.core:core-ktx", version.ref = "core" }
+androidx-splashscreen = { module = "androidx.core:core-splashscreen", version.ref = "splashscreen" }
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activity" }
 androidx-lifecycle-runtime-compose = { module = "androidx.lifecycle:lifecycle-runtime-compose", version.ref = "lifecycle" }
 androidx-lifecycle-viewmodel = { module = "androidx.lifecycle:lifecycle-viewmodel-ktx", version.ref = "lifecycle" }

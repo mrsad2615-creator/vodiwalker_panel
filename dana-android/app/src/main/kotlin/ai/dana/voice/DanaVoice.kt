@@ -11,6 +11,8 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.speech.RecognitionListener
+import android.speech.RecognitionSupport
+import android.speech.RecognitionSupportCallback
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.speech.tts.TextToSpeech
@@ -18,6 +20,7 @@ import android.speech.tts.UtteranceProgressListener
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.annotation.RequiresApi
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
@@ -31,6 +34,10 @@ internal data class VoiceState(
     val partial: String = "",
     val strength: Float = 0f,
     val status: Int? = null,
+    val systemSpeech: Boolean = false,
+    val checking: Boolean = false,
+    val support: Int? = null,
+    val canDownload: Boolean = false,
 )
 
 /** Foreground-only, on-device recognition and voices explicitly marked offline by Android. */
@@ -39,6 +46,15 @@ internal class DanaVoice(context: Context) : DefaultLifecycleObserver {
     private val handler = Handler(Looper.getMainLooper())
     private var recognizer: SpeechRecognizer? = null
     private var synthesizer: TextToSpeech? = null
+    private var probe: SpeechRecognizer? = null
+    private var probeTicket = 0
+    private val probeTimeout = Runnable { finishProbe(R.string.voice_probe_unknown) }
+    private val initTimeout = Runnable {
+        if (loading) {
+            releaseSpeech()
+            state = state.copy(initializing = false, status = R.string.voice_tts_missing)
+        }
+    }
     private var utterancePrefix: String? = null
     private var loading = false
     private var voiceGeneration = 0
@@ -48,27 +64,96 @@ internal class DanaVoice(context: Context) : DefaultLifecycleObserver {
     var state by mutableStateOf(VoiceState())
         private set
 
-    fun canListen(): Boolean = Build.VERSION.SDK_INT >= 31 &&
-        runCatching { SpeechRecognizer.isOnDeviceRecognitionAvailable(app) }.getOrDefault(false)
-    fun unavailable() { state = state.copy(status = R.string.voice_not_supported) }
+    fun canListen(local: Boolean): Boolean = runCatching {
+        if (local) Build.VERSION.SDK_INT >= 31 && SpeechRecognizer.isOnDeviceRecognitionAvailable(app)
+        else SpeechRecognizer.isRecognitionAvailable(app)
+    }.getOrDefault(false)
+
+    fun unavailable(local: Boolean) { state = state.copy(status = if (local) R.string.voice_not_supported else R.string.voice_no_system) }
+
+    fun checkPersian() {
+        cancelProbe()
+        if (!canListen(local = true)) {
+            state = state.copy(support = R.string.voice_not_supported)
+        } else if (Build.VERSION.SDK_INT < 33) {
+            state = state.copy(support = R.string.voice_probe_unknown)
+        } else {
+            probePersian()
+        }
+    }
+
+    @RequiresApi(33)
+    private fun probePersian() {
+        val ticket = ++probeTicket
+        try {
+            val service = SpeechRecognizer.createOnDeviceSpeechRecognizer(app)
+            probe = service
+            state = state.copy(checking = true, support = null, canDownload = false)
+            handler.postDelayed(probeTimeout, 5_000L)
+            service.checkRecognitionSupport(speechRequest(local = true), ContextCompat.getMainExecutor(app), object : RecognitionSupportCallback {
+                override fun onSupportResult(recognitionSupport: RecognitionSupport) {
+                    if (ticket != probeTicket) return
+                    fun List<String>.hasPersian() = any { it.substringBefore('-').substringBefore('_').equals("fa", ignoreCase = true) }
+                    when {
+                        recognitionSupport.installedOnDeviceLanguages.hasPersian() -> finishProbe(R.string.voice_probe_ready)
+                        recognitionSupport.pendingOnDeviceLanguages.hasPersian() -> finishProbe(R.string.voice_probe_pending)
+                        recognitionSupport.supportedOnDeviceLanguages.hasPersian() -> finishProbe(R.string.voice_probe_download, download = true)
+                        else -> finishProbe(R.string.voice_probe_not_listed)
+                    }
+                }
+                override fun onError(error: Int) {
+                    if (ticket == probeTicket) finishProbe(R.string.voice_probe_unknown)
+                }
+            })
+        } catch (_: RuntimeException) { finishProbe(R.string.voice_probe_unknown) }
+    }
+
+    fun requestPersianDownload() {
+        if (Build.VERSION.SDK_INT < 33 || !state.canDownload) return
+        cancelProbe()
+        try {
+            val service = SpeechRecognizer.createOnDeviceSpeechRecognizer(app)
+            probe = service
+            service.triggerModelDownload(speechRequest(local = true))
+            // This asks Android to schedule a model download; it does not report completion.
+            state = state.copy(support = R.string.voice_download_requested)
+            handler.postDelayed({ if (probe === service) cancelProbe() }, 15_000L)
+        } catch (_: RuntimeException) { finishProbe(R.string.voice_probe_unknown) }
+    }
+
+    private fun finishProbe(message: Int, download: Boolean = false) {
+        cancelProbe()
+        state = state.copy(support = message, canDownload = download)
+    }
+
+    private fun cancelProbe() {
+        ++probeTicket
+        handler.removeCallbacks(probeTimeout)
+        val service = probe
+        probe = null
+        runCatching { service?.destroy() }
+        state = state.copy(checking = false, canDownload = false)
+    }
 
     fun permissionDenied() { state = state.copy(status = R.string.voice_denied) }
 
     @SuppressLint("MissingPermission") // Both entry points check permission before requesting microphone access.
-    fun listen(onText: (String) -> Unit) {
+    fun listen(local: Boolean, onText: (String) -> Unit) {
         stopPlayback()
         if (ContextCompat.checkSelfPermission(app, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             permissionDenied()
             return
         }
-        if (Build.VERSION.SDK_INT < 31 || !canListen()) {
-            state = state.copy(status = R.string.voice_not_supported)
+        if (!canListen(local)) {
+            unavailable(local)
             return
         }
+        cancelProbe()
         endListening(null)
         val ticket = ++listenGeneration
         try {
-            val service = SpeechRecognizer.createOnDeviceSpeechRecognizer(app)
+            val service = if (local && Build.VERSION.SDK_INT >= 31) SpeechRecognizer.createOnDeviceSpeechRecognizer(app)
+            else if (!local) SpeechRecognizer.createSpeechRecognizer(app) else return
             recognizer = service
             service.setRecognitionListener(object : RecognitionListener {
                 override fun onReadyForSpeech(params: Bundle?) = Unit
@@ -86,7 +171,8 @@ internal class DanaVoice(context: Context) : DefaultLifecycleObserver {
                     val message = when (error) {
                         SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> R.string.voice_denied
                         SpeechRecognizer.ERROR_LANGUAGE_NOT_SUPPORTED, SpeechRecognizer.ERROR_LANGUAGE_UNAVAILABLE -> R.string.voice_persian_unavailable
-                        SpeechRecognizer.ERROR_NETWORK, SpeechRecognizer.ERROR_NETWORK_TIMEOUT -> R.string.voice_persian_unavailable
+                        SpeechRecognizer.ERROR_NETWORK, SpeechRecognizer.ERROR_NETWORK_TIMEOUT ->
+                            if (local) R.string.voice_persian_unavailable else R.string.voice_speech_network
                         else -> R.string.voice_try_again
                     }
                     endListening(message)
@@ -101,18 +187,20 @@ internal class DanaVoice(context: Context) : DefaultLifecycleObserver {
                     if (ticket == listenGeneration) state = state.copy(partial = firstText(partialResults))
                 }
             })
-            state = state.copy(listening = true, partial = "", strength = 0f, status = null)
-            service.startListening(Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
-                .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-                .putExtra(RecognizerIntent.EXTRA_LANGUAGE, "fa-IR")
-                .putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
-                .putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
-                .putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true))
+            state = state.copy(listening = true, partial = "", strength = 0f, status = null, systemSpeech = !local)
+            service.startListening(speechRequest(local))
             handler.postDelayed(endCapture, 28_000L)
         } catch (_: RuntimeException) {
-            endListening(R.string.voice_not_supported)
+            endListening(if (local) R.string.voice_not_supported else R.string.voice_no_system)
         }
     }
+
+    private fun speechRequest(local: Boolean) = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+        .putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+        .putExtra(RecognizerIntent.EXTRA_LANGUAGE, "fa-IR")
+        .putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
+        .putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
+        .putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, local)
 
     fun finishListening() {
         if (state.listening) {
@@ -137,7 +225,7 @@ internal class DanaVoice(context: Context) : DefaultLifecycleObserver {
             runCatching { service.cancel() }
             runCatching { service.destroy() }
         }
-        state = state.copy(listening = false, partial = "", strength = 0f, status = status)
+        state = state.copy(listening = false, partial = "", strength = 0f, systemSpeech = false, status = status)
     }
 
     fun read(text: String) {
@@ -148,10 +236,12 @@ internal class DanaVoice(context: Context) : DefaultLifecycleObserver {
         val ticket = ++voiceGeneration
         loading = true
         state = state.copy(initializing = true, status = null)
+        handler.postDelayed(initTimeout, 8_000L)
         try {
             synthesizer = TextToSpeech(app) { code ->
                 handler.post {
                     if (ticket != voiceGeneration) return@post
+                    handler.removeCallbacks(initTimeout)
                     loading = false
                     state = state.copy(initializing = false)
                     val engine = synthesizer
@@ -163,7 +253,7 @@ internal class DanaVoice(context: Context) : DefaultLifecycleObserver {
             }
         } catch (_: RuntimeException) {
             releaseSpeech()
-            state = state.copy(status = R.string.voice_tts_missing)
+            state = state.copy(initializing = false, status = R.string.voice_tts_missing)
         }
     }
 
@@ -178,6 +268,7 @@ internal class DanaVoice(context: Context) : DefaultLifecycleObserver {
             }
             val limit = min(TextToSpeech.getMaxSpeechInputLength().coerceAtLeast(128), 3_500)
             val chunks = splitText(raw, limit)
+            if (chunks.isEmpty()) return
             val prefix = UUID.randomUUID().toString()
             utterancePrefix = prefix
             engine.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
@@ -214,6 +305,7 @@ internal class DanaVoice(context: Context) : DefaultLifecycleObserver {
     }
 
     private fun releaseSpeech() {
+        handler.removeCallbacks(initTimeout)
         ++voiceGeneration
         loading = false
         runCatching { synthesizer?.stop() }
@@ -223,6 +315,7 @@ internal class DanaVoice(context: Context) : DefaultLifecycleObserver {
     }
 
     fun close() {
+        cancelProbe()
         endListening(null)
         releaseSpeech()
         state = VoiceState()

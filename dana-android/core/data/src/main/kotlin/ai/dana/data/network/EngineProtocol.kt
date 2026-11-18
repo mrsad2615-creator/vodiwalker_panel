@@ -1,6 +1,10 @@
 package ai.dana.data.network
 
 import ai.dana.domain.ApiCredential
+import ai.dana.domain.CloudEngine
+import ai.dana.domain.PhotoSupport
+import ai.dana.domain.cloudEngine
+import ai.dana.domain.requiresCredential
 import ai.dana.domain.AssistantStyle
 import ai.dana.domain.ComparisonLimits
 import ai.dana.domain.ConversationInput
@@ -31,7 +35,7 @@ import okio.BufferedSink
 import okio.BufferedSource
 
 internal object EngineProtocol {
-    private const val SYSTEM = "تو دانا، دستیار فارسی‌زبان دقیق و محترم هستی. به فارسی روشن پاسخ بده؛ اگر مطمئن نیستی، صریح بگو."
+    private const val SYSTEM = "تو mrsad، دستیار فارسی‌زبان هستی. به فارسی روشن پاسخ بده و دربارهٔ عدم قطعیت صادق باش. این موتور هیچ کنترلی بر گوشی ندارد؛ ادعا نکن که فرمانی را اجرا کرده‌ای."
     private const val MAX_TOKENS = 1_024
     private const val MAX_SSE_LINE_BYTES = 128_000L
     private const val MAX_SSE_EVENT_CHARS = 128_000
@@ -41,20 +45,26 @@ internal object EngineProtocol {
     fun url(endpoint: ProviderEndpoint): HttpUrl.Builder = endpoint.baseUrl.toHttpUrlOrNull()?.takeIf { it.isHttps }?.newBuilder()
         ?: throw EngineFailure(EngineProblem.CONFIGURATION)
 
-    fun authenticate(request: Request.Builder, protocol: ProviderProtocol, key: ApiCredential?) {
-        when (protocol) {
+    fun authenticate(request: Request.Builder, endpoint: ProviderEndpoint, key: ApiCredential?) {
+        when (endpoint.protocol) {
             ProviderProtocol.GEMINI_NATIVE -> request.header("x-goog-api-key", required(key).value)
             ProviderProtocol.APPLE_MAC, ProviderProtocol.OPENROUTER_FREE -> request.header("Authorization", "Bearer ${required(key).value}")
-            ProviderProtocol.OPENAI_COMPATIBLE -> if (key != null) request.header("Authorization", "Bearer ${key.value}")
+            ProviderProtocol.OPENAI_COMPATIBLE -> {
+                if (endpoint.requiresCredential || key != null) request.header("Authorization", "Bearer ${required(key).value}")
+            }
         }
     }
 
     private fun required(key: ApiCredential?): ApiCredential = key ?: throw EngineFailure(EngineProblem.AUTHENTICATION)
 
     fun request(config: ProviderConfig, key: ApiCredential?, input: ConversationInput): Request {
-        val url = url(config.endpoint)
+        val endpoint = config.endpoint
+        val cloud = endpoint.cloudEngine
+        if (cloud?.acceptsChat(config.model) == false) throw EngineFailure(EngineProblem.CONFIGURATION)
+        if (input.photo != null && config.photoSupport == PhotoSupport.NO) throw EngineFailure(EngineProblem.CONTEXT_LIMIT)
+        val url = url(endpoint)
         val headers = Request.Builder().header("Accept", "text/event-stream")
-        authenticate(headers, config.protocol, key)
+        authenticate(headers, endpoint, key)
         val apple = config.protocol == ProviderProtocol.APPLE_MAC
         val instructions = instructions(input.task, apple) + style(input.style, apple) +
             if (!apple && input.facts.isNotEmpty()) {
@@ -66,7 +76,11 @@ internal object EngineProtocol {
                 buildJsonObject {
                     put("model", config.model)
                     put("stream", true)
-                    put("max_tokens", MAX_TOKENS)
+                    put(if (cloud?.prefersMaxCompletionTokens == true) "max_completion_tokens" else "max_tokens", MAX_TOKENS)
+                    if (cloud == CloudEngine.DEEPSEEK && (config.model == "deepseek-flash" || config.model.startsWith("deepseek-v4-"))) {
+                        putJsonObject("thinking") { put("type", "disabled") }
+                    }
+                    if (cloud == CloudEngine.GROQ && config.model.startsWith("openai/gpt-oss-")) put("reasoning_effort", "low")
                     if (config.protocol == ProviderProtocol.OPENROUTER_FREE) putJsonObject("provider") {
                         putJsonObject("max_price") {
                             put("prompt", 0); put("completion", 0); put("request", 0); put("image", 0)
@@ -82,7 +96,9 @@ internal object EngineProtocol {
                                 add(buildJsonObject { put("type", "text"); put("text", input.prompt) })
                                 add(buildJsonObject {
                                     put("type", "image_url")
-                                    putJsonObject("image_url") { put("url", "data:image/jpeg;base64,${photo.encodeBase64()}") }
+                                    val jpeg = "data:image/jpeg;base64,${photo.encodeBase64()}"
+                                    if (cloud == CloudEngine.MISTRAL) put("image_url", jpeg)
+                                    else putJsonObject("image_url") { put("url", jpeg) }
                                 })
                             }
                         })
@@ -130,7 +146,7 @@ internal object EngineProtocol {
     }
 
     private fun instructions(task: AssistantTask, apple: Boolean): String {
-        if (apple) return "You are Dana, a concise and careful assistant. Answer in English. " + when (task) {
+        if (apple) return "You are mrsad, a concise assistant. Answer in English and do not claim to control the phone. " + when (task) {
             AssistantTask.ASK -> "If unsure, say so."
             AssistantTask.SUMMARIZE -> "Summarize the input and preserve its key facts."
             AssistantTask.TRANSLATE -> "Translate the input into English, preserving meaning and tone."
@@ -163,7 +179,7 @@ internal object EngineProtocol {
                 val frame = decode(data.substring(0, data.length - 1), protocol)
                 data.setLength(0)
                 if ((frame.text.replaces || frame.text.value.isNotEmpty()) && !onText(frame.text)) return
-                if (frame.filtered) throw EngineFailure(EngineProblem.FILTERED)
+                frame.problem?.let { throw EngineFailure(it) }
                 if (frame.finished) return
             } else if (line == "data" || line.startsWith("data:")) {
                 val value = if (line == "data") "" else line.substring(5).removePrefix(" ")
@@ -182,14 +198,13 @@ internal object EngineProtocol {
             val code = (error["code"] as? JsonPrimitive)?.content?.toIntOrNull()
             val problem = when {
                 protocol == ProviderProtocol.APPLE_MAC -> appleProblem(error["code"].string())
-                protocol == ProviderProtocol.OPENROUTER_FREE -> when (code) {
+                else -> when (code) {
                     401 -> EngineProblem.AUTHENTICATION
                     402 -> EngineProblem.PAYMENT_REQUIRED
                     403 -> EngineProblem.FORBIDDEN
                     429 -> EngineProblem.RATE_LIMIT
                     else -> EngineProblem.SERVER
                 }
-                else -> EngineProblem.SERVER
             }
             throw EngineFailure(problem, code?.takeIf { it in 400..599 })
         }
@@ -198,9 +213,15 @@ internal object EngineProtocol {
                 val choice = (root["choices"] as? JsonArray)?.firstOrNull() as? JsonObject
                 val finish = choice?.get("finish_reason").string()
                 Frame(
-                    text = EngineText(((choice?.get("delta") as? JsonObject)?.get("content")).string().orEmpty()),
+                    text = EngineText(textContent((choice?.get("delta") as? JsonObject)?.get("content"))),
                     finished = finish != null,
-                    filtered = finish == "content_filter",
+                    problem = when (finish) {
+                        "content_filter" -> EngineProblem.FILTERED
+                        "length", "model_length" -> EngineProblem.OUTPUT_LIMIT
+                        "tool_calls", "function_call" -> EngineProblem.PROTOCOL
+                        "error" -> EngineProblem.SERVER
+                        else -> null
+                    },
                 )
             }
             ProviderProtocol.GEMINI_NATIVE -> {
@@ -214,9 +235,13 @@ internal object EngineProtocol {
                 val reason = candidate?.get("finishReason").string()
                 Frame(
                     text = EngineText(text),
-                    finished = reason == "STOP" || reason == "MAX_TOKENS",
-                    filtered = (block != null && block != "BLOCK_REASON_UNSPECIFIED") ||
-                        (reason != null && reason !in setOf("STOP", "MAX_TOKENS", "FINISH_REASON_UNSPECIFIED")),
+                    finished = reason == "STOP",
+                    problem = when {
+                        block != null && block != "BLOCK_REASON_UNSPECIFIED" -> EngineProblem.FILTERED
+                        reason == "MAX_TOKENS" -> EngineProblem.OUTPUT_LIMIT
+                        reason != null && reason !in setOf("STOP", "FINISH_REASON_UNSPECIFIED") -> EngineProblem.FILTERED
+                        else -> null
+                    },
                 )
             }
             ProviderProtocol.APPLE_MAC -> {
@@ -226,6 +251,12 @@ internal object EngineProtocol {
             }
         }
     }
+
+    private fun textContent(content: JsonElement?): String = content.string() ?: (content as? JsonArray).orEmpty()
+        .joinToString("") { part ->
+            val obj = part as? JsonObject
+            if (obj?.get("type").string() == "text") obj?.get("text").string().orEmpty() else ""
+        }
 
     fun appleProblem(code: String?): EngineProblem = when (code) {
         "apple_unavailable" -> EngineProblem.ENGINE_UNAVAILABLE
@@ -286,5 +317,5 @@ internal object EngineProtocol {
         override fun writeTo(sink: BufferedSink) = inner.writeTo(sink)
     }
 
-    private data class Frame(val text: EngineText = EngineText(""), val finished: Boolean = false, val filtered: Boolean = false)
+    private data class Frame(val text: EngineText = EngineText(""), val finished: Boolean = false, val problem: EngineProblem? = null)
 }

@@ -1,4 +1,4 @@
-name: Dana Android
+name: mrsad Android
 
 on:
   push:
@@ -100,7 +100,7 @@ jobs:
           from xml.etree import ElementTree as ET
           import os
 
-          for module, task, minimum in [('core/domain', 'test', 35), ('core/data', 'testDebugUnitTest', 17)]:
+          for module, task, minimum in [('core/domain', 'test', 38), ('core/data', 'testDebugUnitTest', 20)]:
               reports = list((Path(module) / 'build/test-results' / task).glob('TEST-*.xml'))
               tests = [case for report in reports for case in ET.parse(report).iter('testcase')]
               if len(tests) < minimum or any(case.find('skipped') is not None or case.find('failure') is not None or case.find('error') is not None for case in tests):
@@ -109,14 +109,14 @@ jobs:
                   print(f'- {module}: {len(tests)} JVM tests passed.', file=out)
           PYTHON
           mkdir -p "$RUNNER_TEMP/dana-verified"
-          apk="$RUNNER_TEMP/dana-verified/DANA-AI-preview.apk"
+          apk="$RUNNER_TEMP/dana-verified/mrsad-preview.apk"
           cp app/build/outputs/apk/debug/app-debug.apk "$apk"
           tools="$ANDROID_HOME/build-tools/36.0.0"
           "$tools/apksigner" verify --verbose --print-certs "$apk"
           "$tools/zipalign" -c -P 16 4 "$apk"
           python3 ci/check-native-alignment.py "$apk"
           badging=$("$tools/aapt" dump badging "$apk")
-          grep -Fq "package: name='ai.dana.preview' versionCode='5' versionName='0.5.0-preview'" <<< "$badging"
+          grep -Fq "package: name='ai.dana.preview' versionCode='6' versionName='0.6.0-preview'" <<< "$badging"
           digest=$(sha256sum "$apk" | cut -d' ' -f1)
           printf 'sha256=%s\n' "$digest" >> "$GITHUB_OUTPUT"
           printf '\nSHA-256: `%s`\n' "$digest" >> "$GITHUB_STEP_SUMMARY"
@@ -178,29 +178,29 @@ jobs:
         if: failure() && steps.verify.conclusion == 'success'
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
-          name: Dana-0.5-debug-UI-tests-not-passed
-          path: ${{ runner.temp }}/dana-verified/DANA-AI-preview.apk
+          name: mrsad-0.6-debug-device-tests-not-passed
+          path: ${{ runner.temp }}/dana-verified/mrsad-preview.apk
           if-no-files-found: error
           retention-days: 7
       - name: Upload the APK without a ZIP wrapper
         id: apk
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
-          path: ${{ runner.temp }}/dana-verified/DANA-AI-preview.apk
+          path: ${{ runner.temp }}/dana-verified/mrsad-preview.apk
           archive: false
           if-no-files-found: error
           retention-days: 90
       - name: Save emulator screenshots of the new UI
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
-          name: Dana-0.5-Android-screens
+          name: mrsad-0.6-Android-screens
           path: ${{ runner.temp }}/dana-screens/*.png
           if-no-files-found: error
           retention-days: 30
       - name: Link the APK
         env:
           APK_URL: ${{ steps.apk.outputs.artifact-url }}
-        run: printf '\n[Download DANA AI APK](%s)\n' "$APK_URL" >> "$GITHUB_STEP_SUMMARY"
+        run: printf '\n[Download mrsad APK](%s)\n' "$APK_URL" >> "$GITHUB_STEP_SUMMARY"
 
   apple-bridge:
     name: Verify private Mac bridge protocol (no Apple model)
@@ -245,7 +245,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
-          name: DANA-AI-preview.apk
+          name: mrsad-preview.apk
           path: ${{ runner.temp }}/dana-publish
           skip-decompress: true
       - name: Publish with a direct download link
@@ -255,12 +255,12 @@ jobs:
           VERIFIED_SHA256: ${{ needs.build.outputs.sha256 }}
         run: |
           cd "$RUNNER_TEMP/dana-publish"
-          printf '%s  DANA-AI-preview.apk\n' "$VERIFIED_SHA256" > SHA256SUMS.txt
+          printf '%s  mrsad-preview.apk\n' "$VERIFIED_SHA256" > SHA256SUMS.txt
           sha256sum -c SHA256SUMS.txt
-          tag="dana-preview-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
-          gh release create "$tag" DANA-AI-preview.apk SHA256SUMS.txt \
+          tag="mrsad-preview-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          gh release create "$tag" mrsad-preview.apk SHA256SUMS.txt \
             --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
-            --title "DANA AI 0.5 Studio preview (${GITHUB_SHA:0:8})" --prerelease --latest=false \
-            --notes "Tested Android preview for commit $GITHUB_SHA. Debug-signed (ai.dana.preview), not a production or Play Store build. New Persian home, chat and engine setup. The OpenRouter Free preset uses a personal key and has no paid fallback. Email OTP requires a configured Supabase project and mail service. CI checks GoTrue registration and sign-in with a disposable SMTP sink, controlled AI request/response fixtures, storage, the exact installed APK and offline OCR. It does not check public email delivery, live provider accounts or physical-device microphone/screen behavior. Build and test evidence: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID."
-          printf '\n[Download DANA AI APK](%s/%s/releases/download/%s/DANA-AI-preview.apk)\n' \
+            --title "mrsad 0.6 Android preview (${GITHUB_SHA:0:8})" --prerelease --latest=false \
+            --notes "Tested Android preview for commit $GITHUB_SHA. Debug-signed (ai.dana.preview), not a production or Play Store build. Persian device commands, Android assistant entry, reviewed voice turns, photo input and parallel chat engines. The OpenRouter Free preset uses a personal key and has no paid fallback. Email OTP requires a configured Supabase project and mail service. CI checks GoTrue registration and sign-in with a disposable SMTP sink, controlled AI request/response fixtures, storage, the exact installed APK, local command review and offline photo/OCR. It does not check public email delivery, live provider accounts or physical-device microphone/screen behavior. Build and test evidence: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID."
+          printf '\n[Download mrsad APK](%s/%s/releases/download/%s/mrsad-preview.apk)\n' \
             "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$tag" >> "$GITHUB_STEP_SUMMARY"

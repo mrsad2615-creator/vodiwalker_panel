@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.flow.transformWhile
 
 /** Model IDs returned by the selected provider, never presented as a fallback guess. */
-data class DirectoryModel(val id: String, val label: String)
+data class DirectoryModel(val id: String, val label: String, val photoSupport: PhotoSupport = PhotoSupport.UNKNOWN)
 
 data class DirectoryResult(val models: List<DirectoryModel>, val elapsedMillis: Long)
 

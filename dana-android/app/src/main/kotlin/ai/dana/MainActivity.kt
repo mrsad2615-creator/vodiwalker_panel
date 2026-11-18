@@ -9,6 +9,7 @@ import ai.dana.ui.DanaApp
 import ai.dana.ui.DanaIntent
 import ai.dana.ui.DanaTheme
 import ai.dana.ui.DanaViewModel
+import android.animation.ValueAnimator
 import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
@@ -17,6 +18,7 @@ import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -27,7 +29,14 @@ class MainActivity : ComponentActivity() {
     private val media: MediaViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        val splash = installSplashScreen()
         super.onCreate(savedInstanceState)
+        if (savedInstanceState == null && intent?.action == Intent.ACTION_MAIN && ValueAnimator.areAnimatorsEnabled()) {
+            splash.setOnExitAnimationListener { screen ->
+                screen.iconView.animate().scaleX(1.09f).scaleY(1.09f).setDuration(240L).start()
+                screen.view.animate().alpha(0f).setDuration(260L).withEndAction { screen.remove() }.start()
+            }
+        }
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
             navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
@@ -37,6 +46,7 @@ class MainActivity : ComponentActivity() {
             DanaTheme { DanaApp(model, chat, media, account) }
         }
     }
+
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         handleExternal(intent)
@@ -44,6 +54,11 @@ class MainActivity : ComponentActivity() {
 
     private fun handleExternal(received: Intent?) {
         when (received?.action) {
+            Intent.ACTION_ASSIST -> {
+                // Android can attach foreground-app context. Ignore it; no screen read or microphone start.
+                model.dispatch(DanaIntent.Navigate(DashboardTab.CHAT))
+                chat.assistant(local = true)
+            }
             OneFrameCaptureService.ACTION_OPEN_MEDIA -> {
                 model.dispatch(DanaIntent.Navigate(DashboardTab.CHAT))
                 media.open()

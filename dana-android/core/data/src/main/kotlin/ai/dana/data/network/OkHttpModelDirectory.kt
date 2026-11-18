@@ -3,6 +3,9 @@ package ai.dana.data.network
 import ai.dana.data.network.EngineProtocol.string
 import ai.dana.domain.APPLE_MAC_MODEL
 import ai.dana.domain.ApiCredential
+import ai.dana.domain.CloudEngine
+import ai.dana.domain.PhotoSupport
+import ai.dana.domain.cloudEngine
 import ai.dana.domain.DirectoryModel
 import ai.dana.domain.EngineFailure
 import ai.dana.domain.EngineProblem
@@ -17,6 +20,7 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import okhttp3.Call
 import okhttp3.Callback
 import okhttp3.OkHttpClient
@@ -36,12 +40,13 @@ internal class OkHttpModelDirectory(
             // Credential check only: this route has one fixed model and requires no priced catalog.
             val builder = Request.Builder().url(EngineProtocol.url(endpoint).addPathSegment("key").build())
                 .get().header("Accept", "application/json")
-            EngineProtocol.authenticate(builder, protocol, key)
+            EngineProtocol.authenticate(builder, endpoint, key)
             val root = client.readCatalog(builder.build(), protocol)
             if (root["data"] !is JsonObject) throw EngineFailure(EngineProblem.PROTOCOL)
             return listOf(DirectoryModel(OPENROUTER_FREE_MODEL, "OpenRouter Free"))
         }
         val gemini = protocol == ProviderProtocol.GEMINI_NATIVE
+        val cloud = endpoint.cloudEngine
         val models = LinkedHashMap<String, DirectoryModel>()
         val usedTokens = mutableSetOf<String>()
         var token: String? = null
@@ -52,7 +57,7 @@ internal class OkHttpModelDirectory(
                 token?.let { url.addQueryParameter("pageToken", it) }
             }
             val builder = Request.Builder().url(url.build()).get().header("Accept", "application/json")
-            EngineProtocol.authenticate(builder, protocol, key)
+            EngineProtocol.authenticate(builder, endpoint, key)
             val http = if (endpoint.network == ProviderNetwork.LOCAL_NETWORK) lanClient else client
             val root = http.readCatalog(builder.build(), protocol)
             val field = root[if (gemini) "models" else "data"]
@@ -63,7 +68,7 @@ internal class OkHttpModelDirectory(
                 else -> throw EngineFailure(EngineProblem.PROTOCOL)
             }
             for (entry in entries) {
-                val model = (entry as? JsonObject)?.toModel(protocol) ?: continue
+                val model = (entry as? JsonObject)?.toModel(protocol, cloud) ?: continue
                 models.putIfAbsent(model.id, model)
                 if (models.size > MAX_MODELS) throw EngineFailure(EngineProblem.PROTOCOL)
             }
@@ -76,7 +81,7 @@ internal class OkHttpModelDirectory(
         throw EngineFailure(EngineProblem.PROTOCOL)
     }
 
-    private fun JsonObject.toModel(protocol: ProviderProtocol): DirectoryModel? {
+    private fun JsonObject.toModel(protocol: ProviderProtocol, cloud: CloudEngine?): DirectoryModel? {
         val gemini = protocol == ProviderProtocol.GEMINI_NATIVE
         val id = this[if (gemini) "name" else "id"].string() ?: return null
         if (id.isEmpty() || id.length > ProviderConfig.MODEL_LIMIT || id.any { it.isWhitespace() || it.isISOControl() || it in BIDI }) return null
@@ -86,8 +91,17 @@ internal class OkHttpModelDirectory(
             if (methods.none { it.string() == "generateContent" || it.string() == "streamGenerateContent" }) return null
         }
         if (protocol == ProviderProtocol.APPLE_MAC && id != APPLE_MAC_MODEL) return null
-        val label = this["displayName"].string()?.takeUnless { it.isBlank() || it.any { c -> c.isISOControl() || c in BIDI } }
-        return DirectoryModel(id, label?.take(120) ?: id)
+        if (cloud?.acceptsChat(id) == false || (cloud == CloudEngine.GROQ && this["active"] == JsonPrimitive(false))) return null
+        val capabilities = this["capabilities"] as? JsonObject
+        if (cloud == CloudEngine.MISTRAL && (capabilities?.get("completion_chat") == JsonPrimitive(false) || this["archived"] == JsonPrimitive(true))) return null
+        val photo = when {
+            cloud == CloudEngine.MISTRAL && capabilities?.get("vision") == JsonPrimitive(true) -> PhotoSupport.YES
+            cloud == CloudEngine.MISTRAL && capabilities?.get("vision") == JsonPrimitive(false) -> PhotoSupport.NO
+            cloud == CloudEngine.DEEPSEEK && (this["input_modalities"] as? JsonArray)?.any { it.string() == "image" } == true -> PhotoSupport.YES
+            else -> cloud?.photoSupport(id) ?: PhotoSupport.UNKNOWN
+        }
+        val label = (this["displayName"].string() ?: this["name"].string())?.takeUnless { it.isBlank() || it.any { c -> c.isISOControl() || c in BIDI } }
+        return DirectoryModel(id, label?.take(120) ?: id, photo)
     }
 
     private suspend fun OkHttpClient.readCatalog(request: Request, protocol: ProviderProtocol): JsonObject =

@@ -121,7 +121,7 @@ private fun EngineChoice(profile: ProviderProfile, checked: Boolean, enabled: Bo
 }
 
 @Composable
-private fun EngineAnswer(lane: EngineLane, canSave: Boolean, onSave: () -> Unit) {
+internal fun EngineAnswer(lane: EngineLane, canSave: Boolean, saveLabel: Int = R.string.studio_save_note, onSave: () -> Unit) {
     GlassCard(Modifier.fillMaxWidth()) {
         Text(lane.profile.config.name, style = MaterialTheme.typography.titleMedium)
         val label = when (lane.status) {
@@ -159,7 +159,7 @@ private fun EngineAnswer(lane: EngineLane, canSave: Boolean, onSave: () -> Unit)
                     clipboard?.setPrimaryClip(clip)
                     copied = true
                 }) { Text(stringResource(if (copied) R.string.studio_copied else R.string.studio_copy)) }
-                TextButton(enabled = canSave, onClick = onSave) { Text(stringResource(R.string.studio_save_note)) }
+                TextButton(enabled = canSave, onClick = onSave) { Text(stringResource(saveLabel)) }
             }
         }
     }

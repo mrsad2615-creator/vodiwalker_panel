@@ -2,6 +2,11 @@ package ai.dana.ui
 
 import ai.dana.R
 import ai.dana.domain.ApiCredential
+import ai.dana.domain.CloudEngine
+import ai.dana.domain.ConversationInput
+import ai.dana.domain.InputIssue
+import ai.dana.domain.InputRejected
+import ai.dana.domain.cloudEngine
 import ai.dana.domain.AssistantTask
 import ai.dana.domain.DirectoryResult
 import ai.dana.domain.EngineDiscovery
@@ -61,7 +66,8 @@ internal sealed interface Reading<out T> {
 
 internal sealed interface Editor {
     data class Note(val previous: DanaNote?, val draft: String = previous?.text.orEmpty()) : Editor
-    data class Provider(val previous: ProviderProfile?, val initial: ProviderProtocol, val lanPreset: Boolean = false) : Editor
+    data class Provider(val previous: ProviderProfile?, val initial: ProviderProtocol, val lanPreset: Boolean = false,
+        val cloud: CloudEngine? = previous?.config?.cloudEngine) : Editor
     data class DeleteNote(val id: Long) : Editor
     data class DeleteProvider(val id: String) : Editor
     class ConfirmComparison(val request: ComparisonRequest) : Editor
@@ -94,7 +100,8 @@ internal data class DashboardState(
 internal sealed interface DanaIntent {
     data class Navigate(val tab: DashboardTab) : DanaIntent
     data class EditNote(val note: DanaNote?) : DanaIntent
-    data class EditProvider(val profile: ProviderProfile?, val preset: ProviderProtocol = ProviderProtocol.OPENAI_COMPATIBLE, val lanPreset: Boolean = false) : DanaIntent
+    data class EditProvider(val profile: ProviderProfile?, val preset: ProviderProtocol = ProviderProtocol.OPENAI_COMPATIBLE,
+        val lanPreset: Boolean = false, val cloud: CloudEngine? = profile?.config?.cloudEngine) : DanaIntent
     data class ChooseTask(val task: AssistantTask, val openWorkspace: Boolean = false) : DanaIntent
     data class NoteFromAnswer(val profileId: String) : DanaIntent
     data object ClearDirectory : DanaIntent
@@ -200,7 +207,7 @@ internal class DanaViewModel @Inject constructor(
             DanaIntent.ClearDirectory -> clearDirectory()
             is DanaIntent.ReadModels -> readModels(intent)
             is DanaIntent.EditNote -> show(Editor.Note(intent.note))
-            is DanaIntent.EditProvider -> show(Editor.Provider(intent.profile, intent.profile?.config?.protocol ?: intent.preset, intent.lanPreset))
+            is DanaIntent.EditProvider -> show(Editor.Provider(intent.profile, intent.profile?.config?.protocol ?: intent.preset, intent.lanPreset, intent.cloud))
             is DanaIntent.RequestNoteDeletion -> show(Editor.DeleteNote(intent.id))
             is DanaIntent.RequestProviderDeletion -> show(Editor.DeleteProvider(intent.id))
             DanaIntent.DismissEditor -> show(null)
@@ -221,7 +228,8 @@ internal class DanaViewModel @Inject constructor(
                 if (current.directory == DirectoryState.Loading) return
                 write(closeEditor = true) {
                     val config = ProviderConfig.create(intent.name, intent.protocol, intent.network, intent.baseUrl, intent.model)
-                    if (config.protocol != editor.initial) return@write
+                    validateEndpoint(editor, config.endpoint)
+                    if (editor.cloud?.acceptsChat(config.model) == false) throw InputRejected(InputIssue.INVALID_MODEL)
                     providers.save(editor.previous?.id, config, keyChange(intent.key, intent.removeKey))
                     session.update { it.copy(notice = R.string.engine_saved) }
                 }
@@ -259,7 +267,13 @@ internal class DanaViewModel @Inject constructor(
             return
         }
         val targets = availableProfiles().filter { it.id in state.selected }
-        ComparisonRequest.create(state.prompt, targets, state.task)?.let { show(Editor.ConfirmComparison(it)) }
+        val request = ComparisonRequest.create(state.prompt, targets, state.task) ?: return
+        val input = ConversationInput.single(request.prompt, request.task)
+        if (targets.size != state.selected.size || !targets.all(input::fits)) {
+            comparison.update { it.copy(problem = EngineProblem.CONFIGURATION) }
+            return
+        }
+        show(Editor.ConfirmComparison(request))
     }
 
     private fun startComparison(request: ComparisonRequest) {
@@ -294,6 +308,7 @@ internal class DanaViewModel @Inject constructor(
         directoryJob = viewModelScope.launch {
             val result = try {
                 val endpoint = ProviderEndpoint.create(intent.protocol, intent.network, intent.baseUrl)
+                validateEndpoint(editor, endpoint)
                 DirectoryState.Ready(discovery.models(endpoint, editor.previous, keyChange(intent.key, intent.removeKey)))
             } catch (canceled: CancellationException) {
                 throw canceled
@@ -301,6 +316,12 @@ internal class DanaViewModel @Inject constructor(
                 DirectoryState.Failed(DanaErrorHandler.messageFor(error), (error as? EngineFailure)?.httpStatus)
             }
             session.update { it.copy(directory = result) }
+        }
+    }
+
+    private fun validateEndpoint(editor: Editor.Provider, endpoint: ProviderEndpoint) {
+        if (endpoint.protocol != editor.initial || editor.cloud != null && endpoint.cloudEngine != editor.cloud) {
+            throw InputRejected(InputIssue.INVALID_BASE_URL)
         }
     }
 

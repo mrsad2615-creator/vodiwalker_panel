@@ -85,10 +85,12 @@ class DanaAiRouter(
     private val providers: ProviderRepository,
     private val transport: EngineTransport,
 ) {
-    fun compare(request: ComparisonRequest): Flow<EngineEvent> = whenOnline { parallel(request) }
+    fun compare(request: ComparisonRequest): Flow<EngineEvent> = whenOnline {
+        parallel(ConversationInput.single(request.prompt, request.task), request.targets)
+    }
 
     fun chat(route: ChatRoute): Flow<EngineEvent> = whenOnline {
-        flow {
+        if (route.parallel) parallel(route.input, route.candidates) else flow {
             for (profile in route.candidates) {
                 emit(EngineEvent.Started(profile.id))
                 var textReceived = false
@@ -125,10 +127,9 @@ class DanaAiRouter(
             event != EngineEvent.Offline && event != EngineEvent.Finished
         }
 
-    private fun parallel(request: ComparisonRequest): Flow<EngineEvent> = channelFlow {
+    private fun parallel(input: ConversationInput, targets: List<ProviderProfile>): Flow<EngineEvent> = channelFlow {
         coroutineScope {
-            val input = ConversationInput.single(request.prompt, request.task)
-            request.targets.forEach { profile ->
+            targets.forEach { profile ->
                 launch { runEngine(profile, input) { send(it) } }
             }
         }
@@ -143,6 +144,7 @@ class DanaAiRouter(
         try {
             // A removed or changed snapshot must fail before any request is created.
             val key = providers.credentialFor(profile)
+            if (!profile.config.endpoint.acceptsCredential(key != null)) throw EngineFailure(EngineProblem.AUTHENTICATION)
             val started = TimeSource.Monotonic.markNow()
             var length = 0
             var hasVisibleText = false

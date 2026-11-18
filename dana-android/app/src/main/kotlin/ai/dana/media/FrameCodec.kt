@@ -9,6 +9,8 @@ import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.ImageDecoder
+import android.graphics.Matrix
+import android.media.ExifInterface
 import android.net.Uri
 import android.os.Build
 import androidx.annotation.RequiresApi
@@ -57,9 +59,23 @@ internal object FrameCodec {
         validate(bounds.outWidth, bounds.outHeight)
         var sample = 1
         while (max(bounds.outWidth, bounds.outHeight) / sample > ChatLimits.PHOTO_EDGE) sample *= 2
-        return resolver.openInputStream(uri)?.use { stream ->
+        val bitmap = resolver.openInputStream(uri)?.use { stream ->
             BitmapFactory.decodeStream(stream, null, BitmapFactory.Options().apply { inSampleSize = sample; inPreferredConfig = Bitmap.Config.ARGB_8888 })
         } ?: throw IOException("Image could not be decoded")
+        val orientation = runCatching {
+            resolver.openInputStream(uri)?.use { ExifInterface(it).getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL) }
+        }.getOrNull()
+        val turn = when (orientation) {
+            ExifInterface.ORIENTATION_FLIP_HORIZONTAL -> Matrix().apply { setScale(-1f, 1f) }
+            ExifInterface.ORIENTATION_ROTATE_180 -> Matrix().apply { setRotate(180f) }
+            ExifInterface.ORIENTATION_FLIP_VERTICAL -> Matrix().apply { setScale(1f, -1f) }
+            ExifInterface.ORIENTATION_TRANSPOSE -> Matrix().apply { setRotate(90f); postScale(-1f, 1f) }
+            ExifInterface.ORIENTATION_ROTATE_90 -> Matrix().apply { setRotate(90f) }
+            ExifInterface.ORIENTATION_TRANSVERSE -> Matrix().apply { setRotate(270f); postScale(-1f, 1f) }
+            ExifInterface.ORIENTATION_ROTATE_270 -> Matrix().apply { setRotate(270f) }
+            else -> return bitmap
+        }
+        return try { Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, turn, true) } finally { bitmap.recycle() }
     }
 
     fun compress(bitmap: Bitmap): MemoryFrame {

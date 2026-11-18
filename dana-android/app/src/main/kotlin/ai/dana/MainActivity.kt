@@ -1,5 +1,6 @@
 package ai.dana
 
+import ai.dana.ui.ChatViewModel
 import ai.dana.ui.DanaApp
 import ai.dana.ui.DanaIntent
 import ai.dana.ui.DanaTheme
@@ -16,6 +17,7 @@ import dagger.hilt.android.AndroidEntryPoint
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     private val model: DanaViewModel by viewModels()
+    private val chat: ChatViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -24,11 +26,14 @@ class MainActivity : ComponentActivity() {
             navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
         )
         setContent {
-            DanaTheme { DanaApp(model) }
+            DanaTheme { DanaApp(model, chat) }
         }
     }
     override fun onStop() {
-        if (!isChangingConfigurations) model.dispatch(DanaIntent.StopRemoteRequests)
+        if (!isChangingConfigurations) {
+            model.dispatch(DanaIntent.StopRemoteRequests)
+            chat.background()
+        }
         super.onStop()
     }
 }

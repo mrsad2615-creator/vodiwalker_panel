@@ -28,6 +28,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -136,16 +137,19 @@ private fun ProviderEditor(
     val defaultName = when (protocol) {
         ProviderProtocol.GEMINI_NATIVE -> "Gemini"
         ProviderProtocol.APPLE_MAC -> "Apple · Mac"
-        ProviderProtocol.OPENAI_COMPATIBLE -> ""
+        ProviderProtocol.OPENAI_COMPATIBLE -> if (editor.lanPreset) "Ollama / LM Studio" else ""
     }
     var name by remember { mutableStateOf(previous?.name ?: defaultName) }
-    var local by remember { mutableStateOf(apple || previous?.network == ProviderNetwork.LOCAL_NETWORK) }
+    var local by remember { mutableStateOf(apple || editor.lanPreset || previous?.network == ProviderNetwork.LOCAL_NETWORK) }
     var customGemini by remember { mutableStateOf(gemini && previous != null && previous.baseUrl != GOOGLE_GEMINI_BASE_URL) }
     var baseUrl by remember { mutableStateOf(previous?.baseUrl ?: if (gemini) GOOGLE_GEMINI_BASE_URL else "") }
     var model by remember { mutableStateOf(previous?.model ?: if (apple) APPLE_MAC_MODEL else "") }
     // No rememberSaveable / SavedStateHandle, clipboard helper, or existing key readback.
     var key by remember { mutableStateOf("") }
     var removeKey by remember { mutableStateOf(false) }
+    LaunchedEffect(directory) {
+        if (model.isBlank()) (directory as? DirectoryState.Ready)?.result?.models?.singleOrNull()?.let { model = it.id }
+    }
     val lookup = directory == DirectoryState.Loading
     val formEnabled = !busy && !lookup
     val network = if (local) ProviderNetwork.LOCAL_NETWORK else ProviderNetwork.INTERNET
@@ -156,7 +160,11 @@ private fun ProviderEditor(
     )
     val clear = { dispatch(DanaIntent.ClearDirectory) }
     EditorDialog(
-        title = if (previous == null) presetLabel(protocol) else R.string.engine_edit,
+        title = when {
+            previous != null -> R.string.engine_edit
+            editor.lanPreset -> R.string.engine_add_lan
+            else -> presetLabel(protocol)
+        },
         button = R.string.save,
         enabled = formEnabled && name.isNotBlank() && baseUrl.isNotBlank() && model.isNotBlank(),
         busy = busy,
@@ -172,7 +180,7 @@ private fun ProviderEditor(
             Text(stringResource(R.string.engine_apple_intro))
             Text(stringResource(R.string.apple_language_note), style = MaterialTheme.typography.bodySmall, color = Amber)
             SetupLink(R.string.engine_apple_guide, APPLE_GUIDE_URL, formEnabled)
-        }
+        } else if (editor.lanPreset) Text(stringResource(R.string.engine_lan_intro))
         OutlinedTextField(
             name, { if (it.length <= ProviderConfig.NAME_LIMIT) name = it }, Modifier.fillMaxWidth(),
             enabled = formEnabled, singleLine = true, label = { Text(stringResource(R.string.engine_name)) },
@@ -187,7 +195,7 @@ private fun ProviderEditor(
                 clear()
             }
         }
-        if (!apple && (!gemini || customGemini || previous?.network == ProviderNetwork.LOCAL_NETWORK)) {
+        if (!apple && !editor.lanPreset && (!gemini || customGemini || previous?.network == ProviderNetwork.LOCAL_NETWORK)) {
             ToggleLine(R.string.engine_lan, local, formEnabled) { local = it; clear() }
         }
         if (gemini && !customGemini) {

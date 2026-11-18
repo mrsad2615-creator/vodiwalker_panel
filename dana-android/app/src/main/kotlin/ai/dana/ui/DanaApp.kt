@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
@@ -65,10 +66,13 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @Composable
-internal fun DanaApp(model: DanaViewModel) {
+internal fun DanaApp(model: DanaViewModel, chat: ChatViewModel) {
     val state by model.uiState.collectAsStateWithLifecycle()
     val session = state.session
-    val dispatch = model::dispatch
+    val dispatch: (DanaIntent) -> Unit = { intent ->
+        if (intent is DanaIntent.Navigate && intent.tab != DashboardTab.CHAT) chat.background()
+        model.dispatch(intent)
+    }
 
     BackHandler(enabled = session.tab != DashboardTab.HOME && session.editor == null && !session.busy) {
         dispatch(DanaIntent.Navigate(DashboardTab.HOME))
@@ -100,7 +104,10 @@ internal fun DanaApp(model: DanaViewModel) {
             contentAlignment = Alignment.TopCenter,
         ) {
             key(session.tab) {
-                LazyColumn(
+                if (session.tab == DashboardTab.CHAT) {
+                    ChatScreen(chat, state, onSettings = { dispatch(DanaIntent.Navigate(DashboardTab.SETTINGS)) },
+                        modifier = Modifier.widthIn(max = 720.dp).imePadding())
+                } else LazyColumn(
                     modifier = Modifier.widthIn(max = 640.dp).fillMaxSize(),
                     contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 18.dp, bottom = 24.dp),
                     verticalArrangement = Arrangement.spacedBy(14.dp),
@@ -110,6 +117,7 @@ internal fun DanaApp(model: DanaViewModel) {
                         session.error?.let { message -> item { ReadError(message) } }
                     }
                     when (session.tab) {
+                        DashboardTab.CHAT -> Unit // Chat owns its scroll and fixed composer.
                         DashboardTab.HOME -> home(state, dispatch)
                         DashboardTab.COMPARE -> comparison(state, dispatch)
                         DashboardTab.NOTES -> notes(state, dispatch)
@@ -161,8 +169,13 @@ private fun LazyListScope.home(state: DashboardState, dispatch: (DanaIntent) -> 
                 style = MaterialTheme.typography.bodyMedium,
                 color = Titanium,
             )
-            Button(onClick = { dispatch(DanaIntent.Navigate(DashboardTab.COMPARE)) }, enabled = !state.session.busy) {
-                Text(stringResource(R.string.tab_compare))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(onClick = { dispatch(DanaIntent.Navigate(DashboardTab.CHAT)) }, enabled = !state.session.busy) {
+                    Text(stringResource(R.string.hub_begin_chat))
+                }
+                OutlinedButton(onClick = { dispatch(DanaIntent.Navigate(DashboardTab.COMPARE)) }, enabled = !state.session.busy) {
+                    Text(stringResource(R.string.tab_compare))
+                }
             }
         }
     }
@@ -247,6 +260,10 @@ private fun LazyListScope.settings(state: DashboardState, dispatch: (DanaIntent)
                 enabled = enabled,
                 modifier = Modifier.fillMaxWidth(),
             ) { Text(stringResource(R.string.engine_add_apple)) }
+            OutlinedButton(
+                onClick = { dispatch(DanaIntent.EditProvider(null, lanPreset = true)) },
+                enabled = enabled, modifier = Modifier.fillMaxWidth(),
+            ) { Text(stringResource(R.string.engine_add_lan)) }
             TextButton(
                 onClick = { dispatch(DanaIntent.EditProvider(null)) },
                 enabled = enabled,
@@ -428,6 +445,12 @@ private fun TabGlyph(tab: DashboardTab, tint: Color) {
                 }
                 drawPath(outline, tint, style = Stroke(stroke))
                 drawCircle(tint, 1.5f * t, point(12f, 12f))
+            }
+            DashboardTab.CHAT -> {
+                drawRoundRect(tint, point(3f, 4f), Size(18f * t, 13f * t), CornerRadius(4 * t), style = Stroke(stroke))
+                line(8f, 17f, 8f, 21f)
+                line(8f, 21f, 12f, 17f)
+                line(8f, 10f, 16f, 10f)
             }
             DashboardTab.COMPARE -> {
                 drawRoundRect(tint, point(2f, 5f), Size(9f * t, 13f * t), CornerRadius(2 * t), style = Stroke(stroke))

@@ -46,6 +46,7 @@ import kotlinx.coroutines.launch
 
 internal enum class DashboardTab(@StringRes val label: Int) {
     HOME(R.string.tab_home),
+    CHAT(R.string.tab_chat),
     COMPARE(R.string.tab_compare),
     NOTES(R.string.tab_notes),
     SETTINGS(R.string.tab_settings),
@@ -59,7 +60,7 @@ internal sealed interface Reading<out T> {
 
 internal sealed interface Editor {
     data class Note(val previous: DanaNote?, val draft: String = previous?.text.orEmpty()) : Editor
-    data class Provider(val previous: ProviderProfile?, val initial: ProviderProtocol) : Editor
+    data class Provider(val previous: ProviderProfile?, val initial: ProviderProtocol, val lanPreset: Boolean = false) : Editor
     data class DeleteNote(val id: Long) : Editor
     data class DeleteProvider(val id: String) : Editor
     class ConfirmComparison(val request: ComparisonRequest) : Editor
@@ -91,7 +92,7 @@ internal data class DashboardState(
 internal sealed interface DanaIntent {
     data class Navigate(val tab: DashboardTab) : DanaIntent
     data class EditNote(val note: DanaNote?) : DanaIntent
-    data class EditProvider(val profile: ProviderProfile?, val preset: ProviderProtocol = ProviderProtocol.OPENAI_COMPATIBLE) : DanaIntent
+    data class EditProvider(val profile: ProviderProfile?, val preset: ProviderProtocol = ProviderProtocol.OPENAI_COMPATIBLE, val lanPreset: Boolean = false) : DanaIntent
     data class ChooseTask(val task: AssistantTask, val openWorkspace: Boolean = false) : DanaIntent
     data class NoteFromAnswer(val profileId: String) : DanaIntent
     data object ClearDirectory : DanaIntent
@@ -197,7 +198,7 @@ internal class DanaViewModel @Inject constructor(
             DanaIntent.ClearDirectory -> clearDirectory()
             is DanaIntent.ReadModels -> readModels(intent)
             is DanaIntent.EditNote -> show(Editor.Note(intent.note))
-            is DanaIntent.EditProvider -> show(Editor.Provider(intent.profile, intent.profile?.config?.protocol ?: intent.preset))
+            is DanaIntent.EditProvider -> show(Editor.Provider(intent.profile, intent.profile?.config?.protocol ?: intent.preset, intent.lanPreset))
             is DanaIntent.RequestNoteDeletion -> show(Editor.DeleteNote(intent.id))
             is DanaIntent.RequestProviderDeletion -> show(Editor.DeleteProvider(intent.id))
             DanaIntent.DismissEditor -> show(null)

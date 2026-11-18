@@ -96,8 +96,21 @@ internal interface HistoryDao {
     @Query("SELECT * FROM conversations ORDER BY updated_at_ms DESC, id DESC")
     fun observe(): Flow<List<ConversationEntity>>
 
-    @Query("SELECT * FROM messages WHERE conversation_id = :conversationId ORDER BY id ASC")
+    @Query("SELECT * FROM (SELECT * FROM messages WHERE conversation_id = :conversationId ORDER BY id DESC LIMIT 120) ORDER BY id ASC")
     fun observeMessages(conversationId: Long): Flow<List<MessageEntity>>
+
+    @Query("""
+        SELECT * FROM conversations WHERE instr(lower(title), lower(:text)) > 0 OR id IN (
+            SELECT conversation_id FROM messages WHERE instr(lower(body), lower(:text)) > 0
+        ) ORDER BY updated_at_ms DESC, id DESC LIMIT 100
+    """)
+    fun search(text: String): Flow<List<ConversationEntity>>
+
+    @Query("UPDATE conversations SET title = :title WHERE id = :id")
+    suspend fun rename(id: Long, title: String): Int
+
+    @Query("DELETE FROM conversations")
+    suspend fun clear()
 
     @Insert
     suspend fun insertConversation(conversation: ConversationEntity): Long

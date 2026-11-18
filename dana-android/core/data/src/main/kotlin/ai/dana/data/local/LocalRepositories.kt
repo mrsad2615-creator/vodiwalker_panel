@@ -37,6 +37,10 @@ internal class RoomHistoryRepository(private val database: DanaDatabase) : Histo
         entities.map { Conversation(it.id, it.title, it.updatedAtMs) }
     }
 
+    override fun search(text: String) = dao.search(text.trim().take(160)).map { entities ->
+        entities.map { Conversation(it.id, it.title, it.updatedAtMs) }
+    }
+
     override fun messages(conversationId: Long) = dao.observeMessages(conversationId).map { entities ->
         entities.map {
             ConversationMessage(it.id, it.conversationId, MessageRole.valueOf(it.role), it.body, it.createdAtMs)
@@ -57,6 +61,23 @@ internal class RoomHistoryRepository(private val database: DanaDatabase) : Histo
             )
         }
     }
+
+    override suspend fun saveExchange(conversationId: Long?, title: String, user: String, answer: String): Long {
+        val question = LocalText.message(user)
+        val response = LocalText.message(answer)
+        return database.withTransaction {
+            val now = System.currentTimeMillis()
+            val id = conversationId ?: dao.insertConversation(ConversationEntity(title = LocalText.title(title), updatedAtMs = now))
+            if (conversationId != null) requireChange(dao.touchConversation(id, now))
+            dao.insertMessage(MessageEntity(conversationId = id, role = MessageRole.USER.name, body = question, createdAtMs = now))
+            dao.insertMessage(MessageEntity(conversationId = id, role = MessageRole.ASSISTANT.name, body = response, createdAtMs = now))
+            id
+        }
+    }
+
+    override suspend fun rename(conversationId: Long, title: String) = requireChange(dao.rename(conversationId, LocalText.title(title)))
+
+    override suspend fun clear() = dao.clear()
 
     override suspend fun delete(conversationId: Long) = requireChange(dao.deleteConversation(conversationId))
 }

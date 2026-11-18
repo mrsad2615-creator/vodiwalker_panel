@@ -144,7 +144,7 @@ class DanaAiRouterTest {
         override suspend fun delete(id: String) = error("Unexpected delete")
         override suspend fun credentialFor(profile: ProviderProfile) = credentials(profile)
     }, object : EngineTransport {
-        override fun stream(config: ProviderConfig, key: ApiCredential?, prompt: String, task: AssistantTask) = stream(config, key, prompt).map { EngineText(it) }
+        override fun stream(config: ProviderConfig, key: ApiCredential?, input: ConversationInput) = stream(config, key, input.prompt).map { EngineText(it) }
     })
 
     private fun testRunning(block: suspend kotlinx.coroutines.CoroutineScope.() -> Unit) {

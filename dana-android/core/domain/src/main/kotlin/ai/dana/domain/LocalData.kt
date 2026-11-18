@@ -27,7 +27,11 @@ interface HistoryRepository {
     fun messages(conversationId: Long): Flow<List<ConversationMessage>>
     suspend fun create(title: String): Long
     suspend fun append(conversationId: Long, role: MessageRole, body: String): Long
+    suspend fun saveExchange(conversationId: Long?, title: String, user: String, answer: String): Long
+    suspend fun rename(conversationId: Long, title: String)
     suspend fun delete(conversationId: Long)
+    suspend fun clear()
+    fun search(text: String): Flow<List<Conversation>>
 }
 
 data class UserMemory(val id: Long, val fact: String, val updatedAtMs: Long)

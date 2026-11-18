@@ -1,9 +1,9 @@
 package ai.dana.data.network
 
 import ai.dana.domain.ApiCredential
-import ai.dana.domain.AssistantTask
+import ai.dana.domain.ConversationInput
 import ai.dana.domain.EngineText
-import ai.dana.domain.ProviderProtocol
+import ai.dana.domain.ProviderNetwork
 import ai.dana.domain.EngineFailure
 import ai.dana.domain.EngineProblem
 import ai.dana.domain.EngineTransport
@@ -23,11 +23,11 @@ import okhttp3.Response
 
 internal class OkHttpEngineTransport(
     private val client: OkHttpClient = danaHttpClient(),
-    private val appleClient: OkHttpClient = client.privateAppleClient(),
+    private val lanClient: OkHttpClient = client.privateLanClient(),
 ) : EngineTransport {
-    override fun stream(config: ProviderConfig, key: ApiCredential?, prompt: String, task: AssistantTask): Flow<EngineText> = callbackFlow {
-        val http = if (config.protocol == ProviderProtocol.APPLE_MAC) appleClient else client
-        val call = http.newCall(EngineProtocol.request(config, key, prompt, task))
+    override fun stream(config: ProviderConfig, key: ApiCredential?, input: ConversationInput): Flow<EngineText> = callbackFlow {
+        val http = if (config.network == ProviderNetwork.LOCAL_NETWORK) lanClient else client
+        val call = http.newCall(EngineProtocol.request(config, key, input))
         call.enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
                 close(e.toEngineFailure())

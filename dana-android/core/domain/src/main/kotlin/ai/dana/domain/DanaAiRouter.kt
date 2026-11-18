@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.transformWhile
 import kotlinx.coroutines.launch
@@ -62,10 +63,14 @@ class EngineFailure(val problem: EngineProblem, val httpStatus: Int? = null) : E
 data class EngineText(val value: String, val replaces: Boolean = false)
 
 interface EngineTransport {
-    fun stream(config: ProviderConfig, key: ApiCredential?, prompt: String, task: AssistantTask = AssistantTask.ASK): Flow<EngineText>
+    fun stream(config: ProviderConfig, key: ApiCredential?, input: ConversationInput): Flow<EngineText>
+
+    fun stream(config: ProviderConfig, key: ApiCredential?, prompt: String, task: AssistantTask = AssistantTask.ASK): Flow<EngineText> =
+        stream(config, key, ConversationInput.single(prompt, task))
 }
 
 sealed interface EngineEvent {
+    data class Started(val profileId: String) : EngineEvent
     class Text(val profileId: String, val chunk: EngineText, val firstTextMillis: Long?) : EngineEvent
     data class Complete(val profileId: String, val elapsedMillis: Long) : EngineEvent
     data class Failed(val profileId: String, val problem: EngineProblem, val httpStatus: Int? = null) : EngineEvent
@@ -79,8 +84,28 @@ class DanaAiRouter(
     private val providers: ProviderRepository,
     private val transport: EngineTransport,
 ) {
+    fun compare(request: ComparisonRequest): Flow<EngineEvent> = whenOnline { parallel(request) }
+
+    fun chat(route: ChatRoute): Flow<EngineEvent> = whenOnline {
+        flow {
+            for (profile in route.candidates) {
+                emit(EngineEvent.Started(profile.id))
+                var textReceived = false
+                var failure: EngineProblem? = null
+                runEngine(profile, route.input) { event ->
+                    if (event is EngineEvent.Text) textReceived = true
+                    if (event is EngineEvent.Failed) failure = event.problem
+                    emit(event)
+                }
+                // Never switch on policy/safety refusals, after a visible/partial response, or off the approved route.
+                if (textReceived || failure !in FALLBACK_PROBLEMS) break
+            }
+            emit(EngineEvent.Finished)
+        }
+    }
+
     @OptIn(ExperimentalCoroutinesApi::class)
-    fun compare(request: ComparisonRequest): Flow<EngineEvent> = preferences.offlineMode
+    private fun whenOnline(operation: () -> Flow<EngineEvent>): Flow<EngineEvent> = preferences.offlineMode
         .catch { error ->
             if (error is CancellationException || error !is Exception) throw error
             emit(true) // Fail closed if we cannot read the privacy setting.
@@ -91,7 +116,7 @@ class DanaAiRouter(
             !offline // Once blocked, never replay the approved prompt on a later online transition.
         }
         .flatMapLatest { offline ->
-            if (offline) flowOf(EngineEvent.Offline) else parallel(request)
+            if (offline) flowOf(EngineEvent.Offline) else operation()
         }
         .buffer(0)
         .transformWhile { event ->
@@ -101,8 +126,9 @@ class DanaAiRouter(
 
     private fun parallel(request: ComparisonRequest): Flow<EngineEvent> = channelFlow {
         coroutineScope {
+            val input = ConversationInput.single(request.prompt, request.task)
             request.targets.forEach { profile ->
-                launch { runEngine(profile, request.prompt, request.task) { send(it) } }
+                launch { runEngine(profile, input) { send(it) } }
             }
         }
         send(EngineEvent.Finished)
@@ -110,8 +136,7 @@ class DanaAiRouter(
 
     private suspend fun runEngine(
         profile: ProviderProfile,
-        prompt: String,
-        task: AssistantTask,
+        input: ConversationInput,
         emit: suspend (EngineEvent) -> Unit,
     ) {
         try {
@@ -121,7 +146,7 @@ class DanaAiRouter(
             var length = 0
             var hasVisibleText = false
             var firstTextMillis: Long? = null
-            transport.stream(profile.config, key, prompt, task).collect { chunk ->
+            transport.stream(profile.config, key, input).collect { chunk ->
                 val previouslyWritten = if (chunk.replaces) 0 else length
                 if (chunk.value.length > ComparisonLimits.ANSWER_CHARS - previouslyWritten) {
                     throw EngineFailure(EngineProblem.OUTPUT_LIMIT)
@@ -146,4 +171,12 @@ class DanaAiRouter(
             emit(EngineEvent.Failed(profile.id, problem, (error as? EngineFailure)?.httpStatus))
         }
     }
+
+    private companion object {
+        val FALLBACK_PROBLEMS = setOf(
+            EngineProblem.RATE_LIMIT, EngineProblem.FORBIDDEN, EngineProblem.NETWORK,
+            EngineProblem.TIMEOUT, EngineProblem.SERVER, EngineProblem.ENGINE_UNAVAILABLE,
+        )
+    }
+
 }

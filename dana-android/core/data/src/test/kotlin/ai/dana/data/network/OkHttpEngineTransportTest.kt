@@ -3,6 +3,11 @@ package ai.dana.data.network
 import ai.dana.domain.APPLE_MAC_MODEL
 import ai.dana.domain.ApiCredential
 import ai.dana.domain.AssistantTask
+import ai.dana.domain.AssistantStyle
+import ai.dana.domain.ContextMessage
+import ai.dana.domain.ConversationInput
+import ai.dana.domain.MessageRole
+import ai.dana.domain.VisionPhoto
 import ai.dana.domain.EngineText
 import ai.dana.domain.ProviderEndpoint
 import ai.dana.domain.EngineFailure
@@ -204,13 +209,36 @@ class OkHttpEngineTransportTest {
     fun applePrivateDnsRejectsPublicAddressesEvenWhenDnsReturnsThem() = tlsTest { server, client ->
         val public = InetAddress.getByAddress(byteArrayOf(8, 8, 8, 8))
         val local = InetAddress.getByAddress(byteArrayOf(192.toByte(), 168.toByte(), 0, 3))
-        val privateDns = ApplePrivateDns(Dns { listOf(public, local) })
+        val privateDns = PrivateLanDns(Dns { listOf(public, local) })
         assertEquals(listOf(local), privateDns.lookup("example.test"))
-        assertThrows(UnknownHostException::class.java) { ApplePrivateDns(Dns { listOf(public) }).lookup("example.test") }
+        assertThrows(UnknownHostException::class.java) { PrivateLanDns(Dns { listOf(public) }).lookup("example.test") }
         val publicClient = client.newBuilder().dns(Dns { listOf(public) }).build()
         val endpoint = ProviderEndpoint.create(APPLE, ProviderNetwork.LOCAL_NETWORK, "https://mac.example/v1")
         expect(EngineProblem.CONFIGURATION) { OkHttpModelDirectory(publicClient).list(endpoint, key) }
         assertEquals(0, server.requestCount)
+    }
+
+    @Test
+    fun chatPassesStructuredHistoryAndGatedPhotoToCompatibleProviders() = localTest { server, transport ->
+        server.enqueue(sse(GEMINI))
+        server.enqueue(sse(OPENAI))
+        val jpeg = checkNotNull(VisionPhoto.fromJpeg(byteArrayOf(-1, -40, 2, 3, -1, -39)))
+        val input = checkNotNull(ConversationInput.prepare("کد تایید ۱۲۳۴", listOf(
+            ContextMessage(MessageRole.USER, "Earlier user"), ContextMessage(MessageRole.ASSISTANT, "Earlier answer"),
+        ), emptyList(), AssistantStyle.CONCISE, AssistantTask.ASK, jpeg, mask = true))
+        for (protocol in listOf(GEM, OPEN)) {
+            transport.stream(config(server, protocol), key, input).toList()
+            val call = checkNotNull(server.takeRequest(1, TimeUnit.SECONDS))
+            val body = checkNotNull(call.body).utf8()
+            assertTrue(body.contains("[محفوظ]"))
+            assertFalse(body.contains("۱۲۳۴"))
+            assertTrue(body.contains("Earlier user"))
+            assertTrue(body.contains("Earlier answer"))
+            assertTrue(body.contains(if (protocol == GEM) "inlineData" else "data:image/jpeg;base64,"))
+            assertTrue(body.contains(jpeg.encodeBase64()))
+        }
+        expect(EngineProblem.CONTEXT_LIMIT) { transport.stream(config(server, APPLE, APPLE_MAC_MODEL), key, input).toList() }
+        assertEquals(2, server.requestCount)
     }
 
     private fun json(data: String, status: Int = 200) = MockResponse.Builder().code(status)

@@ -9,7 +9,7 @@ import ai.dana.data.network.AndroidNetworkMonitor
 import ai.dana.data.network.OkHttpEngineTransport
 import ai.dana.data.network.OkHttpModelDirectory
 import ai.dana.data.network.danaHttpClient
-import ai.dana.data.network.privateAppleClient
+import ai.dana.data.network.privateLanClient
 import ai.dana.data.provider.EngineRepository
 import ai.dana.data.provider.KeystoreVault
 import ai.dana.domain.DanaAiRouter
@@ -62,15 +62,15 @@ internal object DataModule {
     fun network(@ApplicationContext context: Context): NetworkMonitor = AndroidNetworkMonitor(context)
 
     private val client by lazy { danaHttpClient() }
-    private val appleClient by lazy { client.privateAppleClient() }
+    private val lanClient by lazy { client.privateLanClient() }
 
     @Provides
     @Singleton
     fun discovery(preferences: PrivacyPreferences, providers: ProviderRepository): EngineDiscovery =
-        EngineDiscovery(preferences, providers, OkHttpModelDirectory(client, appleClient))
+        EngineDiscovery(preferences, providers, OkHttpModelDirectory(client, lanClient))
 
     @Provides
     @Singleton
     fun router(preferences: PrivacyPreferences, providers: ProviderRepository): DanaAiRouter =
-        DanaAiRouter(preferences, providers, OkHttpEngineTransport(client, appleClient))
+        DanaAiRouter(preferences, providers, OkHttpEngineTransport(client, lanClient))
 }

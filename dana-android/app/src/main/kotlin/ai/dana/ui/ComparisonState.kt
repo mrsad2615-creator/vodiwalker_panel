@@ -41,6 +41,7 @@ internal data class ComparisonState(
         is EngineEvent.Failed -> updateLane(event.profileId) {
             it.copy(status = LaneStatus.FAILED, problem = event.problem, httpStatus = event.httpStatus)
         }
+        is EngineEvent.Started -> this
         EngineEvent.Offline -> copy(problem = EngineProblem.OFFLINE)
         EngineEvent.Finished -> this
     }

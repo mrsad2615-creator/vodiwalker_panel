@@ -86,6 +86,23 @@ class LocalDataTest {
     }
 
     @Test
+    fun completeChatExchangeSavesAtomicallyAndCanBeSearchedRenamedAndErased() = deviceTest {
+        database().useDb { db ->
+            val history = RoomHistoryRepository(db)
+            val id = history.saveExchange(null, "جلسه", "تعطیلات شنبه", "برای شنبه آماده شوید")
+            assertEquals(id, history.search("تعطیلات").first().single().id)
+            assertEquals(listOf(MessageRole.USER, MessageRole.ASSISTANT), history.messages(id).first().map { it.role })
+            expectInputIssue(InputIssue.INVALID_MESSAGE) { history.saveExchange(id, "جلسه", "نباید ذخیره شود", " ") }
+            assertEquals(2, history.messages(id).first().size)
+            history.rename(id, "سفر")
+            assertEquals(id, history.search("سفر").first().single().id)
+            history.clear()
+            assertTrue(history.messages(id).first().isEmpty())
+            assertTrue(history.search("تعطیلات").first().isEmpty())
+        }
+    }
+
+    @Test
     fun localMemorySupportsEditingIndividualDeletionAndClearing() = deviceTest {
         database().useDb { db ->
             val memory = RoomMemoryRepository(db.memory())

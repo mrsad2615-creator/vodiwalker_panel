@@ -9,6 +9,7 @@ import ai.dana.domain.EngineProblem
 import ai.dana.domain.ModelDirectory
 import ai.dana.domain.ProviderConfig
 import ai.dana.domain.ProviderEndpoint
+import ai.dana.domain.ProviderNetwork
 import ai.dana.domain.ProviderProtocol
 import java.io.IOException
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -23,7 +24,7 @@ import okhttp3.Response
 
 internal class OkHttpModelDirectory(
     private val client: OkHttpClient,
-    private val appleClient: OkHttpClient = client.privateAppleClient(),
+    private val lanClient: OkHttpClient = client.privateLanClient(),
 ) : ModelDirectory {
     override suspend fun list(endpoint: ProviderEndpoint, key: ApiCredential?): List<DirectoryModel> =
         withTimeoutOrNull(40_000) { collect(endpoint, key) } ?: throw EngineFailure(EngineProblem.TIMEOUT)
@@ -42,7 +43,7 @@ internal class OkHttpModelDirectory(
             }
             val builder = Request.Builder().url(url.build()).get().header("Accept", "application/json")
             EngineProtocol.authenticate(builder, protocol, key)
-            val http = if (protocol == ProviderProtocol.APPLE_MAC) appleClient else client
+            val http = if (endpoint.network == ProviderNetwork.LOCAL_NETWORK) lanClient else client
             val root = http.readCatalog(builder.build(), protocol)
             val field = root[if (gemini) "models" else "data"]
             val entries = when {

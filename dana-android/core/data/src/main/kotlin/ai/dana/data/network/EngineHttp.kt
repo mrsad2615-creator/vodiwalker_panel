@@ -54,10 +54,10 @@ internal fun IOException.toEngineFailure() = EngineFailure(when (this) {
     else -> EngineProblem.NETWORK
 })
 
-private class OutsidePrivateNetwork : UnknownHostException("Apple bridge must resolve to a private address")
+private class OutsidePrivateNetwork : UnknownHostException("LAN host must resolve to a private address")
 
 /** Enforce LAN at socket resolution, not by trusting the label or the DNS name. */
-internal class ApplePrivateDns(private val delegate: Dns) : Dns {
+internal class PrivateLanDns(private val delegate: Dns) : Dns {
     override fun lookup(hostname: String): List<InetAddress> = delegate.lookup(hostname)
         .filter { address ->
             val bytes = address.address
@@ -66,10 +66,10 @@ internal class ApplePrivateDns(private val delegate: Dns) : Dns {
         }.ifEmpty { throw OutsidePrivateNetwork() }
 }
 
-internal fun OkHttpClient.privateAppleClient(): OkHttpClient = newBuilder()
+internal fun OkHttpClient.privateLanClient(): OkHttpClient = newBuilder()
     // Use a separate connection pool; do not reuse sockets or HTTP/2 routes from WAN profiles.
     .connectionPool(ConnectionPool())
-    .dns(ApplePrivateDns(dns))
+    .dns(PrivateLanDns(dns))
     .proxy(Proxy.NO_PROXY)
     .readTimeout(86, TimeUnit.SECONDS)
     .build()

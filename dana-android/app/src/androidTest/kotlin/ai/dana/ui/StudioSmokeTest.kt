@@ -57,6 +57,7 @@ import java.net.Socket
 import java.security.MessageDigest
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.LinkedBlockingQueue
+import kotlinx.coroutines.test.StandardTestDispatcher
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Protocol
@@ -92,7 +93,8 @@ class StudioSmokeTest {
     }.build())
 
     @get:Rule(order = 0) val hilt = HiltAndroidRule(this)
-    @get:Rule(order = 1) val compose = createAndroidComposeRule<MainActivity>()
+    // Advance effects on the test clock rather than letting I/O completions drive layout off-main.
+    @get:Rule(order = 1) val compose = createAndroidComposeRule<MainActivity>(effectContext = StandardTestDispatcher())
 
     @Test
     @SdkSuppress(minSdkVersion = 29)
@@ -221,6 +223,7 @@ class StudioSmokeTest {
         click(R.string.chat_execute)
         visible(R.string.chat_note_saved, scroll = true)
         assertTrue(calls.isEmpty())
+        trace("Share remains a draft; typed note requires explicit review and is saved locally")
     }
 
     @Test

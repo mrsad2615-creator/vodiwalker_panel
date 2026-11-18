@@ -68,7 +68,7 @@ internal fun ArtScreen(model: ArtViewModel, dashboard: DashboardState, dispatch:
     val connect = { finishInput(); dispatch(DanaIntent.OpenQuick(chosen?.first?.service ?: QuickService.AVALAI, DashboardTab.ART)) }
     val list = rememberLazyListState()
     LaunchedEffect(art.preview?.id) {
-        if (art.preview != null) list.scrollToItem(0)
+        if (art.preview != null) list.requestScrollToItem(0)
     }
     Column(modifier.fillMaxSize()) {
         LazyColumn(state = list, modifier = Modifier.weight(1f).fillMaxWidth(),

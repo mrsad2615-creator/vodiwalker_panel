@@ -219,9 +219,10 @@ private fun Dialogue(
         val team = chat.team
         val itemCount = chat.turns.size + if (team == null) 0 else 2 + team.comparison.lanes.size
         LaunchedEffect(chat.turns.lastOrNull()?.index, team?.index, chat.voiceOpen) {
-            if (team != null) scroll.scrollToItem(chat.turns.size + if (chat.voiceOpen) 1 else 0)
-            else if (chat.voiceOpen && itemCount <= 1) scroll.scrollToItem(0)
-            else if (itemCount > 0) scroll.scrollToItem(itemCount - 1 + if (chat.voiceOpen) 1 else 0)
+            // Schedule the jump rather than forcing a remeasure while new content is being laid out.
+            if (team != null) scroll.requestScrollToItem(chat.turns.size + if (chat.voiceOpen) 1 else 0)
+            else if (chat.voiceOpen && itemCount <= 1) scroll.requestScrollToItem(0)
+            else if (itemCount > 0) scroll.requestScrollToItem(itemCount - 1 + if (chat.voiceOpen) 1 else 0)
         }
         LazyColumn(state = scroll, modifier = Modifier.weight(1f).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp),
             contentPadding = PaddingValues(vertical = 4.dp)) {

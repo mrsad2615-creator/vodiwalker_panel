@@ -94,14 +94,16 @@ class AegisOfflineE2ETest {
         composeRule.waitForIdle()
         composeRule.onNodeWithText("Incident Title").performTextInput("Airplane E2E Drill")
         composeRule.onNodeWithText("Create Incident + Auto Checklist").performScrollTo().performClick()
-        composeRule.waitForIdle()
+        composeRule.waitUntil(5_000L) {
+            composeRule.onAllNodesWithText("Airplane E2E Drill").fetchSemanticsNodes().isNotEmpty()
+        }
         composeRule.onAllNodesWithText("Airplane E2E Drill").onFirst().assertIsDisplayed()
         composeRule.onNodeWithText("←").performClick()
         composeRule.waitForIdle()
 
         // Scroll Home LazyColumn to Privacy & Security module card and verify zero-network permission audit
         composeRule.onNodeWithTag("home_lazy_list").performScrollToNode(hasText("Privacy & Security"))
-        composeRule.onNodeWithText("Privacy & Security").performClick()
+        composeRule.onNodeWithText("Privacy & Security").performScrollTo().performClick()
         composeRule.waitForIdle()
         composeRule.onNodeWithText("Audit & Perms").performClick()
         composeRule.waitForIdle()

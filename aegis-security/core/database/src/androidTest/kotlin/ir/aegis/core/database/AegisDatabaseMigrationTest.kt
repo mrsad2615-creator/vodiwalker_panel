@@ -24,7 +24,8 @@ import org.junit.runner.RunWith
 class AegisDatabaseMigrationTest {
 
     @Test
-    fun migrateVersion1ToVersion2PreservesRowsAndValidatesSchema() = runBlocking {
+    fun migrateVersion1ToVersion2PreservesRowsAndValidatesSchema() {
+        runBlocking {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val dbName = "migration_test_v1_v2.db"
         context.deleteDatabase(dbName)
@@ -110,5 +111,6 @@ class AegisDatabaseMigrationTest {
 
         roomDb.close()
         context.deleteDatabase(dbName)
+        }
     }
 }

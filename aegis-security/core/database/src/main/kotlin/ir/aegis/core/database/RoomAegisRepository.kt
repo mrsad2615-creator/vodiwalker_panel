@@ -2,8 +2,10 @@ package ir.aegis.core.database
 
 import ir.aegis.core.maps.OfflineMapSeeds
 import ir.aegis.core.model.*
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.withContext
 import java.util.UUID
 
 class RoomAegisRepository(private val db: AegisDatabase) : AegisRepository {
@@ -42,19 +44,18 @@ class RoomAegisRepository(private val db: AegisDatabase) : AegisRepository {
     override suspend fun getIncidentById(id: String): Incident? = dao.getIncidentById(id)?.toDomain()
 
     override suspend fun createIncident(incident: Incident, initialNote: String) {
-        db.runInTransaction {
-            // Executed inside transaction via Room blocking bridge not needed; use sequential inside suspend
+        withContext(Dispatchers.IO) {
+            dao.upsertIncident(IncidentEntity.fromDomain(incident))
+            dao.upsertTimelineEvent(
+                IncidentTimelineEntity(
+                    id = "tl-${UUID.randomUUID().toString().take(8)}",
+                    incidentId = incident.id,
+                    eventType = "REGISTERED",
+                    summary = initialNote,
+                    createdAtMillis = incident.createdAtMillis,
+                ),
+            )
         }
-        dao.upsertIncident(IncidentEntity.fromDomain(incident))
-        dao.upsertTimelineEvent(
-            IncidentTimelineEntity(
-                id = "tl-${UUID.randomUUID().toString().take(8)}",
-                incidentId = incident.id,
-                eventType = "REGISTERED",
-                summary = initialNote,
-                createdAtMillis = incident.createdAtMillis,
-            ),
-        )
     }
 
     override suspend fun updateIncident(incident: Incident, timelineNote: String?) {
@@ -187,35 +188,37 @@ class RoomAegisRepository(private val db: AegisDatabase) : AegisRepository {
     }
 
     override suspend fun restoreFullSnapshot(snapshot: FullBackupSnapshot) {
-        db.runInTransaction {
-            db.clearAllTables()
+        withContext(Dispatchers.IO) {
+            db.runInTransaction {
+                db.clearAllTables()
+            }
+            snapshot.securityProfile?.let { dao.upsertSecurityProfile(SecurityProfileEntity.fromDomain(it)) }
+            snapshot.emergencyCard?.let { dao.upsertEmergencyCard(EmergencyCardEntity.fromDomain(it)) }
+            snapshot.vaultItems.forEach { dao.upsertVaultItem(VaultItemEntity.fromDomain(it)) }
+            snapshot.trustedContacts.forEach { dao.upsertTrustedContact(TrustedContactEntity.fromDomain(it)) }
+            snapshot.safetyPlans.forEach { dao.upsertSafetyPlan(SafetyPlanEntity.fromDomain(it)) }
+            snapshot.reminders.forEach { dao.upsertReminder(SecurityReminderEntity.fromDomain(it)) }
+            snapshot.journalEntries.forEach { dao.upsertJournalEntry(JournalEntryEntity.fromDomain(it)) }
+            snapshot.incidents.forEach { dao.upsertIncident(IncidentEntity.fromDomain(it)) }
+            snapshot.timelineEvents.forEach { dao.upsertTimelineEvent(IncidentTimelineEntity.fromDomain(it)) }
+            snapshot.attachments.forEach { dao.upsertIncidentAttachment(IncidentAttachmentEntity.fromDomain(it)) }
+            snapshot.checklists.forEach { pair ->
+                dao.upsertChecklist(ChecklistEntity.fromDomain(pair.checklist))
+                dao.upsertChecklistItems(pair.items.map { ChecklistItemEntity.fromDomain(it) })
+            }
+            snapshot.mapPackages.forEach { dao.upsertMapPackage(MapPackageEntity.fromDomain(it)) }
+            snapshot.mapMarkers.forEach { dao.upsertMapMarker(MapMarkerEntity.fromDomain(it)) }
+            snapshot.savedRoutes.forEach { dao.upsertSavedRoute(SavedRouteEntity.fromDomain(it)) }
+            snapshot.familyMembers.forEach { dao.upsertFamilyMember(FamilyMemberEntity.fromDomain(it)) }
+            snapshot.meetingPoints.forEach { dao.upsertMeetingPoint(MeetingPointEntity.fromDomain(it)) }
+            snapshot.familyPlan?.let { dao.upsertFamilyPlan(FamilyPlanEntity.fromDomain(it)) }
+            snapshot.academyProgress.forEach { dao.upsertAcademyProgress(AcademyProgressEntity.fromDomain(it)) }
+            snapshot.inventoryItems.forEach { dao.upsertInventoryItem(InventoryItemEntity.fromDomain(it)) }
+            snapshot.offlineNotes.forEach { dao.upsertOfflineNote(OfflineNoteEntity.fromDomain(it)) }
+            snapshot.voiceNotes.forEach { dao.upsertVoiceNote(VoiceNoteEntity.fromDomain(it)) }
+            snapshot.auditLogs.forEach { dao.insertAuditLog(AuditLogEntity.fromDomain(it)) }
+            logActivity("RESTORE", "Privacy & Backup", "Restored encrypted offline snapshot (${snapshot.incidents.size} incidents, ${snapshot.vaultItems.size} vault items)")
         }
-        snapshot.securityProfile?.let { dao.upsertSecurityProfile(SecurityProfileEntity.fromDomain(it)) }
-        snapshot.emergencyCard?.let { dao.upsertEmergencyCard(EmergencyCardEntity.fromDomain(it)) }
-        snapshot.vaultItems.forEach { dao.upsertVaultItem(VaultItemEntity.fromDomain(it)) }
-        snapshot.trustedContacts.forEach { dao.upsertTrustedContact(TrustedContactEntity.fromDomain(it)) }
-        snapshot.safetyPlans.forEach { dao.upsertSafetyPlan(SafetyPlanEntity.fromDomain(it)) }
-        snapshot.reminders.forEach { dao.upsertReminder(SecurityReminderEntity.fromDomain(it)) }
-        snapshot.journalEntries.forEach { dao.upsertJournalEntry(JournalEntryEntity.fromDomain(it)) }
-        snapshot.incidents.forEach { dao.upsertIncident(IncidentEntity.fromDomain(it)) }
-        snapshot.timelineEvents.forEach { dao.upsertTimelineEvent(IncidentTimelineEntity.fromDomain(it)) }
-        snapshot.attachments.forEach { dao.upsertIncidentAttachment(IncidentAttachmentEntity.fromDomain(it)) }
-        snapshot.checklists.forEach { pair ->
-            dao.upsertChecklist(ChecklistEntity.fromDomain(pair.checklist))
-            dao.upsertChecklistItems(pair.items.map { ChecklistItemEntity.fromDomain(it) })
-        }
-        snapshot.mapPackages.forEach { dao.upsertMapPackage(MapPackageEntity.fromDomain(it)) }
-        snapshot.mapMarkers.forEach { dao.upsertMapMarker(MapMarkerEntity.fromDomain(it)) }
-        snapshot.savedRoutes.forEach { dao.upsertSavedRoute(SavedRouteEntity.fromDomain(it)) }
-        snapshot.familyMembers.forEach { dao.upsertFamilyMember(FamilyMemberEntity.fromDomain(it)) }
-        snapshot.meetingPoints.forEach { dao.upsertMeetingPoint(MeetingPointEntity.fromDomain(it)) }
-        snapshot.familyPlan?.let { dao.upsertFamilyPlan(FamilyPlanEntity.fromDomain(it)) }
-        snapshot.academyProgress.forEach { dao.upsertAcademyProgress(AcademyProgressEntity.fromDomain(it)) }
-        snapshot.inventoryItems.forEach { dao.upsertInventoryItem(InventoryItemEntity.fromDomain(it)) }
-        snapshot.offlineNotes.forEach { dao.upsertOfflineNote(OfflineNoteEntity.fromDomain(it)) }
-        snapshot.voiceNotes.forEach { dao.upsertVoiceNote(VoiceNoteEntity.fromDomain(it)) }
-        snapshot.auditLogs.forEach { dao.insertAuditLog(AuditLogEntity.fromDomain(it)) }
-        logActivity("RESTORE", "Privacy & Backup", "Restored encrypted offline snapshot (${snapshot.incidents.size} incidents, ${snapshot.vaultItems.size} vault items)")
     }
 
     override suspend fun panicWipeSensitiveData() {

@@ -636,10 +636,10 @@ fun OfflineMapScreen(
                                                 longitude = centerLon,
                                                 elevationMeters = vectorBundle.baseElevationMeters + 15.0,
                                                 isEmergencyResource = pinCategory != MarkerCategory.CUSTOM,
-                                                isUserCreated = true,
+                                                isCustom = true,
                                                 createdAtMillis = System.currentTimeMillis(),
                                             )
-                                            repository.saveMapMarker(mk)
+                                            repository.upsertMapMarker(mk)
                                             selectedMarker = mk
                                             pinTitle = ""
                                             statusMsg = trText(lang, "Pin saved to offline Room map storage.", "نشانگر با موفقیت در نقشه آفلاین ذخیره شد.")
@@ -705,7 +705,7 @@ fun OfflineMapScreen(
                                     },
                                     accent = colors.accentCyan,
                                 )
-                                if (mk.isUserCreated) {
+                                if (mk.isCustom) {
                                     GlassButton(
                                         label = tr("Delete", "حذف"),
                                         onClick = { scope.launch { repository.deleteMapMarker(mk.id) } },
@@ -759,7 +759,16 @@ fun OfflineMapScreen(
                                 )
                                 GlassButton(
                                     label = if (pack.isInstalled) tr("Installed Offline", "نصب شده آفلاین") else tr("Enable Pack", "فعال‌سازی بسته"),
-                                    onClick = { scope.launch { repository.toggleMapPackageInstalled(pack.id, !pack.isInstalled) } },
+                                    onClick = {
+                                        scope.launch {
+                                            repository.upsertMapPackage(
+                                                pack.copy(
+                                                    isInstalled = !pack.isInstalled,
+                                                    updatedAtMillis = System.currentTimeMillis(),
+                                                ),
+                                            )
+                                        }
+                                    },
                                     accent = if (pack.isInstalled) colors.accentEmerald else colors.accentAmber,
                                 )
                             }

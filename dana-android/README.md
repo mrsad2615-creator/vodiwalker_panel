@@ -2,7 +2,13 @@
 
 اپ بومی Android با Kotlin و Compose: گفتگو، ساخت تصویر، OCR و فرمان‌های گوشی. کد اپ در این پوشه [با مجوز MIT](LICENSE) است؛ [مجوزهای اجزای ثالث](NOTICE.md) جداگانه‌اند. به پنل Python مخزن وابسته نیست.
 
-## اگر نسخهٔ کامل نصب نمی‌شود: مرصاد سبک
+## مرصاد سبک ۰٫۱۱ · پیش‌نمایش فرمان فارسی
+
+**[دانلود مستقیم APK](https://github.com/mrsad2615-creator/vodiwalker_panel/releases/download/mrsad-lite-44461546220-1/mrsad-lite.apk)** · [SHA-256](https://github.com/mrsad2615-creator/vodiwalker_panel/releases/download/mrsad-lite-44461546220-1/SHA256SUMS.txt) · [آزمون‌ها](https://github.com/mrsad2615-creator/vodiwalker_panel/actions/runs/44461546220) · [راهنمای فارسی فرمان](docs/12-command-fa.md)
+
+Android 8+ · `46.3 MB` · بستهٔ مستقل `ai.dana.mrsad.compat.command`، قابل‌نصب کنار نسخهٔ قبلی. فرمان محلی با عبارت‌های طبیعی، پیگیریِ مدتِ تایمر، یادآوریِ وای‌فای و درخواست نقش دستیار از خود صفحهٔ فرمان. **ورود یک‌ایمیلی در این فایل فعال نیست.** [راهنمای سرویس یک‌ایمیلی برای مالک](gateway/README.md).
+
+## نسخهٔ قبلی مرصاد سبک ۰٫۱۰٫۱
 
 **[دانلود مستقیم مرصاد سبک](https://github.com/mrsad2615-creator/vodiwalker_panel/releases/download/mrsad-lite-44416761230-1/mrsad-lite.apk)** · [SHA-256](https://github.com/mrsad2615-creator/vodiwalker_panel/releases/download/mrsad-lite-44416761230-1/SHA256SUMS.txt) · [آزمون‌ها](https://github.com/mrsad2615-creator/vodiwalker_panel/actions/runs/44416761230) · [راهنمای نصب](docs/11-install-fa.md)
 

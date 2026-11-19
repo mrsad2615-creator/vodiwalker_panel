@@ -183,3 +183,53 @@ cd android && ./gradlew :app:assembleDebug lint testDebugUnitTest
 | DAG node execution | per-node timeout 0.3–3 s, breaker after 3 failures | enforced |
 | Overlay frame | 120 Hz canvas with historical pointers, no allocation in the pointer loop | design constraint |
 | Idle battery | 0 network, ~0.05–2.4 %/h depending on mode | `AdaptivePowerGovernor` |
+
+---
+
+## 6. Release artefact verification (GitHub Actions)
+
+The APK is produced by `.github/workflows/vodigesture-apk.yml` on the real Android toolchain,
+because this workspace has no Android SDK and no route to `dl.google.com` / Maven Central.
+
+| Item | Value |
+| --- | --- |
+| Workflow | `VodiGesture APK` → jobs `gates`, `apk` |
+| Toolchain | Temurin JDK 21, Gradle 8.11.1, AGP 8.9.1, Kotlin 2.1.20, SDK 35, build-tools 35.0.0 |
+| Tasks | `:app:compileDebugKotlin` → `assembleDebug` → `assembleRelease` → `verifyPackagedApk` |
+| Artefacts | `VodiGesture-1.0.0-release.apk` (~3 MB, signed, R8 full mode), `VodiGesture-1.0.0-debug.apk` (~61 MB) |
+| Download | `https://github.com/mrsad2615-creator/vodiwalker_panel/releases/download/vodigesture-latest/VodiGesture-1.0.0-release.apk` |
+
+Checks that gate publication (all executed before the release step):
+
+1. `zipalign -c -P 16 -v 4` — archive alignment required for installation.
+2. `apksigner verify --verbose --print-certs` — exit status authoritative; the earlier unsigned
+   artefact failure (`Missing META-INF/MANIFEST.MF`) was caught by exactly this check.
+3. `aapt2 dump badging` — applicationId (`…gesture` / `…gesture.debug`), `minSdkVersion 29`,
+   `targetSdkVersion 35`.
+4. `:app:verifyPackagedApk` — asserts the absent-permission contract in the packaged manifest:
+   no `INTERNET`, `SYSTEM_ALERT_WINDOW`, `QUERY_ALL_PACKAGES`, `READ_SMS`, `RECORD_AUDIO`.
+5. `packageRelease` refuses to run in CI without `-Pvodigesture.ciKeystore`, so a green workflow
+   can never publish an unsigned build.
+
+### Debugging CI from a restricted network
+
+Workflow-log and artifact download endpoints (`results-receiver.actions.githubusercontent.com`,
+`productionresultssa*.blob.core.windows.net`) were not reachable from this workspace. Failures were
+diagnosed through `tools/ci_gradle.sh`, which republishes compiler diagnostics, the whole Gradle
+`* What went wrong:` block, the failed-task/exception chain and the log tail as `::error::`
+annotations, readable via the Checks API:
+
+```bash
+JOB=$(gh run view <run-id> --json jobs -q '.jobs[]|select(.name=="Assemble APK")|.databaseId')
+gh api "repos/mrsad2615-creator/vodiwalker_panel/check-runs/$JOB/annotations?per_page=100" \
+  -q '.[] | select(.annotation_level=="failure") | .message'
+```
+
+Defects found this way, which the single-compilation-unit `kotlinc` gate cannot detect:
+
+| Defect | Why it was invisible locally |
+| --- | --- |
+| `Smart cast to 'String' is impossible … declared in different module` | one `kotlinc` invocation = one module |
+| `Returns are prohibited for functions with an expression body` | only the real compiler flags it under `-Werror` |
+| `[Dagger/MissingBinding] CoroutineDispatcher` | Dagger cannot see Kotlin default arguments |
+| Unsigned release APK | `apksigner` proves the signature; nothing local could |

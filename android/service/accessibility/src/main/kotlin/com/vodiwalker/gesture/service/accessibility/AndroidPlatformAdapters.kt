@@ -359,39 +359,53 @@ class AndroidPlatformActionExecutor(
         audio.dispatchMediaKeyEvent(KeyEvent(KeyEvent.ACTION_UP, keyCode))
     }
 
-    private fun toggleHardware(toggle: HardwareToggleType): AppResult<Unit, GestureError> = when (toggle) {
-        HardwareToggleType.TORCH_FLASHLIGHT -> {
-            val cm = service.getSystemService(CameraManager::class.java)
-                ?: return AppResult.Err(GestureError.PlatformFailure("CAMERA_UNAVAILABLE", "No CameraManager"))
-            val flashId = cm.cameraIdList.firstOrNull { id ->
-                cm.getCameraCharacteristics(id).get(CameraCharacteristics.FLASH_INFO_AVAILABLE) == true
-            } ?: return AppResult.Err(GestureError.PlatformFailure("NO_FLASH_UNIT", "Device lacks torch"))
-            val next = !torchEnabled.get()
-            runCatching {
-                cm.setTorchMode(flashId, next)
-                torchEnabled.set(next)
-            }.fold(
-                onSuccess = { AppResult.Ok(Unit) },
-                onFailure = { AppResult.Err(GestureError.PlatformFailure("TORCH_ERROR", it.message.orEmpty())) },
-            )
-        }
-        HardwareToggleType.AUTO_ROTATE_DISPLAY -> {
-            if (!Settings.System.canWrite(service)) {
-                return AppResult.Err(GestureError.PermissionDenied("WRITE_SETTINGS"))
+    private fun toggleHardware(toggle: HardwareToggleType): AppResult<Unit, GestureError> {
+        return when (toggle) {
+            HardwareToggleType.TORCH_FLASHLIGHT -> {
+                val cm = service.getSystemService(CameraManager::class.java)
+                    ?: return AppResult.Err(
+                        GestureError.PlatformFailure("CAMERA_UNAVAILABLE", "No CameraManager"),
+                    )
+                val flashId = cm.cameraIdList.firstOrNull { id ->
+                    cm.getCameraCharacteristics(id)
+                        .get(CameraCharacteristics.FLASH_INFO_AVAILABLE) == true
+                } ?: return AppResult.Err(
+                    GestureError.PlatformFailure("NO_FLASH_UNIT", "Device lacks torch"),
+                )
+                val next = !torchEnabled.get()
+                runCatching {
+                    cm.setTorchMode(flashId, next)
+                    torchEnabled.set(next)
+                }.fold(
+                    onSuccess = { AppResult.Ok(Unit) },
+                    onFailure = {
+                        AppResult.Err(
+                            GestureError.PlatformFailure("TORCH_ERROR", it.message.orEmpty()),
+                        )
+                    },
+                )
             }
-            val current = Settings.System.getInt(
-                service.contentResolver,
-                Settings.System.ACCELEROMETER_ROTATION,
-                0,
-            )
-            Settings.System.putInt(
-                service.contentResolver,
-                Settings.System.ACCELEROMETER_ROTATION,
-                if (current == 1) 0 else 1,
-            )
-            AppResult.Ok(Unit)
+
+            HardwareToggleType.AUTO_ROTATE_DISPLAY -> {
+                if (!Settings.System.canWrite(service)) {
+                    return AppResult.Err(GestureError.PermissionDenied("WRITE_SETTINGS"))
+                }
+                val current = Settings.System.getInt(
+                    service.contentResolver,
+                    Settings.System.ACCELEROMETER_ROTATION,
+                    0,
+                )
+                Settings.System.putInt(
+                    service.contentResolver,
+                    Settings.System.ACCELEROMETER_ROTATION,
+                    if (current == 1) 0 else 1,
+                )
+                AppResult.Ok(Unit)
+            }
+
+            HardwareToggleType.ONE_HANDED_OVERLAY ->
+                executeGlobalAction(SystemAccessibilityAction.NOTIFICATIONS)
         }
-        HardwareToggleType.ONE_HANDED_OVERLAY -> executeGlobalAction(SystemAccessibilityAction.NOTIFICATIONS)
     }
 
     private fun performSemanticNodeAction(

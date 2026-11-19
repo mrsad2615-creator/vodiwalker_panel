@@ -57,6 +57,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
@@ -383,7 +384,7 @@ internal fun PhoneActionReview(model: PhoneViewModel, planner: ManagedModel?, re
                     Text("${review.model.provider} · ${review.model.title}", style = MaterialTheme.typography.titleMedium)
                     Text(stringResource(R.string.managed_preview_help, faDigits(review.model.units)), color = Titanium)
                     Text(stringResource(R.string.managed_command_review), color = Titanium)
-                    Text(review.prompt)
+                    Text(review.prompt, Modifier.testTag("managed-command-outbound"))
                 }
             }, dismissButton = { TextButton(model::dismissOnline) { Text(stringResource(R.string.cancel)) } },
             confirmButton = { TextButton(enabled = review.model == planner, onClick = { model.interpretOnline(review, planner, refresh) }) {

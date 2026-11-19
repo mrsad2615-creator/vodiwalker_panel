@@ -113,12 +113,7 @@ android {
     }
 
     afterEvaluate {
-        // A CI build MUST never publish an unsigned artefact: fail fast and loudly instead.
-        if (providers.environmentVariable("CI").getOrElse("false").toBoolean()) {
-            check(ciSigningRequested) {
-                "CI build requires a signing keystore, but -Pvodigesture.ciKeystore is unset. " +
-                    "Received: '${ciKeystorePath ?: "<none>"}'"
-            }
+        if (ciSigningRequested) {
             check(ciKeystoreFile!!.exists()) {
                 "vodigesture.ciKeystore=${ciKeystoreFile.absolutePath} does not exist"
             }
@@ -126,6 +121,18 @@ android {
         logger.lifecycle(
             "vodigesture signing: requested=$ciSigningRequested keystore=${ciKeystoreFile?.absolutePath ?: "<none>"}",
         )
+    }
+
+    // Guard rail: `assembleRelease` refuses to run in CI without a keystore, so a green workflow
+    // can never publish an unsigned artefact. Scoped to that task (and its dependencies) because
+    // wrapper generation and debug builds legitimately run without a keystore.
+    tasks.matching { it.name == "packageRelease" }.configureEach {
+        doFirst {
+            check(ciSigningRequested) {
+                "CI build requires a signing keystore, but -Pvodigesture.ciKeystore is unset. " +
+                    "Received: '${ciKeystorePath ?: "<none>"}'"
+            }
+        }
     }
 
     packaging {

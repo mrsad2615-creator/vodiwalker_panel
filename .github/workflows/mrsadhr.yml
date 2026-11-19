@@ -16,7 +16,8 @@ jobs:
       - name: Compile APK and run clock tests
         run: |
           ./gradlew --console=plain testDebugUnitTest assembleDebug assembleDebugAndroidTest 2>&1 | tee "$RUNNER_TEMP/compile.log" || {
-            python3 -c 'import pathlib,os; print("::error::"+pathlib.Path(os.environ["RUNNER_TEMP"],"compile.log").read_text()[-12000:].replace("%","%25").replace("\n","%0A"))' 
+            grep -Ei '(^e:|^error:|^exception:|^> |failed|caused by:|incompatible)' "$RUNNER_TEMP/compile.log" | tail -35 > "$RUNNER_TEMP/errors.log"
+            python3 -c 'import pathlib,os; print("::error::"+pathlib.Path(os.environ["RUNNER_TEMP"],"errors.log").read_text()[-3800:].replace("%","%25").replace("\n","%0A"))' 
             exit 1
           }
         shell: bash

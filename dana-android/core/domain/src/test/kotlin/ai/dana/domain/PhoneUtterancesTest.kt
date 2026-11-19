@@ -16,6 +16,8 @@ class PhoneUtterancesTest {
             "تایمر بذار برای یه ربع" to 900,
             "تایمر برای نیم ساعت" to 1_800,
             "timer ۹۰s" to 90,
+            "تایمر دو و نیم دقیقه‌ای تنظیم کن" to 150,
+            "اگه میشه یه تایمر ۱٫۵ دقیقه‌ای بذار" to 90,
         )
         for ((text, seconds) in timers) assertEquals(text, LocalAction.Timer(seconds), action(text))
         assertEquals(LocalAction.Battery, action("میشه بهم بگو چند درصد باتری مونده؟"))
@@ -31,6 +33,10 @@ class PhoneUtterancesTest {
         assertEquals(PhoneIntent.NeedDuration(DurationTarget.WIFI_OFF), PhoneUtterances.interpret("تایمر خاموش کردن وای فای"))
         assertEquals(PhoneIntent.NeedDuration(DurationTarget.TIMER), PhoneUtterances.interpret("یه تایمر بذار"))
         assertEquals(LocalAction.WifiReminder(125, false), DurationTarget.WIFI_OFF.action(125))
+        assertEquals(LocalAction.WifiReminder(150, false), action("وای‌فای رو بعد دو و نیم دقیقه قطعش کن"))
+        assertEquals(LocalAction.WifiChange(false), action("الان وای فای رو خاموش کن"))
+        assertEquals(LocalAction.WifiReminder(120, false), action("یه تایمر برای خاموش کردن وای فای برای دو دقیقه بذار"))
+        assertEquals(150, PhoneUtterances.duration("برای دو دقیقه و سی ثانیه"))
     }
 
     @Test fun noPartialExecutionOnUnknownNegativeAndAmbiguousRequests() {
@@ -38,9 +44,9 @@ class PhoneUtterancesTest {
             "وای فای رو برای ده دقیقه خاموش کن", "وای فای رو خاموش نکن",
             "چطور وای فای رو خاموش کنم؟", "ده دقیقه دیگه وای فای رو خاموش کن و پیامک بفرست",
             "تایمر ده دقیقه بذار و فایل‌ها رو حذف کن", "تایمر منفی دو دقیقه", "تایمر ده",
-            "https://example.test", "وای فای\u202E رو خاموش کن",
+            "یک ربع دیگه", "https://example.test", "وای فای\u202E رو خاموش کن",
         ).forEach { assertNull(it, action(it)) }
-        listOf("ده", "منفی دو دقیقه", "۰ ثانیه", "۲۵ ساعت", "5m and call", "دو دقیقه و یک ساعت", "دو ساعت و نیم و نیم")
+        listOf("ده", "منفی دو دقیقه", "۰ ثانیه", "۲۵ ساعت", "5m and call", "دو دقیقه و یک ساعت", "دو ساعت و نیم و نیم", "۱٫۱ ثانیه", "۲٫۵ دقیقه و نیم", "۱۰ ثانیه\u202E")
             .forEach { assertNull(it, PhoneUtterances.duration(it)) }
     }
 }

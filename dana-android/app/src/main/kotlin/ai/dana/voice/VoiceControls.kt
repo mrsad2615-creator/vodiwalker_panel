@@ -88,7 +88,7 @@ internal fun VoiceButton(voice: DanaVoice, enabled: Boolean, useSystemSpeech: Bo
     val label = stringResource(when {
         state.listening -> R.string.voice_finish
         state.speaking || state.initializing -> R.string.voice_stop_reading
-        turnMode && useSystemSpeech -> R.string.voice_record_system
+        useSystemSpeech -> R.string.voice_record_system
         turnMode -> R.string.voice_record_turn
         else -> R.string.voice_record
     })

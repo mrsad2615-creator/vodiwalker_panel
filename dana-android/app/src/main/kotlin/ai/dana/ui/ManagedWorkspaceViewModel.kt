@@ -88,6 +88,7 @@ internal class ManagedWorkspaceViewModel @Inject constructor(
     private val mutable = MutableStateFlow(ManagedWorkspaceState())
     val state = mutable.asStateFlow()
     private val reload = MutableStateFlow(0L)
+    private val foreground = MutableStateFlow(false)
     private var work: Job? = null
 
     init {
@@ -98,11 +99,14 @@ internal class ManagedWorkspaceViewModel @Inject constructor(
             val offline = privacy.offlineMode
                 .catch { error -> if (error is CancellationException || error !is Exception) throw error else emit(true) }
                 .distinctUntilChanged()
-            combine(known, offline, reload) { active, blocked, revision -> Triple(active, blocked, revision) }.collectLatest { (resumed, onDevice, _) ->
+            combine(known, offline, reload, foreground) { signedIn, blocked, _, visible -> Triple(signedIn, blocked, visible) }
+                .collectLatest { (resumed, onDevice, visible) ->
                 if (!resumed || onDevice) {
                     stop()
                     if (!resumed) mutable.value = ManagedWorkspaceState(offline = onDevice)
                     else mutable.update { it.copy(resumed = true, offline = true, catalog = null, loading = false) }
+                } else if (!visible) {
+                    mutable.update { it.copy(resumed = true, offline = false, loading = false) }
                 } else {
                     mutable.update { it.copy(resumed = true, offline = false, loading = true, catalogError = null) }
                     try {
@@ -120,7 +124,12 @@ internal class ManagedWorkspaceViewModel @Inject constructor(
         }
     }
 
-    @MainThread fun refresh() { reload.update { it + 1 } }
+    @MainThread fun setForeground(active: Boolean) {
+        foreground.value = active
+        if (!active) stop()
+    }
+
+    @MainThread fun refresh() { if (configured) reload.update { it + 1 } }
     @MainThread fun draft(kind: ManagedKind, value: String) {
         val limit = if (kind == ManagedKind.CHAT) ManagedCloud.CHAT_PROMPT_LIMIT else ArtRequest.PROMPT_LIMIT
         if (value.length <= limit && mutable.value.running == null) mutable.update {
@@ -144,22 +153,24 @@ internal class ManagedWorkspaceViewModel @Inject constructor(
     @MainThread fun propose(kind: ManagedKind) {
         val state = mutable.value
         val model = state.selected(kind) ?: return
-        if (state.offline || !state.resumed || state.running != null || state.approval != null || state.loading ||
+        if (!foreground.value || state.offline || !state.resumed || state.running != null || state.approval != null || state.loading ||
             model.units > (state.catalog?.dailyRemaining ?: 0)) return
-        val raw = (if (kind == ManagedKind.CHAT) state.chatDraft else state.imageDraft).trim().takeIf(String::isNotBlank) ?: return
+        val raw = (if (kind == ManagedKind.CHAT) state.chatDraft else state.imageDraft).trim()
         val input = if (kind == ManagedKind.CHAT) {
             val recent = state.turns.takeLast(3).flatMap { listOf(ContextMessage(MessageRole.USER, it.question), ContextMessage(MessageRole.ASSISTANT, it.answer)) }
             ConversationInput.prepare(raw, recent, emptyList(), AssistantStyle.BALANCED, AssistantTask.ASK, null, mask = true)
-                ?: return
         } else null
+        val valid = if (kind == ManagedKind.CHAT) input != null && ManagedCloud.acceptsChat(input)
+            else ManagedCloud.acceptsText(raw, ArtRequest.PROMPT_LIMIT)
+        if (!valid) { mutable.update { it.copy(error = R.string.managed_invalid_text) }; return }
         mutable.update { it.copy(approval = HostedApproval(model, raw, input, state.shape, SystemClock.elapsedRealtime() + 60_000L), error = null) }
     }
     @MainThread fun dismiss() { mutable.update { it.copy(approval = null) } }
 
     @MainThread fun approve(plan: HostedApproval) {
         val state = mutable.value
-        if (state.approval !== plan || state.offline || !state.resumed || state.loading || state.running != null ||
-            plan.model !in state.available(plan.model.kind)) return
+        if (!foreground.value || state.approval !== plan || state.offline || !state.resumed || state.loading || state.running != null ||
+            plan.model !in state.available(plan.model.kind) || plan.model.units > (state.catalog?.dailyRemaining ?: 0)) return
         dismiss()
         if (SystemClock.elapsedRealtime() >= plan.expiresAt) {
             mutable.update { it.copy(error = R.string.managed_approval_expired) }

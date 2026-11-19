@@ -18,22 +18,23 @@ enum class DurationTarget {
 
 /** Small, bounded Persian grammar for offline commands. Match the whole request; do not execute a fragment. */
 object PhoneUtterances {
-    private val leading = Regex("^(?:(?:لطفا|میشه|می شه|میتونی|می تونی|میتوانی|می توانی|برام|واسم|برای من|بهم بگو)[ ،,]+)+")
+    private val leading = Regex("^(?:(?:خواهش می کنم|اگه میشه|اگه می شه|لطفا|میشه|می شه|میتونی|می تونی|میتوانی|می توانی|برام|واسم|برای من|بهم بگو)[ ،,]+)+")
     private val trailing = Regex("[ ،,]+(?:لطفا|برام|واسم|برای من)$")
     private val wifiSpelling = Regex("(?<![\\p{L}])(?:وای[ -]*فای|wi-?fi)(?![\\p{L}])")
     private val boundary = Regex("\\s*[،,]\\s*")
-    private val meta = Regex("^(?:اگر |چگونه |چطوری |چطور |فقط توضیح |نمی[ ]?خو[ا]?[هم] |درباره )")
-    private const val SWITCH = "(خاموش|قطع|غیر ?فعال|روشن|وصل|فعال)"
-    private const val EXECUTE = "(?: (?:کن|بکن|کنید|کردن))?"
-    private const val TIMER_VERB = "(?: (?:بذار|بزار|بگذار|بذاری|بزاری|بگذاری|بذارید|بگذارید|تنظیم کن|تنظیم کنید|شروع کن|بزن|بگیر))?"
+    private val meta = Regex("^(?:اگر |اگه |چگونه |چطوری |چطور |چه جوری |فقط توضیح |نمی ?خوا(?:م|هم|ی) |درباره )")
+    private const val SWITCH = "(خاموش|قطع|غیر ?فعال|روشن|وصل|فعال)(?:ش)?"
+    private const val EXECUTE = "(?: (?:کن|بکن|کنید|بکنی|کنی|کردن))?"
+    private const val TIMER_VERB = "(?: (?:بذار|بزار|بگذار|بذاری|بزاری|بگذاری|بذارید|بگذارید|تنظیم کن|تنظیم کنید|شروع کن|راه بنداز|راه بینداز|بزن|بگیر))?"
     private const val SLOT = "(.{1,64}?)"
-    private const val AFTER = "(?:بعد از|پس از)"
+    private const val AFTER = "(?:بعد از|پس از|بعد)"
     private const val LATER = "(?:بعد|دیگه|دیگر)"
     private const val TIMER_START = "(?:(?:یه|یک) )?(?:تایمر|شمارش معکوس|timer)(?: (?:رو|را))?"
 
     private val wifiNow = listOf(
-        Regex("وای فای(?: را| رو)?(?: الان| همین حالا)? $SWITCH$EXECUTE"),
+        Regex("وای فای(?: را| رو)?(?: الان| همین حالا| الآن)? $SWITCH$EXECUTE"),
         Regex("$SWITCH(?: کردن)? وای فای(?: را| رو)?$EXECUTE"),
+        Regex("(?:الان|همین حالا|الآن) وای فای(?: را| رو)? $SWITCH$EXECUTE"),
     )
     private const val WIFI_CLAUSE = "((?:وای فای|خاموش|روشن|قطع|وصل|غیر ?فعال|فعال) .+)"
     private val wifiBefore = listOf(
@@ -55,6 +56,8 @@ object PhoneUtterances {
     private val battery = Regex("(?:وضعیت (?:شارژ )?باتری(?: رو بگو| را بگو)?|چقدر (?:شارژ|باتری) (?:دارم|مونده|مانده)|چند درصد (?:شارژ|باتری)(?: (?:دارم|مونده|مانده))?|(?:گوشیم|گوشی) چقدر شارژ (?:داره|دارد))")
     private val durationPart = Regex("(.+?)\\s*(ثانیه|دقیقه|ساعت|s|m|h)(?: ای)?(?: و (.+))?")
     private val quarter = Regex("(?:(یک|یه|دو|سه|[1-3]) )?ربع(?: ساعت)?")
+    private val decimal = Regex("([0-9]{1,5})[.٫]([0-9]{1,3})")
+    private val continuation = Regex("^(?:تا |برای )")
 
     fun interpret(raw: String): PhoneIntent {
         if (!ReviewMessage.acceptsDraft(raw) || raw.isBlank()) return PhoneIntent.Unknown
@@ -87,8 +90,8 @@ object PhoneUtterances {
 
     /** Follow-up replies require a unit. No assumed minutes, rounded times, or partial matches. */
     fun duration(raw: String): Int? {
-        if (raw.length !in 1..80) return null
-        val value = surface(raw)
+        if (raw.length !in 1..80 || !ReviewMessage.acceptsDraft(raw)) return null
+        val value = surface(raw).replaceFirst(continuation, "")
         quarter.matchEntire(value)?.let {
             val amount = when (it.groupValues[1]) { "دو", "2" -> 2; "سه", "3" -> 3; else -> 1 }
             return amount * 900
@@ -102,18 +105,29 @@ object PhoneUtterances {
         val factor = when (match.groupValues[2]) { "ثانیه", "s" -> 1; "دقیقه", "m" -> 60; else -> 3_600 }
         if (factor >= previousFactor) return null
         val quantity = match.groupValues[1].trim()
-        val base = if (quantity in setOf("نیم", "نصف") && factor > 1) factor / 2L else {
-            val amount = if (quantity == "یه") 1 else LocalCommands.commandNumber(quantity) ?: return null
-            amount.toLong() * factor
-        }
+        val base = secondsFor(quantity, factor) ?: return null
         if (base !in 0..86_400) return null
         val rest = match.groupValues[3]
         val tail = when {
             rest.isEmpty() -> 0L
-            rest == "نیم" && factor > 1 && quantity !in setOf("نیم", "نصف") -> factor / 2L
+            rest == "نیم" && factor > 1 && whole(quantity) != null -> factor / 2L
             else -> durationPart(rest, factor, remainingParts - 1) ?: return null
         }
         return base + tail
+    }
+
+    private fun whole(quantity: String): Int? = if (quantity == "یه") 1 else LocalCommands.commandNumber(quantity)
+
+    private fun secondsFor(quantity: String, factor: Int): Long? {
+        whole(quantity)?.let { return it.toLong() * factor }
+        if (factor == 1) return null // The system Clock takes integer seconds; do not round.
+        if (quantity in setOf("نیم", "نصف")) return factor / 2L
+        if (quantity.endsWith(" و نیم")) return whole(quantity.removeSuffix(" و نیم"))?.let { it.toLong() * factor + factor / 2L }
+        val part = decimal.matchEntire(quantity) ?: return null
+        val fraction = part.groupValues[2]
+        val denominator = when (fraction.length) { 1 -> 10; 2 -> 100; else -> 1000 }
+        val scaled = fraction.toInt() * factor
+        return if (scaled % denominator == 0) part.groupValues[1].toLong() * factor + scaled / denominator else null
     }
 
     private fun wifiSwitch(text: String): Boolean? = wifiNow.firstNotNullOfOrNull { pattern ->

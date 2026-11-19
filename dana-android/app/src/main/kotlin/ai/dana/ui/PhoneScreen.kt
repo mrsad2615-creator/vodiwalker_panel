@@ -12,8 +12,10 @@ import ai.dana.domain.ReviewMessage
 import ai.dana.domain.NotesRepository
 import ai.dana.domain.PhoneIntent
 import ai.dana.domain.PhoneUtterances
+import ai.dana.domain.PrivateText
 import ai.dana.voice.VoiceButton
 import ai.dana.voice.VoiceStatus
+import ai.dana.voice.VoiceSetup
 import ai.dana.voice.rememberDanaVoice
 import android.content.Context
 import android.Manifest
@@ -36,6 +38,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
@@ -45,6 +49,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -139,13 +144,15 @@ internal class PhoneViewModel @Inject constructor(private val notes: NotesReposi
     @MainThread fun reviewOnline(model: ManagedModel) {
         val state = mutable.value
         if (!cloud.configured || !state.offerCloud || state.working || state.pending != null || state.cloudReview != null) return
-        val prompt = state.draft.trim().takeIf { it.isNotBlank() && it.length <= ManagedCloud.COMMAND_LIMIT && ReviewMessage.acceptsDraft(it) } ?: return
+        val prompt = PrivateText.mask(state.draft.trim()).text.takeIf {
+            it.isNotBlank() && it.length <= ManagedCloud.COMMAND_LIMIT && ReviewMessage.acceptsDraft(it)
+        } ?: run { result(DeviceOutcome(R.string.managed_invalid_text, ok = false), false); return }
         mutable.update { it.copy(cloudReview = CloudPhoneReview(model, prompt, SystemClock.elapsedRealtime() + 45_000L)) }
     }
 
     @MainThread fun dismissOnline() { mutable.update { it.copy(cloudReview = null) } }
 
-    @MainThread fun interpretOnline(review: CloudPhoneReview, currentModel: ManagedModel?) {
+    @MainThread fun interpretOnline(review: CloudPhoneReview, currentModel: ManagedModel?, refresh: () -> Unit) {
         val state = mutable.value
         if (state.cloudReview !== review || state.working || review.model != currentModel) return
         dismissOnline()
@@ -170,12 +177,14 @@ internal class PhoneViewModel @Inject constructor(private val notes: NotesReposi
                     (error as? ManagedFailure)?.problem?.let(::managedError) ?: R.string.managed_network_error, ok = false), false)
             } finally {
                 if (mutable.value.planning === review) mutable.update { it.copy(planning = null) }
+                refresh() // A canceled upstream attempt can still count toward the daily limit.
             }
         }
     }
 
     @MainThread fun cancel() {
-        mutable.update { it.copy(pending = null, durationTarget = null, planning = null, cloudReview = null, offerCloud = false) }
+        // Retain only the draft and its (unapproved) online offer, including the return from email sign-in.
+        mutable.update { it.copy(pending = null, durationTarget = null, planning = null, cloudReview = null) }
         planningJob?.cancel()
         planningJob = null
     }
@@ -209,7 +218,10 @@ internal class PhoneViewModel @Inject constructor(private val notes: NotesReposi
 }
 
 @Composable
-internal fun PhoneScreen(model: PhoneViewModel, planner: ManagedModel? = null, login: (() -> Unit)? = null) {
+internal fun PhoneScreen(
+    model: PhoneViewModel, offline: Boolean, planner: ManagedModel?, remaining: Int, login: (() -> Unit)?,
+    enableNetwork: (() -> Unit)?, refresh: () -> Unit,
+) {
     val state by model.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val focus = LocalFocusManager.current
@@ -223,6 +235,13 @@ internal fun PhoneScreen(model: PhoneViewModel, planner: ManagedModel? = null, l
     var access by remember { mutableStateOf(false) }
     var timer by remember { mutableStateOf(false) }
     var examples by remember { mutableStateOf(false) }
+    var voiceSetup by remember { mutableStateOf(false) }
+    var systemSpeech by remember { mutableStateOf(false) }
+    LaunchedEffect(offline) {
+        if (offline && systemSpeech) { systemSpeech = false; voice.close() }
+    }
+    if (voiceSetup) VoiceSetup(voice, offline, systemSpeech && !offline,
+        onSystemSpeech = { voice.close(); systemSpeech = it }, onClose = { voiceSetup = false })
     val flash = remember(context) { context.packageManager.hasSystemFeature(PackageManager.FEATURE_CAMERA_FLASH) }
 
     if (timer) TimerForm(dismiss = { timer = false }, submit = { timer = false; run(it) })
@@ -268,23 +287,34 @@ internal fun PhoneScreen(model: PhoneViewModel, planner: ManagedModel? = null, l
                 Button(onClick = { focus.clearFocus(); voice.close(); model.submit(execute) },
                     enabled = !state.working && !voice.state.listening && state.draft.isNotBlank(),
                     modifier = Modifier.weight(1f).heightIn(min = 48.dp)) { Text(stringResource(R.string.workspace_run)) }
-                VoiceButton(voice, !state.working, useSystemSpeech = false, turnMode = false, compact = true, onText = { finalText ->
+                VoiceButton(voice, !state.working && state.pending == null && state.cloudReview == null,
+                    useSystemSpeech = systemSpeech && !offline, turnMode = false, compact = true, onText = { finalText ->
                     model.speech(finalText, execute)
                 })
             }
             VoiceStatus(voice.state)
+            TextButton(onClick = { focus.clearFocus(); voice.close(); voiceSetup = true }, enabled = !state.working,
+                modifier = Modifier.heightIn(min = 48.dp)) { Text(stringResource(R.string.voice_setup)) }
             // Keep typed results close to the field as well; the first status card may have scrolled away.
             state.status?.takeIf { state.draft.isNotBlank() && !it.ok }?.let { ReadError(it.message) }
             if (state.planning != null) {
                 Text(stringResource(R.string.managed_command_running), color = Titanium)
                 TextButton(model::cancel) { Text(stringResource(R.string.compare_stop)) }
             } else if (state.offerCloud) {
-                if (planner != null) {
-                    Text(stringResource(R.string.managed_command_help), color = Titanium)
-                    OutlinedButton(onClick = { focus.clearFocus(); voice.close(); model.reviewOnline(planner) }, modifier = Modifier.fillMaxWidth()) {
-                        Text(stringResource(R.string.managed_command_button))
+                when {
+                    planner != null && planner.units <= remaining -> {
+                        Text(stringResource(R.string.managed_command_help), color = Titanium)
+                        OutlinedButton(onClick = { focus.clearFocus(); voice.close(); model.reviewOnline(planner) }, modifier = Modifier.fillMaxWidth()) {
+                            Text(stringResource(R.string.managed_command_button))
+                        }
                     }
-                } else if (login != null) TextButton(onClick = login) { Text(stringResource(R.string.managed_command_login)) }
+                    planner != null -> {
+                        Text(stringResource(R.string.managed_quota), color = Amber)
+                        TextButton(refresh) { Text(stringResource(R.string.managed_refresh_catalog)) }
+                    }
+                    login != null -> TextButton(onClick = login) { Text(stringResource(R.string.managed_command_login)) }
+                    enableNetwork != null -> OfflinePanel(R.string.managed_offline, true, enableNetwork)
+                }
             }
             TextButton(onClick = { examples = !examples }, modifier = Modifier.heightIn(min = 48.dp)) {
                 Text(stringResource(R.string.workspace_examples))
@@ -317,7 +347,7 @@ internal fun PhoneScreen(model: PhoneViewModel, planner: ManagedModel? = null, l
 
 /** Stable dialog host, outside the scrolling content that can be recycled during IME transitions. */
 @Composable
-internal fun PhoneActionReview(model: PhoneViewModel, planner: ManagedModel? = null) {
+internal fun PhoneActionReview(model: PhoneViewModel, planner: ManagedModel?, refresh: () -> Unit) {
     val state by model.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
     state.pending?.let { approval ->
@@ -349,14 +379,14 @@ internal fun PhoneActionReview(model: PhoneViewModel, planner: ManagedModel? = n
     state.cloudReview?.let { review ->
         AlertDialog(onDismissRequest = model::dismissOnline, properties = DialogProperties(securePolicy = SecureFlagPolicy.SecureOn),
             title = { Text(stringResource(R.string.managed_command_button)) }, text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(Modifier.heightIn(max = 340.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("${review.model.provider} · ${review.model.title}", style = MaterialTheme.typography.titleMedium)
                     Text(stringResource(R.string.managed_preview_help, faDigits(review.model.units)), color = Titanium)
                     Text(stringResource(R.string.managed_command_review), color = Titanium)
                     Text(review.prompt)
                 }
             }, dismissButton = { TextButton(model::dismissOnline) { Text(stringResource(R.string.cancel)) } },
-            confirmButton = { TextButton(enabled = review.model == planner, onClick = { model.interpretOnline(review, planner) }) {
+            confirmButton = { TextButton(enabled = review.model == planner, onClick = { model.interpretOnline(review, planner, refresh) }) {
                 Text(stringResource(R.string.message_send_once))
             } })
     }

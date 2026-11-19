@@ -655,7 +655,7 @@
     <string name="phone_wifi_label_off">خاموش‌کردن وای‌فای</string>
     <string name="phone_wifi_label_on">روشن‌کردن وای‌فای</string>
     <string name="phone_wifi_plan">بازکردن تنظیمات برای %1$s</string>
-    <string name="phone_wifi_manual_review">اندروید این تغییر را به خود شما واگذار می‌کند. مرصاد فقط تنظیمات وای‌فای را باز می‌کند.</string>
+    <string name="phone_wifi_manual_review">مرصاد فقط تنظیمات وای‌فای را باز می‌کند. روشن یا خاموش‌کردن با شماست.</string>
     <string name="phone_wifi_manual_opened">تنظیمات وای‌فای باز شد؛ تغییر با شماست.</string>
     <string name="phone_wifi_reminder_plan">تایمر %1$s برای یادآوریِ %2$s</string>
     <string name="phone_wifi_reminder_review">این فقط یک یادآوری است. در برنامهٔ ساعت، تایمر را بررسی و در صورت نیاز شروع کنید. پس از پایان تایمر، وای‌فای خودکار تغییر نمی‌کند.</string>
@@ -700,4 +700,6 @@
     <string name="managed_command_login">ورود برای فهم فرمان‌های پیچیده‌تر</string>
     <string name="managed_command_review">مدل فقط پیشنهاد می‌دهد. برای بازکردن صفحهٔ سیستم یا انجام هر کار، تأیید جداگانه لازم است.</string>
     <string name="managed_command_running">در حال فهم فرمان؛ هنوز کاری انجام نشده است.</string>
+    <string name="managed_invalid_text">متنِ قابل‌ارسال نیست؛ نویسه‌های نامعتبر را بردارید یا متن را کوتاه کنید.</string>
+    <string name="managed_refresh_catalog">به‌روزرسانی مدل‌ها و سهمیه</string>
 </resources>

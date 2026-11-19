@@ -47,6 +47,8 @@ import org.junit.runner.RunWith
 class CompatibilityInstallTest {
     private val context get() = InstrumentationRegistry.getInstrumentation().targetContext
     private val calls = AtomicInteger()
+    private val homeLabel get() = if (InstrumentationRegistry.getArguments().getString("expectedHosted") == "true")
+        R.string.managed_login else R.string.models_compat_summary
     @BindValue @JvmField val engines = EngineClients(OkHttpClient.Builder().addInterceptor {
         calls.incrementAndGet()
         error("No HTTP request is allowed in the compatibility smoke test")
@@ -62,7 +64,7 @@ class CompatibilityInstallTest {
         assertFalse(DeviceModels.BUNDLED)
         assertTrue(runBlocking { DeviceModels(context).available().isEmpty() })
         assertTrue(context.assets.list("models").orEmpty().isEmpty())
-        visible(R.string.models_compat_summary)
+        visible(homeLabel)
         compose.onNodeWithTag("local-qwen3-0.6b").assertDoesNotExist()
         compose.onNodeWithTag("local-smollm2-135m").assertDoesNotExist()
         click(R.string.tab_phone)
@@ -98,7 +100,7 @@ class CompatibilityInstallTest {
         visible(offline)
         compose.onNodeWithText(context.getString(R.string.message_online)).assertIsNotEnabled()
         compose.onNodeWithContentDescription(context.getString(R.string.studio_back)).performClick()
-        visible(R.string.models_compat_summary)
+        visible(homeLabel)
     }
 
     private fun visible(id: Int) = visible(context.getString(id))

@@ -70,7 +70,7 @@ internal fun ManagedWorkspaceScreen(
         if (chat && state.turns.isNotEmpty()) list.requestScrollToItem(state.turns.size)
         else if (!chat && state.preview != null) list.requestScrollToItem(0)
     }
-    LazyColumn(modifier.fillMaxSize(), state = list, contentPadding = PaddingValues(horizontal = 18.dp, vertical = 12.dp),
+    LazyColumn(modifier.fillMaxSize().testTag("managed-workspace-list"), state = list, contentPadding = PaddingValues(horizontal = 18.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
             SectionIntro(if (chat) R.string.managed_chat_title else R.string.art_title, R.string.managed_intro)
@@ -130,12 +130,16 @@ internal fun ManagedWorkspaceScreen(
                                 label = { Text(stringResource(if (chat) R.string.chat_prompt else R.string.art_prompt)) }, minLines = 2, maxLines = 5)
                             catalog?.let { Text(stringResource(R.string.managed_remaining, faDigits(it.dailyRemaining)), color = Titanium) }
                             state.error?.let { ReadError(it) }
+                            if (state.error == R.string.managed_login_again) TextButton(openAccount) { Text(stringResource(R.string.managed_login)) }
                             if (busy) {
                                 LinearProgressIndicator(Modifier.fillMaxWidth())
                                 TextButton(model::stop) { Text(stringResource(R.string.compare_stop)) }
                             } else {
                                 val allowed = selected != null && catalog != null && selected.units <= catalog.dailyRemaining
-                                if (selected != null && !allowed) Text(stringResource(R.string.managed_quota), color = Amber)
+                                if (selected != null && !allowed) {
+                                    Text(stringResource(R.string.managed_quota), color = Amber)
+                                    TextButton(model::refresh, enabled = !state.loading) { Text(stringResource(R.string.managed_refresh_catalog)) }
+                                }
                                 Button(onClick = { focus.clearFocus(); keyboard?.hide(); model.propose(kind) },
                                     modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp), enabled = allowed && !state.loading && prompt.isNotBlank()) {
                                     Text(stringResource(if (chat) R.string.workspace_send else R.string.art_generate))

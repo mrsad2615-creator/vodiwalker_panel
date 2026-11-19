@@ -68,7 +68,7 @@ trap 'kill "$logcat_pid" 2>/dev/null || true' EXIT
 if ! DANA_ADB_TIMEOUT=460s device shell am instrument -w "$test_package/ai.dana.WorkspaceTestRunner" 2>&1 | tee "$log"; then
   report_failure 'Could not run Android instrumentation on the verified APK.'
 fi
-if ! grep -Eq '^OK \((1[5-9]|[2-9][0-9]+) tests\)' "$log" || grep -Eq 'FAILURES!!!|INSTRUMENTATION_(FAILED|ABORTED)' "$log"; then
+if ! grep -Eq '^OK \((1[8-9]|[2-9][0-9]+) tests\)' "$log" || grep -Eq 'FAILURES!!!|INSTRUMENTATION_(FAILED|ABORTED)' "$log"; then
   report_failure 'The installed APK did not pass message review, assistant, chat, studio and native OCR tests.'
 fi
 

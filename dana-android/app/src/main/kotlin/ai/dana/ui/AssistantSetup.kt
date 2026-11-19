@@ -15,11 +15,13 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -35,8 +37,8 @@ internal fun AssistantSetup(enabled: Boolean, beforeLaunch: () -> Unit) {
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     var held by remember(context) { mutableStateOf(isAssistant(context)) }
     var failed by remember { mutableStateOf(false) }
-    var requestedRole by remember { mutableStateOf(false) }
-    var notSelected by remember { mutableStateOf(false) }
+    var requestedRole by rememberSaveable { mutableStateOf(false) }
+    var notSelected by rememberSaveable { mutableStateOf(false) }
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
         held = isAssistant(context)
         notSelected = requestedRole && !held
@@ -47,6 +49,12 @@ internal fun AssistantSetup(enabled: Boolean, beforeLaunch: () -> Unit) {
         lifecycle.addObserver(observer)
         onDispose { lifecycle.removeObserver(observer) }
     }
+    fun openAssistantSettings() {
+        requestedRole = false
+        failed = listOf(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS, Settings.ACTION_VOICE_INPUT_SETTINGS).none { action ->
+            runCatching { launcher.launch(Intent(action)) }.isSuccess
+        }
+    }
     GlassCard(Modifier.fillMaxWidth()) {
         Text(stringResource(R.string.phone_assistant_title), style = MaterialTheme.typography.titleMedium)
         Text(stringResource(if (held) R.string.phone_assistant_active else R.string.phone_assistant_help), color = if (held) Mint else Titanium)
@@ -56,17 +64,16 @@ internal fun AssistantSetup(enabled: Boolean, beforeLaunch: () -> Unit) {
             notSelected = false
             requestedRole = request != null
             val roleOpened = request != null && runCatching { launcher.launch(request) }.isSuccess
-            failed = if (roleOpened) false else {
-                requestedRole = false
-                listOf(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS, Settings.ACTION_VOICE_INPUT_SETTINGS).none { action ->
-                    runCatching { launcher.launch(Intent(action)) }.isSuccess
-                }
-            }
+            failed = false
+            if (!roleOpened) openAssistantSettings()
         }, enabled = enabled, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
             Text(stringResource(if (held) R.string.phone_assistant_settings else R.string.phone_assistant_enable))
         }
-        if (notSelected && !held) Text(stringResource(R.string.workspace_assistant_not_selected), color = Amber,
-            style = MaterialTheme.typography.bodySmall)
+        if (notSelected && !held) {
+            Text(stringResource(R.string.workspace_assistant_not_selected), color = Amber, style = MaterialTheme.typography.bodySmall)
+            TextButton(onClick = { beforeLaunch(); openAssistantSettings() }, enabled = enabled,
+                modifier = Modifier.heightIn(min = 48.dp)) { Text(stringResource(R.string.phone_assistant_settings)) }
+        }
         if (failed) ReadError(R.string.phone_assistant_unavailable)
     }
 }
@@ -81,6 +88,6 @@ private fun isAssistant(context: Context): Boolean = runCatching {
 }.getOrDefault(false)
 
 @RequiresApi(29)
-private fun requestRole(context: Context): Intent? = context.getSystemService(RoleManager::class.java)?.let {
+internal fun requestRole(context: Context): Intent? = context.getSystemService(RoleManager::class.java)?.let {
     if (it.isRoleAvailable(RoleManager.ROLE_ASSISTANT)) it.createRequestRoleIntent(RoleManager.ROLE_ASSISTANT) else null
 }

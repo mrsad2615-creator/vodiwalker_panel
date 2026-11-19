@@ -34,6 +34,8 @@ class MainActivity : ComponentActivity() {
     private val art by artDelegate
     private val phoneDelegate = viewModels<PhoneViewModel>()
     private val phone by phoneDelegate
+    private val managedDelegate = viewModels<ManagedWorkspaceViewModel>()
+    private val managed by managedDelegate
 
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
@@ -61,24 +63,34 @@ class MainActivity : ComponentActivity() {
         when (received?.action) {
             Intent.ACTION_ASSIST -> {
                 // Android can attach foreground-app context. Ignore it; no screen read or microphone start.
+                clearCommandContext()
                 model.dispatch(DanaIntent.Navigate(DashboardTab.PHONE))
             }
             OneFrameCaptureService.ACTION_OPEN_MEDIA -> {
+                clearCommandContext()
                 model.dispatch(DanaIntent.Navigate(DashboardTab.CHAT))
                 media.open()
             }
         }
     }
 
+    private fun clearCommandContext() {
+        model.dispatch(DanaIntent.StopRemoteRequests)
+        if (phoneDelegate.isInitialized()) phone.cancel()
+        if (managedDelegate.isInitialized()) managed.stop()
+        if (accountDelegate.isInitialized()) account.background()
+        if (artDelegate.isInitialized()) art.stop()
+        chat.background()
+    }
+
+    override fun onStart() {
+        super.onStart()
+        managed.setForeground(true)
+    }
+
     override fun onStop() {
-        if (!isChangingConfigurations) {
-            model.dispatch(DanaIntent.StopRemoteRequests)
-            chat.background()
-            if (managedDelegate.isInitialized()) managed.stop()
-            if (accountDelegate.isInitialized()) account.background()
-            if (artDelegate.isInitialized()) art.stop()
-            if (phoneDelegate.isInitialized()) phone.cancel()
-        }
+        if (managedDelegate.isInitialized()) managed.setForeground(false)
+        if (!isChangingConfigurations) clearCommandContext()
         super.onStop()
     }
 }

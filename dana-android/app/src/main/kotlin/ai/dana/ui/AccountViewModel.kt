@@ -113,6 +113,7 @@ internal class AccountViewModel @Inject constructor(private val accounts: EmailA
             } catch (canceled: CancellationException) {
                 throw canceled
             } catch (error: AccountFailure) {
+                if (error.problem == AccountProblem.EXPIRED_SESSION) mutable.update { it.copy(identity = null) }
                 fail(error.problem)
             } catch (_: Exception) {
                 fail(AccountProblem.LOCAL)

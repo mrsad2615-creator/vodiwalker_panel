@@ -3,6 +3,7 @@ package ai.dana.ui
 import ai.dana.R
 import ai.dana.domain.CloudEngine
 import ai.dana.domain.ManagedKind
+import ai.dana.domain.ManagedProblem
 import ai.dana.domain.NetworkStatus
 import ai.dana.domain.PhotoSupport
 import ai.dana.domain.acceptsChat
@@ -60,6 +61,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
@@ -90,9 +92,9 @@ internal fun DanaApp(
     val session = state.session
     val managedState by managed.state.collectAsStateWithLifecycle()
     val hosted = managed.configured
-    val planner = managedState.catalog?.let { catalog -> catalog.planner?.takeIf { !managedState.offline && it.units <= catalog.dailyRemaining } }
+    val planner = managedState.catalog?.planner?.takeUnless { managedState.offline }
     var showLocal by rememberSaveable { mutableStateOf(false) }
-    var afterLogin by remember { mutableStateOf<DashboardTab?>(null) }
+    var afterLogin by rememberSaveable { mutableStateOf<DashboardTab?>(null) }
     val offline = (state.offline as? Reading.Ready)?.value != false
     val ime = WindowInsets.ime.getBottom(LocalDensity.current) > 0
     val secondary = rootTabs.none { it.first == session.tab }
@@ -163,7 +165,7 @@ internal fun DanaApp(
                         modifier = Modifier.widthIn(max = 680.dp).imePadding())
                     else ArtScreen(art(), state, dispatch, Modifier.widthIn(max = 680.dp).imePadding())
                 } else LazyColumn(
-                    modifier = Modifier.widthIn(max = 680.dp).fillMaxSize().imePadding(),
+                    modifier = Modifier.widthIn(max = 680.dp).fillMaxSize().imePadding().testTag("workspace-list"),
                     contentPadding = PaddingValues(start = 18.dp, end = 18.dp, top = 8.dp, bottom = 26.dp),
                     verticalArrangement = Arrangement.spacedBy(14.dp),
                 ) {
@@ -179,7 +181,12 @@ internal fun DanaApp(
                         DashboardTab.COMPARE -> comparison(state, dispatch)
                         DashboardTab.NOTES -> notes(state, dispatch)
                         DashboardTab.SETTINGS -> if (hosted) managedSettings(state, dispatch) else settings(state, dispatch)
-                        DashboardTab.PHONE -> item { PhoneScreen(phone(), planner, if (hosted && !managedState.resumed) openLogin else null) }
+                        DashboardTab.PHONE -> item {
+                            PhoneScreen(phone(), offline, planner, managedState.catalog?.dailyRemaining ?: 0,
+                                login = openLogin.takeIf { hosted && (!managedState.resumed || managedState.catalogError == ManagedProblem.SIGN_IN) },
+                                enableNetwork = allowNetwork.takeIf { hosted && managedState.resumed && managedState.offline },
+                                refresh = managed::refresh)
+                        }
                         DashboardTab.ACCOUNT -> item {
                             AccountScreen(account(), offline, !session.busy && state.offline is Reading.Ready, allowNetwork,
                                 managed = hosted, onEntered = afterLogin?.let { tab -> { managed.refresh(); dispatch(DanaIntent.Navigate(tab)) } })
@@ -189,7 +196,7 @@ internal fun DanaApp(
             }
         }
     }
-    if (session.tab == DashboardTab.PHONE) PhoneActionReview(phone(), planner)
+    if (session.tab == DashboardTab.PHONE) PhoneActionReview(phone(), planner?.takeIf { it.units <= (managedState.catalog?.dailyRemaining ?: 0) }, managed::refresh)
     session.editor?.let { editor ->
         key(editor) { DanaEditor(editor, session, offline, dispatch) }
     }

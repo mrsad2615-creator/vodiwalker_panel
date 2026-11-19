@@ -42,12 +42,13 @@ adb_run shell am force-stop "$package" >> "$log" 2>&1 || fail 'Could not reset p
 ADB_LIMIT=70s adb_run install -r -t "$test_apk" 2>&1 | tee -a "$log" | grep -q '^Success' || fail 'Test APK could not be installed'
 # Do not rely on shell privileges to change Wi-Fi or airplane mode on Android 8.
 # The message test uses the app's offline mode and asserts zero requests with an isolated transport.
-classes='ai.dana.ui.CompatibilityInstallTest,ai.dana.media.OfflinePhotoTest'
+classes='ai.dana.ui.CompatibilityInstallTest,ai.dana.media.OfflinePhotoTest,ai.dana.ui.CommandWorkflowTest,ai.dana.ui.HostedWorkspaceTest'
 if ! ADB_LIMIT=200s adb_run shell am instrument -w -e class "$classes" -e expectedApi "$api" -e expected64Bit "$expected64" \
+    -e expectedHosted "${DANA_BUILD_MANAGED:-false}" \
     "$package.test/ai.dana.WorkspaceTestRunner" 2>&1 | tee -a "$log"; then
   fail 'Instrumentation command failed'
 fi
-if ! grep -Eq '^OK \(5 tests\)' "$log" || grep -Eq 'FAILURES!!!|INSTRUMENTATION_(FAILED|ABORTED)' "$log"; then
-  fail 'Expected five passing compatibility tests'
+if ! grep -Eq '^OK \(8 tests\)' "$log" || grep -Eq 'FAILURES!!!|INSTRUMENTATION_(FAILED|ABORTED)' "$log"; then
+  fail 'Expected eight passing compatibility tests'
 fi
-printf '::notice title=mrsad compatible APK::Same signed APK installed and passed five tests on Android API %s (%s), including native OCR and message review in the app’s offline mode.\n' "$api" "$abi"
+printf '::notice title=mrsad compatible APK::Same signed APK installed and passed eight tests on Android API %s (%s), including Command reviews, the Android assistant request, native OCR and isolated email-to-model UI.\n' "$api" "$abi"

@@ -37,17 +37,7 @@ class ReviewMessage private constructor(val text: String) {
         private val mail = Regex("(?i)[a-z0-9.!_%+\\-]+@[a-z0-9.\\-]+\\.[a-z]{2,}")
         private val clock = Regex("(?<!$DIGIT)(?:[۰-۱٠-١01]?$DIGIT|[۲٢2][۰-۳٠-٣0-3]):[۰-۵٠-٥0-5]$DIGIT(?!$DIGIT)")
 
-        fun acceptsDraft(raw: CharSequence): Boolean {
-            if (raw.length > MAX_CHARS) return false
-            for (index in raw.indices) {
-                val ch = raw[index]
-                if ((ch.isISOControl() && ch !in "\n\r\t") || ch in '\u202A'..'\u202E' || ch in '\u2066'..'\u2069' ||
-                    (ch.isHighSurrogate() && raw.getOrNull(index + 1)?.isLowSurrogate() != true) ||
-                    (ch.isLowSurrogate() && raw.getOrNull(index - 1)?.isHighSurrogate() != true)
-                ) return false
-            }
-            return true
-        }
+        fun acceptsDraft(raw: CharSequence): Boolean = raw.length <= MAX_CHARS && raw.isSafeText()
 
         fun create(raw: CharSequence): ReviewMessage? {
             if (!acceptsDraft(raw)) return null
@@ -72,4 +62,12 @@ class MessageReviewPlan private constructor(val profile: ProviderProfile, val in
             return if (input.prompt.length in 1..ComparisonLimits.PROMPT_CHARS) MessageReviewPlan(profile, input) else null
         }
     }
+}
+
+/** Do not accept unpaired surrogates, transport controls or bidi overrides inside reviewed text. */
+internal fun CharSequence.isSafeText(): Boolean = indices.all { index ->
+    val ch = this[index]
+    !(ch.isISOControl() && ch !in "\n\r\t") && ch !in '\u202A'..'\u202E' && ch !in '\u2066'..'\u2069' &&
+        (!ch.isHighSurrogate() || getOrNull(index + 1)?.isLowSurrogate() == true) &&
+        (!ch.isLowSurrogate() || getOrNull(index - 1)?.isHighSurrogate() == true)
 }

@@ -50,7 +50,9 @@ internal class OkHttpManagedCloud(
 ) : ManagedCloud {
     private val http = client.newBuilder().followRedirects(false).followSslRedirects(false)
         .retryOnConnectionFailure(false).build()
-    override val configured: Boolean = origin?.isHttps == true
+    override val configured: Boolean = origin?.let {
+        it.isHttps && it.encodedPath == "/" && it.query == null && it.fragment == null && it.username.isEmpty() && it.password.isEmpty()
+    } == true
 
     override suspend fun catalog(): ManagedCatalog = call("catalog") { response ->
         val root = response.readObject(24_576)
@@ -70,7 +72,7 @@ internal class OkHttpManagedCloud(
     }
 
     override suspend fun chat(model: ManagedModel, input: ConversationInput, requestId: String): String {
-        if (model.kind != ManagedKind.CHAT || input.prompt.length > ManagedCloud.CHAT_PROMPT_LIMIT || input.photo != null || input.facts.isNotEmpty() || input.probe || input.forMessageReview) invalid()
+        if (model.kind != ManagedKind.CHAT || !ManagedCloud.acceptsChat(input)) invalid()
         val payload = buildJsonObject {
             put("model", model.id)
             put("prompt", input.prompt)
@@ -82,12 +84,12 @@ internal class OkHttpManagedCloud(
             }
         }
         return call("chat", payload, requestId) { response ->
-            response.readObject(96_000)["text"].string()?.takeIf { it.isNotBlank() && it.length <= 16_000 } ?: invalid()
+            response.readObject(96_000)["text"].string()?.takeIf { ManagedCloud.acceptsText(it, ManagedCloud.ANSWER_LIMIT) } ?: invalid()
         }
     }
 
     override suspend fun image(model: ManagedModel, prompt: String, shape: ArtShape, requestId: String): ArtImage {
-        if (model.kind != ManagedKind.IMAGE || prompt.length !in 1..ArtRequest.PROMPT_LIMIT) invalid()
+        if (model.kind != ManagedKind.IMAGE || !ManagedCloud.acceptsText(prompt, ArtRequest.PROMPT_LIMIT)) invalid()
         val payload = buildJsonObject { put("model", model.id); put("prompt", prompt); put("shape", shape.name.lowercase(Locale.ROOT)) }
         return call("image", payload, requestId) { response ->
             val mime = response.body.contentType()?.let { "${it.type}/${it.subtype}" } ?: invalid()
@@ -99,7 +101,7 @@ internal class OkHttpManagedCloud(
     }
 
     override suspend fun command(model: ManagedModel, prompt: String, requestId: String): PhoneIntent {
-        if (model.kind != ManagedKind.CHAT || prompt.length !in 1..ManagedCloud.COMMAND_LIMIT || !ReviewMessage.acceptsDraft(prompt) || prompt.isBlank()) invalid()
+        if (model.kind != ManagedKind.CHAT || !ManagedCloud.acceptsText(prompt, ManagedCloud.COMMAND_LIMIT)) invalid()
         return call("command", buildJsonObject { put("prompt", prompt); put("model", model.id) }, requestId) { parseManagedPlan(it.readObject(2_048)) }
     }
 

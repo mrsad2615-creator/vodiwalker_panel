@@ -49,7 +49,7 @@ data class MrsadTypography(
     val reading: TextStyle,
 ) {
     companion object {
-        fun default: MrsadTypography = build(1f, false)
+        val default: MrsadTypography = build(1f, false)
 
         @Composable
         fun remember(fontScale: Float, readingFont: Boolean): MrsadTypography =

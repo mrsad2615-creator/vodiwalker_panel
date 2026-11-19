@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Android 13+ per-app language list order is taken from locales_config.xml. -->
+    <string-array name="vodi_supported_locales" translatable="false">
+        <item>fa</item>
+        <item>en</item>
+    </string-array>
+</resources>

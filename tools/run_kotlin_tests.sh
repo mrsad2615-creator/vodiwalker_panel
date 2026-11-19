@@ -94,8 +94,16 @@ done
 # :core:database entity + mapper layer is framework-annotation-only; compile it with minimal
 # offline Room/coroutines stubs so its codecs are exercised on the plain JVM.
 DB_SRC="$ROOT_DIR/android/core/database/src/main/kotlin/com/vodiwalker/gesture/core/database"
-EXTRA_SRCS=("$DB_SRC/EntityMappers.kt" "$DB_SRC/VodiGestureDatabase.kt")
+EXTRA_SRCS=(
+  "$DB_SRC/EntityMappers.kt"
+  "$DB_SRC/VodiGestureDatabase.kt"
+  # Pure-Kotlin text layer from the Android design-system module (no Android imports).
+  "$ROOT_DIR/android/core/designsystem/src/main/kotlin/com/vodiwalker/gesture/core/designsystem/text/PersianText.kt"
+  # First-run content: generated with the real geometry pipeline, no Android imports.
+  "$DB_SRC/StarterContent.kt"
+)
 while IFS= read -r file; do TEST_SRCS+=("$file"); done < <(find "$ROOT_DIR/android/core/database/src/test/kotlin" -name '*.kt' 2>/dev/null | sort)
+while IFS= read -r file; do TEST_SRCS+=("$file"); done < <(find "$ROOT_DIR/android/core/designsystem/src/test/kotlin" -name '*.kt' 2>/dev/null | sort)
 
 if [ "${#TEST_SRCS[@]}" -eq 0 ]; then
   echo "ERROR: no Kotlin test sources discovered." >&2
@@ -127,10 +135,12 @@ fun main() {
     val testClasses = listOf(
         com.vodiwalker.gesture.core.common.ResilienceAndCodecTest::class,
         com.vodiwalker.gesture.core.database.RoomPayloadCodecTest::class,
+        com.vodiwalker.gesture.core.database.StarterContentTest::class,
         com.vodiwalker.gesture.engine.gesture.HybridGestureEngineTest::class,
         com.vodiwalker.gesture.engine.gesture.AdaptiveOneEuroFilterTest::class,
         com.vodiwalker.gesture.engine.prediction.AiGesturePredictionEngineTest::class,
         com.vodiwalker.gesture.engine.smartaction.SmartActionHapticsAndPowerEngineTest::class,
+        com.vodiwalker.gesture.core.designsystem.text.PersianTextTest::class,
     )
     var passed = 0
     var failed = 0

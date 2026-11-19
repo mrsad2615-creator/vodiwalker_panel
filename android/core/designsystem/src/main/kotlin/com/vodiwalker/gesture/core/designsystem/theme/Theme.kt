@@ -20,11 +20,28 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.vodiwalker.gesture.core.designsystem.R
+
+
+/**
+ * Vazirmatn — the reference open-source Persian UI typeface (SIL OFL 1.1, bundled under
+ * `res/font`). Persian text needs a taller line box than Latin (ascenders, descenders, dots and
+ * floating marks), and must never be letter-spaced: tracking tears the cursive joins apart.
+ *
+ * Every style therefore uses a line height of 1.55–1.75× the font size and `letterSpacing = 0.sp`.
+ */
+val VodiFontFamily: FontFamily = FontFamily(
+    Font(R.font.vazirmatn_regular, FontWeight.Normal),
+    Font(R.font.vazirmatn_medium, FontWeight.Medium),
+    Font(R.font.vazirmatn_semibold, FontWeight.SemiBold),
+    Font(R.font.vazirmatn_bold, FontWeight.Bold),
+)
 
 /**
  * Complete 15-style Material Design 3 Type Scale engineered for high-density system telemetry and
@@ -33,111 +50,111 @@ import androidx.compose.ui.unit.sp
  */
 val VodiTypography = Typography(
     displayLarge = TextStyle(
-        fontFamily = FontFamily.SansSerif,
+        fontFamily = VodiFontFamily,
         fontWeight = FontWeight.SemiBold,
         fontSize = 57.sp,
-        lineHeight = 64.sp,
-        letterSpacing = (-0.25).sp,
+        lineHeight = 77.0.sp,
+        letterSpacing = 0.sp,
     ),
     displayMedium = TextStyle(
-        fontFamily = FontFamily.SansSerif,
+        fontFamily = VodiFontFamily,
         fontWeight = FontWeight.SemiBold,
         fontSize = 45.sp,
-        lineHeight = 52.sp,
+        lineHeight = 60.8.sp,
         letterSpacing = 0.sp,
     ),
     displaySmall = TextStyle(
-        fontFamily = FontFamily.SansSerif,
+        fontFamily = VodiFontFamily,
         fontWeight = FontWeight.SemiBold,
         fontSize = 36.sp,
-        lineHeight = 44.sp,
+        lineHeight = 55.8.sp,
         letterSpacing = 0.sp,
     ),
     headlineLarge = TextStyle(
-        fontFamily = FontFamily.SansSerif,
+        fontFamily = VodiFontFamily,
         fontWeight = FontWeight.SemiBold,
         fontSize = 32.sp,
-        lineHeight = 40.sp,
+        lineHeight = 49.6.sp,
         letterSpacing = 0.sp,
     ),
     headlineMedium = TextStyle(
-        fontFamily = FontFamily.SansSerif,
+        fontFamily = VodiFontFamily,
         fontWeight = FontWeight.SemiBold,
         fontSize = 28.sp,
-        lineHeight = 36.sp,
+        lineHeight = 43.4.sp,
         letterSpacing = 0.sp,
     ),
     headlineSmall = TextStyle(
-        fontFamily = FontFamily.SansSerif,
+        fontFamily = VodiFontFamily,
         fontWeight = FontWeight.Medium,
         fontSize = 24.sp,
-        lineHeight = 32.sp,
+        lineHeight = 37.2.sp,
         letterSpacing = 0.sp,
     ),
     titleLarge = TextStyle(
-        fontFamily = FontFamily.SansSerif,
+        fontFamily = VodiFontFamily,
         fontWeight = FontWeight.SemiBold,
         fontSize = 22.sp,
-        lineHeight = 28.sp,
+        lineHeight = 37.4.sp,
         letterSpacing = 0.sp,
     ),
     titleMedium = TextStyle(
-        fontFamily = FontFamily.SansSerif,
+        fontFamily = VodiFontFamily,
         fontWeight = FontWeight.Medium,
         fontSize = 16.sp,
-        lineHeight = 24.sp,
-        letterSpacing = 0.15.sp,
+        lineHeight = 27.2.sp,
+        letterSpacing = 0.sp,
     ),
     titleSmall = TextStyle(
-        fontFamily = FontFamily.SansSerif,
+        fontFamily = VodiFontFamily,
         fontWeight = FontWeight.Medium,
         fontSize = 14.sp,
-        lineHeight = 20.sp,
-        letterSpacing = 0.1.sp,
+        lineHeight = 23.8.sp,
+        letterSpacing = 0.sp,
     ),
     bodyLarge = TextStyle(
-        fontFamily = FontFamily.SansSerif,
+        fontFamily = VodiFontFamily,
         fontWeight = FontWeight.Normal,
         fontSize = 16.sp,
-        lineHeight = 24.sp,
-        letterSpacing = 0.5.sp,
+        lineHeight = 27.2.sp,
+        letterSpacing = 0.sp,
     ),
     bodyMedium = TextStyle(
-        fontFamily = FontFamily.SansSerif,
+        fontFamily = VodiFontFamily,
         fontWeight = FontWeight.Normal,
         fontSize = 14.sp,
-        lineHeight = 20.sp,
-        letterSpacing = 0.25.sp,
+        lineHeight = 23.8.sp,
+        letterSpacing = 0.sp,
     ),
     bodySmall = TextStyle(
-        fontFamily = FontFamily.SansSerif,
+        fontFamily = VodiFontFamily,
         fontWeight = FontWeight.Normal,
         fontSize = 12.sp,
-        lineHeight = 16.sp,
-        letterSpacing = 0.4.sp,
+        lineHeight = 20.4.sp,
+        letterSpacing = 0.sp,
     ),
     labelLarge = TextStyle(
-        fontFamily = FontFamily.SansSerif,
+        fontFamily = VodiFontFamily,
         fontWeight = FontWeight.Medium,
         fontSize = 14.sp,
-        lineHeight = 20.sp,
-        letterSpacing = 0.1.sp,
+        lineHeight = 23.8.sp,
+        letterSpacing = 0.sp,
         fontFeatureSettings = "tnum",
     ),
     labelMedium = TextStyle(
-        fontFamily = FontFamily.SansSerif,
+        fontFamily = VodiFontFamily,
         fontWeight = FontWeight.Medium,
         fontSize = 12.sp,
-        lineHeight = 16.sp,
-        letterSpacing = 0.5.sp,
+        lineHeight = 20.4.sp,
+        letterSpacing = 0.sp,
         fontFeatureSettings = "tnum",
     ),
     labelSmall = TextStyle(
-        fontFamily = FontFamily.SansSerif,
+        fontFamily = VodiFontFamily,
         fontWeight = FontWeight.Medium,
         fontSize = 11.sp,
-        lineHeight = 16.sp,
-        letterSpacing = 0.5.sp,
+        lineHeight = 18.7.sp,
+        letterSpacing = 0.sp,
         fontFeatureSettings = "tnum",
     ),
 )

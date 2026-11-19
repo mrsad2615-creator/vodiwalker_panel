@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="accessibility_service_summary">One-handed custom gesture shortcuts and privacy-safe automation</string>
-    <string name="accessibility_service_description">VodiGesture helps users trigger system navigation, one-handed shortcuts, and app-specific Smart-Actions by drawing single or multi-stroke gestures from a floating edge handle. VodiGesture checks foreground window changes only to match app-specific rules and automatically pauses over passwords, lock screens, and sensitive Android 14+ views. Zero personal data or screen text is collected, stored, or transmitted.</string>
-</resources>
+<!--
+    The accessibility service strings live in :app (values/ and values-fa/) so both locales are
+    maintained together and the library never ships a half-translated label.
+    This file is intentionally kept minimal: library resources must not define app-level labels.
+-->
+<resources />

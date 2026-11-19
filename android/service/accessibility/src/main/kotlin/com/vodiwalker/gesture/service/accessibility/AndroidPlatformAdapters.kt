@@ -412,8 +412,12 @@ class AndroidPlatformActionExecutor(
         viewId: String,
         interaction: NodeInteractionType,
     ): AppResult<Unit, GestureError> {
+        // canRetrieveWindowContent="false" is this app's privacy contract, so node-level actions
+        // are refused by design rather than silently degrading.
         val root = service.rootInActiveWindow
-            ?: return AppResult.Err(GestureError.PlatformFailure("NO_ACTIVE_WINDOW", "Root window unavailable"))
+            ?: return AppResult.Err(
+                GestureError.PermissionDenied("WINDOW_CONTENT_DISABLED"),
+            )
         // Enforce Android 14+ (API 34) accessibilityDataSensitive contract
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE && root.isAccessibilityDataSensitive) {
             return AppResult.Err(GestureError.PermissionDenied("ACCESSIBILITY_DATA_SENSITIVE"))

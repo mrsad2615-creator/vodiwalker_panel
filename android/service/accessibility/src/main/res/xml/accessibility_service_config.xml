@@ -1,17 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Android 14/15 (API 34–35) Compliant AccessibilityService Configuration.
-    - Declares android:isAccessibilityTool="true" per Google Play Accessibility Policy.
-    - Minimal event scope: typeWindowStateChanged only (never captures keystrokes or text input).
-    - Enables hardware gesture synthesis (canPerformGestures="true") and interactive window awareness.
+    Android 14/15 (API 34–35) accessibility service configuration.
+
+    Privacy posture, stated as narrowly as the platform allows:
+    · canRetrieveWindowContent="false"  — window *content* is never read. Only the identity of the
+      foreground window is tracked (flagRetrieveInteractiveWindows), which is what lets a rule be
+      scoped to one app.
+    · accessibilityEventTypes: window state changes only, so gesture rules can be scoped to the
+      foreground app without inspecting what is on screen.
+    · canPerformGestures="true"         — required to draw the edge handle and synthesise strokes.
+    · isAccessibilityTool="true"        — declares the assistive purpose required by Play policy.
 -->
 <accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
     android:accessibilityEventTypes="typeWindowStateChanged"
     android:accessibilityFeedbackType="feedbackHaptic"
-    android:accessibilityFlags="flagDefault|flagRetrieveInteractiveWindows|flagReportViewIds"
+    android:accessibilityFlags="flagDefault|flagRetrieveInteractiveWindows"
     android:canPerformGestures="true"
     android:canRequestTouchExplorationMode="false"
-    android:canRetrieveWindowContent="true"
+    android:canRetrieveWindowContent="false"
     android:description="@string/accessibility_service_description"
     android:isAccessibilityTool="true"
     android:notificationTimeout="110"

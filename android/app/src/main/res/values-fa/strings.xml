@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Persian (fa) interface copy — the primary locale of VodiGesture.
+
+    Copy rules applied throughout this file:
+      · native Persian digits (۰۱۲۳۴۵۶۷۸۹) in all user-facing numbers;
+      · «...» for quotations, ZWNJ (‌) inside compound words (می‌کند، برنامه‌ها);
+      · no letter-spacing concepts, no gendered address, second person plural (شما) for deference;
+      · Latin product/protocol names (VodiGesture, Android, Wi‑Fi) stay untranslated inside <bdi>.
+
+    String names are stable API: a `<string>` here must have an identical `en` counterpart.
+-->
+<resources>
+
+    <!-- ============================ Product identity ============================ -->
+    <string name="app_name">VodiGesture</string>
+    <string name="app_tagline">ژست‌های انگشت، در یک لمس</string>
+
+    <!-- ============================ Bottom navigation ============================ -->
+    <string name="nav_home">خانه</string>
+    <string name="nav_gestures">ژست‌ها</string>
+    <string name="nav_rules">قانون‌ها</string>
+    <string name="nav_settings">تنظیمات</string>
+
+    <!-- ============================ Status vocabulary ============================ -->
+    <string name="status_ready">آماده</string>
+    <string name="status_needs_setup">نیاز به راه‌اندازی</string>
+    <string name="status_paused">موقتاً متوقف</string>
+    <string name="status_learning">در حال یادگیری</string>
+    <string name="status_battery_percent">باتری ٪۱$s</string>
+    <string name="status_gestures_count">%1$s ژست</string>
+
+    <!-- ============================ Home ============================ -->
+    <string name="home_title">خانه</string>
+    <string name="home_greeting">خوش آمدید</string>
+    <string name="home_ready_headline">همه‌چیز آماده است</string>
+    <string name="home_ready_body">دستگیرهٔ کنارهٔ صفحه فعال است. از لبهٔ راست بکشید تا ژست بکشید.</string>
+    <string name="home_setup_headline">یک قدم تا فعال شدن</string>
+    <string name="home_setup_body">فقط دسترسی‌پذیری را روشن کنید؛ کمتر از یک دقیقه طول می‌کشد.</string>
+    <string name="home_setup_cta">راه‌اندازی در ۳۰ ثانیه</string>
+    <string name="home_try_now_cta">امتحان کن</string>
+    <string name="home_section_quick">دسترسی سریع</string>
+    <string name="home_section_your_gestures">ژست‌های شما</string>
+    <string name="home_section_activity">فعالیت امروز</string>
+    <string name="home_empty_gestures_title">هنوز ژستی نساخته‌اید</string>
+    <string name="home_empty_gestures_body">با یک الگوی آماده شروع کنید یا ژست خودتان را بکشید.</string>
+    <string name="home_empty_gestures_cta">ساخت اولین ژست</string>
+    <string name="home_activity_runs">%1$s اجرا</string>
+    <string name="home_activity_success">٪۱$s موفق</string>
+    <string name="home_activity_none">امروز هنوز ژستی اجرا نشده</string>
+
+    <!-- ============================ Setup / permissions ============================ -->
+    <string name="setup_title">راه‌اندازی</string>
+    <string name="setup_step_of">قدم %1$s از %2$s</string>
+    <string name="setup_time_hint">حدود ۳۰ ثانیه</string>
+    <string name="setup_privacy_heading">قبل از شروع</string>
+    <string name="setup_privacy_body">VodiGesture هیچ اطلاعاتی را به اینترنت نمی‌فرستد. برنامه مجوز اینترنت ندارد. فقط تغییر پنجرهٔ فعال برنامه‌ها خوانده می‌شود تا بداند کدام قانون را اجرا کند.</string>
+    <string name="setup_privacy_bullet_never">هرگز خوانده نمی‌شود: متن، رمز عبور، صفحهٔ قفل، صفحه‌های حساس Android ۱۴ به بالا.</string>
+    <string name="setup_privacy_bullet_always">همیشه بر دستگاه شما می‌ماند: ژست‌ها، قانون‌ها، گزارش فعالیت.</string>
+    <string name="setup_accept">می‌پذیرم و ادامه می‌دهم</string>
+    <string name="setup_step_accessibility_title">روشن کردن دسترسی‌پذیری</string>
+    <string name="setup_step_accessibility_body">این تنها مجوز لازم است. VodiGesture از آن برای کشیدن دستگیرهٔ شناور و اجرای ژست‌ها استفاده می‌کند.</string>
+    <string name="setup_open_accessibility">باز کردن تنظیمات دسترسی‌پذیری</string>
+    <string name="setup_step_accessibility_waiting">منتظر روشن شدن… پس از برگشت به این صفحه خودکار بررسی می‌شود</string>
+    <string name="setup_restricted_title">اگر VodiGesture در فهرست نبود</string>
+    <string name="setup_restricted_body">اندروید ۱۳ تا ۱۵ برنامه‌های نصب‌شده از بیرون استور را محدود می‌کند. در صفحهٔ «اطلاعات برنامه»، از منوی سه‌نقطه گزینهٔ «Allow restricted settings» را بزنید و دوباره تلاش کنید.</string>
+    <string name="setup_restricted_cta">باز کردن صفحهٔ اطلاعات برنامه</string>
+    <string name="setup_step_notifications_title">اعلان‌ها (اختیاری)</string>
+    <string name="setup_step_notifications_body">برای نمایش وضعیت دستگیره و گزارش اجرا. بدون آن هم همه‌چیز کار می‌کند.</string>
+    <string name="setup_allow">اجازه می‌دهم</string>
+    <string name="setup_skip">فعلاً نه</string>
+    <string name="setup_done_title">فعال شد</string>
+    <string name="setup_done_body">از لبهٔ راست صفحه به داخل بکشید تا دستگیره ظاهر شود.</string>
+    <string name="setup_done_cta">شروع</string>
+
+    <!-- ============================ Gesture library ============================ -->
+    <string name="gestures_title">ژست‌ها</string>
+    <string name="gestures_subtitle">%1$s ژست فعال</string>
+    <string name="gestures_new_cta">ژست تازه</string>
+    <string name="gestures_filter_all">همه</string>
+    <string name="gestures_empty_title">فهرست خالی است</string>
+    <string name="gestures_empty_body">یک الگوی آماده اضافه کنید تا در چند ثانیه شروع کنید.</string>
+    <string name="gestures_usage_count">%1$s بار استفاده شده</string>
+    <string name="gestures_confidence">دقت ٪۱$s</string>
+    <string name="gestures_enabled">روشن</string>
+    <string name="gestures_disabled">خاموش</string>
+    <string name="gestures_action_run">اجرای آزمایشی</string>
+    <string name="gestures_action_rename">تغییر نام</string>
+    <string name="gestures_action_delete">حذف</string>
+    <string name="gestures_delete_confirm">«%1$s» حذف شود؟ این کار برگشت‌پذیر نیست.</string>
+
+    <!-- ============================ Recorder ============================ -->
+    <string name="recorder_title">ژست تازه</string>
+    <string name="recorder_instruction">روی صفحه یک شکل بکشید</string>
+    <string name="recorder_hint_sample">نمونهٔ %1$s از %2$s</string>
+    <string name="recorder_hint_more">یک بار دیگر بکشید تا مطمئن‌تر شود</string>
+    <string name="recorder_clear">پاک کردن</string>
+    <string name="recorder_undo">یک قدم عقب</string>
+    <string name="recorder_short_error">خط خیلی کوتاه بود؛ بزرگ‌تر بکشید.</string>
+    <string name="recorder_name_label">نام ژست</string>
+    <string name="recorder_name_placeholder">مثلاً «صفحهٔ اصلی»</string>
+    <string name="recorder_category_label">دسته</string>
+    <string name="recorder_start_recording">ضبط</string>
+    <string name="recorder_stop_recording">پایان ضبط</string>
+    <string name="recorder_save">ذخیره</string>
+    <string name="recorder_saved">ذخیره شد</string>
+    <string name="recorder_collision">با ژست «%1$s» شبیه است (٪۲$s). شکل دیگری بکشید.</string>
+    <string name="recorder_templates_ready">آماده است</string>
+
+    <!-- ============================ Rules ============================ -->
+    <string name="rules_title">قانون‌ها</string>
+    <string name="rules_subtitle">کدام ژست، در کدام برنامه، چه کاری بکند</string>
+    <string name="rules_empty_title">قانونی تعریف نشده</string>
+    <string name="rules_empty_body">قانون تعیین می‌کند یک ژست در کدام برنامه چه کاری انجام دهد. با یک قانون ساده شروع کنید.</string>
+    <string name="rules_new_cta">قانون تازه</string>
+    <string name="rules_scope_everywhere">همهٔ برنامه‌ها</string>
+    <string name="rules_scope_app">فقط در %1$s</string>
+    <string name="rules_action_open">باز کردن</string>
+    <string name="rules_action_back">بازگشت</string>
+    <string name="rules_action_home">خانه</string>
+    <string name="rules_action_recents">برنامه‌های اخیر</string>
+    <string name="rules_action_notifications">اعلان‌ها</string>
+    <string name="rules_action_torch">چراغ‌قوه</string>
+    <string name="rules_action_screenshot">تصویر صفحه</string>
+    <string name="rules_when_label">وقتی این ژست کشیده شد</string>
+    <string name="rules_where_label">در این برنامه</string>
+    <string name="rules_do_label">این کار را بکن</string>
+
+    <!-- ============================ Settings ============================ -->
+    <string name="settings_title">تنظیمات</string>
+    <string name="settings_section_appearance">ظاهر</string>
+    <string name="settings_dark_mode">حالت تیره</string>
+    <string name="settings_dark_mode_desc">همیشه تیره، یا هم‌رنگ سیستم</string>
+    <string name="settings_dynamic_color">رنگ‌های سیستم (Material You)</string>
+    <string name="settings_dynamic_color_desc">هم‌رنگ با تصویر پس‌زمینهٔ دستگاه</string>
+    <string name="settings_high_contrast">کنتراست بالا</string>
+    <string name="settings_high_contrast_desc">برای خوانایی بیشتر در نور شدید</string>
+    <string name="settings_text_size">اندازهٔ متن</string>
+    <string name="settings_section_behavior">رفتار</string>
+    <string name="settings_haptic">قدرت لرزش</string>
+    <string name="settings_haptic_value">٪۱$s</string>
+    <string name="settings_edge">لبهٔ دستگیره</string>
+    <string name="settings_edge_right">راست (مناسب راست‌دست‌ها)</string>
+    <string name="settings_edge_left">چپ</string>
+    <string name="settings_battery_saver">صرفه‌جویی در باتری</string>
+    <string name="settings_battery_saver_desc">کاهش نرخ نمونه‌برداری وقتی باتری کم است</string>
+    <string name="settings_section_privacy">حریم خصوصی</string>
+    <string name="settings_privacy_apps">برنامه‌های محافظت‌شده</string>
+    <string name="settings_privacy_apps_desc">در این برنامه‌ها ژست‌ها غیرفعال می‌شوند</string>
+    <string name="settings_privacy_bank">برنامه‌های بانکی</string>
+    <string name="settings_privacy_password">مدیر رمز عبور</string>
+    <string name="settings_section_about">درباره</string>
+    <string name="settings_version">نسخه %1$s</string>
+    <string name="settings_offline_badge">کاملاً آفلاین</string>
+    <string name="settings_offline_desc">این برنامه مجوز اینترنت ندارد.</string>
+
+    <!-- ============================ Common ============================ -->
+    <string name="action_continue">ادامه</string>
+    <string name="action_back">بازگشت</string>
+    <string name="action_cancel">انصراف</string>
+    <string name="action_save">ذخیره</string>
+    <string name="action_delete">حذف</string>
+    <string name="action_retry">تلاش دوباره</string>
+    <string name="action_close">بستن</string>
+    <string name="action_on">روشن</string>
+    <string name="action_off">خاموش</string>
+    <string name="label_optional">اختیاری</string>
+
+    <!-- ============================ Accessibility service ============================ -->
+    <string name="accessibility_service_label">VodiGesture</string>
+    <string name="accessibility_service_summary">ژست‌های انگشت و میان‌بُرهای یک‌دستی، بدون جمع‌آوری هیچ داده‌ای</string>
+    <string name="accessibility_service_description">VodiGesture با کشیدن ژست از دستگیرهٔ کنار صفحه، میان‌بُرهای سیستم و برنامه‌ها را اجرا می‌کند. فقط تغییر پنجرهٔ فعال خوانده می‌شود تا قانون مناسب برنامه انتخاب شود؛ برنامه به‌طور خودکار روی صفحه‌های رمز عبور، صفحهٔ قفل و نماهای حساس Android ۱۴ به بالا متوقف می‌شود. هیچ متن، رمز یا داده‌ای ذخیره یا ارسال نمی‌شود.</string>
+
+</resources>

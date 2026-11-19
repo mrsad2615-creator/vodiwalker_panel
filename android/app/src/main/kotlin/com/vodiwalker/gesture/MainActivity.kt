@@ -8,13 +8,15 @@ import androidx.activity.SystemBarStyle
 import androidx.activity.compose.PredictiveBackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.annotation.StringRes
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AccountTree
-import androidx.compose.material.icons.rounded.Dashboard
 import androidx.compose.material.icons.rounded.Gesture
-import androidx.compose.material.icons.rounded.Security
+import androidx.compose.material.icons.rounded.Home
+import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
@@ -26,10 +28,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.hilt.work.HiltWorker
 import androidx.hilt.work.HiltWorkerFactory
@@ -43,6 +44,7 @@ import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.vodiwalker.gesture.core.common.MonotonicClock
 import com.vodiwalker.gesture.core.common.SyntheticGestureGuard
+import com.vodiwalker.gesture.core.datastore.DarkThemeMode
 import com.vodiwalker.gesture.core.datastore.UserSettingsDataSource
 import com.vodiwalker.gesture.core.designsystem.theme.VodiGestureTheme
 import com.vodiwalker.gesture.core.model.ExecutionTelemetryRepository
@@ -52,6 +54,7 @@ import com.vodiwalker.gesture.engine.power.AdaptivePowerGovernor
 import com.vodiwalker.gesture.engine.prediction.AiGesturePredictionEngine
 import com.vodiwalker.gesture.engine.smartaction.AppTriggerResolver
 import com.vodiwalker.gesture.feature.dashboard.DashboardRoute
+import com.vodiwalker.gesture.feature.dashboard.SettingsRoute
 import com.vodiwalker.gesture.feature.permissions.PermissionOnboardingRoute
 import com.vodiwalker.gesture.feature.recorder.GestureRecorderRoute
 import com.vodiwalker.gesture.feature.triggers.AppTriggersRoute
@@ -175,6 +178,7 @@ class TelemetryCompactionWorker @AssistedInject constructor(
 class VodiGestureApplication : Application(), Configuration.Provider {
 
     @Inject lateinit var workerFactory: HiltWorkerFactory
+    @Inject lateinit var starterContentInstaller: StarterContentInstaller
 
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder()
@@ -183,24 +187,31 @@ class VodiGestureApplication : Application(), Configuration.Provider {
 
     override fun onCreate() {
         super.onCreate()
+        // Seeds the three starter gestures on the first launch after setup, once.
+        starterContentInstaller.installIfNeeded()
         TelemetryCompactionWorker.enqueuePeriodicIdleCompaction(this)
     }
 }
 
 /**
- * Primary navigation destinations surfaced by the adaptive navigation suite.
+ * Four destinations, ordered from "what do I do now" to "how do I fine-tune it".
  */
-enum class TopLevelDestination(val label: String, val icon: ImageVector) {
-    DASHBOARD("Studio", Icons.Rounded.Dashboard),
-    RECORDER("Record", Icons.Rounded.Gesture),
-    TRIGGERS("Triggers", Icons.Rounded.AccountTree),
-    PERMISSIONS("Privacy", Icons.Rounded.Security),
+enum class TopLevelDestination(
+    @StringRes val labelRes: Int,
+    val icon: ImageVector,
+) {
+    HOME(R.string.nav_home, Icons.Rounded.Home),
+    GESTURES(R.string.nav_gestures, Icons.Rounded.Gesture),
+    RULES(R.string.nav_rules, Icons.Rounded.AccountTree),
+    SETTINGS(R.string.nav_settings, Icons.Rounded.Settings),
 }
 
 /**
- * Single-Activity Jetpack Compose host enforcing Android 15 edge-to-edge display insets, adaptive
- * Material Design 3 `NavigationSuiteScaffold` (phones, foldables, tablets), and Android 14+
- * `PredictiveBackHandler` interactive scale choreography.
+ * Single-Activity Compose host: edge-to-edge insets, an adaptive M3 navigation suite (bar on
+ * phones, rail on tablets/foldables), and predictive-back choreography.
+ *
+ * Direction and locale come from the platform: with `values-fa` present and `supportsRtl="true"`,
+ * the whole layout mirrors automatically, so no screen hard-codes left or right.
  */
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -210,50 +221,76 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge(
-            statusBarStyle = SystemBarStyle.dark(Color.Transparent.toArgb()),
-            navigationBarStyle = SystemBarStyle.dark(Color.Transparent.toArgb()),
+            statusBarStyle = SystemBarStyle.auto(
+                lightScrim = android.graphics.Color.TRANSPARENT,
+                darkScrim = android.graphics.Color.TRANSPARENT,
+            ),
+            navigationBarStyle = SystemBarStyle.auto(
+                lightScrim = android.graphics.Color.TRANSPARENT,
+                darkScrim = android.graphics.Color.TRANSPARENT,
+            ),
         )
         setContent {
             val settings by settingsDataSource.settingsFlow.collectAsStateWithLifecycle(initialValue = null)
+            val darkTheme = when (settings?.darkThemeMode) {
+                DarkThemeMode.AlwaysDark -> true
+                DarkThemeMode.AlwaysLight -> false
+                else -> isSystemInDarkTheme()
+            }
             VodiGestureTheme(
+                darkTheme = darkTheme,
                 dynamicColor = settings?.dynamicMaterialYouColor ?: true,
                 forceHighContrast = settings?.forceHighContrast ?: false,
             ) {
-                VodiGestureAppShell()
+                VodiGestureAppShell(
+                    onboardingRequired = settings?.prominentDisclosureAccepted == false,
+                )
             }
         }
     }
 }
 
 /**
- * Adaptive M3 shell: NavigationSuiteScaffold + predictive-back scale choreography.
+ * Adaptive shell. A first-run user is routed straight into setup, so the very first screen they
+ * see is the one that activates the product — not an empty dashboard.
  */
 @Composable
-fun VodiGestureAppShell() {
-    var currentDestination by rememberSaveable { mutableStateOf(TopLevelDestination.DASHBOARD) }
+fun VodiGestureAppShell(onboardingRequired: Boolean) {
+    var currentDestination by rememberSaveable { mutableStateOf(TopLevelDestination.HOME) }
     var backScale by remember { mutableFloatStateOf(1f) }
 
-    // Android 14/15 Predictive Back gesture choreography returning cleanly to Dashboard
-    PredictiveBackHandler(enabled = currentDestination != TopLevelDestination.DASHBOARD) { progressFlow ->
+    PredictiveBackHandler(enabled = currentDestination != TopLevelDestination.HOME) { progressFlow ->
         try {
-            progressFlow.collect { backEvent ->
-                backScale = 1f - (0.08f * backEvent.progress)
-            }
+            progressFlow.collect { event -> backScale = 1f - (0.08f * event.progress) }
             backScale = 1f
-            currentDestination = TopLevelDestination.DASHBOARD
+            currentDestination = TopLevelDestination.HOME
         } catch (_: kotlinx.coroutines.CancellationException) {
             backScale = 1f
         }
     }
 
+    if (onboardingRequired) {
+        // Setup owns the whole window on first run: no navigation bar to get lost in.
+        PermissionOnboardingRoute(
+            onContinueToDashboard = { currentDestination = TopLevelDestination.HOME },
+            viewModel = hiltViewModel(),
+        )
+        return
+    }
+
     NavigationSuiteScaffold(
         navigationSuiteItems = {
-            TopLevelDestination.entries.forEach { dest ->
+            TopLevelDestination.entries.forEach { destination ->
                 item(
-                    selected = currentDestination == dest,
-                    onClick = { currentDestination = dest },
-                    icon = { Icon(dest.icon, contentDescription = dest.label) },
-                    label = { Text(dest.label) },
+                    selected = currentDestination == destination,
+                    onClick = { currentDestination = destination },
+                    icon = {
+                        Icon(
+                            imageVector = destination.icon,
+                            contentDescription = stringResource(destination.labelRes),
+                        )
+                    },
+                    label = { Text(stringResource(destination.labelRes)) },
                 )
             }
         },
@@ -267,16 +304,16 @@ fun VodiGestureAppShell() {
                 },
         ) {
             when (currentDestination) {
-                TopLevelDestination.DASHBOARD -> DashboardRoute(
-                    onNavigateToRecorder = { currentDestination = TopLevelDestination.RECORDER },
-                    onNavigateToPermissions = { currentDestination = TopLevelDestination.PERMISSIONS },
+                TopLevelDestination.HOME -> DashboardRoute(
+                    onNavigateToRecorder = { currentDestination = TopLevelDestination.GESTURES },
+                    onNavigateToPermissions = { currentDestination = TopLevelDestination.SETTINGS },
                     viewModel = hiltViewModel(),
                 )
-                TopLevelDestination.RECORDER -> GestureRecorderRoute(viewModel = hiltViewModel())
-                TopLevelDestination.TRIGGERS -> AppTriggersRoute(viewModel = hiltViewModel())
-                TopLevelDestination.PERMISSIONS -> PermissionOnboardingRoute(
-                    onContinueToDashboard = { currentDestination = TopLevelDestination.DASHBOARD },
+                TopLevelDestination.GESTURES -> GestureRecorderRoute(viewModel = hiltViewModel())
+                TopLevelDestination.RULES -> AppTriggersRoute(viewModel = hiltViewModel())
+                TopLevelDestination.SETTINGS -> SettingsRoute(
                     viewModel = hiltViewModel(),
+                    appVersion = BuildConfig.VERSION_NAME,
                 )
             }
         }

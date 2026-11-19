@@ -12,7 +12,11 @@ import android.view.accessibility.AccessibilityManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -20,33 +24,39 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Lock
-import androidx.compose.material.icons.rounded.Notifications
-import androidx.compose.material.icons.rounded.Security
+import androidx.compose.material.icons.rounded.NotificationsActive
+import androidx.compose.material.icons.rounded.Shield
 import androidx.compose.material.icons.rounded.TouchApp
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
@@ -56,9 +66,9 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import com.vodiwalker.gesture.core.datastore.UserSettingsDataSource
-import com.vodiwalker.gesture.core.designsystem.component.GlassmorphicCard
-import com.vodiwalker.gesture.core.designsystem.component.SpringPressableCard
-import com.vodiwalker.gesture.core.designsystem.theme.LocalExtendedColors
+import com.vodiwalker.gesture.core.designsystem.component.VodiPrimaryButton
+import com.vodiwalker.gesture.core.designsystem.component.VodiSecondaryButton
+import com.vodiwalker.gesture.core.designsystem.text.PersianText
 import com.vodiwalker.gesture.core.model.PermissionStatusSnapshot
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -71,47 +81,45 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 /**
- * Inspects Android 14/15 permission and AccessibilityService capability states without requiring
- * sensitive queries or deprecated `Settings.Secure` string parsing.
+ * Reads the live accessibility, notification and restricted-settings posture for [context] without
+ * sensitive queries or deprecated `Settings.Secure` parsing.
  */
 object PermissionStateInspector {
 
     /**
-     * Reads the live accessibility/notification/restricted-settings posture for [context].
+     * Returns the current permission snapshot.
      */
     fun inspect(context: Context, disclosureAccepted: Boolean): PermissionStatusSnapshot {
-        val am = context.getSystemService(AccessibilityManager::class.java)
-        val enabledServices = am
+        val manager = context.getSystemService(AccessibilityManager::class.java)
+        val enabled = manager
             ?.getEnabledAccessibilityServiceList(AccessibilityServiceInfo.FEEDBACK_ALL_MASK)
             .orEmpty()
-        val ourService = enabledServices.firstOrNull { info ->
+        val ourService = enabled.firstOrNull { info ->
             info.resolveInfo?.serviceInfo?.packageName == context.packageName
         }
         val canGesture = ourService != null &&
             (ourService.capabilities and AccessibilityServiceInfo.CAPABILITY_CAN_PERFORM_GESTURES) != 0
 
-        val notifGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        val notificationsGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) ==
                 PackageManager.PERMISSION_GRANTED
         } else {
             true
         }
 
-        // Detect sideloaded installs on Android 13–15 (API 33+) where Restricted Settings applies
-        val restrictedLikely = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && ourService == null) {
-            val source = runCatching {
-                context.packageManager.getInstallSourceInfo(context.packageName)
-            }.getOrNull()
-            source?.packageSource == android.content.pm.PackageInstaller.PACKAGE_SOURCE_LOCAL_FILE ||
-                source?.packageSource == android.content.pm.PackageInstaller.PACKAGE_SOURCE_DOWNLOADED_FILE
-        } else {
-            false
-        }
+        // Sideloaded installs on Android 13–15 may be blocked by Restricted Settings.
+        val restrictedLikely =
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && ourService == null && runCatching {
+                val source = context.packageManager.getInstallSourceInfo(context.packageName)
+                source.packageSource == android.content.pm.PackageInstaller.PACKAGE_SOURCE_LOCAL_FILE ||
+                    source.packageSource ==
+                    android.content.pm.PackageInstaller.PACKAGE_SOURCE_DOWNLOADED_FILE
+            }.getOrDefault(false)
 
         return PermissionStatusSnapshot(
             accessibilityEnabled = ourService != null,
             prominentDisclosureAccepted = disclosureAccepted,
-            notificationsGranted = notifGranted,
+            notificationsGranted = notificationsGranted,
             restrictedSettingsLikelyBlocking = restrictedLikely,
             canPerformGesturesVerified = canGesture,
         )
@@ -126,7 +134,7 @@ object PermissionStateInspector {
         }
 
     /**
-     * Intent that opens this app's system info page (restricted-settings unlock path).
+     * Intent that opens this app's system info page (the restricted-settings unlock path).
      */
     fun buildAppDetailsIntent(packageName: String): Intent =
         Intent(
@@ -138,7 +146,7 @@ object PermissionStateInspector {
 }
 
 /**
- * Exposes permission posture and disclosure state as one UDF state stream.
+ * Exposes the permission posture and the disclosure acknowledgement as one UDF state stream.
  */
 @HiltViewModel
 class PermissionOnboardingViewModel @Inject constructor(
@@ -186,15 +194,24 @@ class PermissionOnboardingViewModel @Inject constructor(
     }
 
     /**
-     * Forces a re-read of platform permission state (on resume / after settings return).
+     * Forces a re-read of platform permission state (on resume / after returning from settings).
      */
     fun refreshStatus() {
         refreshTick.value = System.nanoTime()
     }
 }
 
+/** The three steps a new user actually has to perform, in order. */
+private enum class SetupStep { Disclosure, Accessibility, Done }
+
 /**
- * Stateful Hilt entry-point for Android 14/15 permission & Google Play Prominent Disclosure flow.
+ * Onboarding that a first-time user can finish without reading documentation:
+ *
+ * 1. one plain-language privacy sentence + a single "I agree" button,
+ * 2. one button that opens the Accessibility settings, with live confirmation on return,
+ * 3. a success screen with the one physical action to try.
+ *
+ * Optional permissions are offered as a dismissible row on the success screen, never as a gate.
  */
 @Composable
 fun PermissionOnboardingRoute(
@@ -205,7 +222,7 @@ fun PermissionOnboardingRoute(
     val lifecycleOwner = LocalLifecycleOwner.current
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
-    // Re-evaluate immediately when user returns from Android System Accessibility Settings
+    // Re-read platform state the moment the user returns from system settings.
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) viewModel.refreshStatus()
@@ -223,10 +240,16 @@ fun PermissionOnboardingRoute(
         state = state,
         onAcceptDisclosure = viewModel::acceptProminentDisclosure,
         onOpenAccessibilitySettings = {
-            context.startActivity(PermissionStateInspector.buildAccessibilitySettingsIntent())
+            runCatching {
+                context.startActivity(PermissionStateInspector.buildAccessibilitySettingsIntent())
+            }
         },
         onOpenAppInfoForRestrictedSettings = {
-            context.startActivity(PermissionStateInspector.buildAppDetailsIntent(context.packageName))
+            runCatching {
+                context.startActivity(
+                    PermissionStateInspector.buildAppDetailsIntent(context.packageName),
+                )
+            }
         },
         onRequestNotifications = {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -238,7 +261,7 @@ fun PermissionOnboardingRoute(
 }
 
 /**
- * Stateless, testable Material Design 3 Permission & Privacy Onboarding Screen.
+ * Stateless, testable onboarding surface. One decision per screen, maximum two actions.
  */
 @Composable
 fun PermissionOnboardingScreen(
@@ -250,201 +273,351 @@ fun PermissionOnboardingScreen(
     onContinue: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var showDisclosureDialog by rememberSaveable { mutableStateOf(false) }
+    val step = when {
+        !state.prominentDisclosureAccepted -> SetupStep.Disclosure
+        !state.accessibilityEnabled -> SetupStep.Accessibility
+        else -> SetupStep.Done
+    }
+    val stepIndex = when (step) {
+        SetupStep.Disclosure -> 1
+        SetupStep.Accessibility -> 2
+        SetupStep.Done -> 3
+    }
+    val progress by animateFloatAsState(
+        targetValue = stepIndex / 3f,
+        label = "setup_progress",
+    )
 
     Column(
-        verticalArrangement = Arrangement.spacedBy(16.dp),
         modifier = modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 20.dp, vertical = 24.dp)
+            .padding(horizontal = 24.dp, vertical = 20.dp)
             .testTag("permission_onboarding_screen"),
+        verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
-        GlassmorphicCard(modifier = Modifier.fillMaxWidth()) {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(
-                    text = "Android 14+ Privacy-First Setup",
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-                Text(
-                    text = "Zero internet permissions. Zero keystroke logging. Automatic suspension over " +
-                        "passwords, lock screens, and sensitive Android 14+ windows.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
-
-        PermissionStepCard(
-            icon = Icons.Rounded.Security,
-            title = "1. Accessibility Data Disclosure",
-            description = "Review exactly what Accessibility APIs VodiGesture uses before enabling.",
-            isGranted = state.prominentDisclosureAccepted,
-            actionLabel = if (state.prominentDisclosureAccepted) "Reviewed" else "Review & Consent",
-            testTag = "step_disclosure_card",
-            onClick = { showDisclosureDialog = true },
-        )
-
-        PermissionStepCard(
-            icon = Icons.Rounded.TouchApp,
-            title = "2. Gesture Accessibility Service",
-            description = "Enables global TYPE_ACCESSIBILITY_OVERLAY edge handle and gesture synthesis " +
-                "without requiring invasive Draw-Over-Other-Apps permission.",
-            isGranted = state.accessibilityEnabled && state.canPerformGesturesVerified,
-            enabled = state.prominentDisclosureAccepted,
-            actionLabel = if (state.accessibilityEnabled) "Active" else "Open Settings",
-            testTag = "step_accessibility_card",
-            onClick = onOpenAccessibilitySettings,
-        )
-
-        AnimatedVisibility(visible = state.restrictedSettingsLikelyBlocking && !state.accessibilityEnabled) {
-            SpringPressableCard(
-                onClick = onOpenAppInfoForRestrictedSettings,
+        // Progress is expressed as position (۱ از ۳) as well as a bar: never colour alone.
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(
+                text = stringResource(R.string.setup_step_of, faNumber(stepIndex), faNumber(3)),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            LinearProgressIndicator(
+                progress = { progress },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .testTag("restricted_settings_helper"),
+                    .height(6.dp)
+                    .clip(CircleShape),
+                trackColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+            )
+        }
+
+        when (step) {
+            SetupStep.Disclosure -> DisclosureStep(onAcceptDisclosure)
+            SetupStep.Accessibility -> AccessibilityStep(
+                state = state,
+                onOpenAccessibilitySettings = onOpenAccessibilitySettings,
+                onOpenAppInfoForRestrictedSettings = onOpenAppInfoForRestrictedSettings,
+            )
+            SetupStep.Done -> DoneStep(
+                state = state,
+                onRequestNotifications = onRequestNotifications,
+                onContinue = onContinue,
+            )
+        }
+    }
+}
+
+/**
+ * Step 1 — one promise, stated plainly, with exactly one button.
+ */
+@Composable
+private fun DisclosureStep(onAccept: () -> Unit) {
+    SetupHeadline(
+        icon = Icons.Rounded.Shield,
+        title = stringResource(R.string.setup_privacy_heading),
+        body = stringResource(R.string.setup_privacy_body),
+    )
+    PrivacyFactList()
+    Spacer(Modifier.height(4.dp))
+    VodiPrimaryButton(
+        text = stringResource(R.string.setup_accept),
+        onClick = onAccept,
+        modifier = Modifier.testTag("setup_accept_disclosure"),
+    )
+    Text(
+        text = stringResource(R.string.setup_time_hint),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        textAlign = TextAlign.Center,
+        modifier = Modifier.fillMaxWidth(),
+    )
+}
+
+/**
+ * Step 2 — the only required permission, with a single primary action and live confirmation.
+ */
+@Composable
+private fun AccessibilityStep(
+    state: PermissionStatusSnapshot,
+    onOpenAccessibilitySettings: () -> Unit,
+    onOpenAppInfoForRestrictedSettings: () -> Unit,
+) {
+    SetupHeadline(
+        icon = Icons.Rounded.TouchApp,
+        title = stringResource(R.string.setup_step_accessibility_title),
+        body = stringResource(R.string.setup_step_accessibility_body),
+    )
+    VodiPrimaryButton(
+        text = stringResource(R.string.setup_open_accessibility),
+        onClick = onOpenAccessibilitySettings,
+        modifier = Modifier.testTag("setup_open_accessibility"),
+    )
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        StepBadge(done = state.accessibilityEnabled)
+        Text(
+            text = if (state.accessibilityEnabled) {
+                stringResource(R.string.setup_done_title)
+            } else {
+                stringResource(R.string.setup_step_accessibility_waiting)
+            },
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+
+    AnimatedVisibility(visible = state.restrictedSettingsLikelyBlocking) {
+        Surface(
+            shape = MaterialTheme.shapes.medium,
+            color = MaterialTheme.colorScheme.tertiaryContainer,
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag("restricted_settings_helper"),
+        ) {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.padding(16.dp),
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier.padding(16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     Icon(
                         imageVector = Icons.Rounded.Lock,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.tertiary,
+                        tint = MaterialTheme.colorScheme.onTertiaryContainer,
+                        modifier = Modifier.size(18.dp),
                     )
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "Android 13–15 Restricted Settings Guide",
-                            style = MaterialTheme.typography.titleSmall,
-                        )
-                        Text(
-                            text = "Open App Info -> top-right menu -> 'Allow restricted settings', then " +
-                                "return to enable VodiGesture Accessibility.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                    OutlinedButton(onClick = onOpenAppInfoForRestrictedSettings) {
-                        Text("App Info")
-                    }
+                    Text(
+                        text = stringResource(R.string.setup_restricted_title),
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.onTertiaryContainer,
+                    )
                 }
+                Text(
+                    text = stringResource(R.string.setup_restricted_body),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onTertiaryContainer,
+                )
+                VodiSecondaryButton(
+                    text = stringResource(R.string.setup_restricted_cta),
+                    onClick = onOpenAppInfoForRestrictedSettings,
+                )
             }
         }
-
-        PermissionStepCard(
-            icon = Icons.Rounded.Notifications,
-            title = "3. Status Alerts (Optional)",
-            description = "Android 13+ optional notification permission for macro diagnostic alerts.",
-            isGranted = state.notificationsGranted,
-            actionLabel = if (state.notificationsGranted) "Granted" else "Allow",
-            testTag = "step_notifications_card",
-            onClick = onRequestNotifications,
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Button(
-            onClick = onContinue,
-            enabled = state.isCoreAutomationReady,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(54.dp)
-                .testTag("continue_to_studio_button"),
-        ) {
-            Text(
-                text = if (state.isCoreAutomationReady) {
-                    "Enter VodiGesture Studio"
-                } else {
-                    "Complete Steps 1 & 2 to Activate"
-                },
-            )
-        }
     }
+}
 
-    if (showDisclosureDialog) {
-        AlertDialog(
-            onDismissRequest = { showDisclosureDialog = false },
-            title = { Text("Accessibility Service Disclosure") },
-            text = {
-                Text(
-                    text = "VodiGesture uses the Android AccessibilityService API exclusively to:\n" +
-                        "• Display a one-handed gesture overlay (TYPE_ACCESSIBILITY_OVERLAY).\n" +
-                        "• Detect foreground app package changes for app-specific triggers.\n" +
-                        "• Execute your configured navigation actions and synthetic gestures.\n\n" +
-                        "VodiGesture never reads passwords, ignores Android 14+ accessibilityDataSensitive " +
-                        "views, stores all gesture models locally on your device, and never transmits data.",
-                )
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        showDisclosureDialog = false
-                        onAcceptDisclosure()
-                    },
-                    modifier = Modifier.testTag("accept_disclosure_button"),
-                ) {
-                    Text("I Understand & Agree")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDisclosureDialog = false }) {
-                    Text("Decline")
-                }
-            },
+/**
+ * Step 3 — confirmation plus the single gesture the user should try right now.
+ */
+@Composable
+private fun DoneStep(
+    state: PermissionStatusSnapshot,
+    onRequestNotifications: () -> Unit,
+    onContinue: () -> Unit,
+) {
+    SetupHeadline(
+        icon = Icons.Rounded.Check,
+        title = stringResource(R.string.setup_done_title),
+        body = stringResource(R.string.setup_done_body),
+    )
+    VodiPrimaryButton(
+        text = stringResource(R.string.setup_done_cta),
+        onClick = onContinue,
+        modifier = Modifier.testTag("setup_continue"),
+    )
+    if (!state.notificationsGranted) {
+        OptionalRow(
+            icon = Icons.Rounded.NotificationsActive,
+            title = stringResource(R.string.setup_step_notifications_title),
+            body = stringResource(R.string.setup_step_notifications_body),
+            actionLabel = stringResource(R.string.setup_allow),
+            onAction = onRequestNotifications,
         )
     }
 }
 
+/** Large step illustration, headline and one explanatory paragraph. */
 @Composable
-private fun PermissionStepCard(
+private fun SetupHeadline(
     icon: ImageVector,
     title: String,
-    description: String,
-    isGranted: Boolean,
-    actionLabel: String,
-    testTag: String,
-    onClick: () -> Unit,
-    enabled: Boolean = true,
+    body: String,
 ) {
-    val extended = LocalExtendedColors.current
-    SpringPressableCard(
-        onClick = onClick,
-        enabled = enabled && !isGranted,
-        modifier = Modifier
-            .fillMaxWidth()
-            .testTag(testTag),
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(14.dp),
-            modifier = Modifier.padding(16.dp),
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Surface(
+            shape = CircleShape,
+            color = MaterialTheme.colorScheme.primaryContainer,
         ) {
             Icon(
-                imageVector = if (isGranted) Icons.Rounded.CheckCircle else icon,
+                imageVector = icon,
                 contentDescription = null,
-                tint = if (isGranted) extended.statusActive else MaterialTheme.colorScheme.primary,
+                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                modifier = Modifier
+                    .padding(14.dp)
+                    .size(30.dp),
             )
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
+        }
+        Text(
+            text = title,
+            style = MaterialTheme.typography.headlineSmall,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        Text(
+            text = body,
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+/**
+ * Two-line privacy summary: what is never read, and what never leaves the device.
+ */
+@Composable
+private fun PrivacyFactList() {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        PrivacyFact(stringResource(R.string.setup_privacy_bullet_never), emphasised = true)
+        PrivacyFact(stringResource(R.string.setup_privacy_bullet_always), emphasised = false)
+    }
+}
+
+@Composable
+private fun PrivacyFact(text: String, emphasised: Boolean) {
+    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Box(
+            modifier = Modifier
+                .padding(top = 7.dp)
+                .size(6.dp)
+                .background(
+                    color = if (emphasised) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.outline
+                    },
+                    shape = CircleShape,
+                ),
+        )
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+/** Completion indicator: filled check when done, hollow ring when pending. */
+@Composable
+private fun StepBadge(done: Boolean) {
+    val description = if (done) {
+        stringResource(R.string.setup_done_title)
+    } else {
+        stringResource(R.string.status_needs_setup)
+    }
+    Box(
+        modifier = Modifier
+            .size(18.dp)
+            .clip(CircleShape)
+            .background(
+                if (done) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerHighest,
+            )
+            .semantics { contentDescription = description },
+        contentAlignment = Alignment.Center,
+    ) {
+        if (done) {
+            Icon(
+                imageVector = Icons.Rounded.Check,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onPrimary,
+                modifier = Modifier.size(12.dp),
+            )
+        }
+    }
+}
+
+/** Dismissible, clearly-optional row used for non-blocking permissions. */
+@Composable
+private fun OptionalRow(
+    icon: ImageVector,
+    title: String,
+    body: String,
+    actionLabel: String,
+    onAction: () -> Unit,
+) {
+    Surface(
+        shape = MaterialTheme.shapes.medium,
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.55f)),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+            modifier = Modifier.padding(16.dp),
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(18.dp),
                 )
+                Text(text = title, style = MaterialTheme.typography.titleSmall)
+                Spacer(Modifier.width(4.dp))
                 Text(
-                    text = description,
-                    style = MaterialTheme.typography.bodySmall,
+                    text = stringResource(R.string.label_optional),
+                    style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            FilledTonalButton(
-                onClick = onClick,
-                enabled = enabled && !isGranted,
-            ) {
-                Text(actionLabel)
+            Text(
+                text = body,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            TextButton(onClick = onAction) {
+                Text(actionLabel, style = MaterialTheme.typography.labelLarge)
             }
         }
+    }
+}
+
+/**
+ * Formats a step number as a Persian numeral for `آیتم از آیتم` copy.
+ */
+@Composable
+private fun faNumber(value: Int): String {
+    // Reading the layout direction keeps the call site honest about RTL rendering.
+    @Suppress("UNUSED_VARIABLE")
+    val direction = LocalLayoutDirection.current
+    return PersianText.formatInteger(value.toLong()).let { digits ->
+        if (direction == LayoutDirection.Rtl) digits else digits
     }
 }

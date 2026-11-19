@@ -1,4 +1,167 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+    English (en) interface copy. Mirrors values-fa/strings.xml key-for-key; the two files must
+    always declare exactly the same names so no locale falls back to a raw resource id.
+-->
 <resources>
+
+    <!-- ============================ Product identity ============================ -->
     <string name="app_name">VodiGesture</string>
+    <string name="app_tagline">Finger gestures, in one touch</string>
+
+    <!-- ============================ Bottom navigation ============================ -->
+    <string name="nav_home">Home</string>
+    <string name="nav_gestures">Gestures</string>
+    <string name="nav_rules">Rules</string>
+    <string name="nav_settings">Settings</string>
+
+    <!-- ============================ Status vocabulary ============================ -->
+    <string name="status_ready">Ready</string>
+    <string name="status_needs_setup">Needs setup</string>
+    <string name="status_paused">Paused</string>
+    <string name="status_learning">Learning</string>
+    <string name="status_battery_percent">Battery %1$s%%</string>
+    <string name="status_gestures_count">%1$s gestures</string>
+
+    <!-- ============================ Home ============================ -->
+    <string name="home_title">Home</string>
+    <string name="home_greeting">Welcome</string>
+    <string name="home_ready_headline">Everything is ready</string>
+    <string name="home_ready_body">The edge handle is active. Swipe in from the right edge to draw.</string>
+    <string name="home_setup_headline">One step left</string>
+    <string name="home_setup_body">Just turn on Accessibility — it takes less than a minute.</string>
+    <string name="home_setup_cta">Set up in 30 seconds</string>
+    <string name="home_try_now_cta">Try it</string>
+    <string name="home_section_quick">Quick actions</string>
+    <string name="home_section_your_gestures">Your gestures</string>
+    <string name="home_section_activity">Today</string>
+    <string name="home_empty_gestures_title">No gestures yet</string>
+    <string name="home_empty_gestures_body">Start from a ready-made pattern or draw your own.</string>
+    <string name="home_empty_gestures_cta">Create the first gesture</string>
+    <string name="home_activity_runs">%1$s runs</string>
+    <string name="home_activity_success">%1$s%% succeeded</string>
+    <string name="home_activity_none">No gestures run today</string>
+
+    <!-- ============================ Setup / permissions ============================ -->
+    <string name="setup_title">Setup</string>
+    <string name="setup_step_of">Step %1$s of %2$s</string>
+    <string name="setup_time_hint">About 30 seconds</string>
+    <string name="setup_privacy_heading">Before we start</string>
+    <string name="setup_privacy_body">VodiGesture sends nothing to the internet — the app has no internet permission. It only reads which window is in front, to know which rule applies.</string>
+    <string name="setup_privacy_bullet_never">Never read: text, passwords, the lock screen, sensitive Android 14+ surfaces.</string>
+    <string name="setup_privacy_bullet_always">Always on your device: gestures, rules, activity log.</string>
+    <string name="setup_accept">I agree and continue</string>
+    <string name="setup_step_accessibility_title">Turn on Accessibility</string>
+    <string name="setup_step_accessibility_body">This is the only permission needed. VodiGesture uses it to draw the floating handle and perform gestures.</string>
+    <string name="setup_open_accessibility">Open Accessibility settings</string>
+    <string name="setup_step_accessibility_waiting">Waiting… checked automatically when you come back</string>
+    <string name="setup_restricted_title">If VodiGesture is not in the list</string>
+    <string name="setup_restricted_body">Android 13–15 restricts apps installed outside a store. On the App info screen, open the ⋮ menu and choose “Allow restricted settings”, then try again.</string>
+    <string name="setup_restricted_cta">Open App info</string>
+    <string name="setup_step_notifications_title">Notifications (optional)</string>
+    <string name="setup_step_notifications_body">Shows handle status and run reports. Everything works without it.</string>
+    <string name="setup_allow">Allow</string>
+    <string name="setup_skip">Not now</string>
+    <string name="setup_done_title">You are set</string>
+    <string name="setup_done_body">Swipe in from the right edge and the handle appears.</string>
+    <string name="setup_done_cta">Start</string>
+
+    <!-- ============================ Gesture library ============================ -->
+    <string name="gestures_title">Gestures</string>
+    <string name="gestures_subtitle">%1$s active gestures</string>
+    <string name="gestures_new_cta">New gesture</string>
+    <string name="gestures_filter_all">All</string>
+    <string name="gestures_empty_title">Nothing here yet</string>
+    <string name="gestures_empty_body">Add a ready-made pattern to start in seconds.</string>
+    <string name="gestures_usage_count">Used %1$s times</string>
+    <string name="gestures_confidence">%1$s%% confidence</string>
+    <string name="gestures_enabled">On</string>
+    <string name="gestures_disabled">Off</string>
+    <string name="gestures_action_run">Test run</string>
+    <string name="gestures_action_rename">Rename</string>
+    <string name="gestures_action_delete">Delete</string>
+    <string name="gestures_delete_confirm">Delete “%1$s”? This cannot be undone.</string>
+
+    <!-- ============================ Recorder ============================ -->
+    <string name="recorder_title">New gesture</string>
+    <string name="recorder_instruction">Draw a shape on the surface</string>
+    <string name="recorder_hint_sample">Sample %1$s of %2$s</string>
+    <string name="recorder_hint_more">Draw once more so recognition is confident</string>
+    <string name="recorder_clear">Clear</string>
+    <string name="recorder_undo">Undo</string>
+    <string name="recorder_short_error">That stroke was too short — draw larger.</string>
+    <string name="recorder_name_label">Gesture name</string>
+    <string name="recorder_name_placeholder">e.g. “Go home”</string>
+    <string name="recorder_category_label">Category</string>
+    <string name="recorder_start_recording">Record</string>
+    <string name="recorder_stop_recording">Stop</string>
+    <string name="recorder_save">Save</string>
+    <string name="recorder_saved">Saved</string>
+    <string name="recorder_collision">Too similar to “%1$s” (%2$s%%). Try a different shape.</string>
+    <string name="recorder_templates_ready">Ready</string>
+
+    <!-- ============================ Rules ============================ -->
+    <string name="rules_title">Rules</string>
+    <string name="rules_subtitle">Which gesture, in which app, does what</string>
+    <string name="rules_empty_title">No rules yet</string>
+    <string name="rules_empty_body">A rule decides what a gesture does inside a given app. Start with a simple one.</string>
+    <string name="rules_new_cta">New rule</string>
+    <string name="rules_scope_everywhere">Everywhere</string>
+    <string name="rules_scope_app">Only in %1$s</string>
+    <string name="rules_action_open">Open</string>
+    <string name="rules_action_back">Back</string>
+    <string name="rules_action_home">Home</string>
+    <string name="rules_action_recents">Recents</string>
+    <string name="rules_action_notifications">Notifications</string>
+    <string name="rules_action_torch">Flashlight</string>
+    <string name="rules_action_screenshot">Screenshot</string>
+    <string name="rules_when_label">When this gesture is drawn</string>
+    <string name="rules_where_label">In this app</string>
+    <string name="rules_do_label">Do this</string>
+
+    <!-- ============================ Settings ============================ -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_section_appearance">Appearance</string>
+    <string name="settings_dark_mode">Dark theme</string>
+    <string name="settings_dark_mode_desc">Always dark, or follow the system</string>
+    <string name="settings_dynamic_color">System colours (Material You)</string>
+    <string name="settings_dynamic_color_desc">Match your wallpaper</string>
+    <string name="settings_high_contrast">High contrast</string>
+    <string name="settings_high_contrast_desc">Easier to read in bright light</string>
+    <string name="settings_text_size">Text size</string>
+    <string name="settings_section_behavior">Behaviour</string>
+    <string name="settings_haptic">Haptic strength</string>
+    <string name="settings_haptic_value">%1$s%%</string>
+    <string name="settings_edge">Handle edge</string>
+    <string name="settings_edge_right">Right (right-handed)</string>
+    <string name="settings_edge_left">Left</string>
+    <string name="settings_battery_saver">Battery saver</string>
+    <string name="settings_battery_saver_desc">Lower the sample rate when the battery is low</string>
+    <string name="settings_section_privacy">Privacy</string>
+    <string name="settings_privacy_apps">Protected apps</string>
+    <string name="settings_privacy_apps_desc">Gestures are disabled inside these apps</string>
+    <string name="settings_privacy_bank">Banking apps</string>
+    <string name="settings_privacy_password">Password managers</string>
+    <string name="settings_section_about">About</string>
+    <string name="settings_version">Version %1$s</string>
+    <string name="settings_offline_badge">Fully offline</string>
+    <string name="settings_offline_desc">This app has no internet permission.</string>
+
+    <!-- ============================ Common ============================ -->
+    <string name="action_continue">Continue</string>
+    <string name="action_back">Back</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_save">Save</string>
+    <string name="action_delete">Delete</string>
+    <string name="action_retry">Try again</string>
+    <string name="action_close">Close</string>
+    <string name="action_on">On</string>
+    <string name="action_off">Off</string>
+    <string name="label_optional">Optional</string>
+
+    <!-- ============================ Accessibility service ============================ -->
+    <string name="accessibility_service_label">VodiGesture</string>
+    <string name="accessibility_service_summary">Finger gestures and one-handed shortcuts, collecting nothing</string>
+    <string name="accessibility_service_description">VodiGesture runs system and app shortcuts when you draw a gesture from the edge handle. It only reads foreground window changes to pick the right app rule, automatically pauses over passwords, the lock screen and sensitive Android 14+ surfaces, and never stores or transmits text, passwords or personal data.</string>
+
 </resources>

@@ -273,10 +273,8 @@ class VodiGestureAccessibilityService : AccessibilityService() {
         if (keyguard?.isKeyguardLocked == true) return true
         val excluded = latestSettings?.privacyExcludedPackages ?: UserSettingsDataSource.DEFAULT_PROTECTED_PACKAGES
         if (pkg in excluded) return true
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            val root = rootInActiveWindow
-            if (root?.isAccessibilityDataSensitive == true) return true
-        }
+        // canRetrieveWindowContent is off, so rootInActiveWindow is always null here; the
+        // Android 14 sensitivity signal arrives on the event itself instead.
         return false
     }
 

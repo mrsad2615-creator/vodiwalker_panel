@@ -21,6 +21,20 @@ import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/**
+ * Appearance preference for the theme, offered as a plain three-way choice to the user.
+ */
+enum class DarkThemeMode {
+    /** Follow the device's night-mode setting. */
+    System,
+
+    /** Always use the dark scheme. */
+    AlwaysDark,
+
+    /** Always use the light scheme. */
+    AlwaysLight,
+}
+
 private val Context.vodiPreferencesDataStore: DataStore<Preferences> by preferencesDataStore(
     name = "vodigesture_user_prefs",
 )
@@ -33,6 +47,8 @@ data class UserSettings(
     val prominentDisclosureAccepted: Boolean,
     val dynamicMaterialYouColor: Boolean,
     val forceHighContrast: Boolean,
+    val darkThemeMode: DarkThemeMode = DarkThemeMode.System,
+    val starterContentInstalled: Boolean = false,
     val hapticIntensity: Float,
     val preferredPowerMode: PowerMode?,
     val overlayConfig: OverlayUiConfig,
@@ -50,6 +66,8 @@ class UserSettingsDataSource @Inject constructor(
         val PROMINENT_DISCLOSURE_ACCEPTED = booleanPreferencesKey("prominent_disclosure_accepted")
         val DYNAMIC_COLOR = booleanPreferencesKey("dynamic_material_you_color")
         val HIGH_CONTRAST = booleanPreferencesKey("force_high_contrast")
+        val DARK_THEME_MODE = stringPreferencesKey("dark_theme_mode")
+        val STARTER_CONTENT_INSTALLED = booleanPreferencesKey("starter_content_installed")
         val HAPTIC_INTENSITY = floatPreferencesKey("haptic_intensity")
         val PREFERRED_POWER_MODE = stringPreferencesKey("preferred_power_mode")
         val OVERLAY_DOCK_EDGE = stringPreferencesKey("overlay_dock_edge")
@@ -68,6 +86,10 @@ class UserSettingsDataSource @Inject constructor(
                 prominentDisclosureAccepted = prefs[Keys.PROMINENT_DISCLOSURE_ACCEPTED] ?: false,
                 dynamicMaterialYouColor = prefs[Keys.DYNAMIC_COLOR] ?: true,
                 forceHighContrast = prefs[Keys.HIGH_CONTRAST] ?: false,
+                darkThemeMode = prefs[Keys.DARK_THEME_MODE]?.let { raw ->
+                    DarkThemeMode.entries.firstOrNull { it.name == raw }
+                } ?: DarkThemeMode.System,
+                starterContentInstalled = prefs[Keys.STARTER_CONTENT_INSTALLED] ?: false,
                 hapticIntensity = (prefs[Keys.HAPTIC_INTENSITY] ?: 0.85f).coerceIn(0f, 1f),
                 preferredPowerMode = prefs[Keys.PREFERRED_POWER_MODE]?.let { raw ->
                     PowerMode.entries.firstOrNull { it.name == raw }
@@ -102,6 +124,40 @@ class UserSettingsDataSource @Inject constructor(
 
     /**
      * Pins a power mode, or null to return to the adaptive governor.
+     */
+    /**
+     * Persists the three-way appearance preference (system / always dark / always light).
+     */
+    suspend fun setDarkThemeMode(mode: DarkThemeMode) {
+        context.vodiPreferencesDataStore.edit { it[Keys.DARK_THEME_MODE] = mode.name }
+    }
+
+    /**
+     * Persists the Material You dynamic-colour preference.
+     */
+    suspend fun setDynamicMaterialYouColor(enabled: Boolean) {
+        context.vodiPreferencesDataStore.edit { it[Keys.DYNAMIC_COLOR] = enabled }
+    }
+
+    /**
+     * Persists the high-contrast preference.
+     */
+    suspend fun setForceHighContrast(enabled: Boolean) {
+        context.vodiPreferencesDataStore.edit { it[Keys.HIGH_CONTRAST] = enabled }
+    }
+
+    /**
+     * Pins a power mode, or clears it to follow the adaptive governor.
+     */
+    /**
+     * Records that the first-run gesture library has been installed.
+     */
+    suspend fun setStarterContentInstalled(installed: Boolean) {
+        context.vodiPreferencesDataStore.edit { it[Keys.STARTER_CONTENT_INSTALLED] = installed }
+    }
+
+    /**
+     * Pins a power mode, or clears it to follow the adaptive governor.
      */
     suspend fun setPreferredPowerMode(mode: PowerMode?) {
         context.vodiPreferencesDataStore.edit { prefs ->

@@ -35,7 +35,7 @@ jobs:
   build:
     name: Build & test Android app
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 45
     needs: core-tests
     defaults:
       run:
@@ -48,37 +48,41 @@ jobs:
           java-version: '17'
       - uses: gradle/actions/setup-gradle@v4
 
-      - name: Compile, lint and unit-test
-        shell: bash
+      - name: Assemble debug
         run: |
           set -o pipefail
-          ./gradlew --console=plain --no-daemon \
-            :app:assembleDebug \
-            :app:testDebugUnitTest \
-            :app:lintDebug 2>&1 | tee "$RUNNER_TEMP/build.log" || {
-            echo "--- compiler errors ---"
-            grep -E '(^e:|^w: .*error|error:|FAILURE|Caused by|> Task .*FAILED)' "$RUNNER_TEMP/build.log" | head -80
-            python3 - <<'PY'
-          import os, pathlib
-          log = pathlib.Path(os.environ["RUNNER_TEMP"], "build.log")
-          text = log.read_text(errors="replace")
-          # Surface only the actionable region (first compiler error → next 60 lines)
-          marker = text.find("e: file://")
-          chunk = text[marker:marker + 6000] if marker >= 0 else text[-4000:]
-          chunk = chunk.replace("%", "%25").replace("\n", "%0A").replace("\r", "")
-          print(f"::error title=MRSAD build failure::{chunk}")
-          PY
-            exit 1
-          }
+          ./gradlew --console=plain --no-daemon :app:assembleDebug 2>&1 | tee build.log
+
+      - name: Unit tests
+        run: |
+          set -o pipefail
+          ./gradlew --console=plain --no-daemon :app:testDebugUnitTest 2>&1 | tee -a build.log
+
+      - name: Lint
+        run: |
+          set -o pipefail
+          ./gradlew --console=plain --no-daemon :app:lintDebug 2>&1 | tee -a build.log
+
+      - name: Report failure details
+        if: failure()
+        run: |
+          echo "----- last 80 lines -----"
+          tail -80 build.log || true
+          echo "----- errors -----"
+          grep -nE '^(e: |w: .*error|.*error:|.*Error:|FAILURE|> Task .*FAILED|Caused by)' build.log | head -60 || true
+          if [ -f app/build/reports/lint-results-debug.txt ]; then
+            head -40 app/build/reports/lint-results-debug.txt || true
+          fi
 
       - name: Upload debug APK
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: mrsad-debug-apk
           path: mrsad/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
 
-      - name: Upload test & lint reports
+      - name: Upload reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -87,12 +91,13 @@ jobs:
             mrsad/core/build/reports/tests/test/**
             mrsad/app/build/reports/**
             mrsad/app/build/test-results/**
+            mrsad/app/build/outputs/logs/**
           if-no-files-found: ignore
 
   e2e:
-    name: Emulator smoke test (offline boot)
+    name: Emulator smoke test
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 45
     needs: build
     steps:
       - uses: actions/checkout@v4

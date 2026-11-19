@@ -149,10 +149,12 @@ class AssistantViewModel(private val container: AppContainer) : ViewModel() {
             return "جلسهٔ خواندنی ثبت نشده است. در MRSAD READ یک متن را انتخاب کنید؛ پس از خواندن، " +
                 "درک مطلب سنجیده می‌شود و سرعت مؤثر (سرعت × درک) به‌عنوان معیار اصلی ثبت می‌گردد."
         }
-        return "میانگین درک مطلب شما ${snapshot.avgComprehension.roundToInt()}٪ با سرعت ${snapshot.avgReadingWpm} کلمه در دقیقه است. " +
-            if (snapshot.avgComprehension < 60)
-                "برای تثبیت درک مطلب، سرعت را کمی پایین بیاورید و پس از هر جلسه به پرسش‌ها دقیق پاسخ دهید."
-            else "درک مطلب شما در سطح قابل قبولی است؛ افزایش تدریجی سرعت منطقی است."
+        val advice = if (snapshot.avgComprehension < 60) {
+            "برای تثبیت درک مطلب، سرعت را کمی پایین بیاورید و پس از هر جلسه به پرسش‌ها دقیق پاسخ دهید."
+        } else {
+            "درک مطلب شما در سطح قابل قبولی است؛ افزایش تدریجی سرعت منطقی است."
+        }
+        return "میانگین درک مطلب شما ${snapshot.avgComprehension}٪ با سرعت ${snapshot.avgReadingWpm} کلمه در دقیقه است. $advice"
     }
 
     private fun mindAnswer(snapshot: SkillSnapshot): String {
@@ -160,9 +162,12 @@ class AssistantViewModel(private val container: AppContainer) : ViewModel() {
             return "تمرین ذهنی ثبت نشده است. از MRSAD MIND با تمرین «حافظهٔ عددی» شروع کنید؛ " +
                 "سطح تمرین‌ها بر اساس نتایج خودکار تنظیم می‌شود."
         }
-        return "میانگین امتیاز تمرین‌های ذهنی شما ${snapshot.avgMindScore.roundToInt()}٪ است. " +
-            if (snapshot.avgMindScore < 50) "تمرین‌های حافظه و توجه را با جلسات کوتاه روزانه تکرار کنید."
-            else "سطح فعلی خوب است؛ سطح بعدی را روی ضعیف‌ترین دسته (توجه یا منطق) بگذارید."
+        val advice = if (snapshot.avgMindScore < 50) {
+            "تمرین‌های حافظه و توجه را با جلسات کوتاه روزانه تکرار کنید."
+        } else {
+            "سطح فعلی خوب است؛ سطح بعدی را روی ضعیف‌ترین دسته (توجه یا منطق) بگذارید."
+        }
+        return "میانگین امتیاز تمرین‌های ذهنی شما ${snapshot.avgMindScore.roundToInt()}٪ است. $advice"
     }
 
     private fun planAnswer(snapshot: SkillSnapshot, persianNumerals: Boolean): String {

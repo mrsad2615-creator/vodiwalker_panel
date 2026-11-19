@@ -183,7 +183,7 @@ data class MrsadMotion(
 }
 
 val LocalMrsadColors = staticCompositionLocalOf { ObsidianColors }
-val LocalMrsadTypography = staticCompositionLocalOf { MrsadType.default }
+val LocalMrsadTypography = staticCompositionLocalOf<MrsadTypography> { MrsadTypography.default }
 val LocalMrsadMotion = staticCompositionLocalOf {
     MrsadMotion(animationsEnabled = true, particleCount = 45, animationScale = 1f, quality = GraphicsQuality.BALANCED)
 }
@@ -202,7 +202,7 @@ object MrsadTheme {
 @Composable
 fun MrsadTheme(settings: MrsadSettings, content: @Composable () -> Unit) {
     val colors = colorsFor(settings.theme)
-    val typography = MrsadType.remember(fontScale = settings.fontScale, readingFont = false)
+    val typography = MrsadTypography.remember(fontScale = settings.fontScale, readingFont = false)
     val motion = MrsadMotion.of(settings)
 
     val materialScheme = if (colors.isLight) {

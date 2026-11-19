@@ -80,7 +80,8 @@ class ClockStore(ctx: Context) {
     }
 }
 
-class Desk(val studio: Studio) : AndroidViewModel(studio) {
+class Desk(application: Application) : AndroidViewModel(application) {
+    val studio = application as Studio
     val repo = studio.clocks
     val prefs = studio.options.data
     val presets = studio.presets.all()

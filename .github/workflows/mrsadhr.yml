@@ -37,4 +37,10 @@ jobs:
       - name: Report instrument failures
         if: failure()
         run: |
-          find app/build/outputs/androidTest-results -name '*.xml' -exec grep -h -A4 '<failure' {} + | while IFS= read -r line; do echo "::error::$line"; done
+          python3 - <<'PYTEST'
+          import glob, xml.etree.ElementTree as ET
+          for f in glob.glob('app/build/outputs/androidTest-results/**/*.xml', recursive=True):
+              for t in ET.parse(f).iter('testcase'):
+                  err=t.find('failure')
+                  if err is not None: print('::error::'+t.attrib['name']+': '+(err.text or '')[:3600].replace('\n','%0A'))
+          PYTEST

@@ -51,6 +51,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
@@ -74,6 +75,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 
 private val rootTabs = listOf(
     DashboardTab.CHAT to Mark.CHAT,
@@ -95,6 +98,13 @@ internal fun DanaApp(
     val planner = managedState.catalog?.planner?.takeUnless { managedState.offline }
     var showLocal by rememberSaveable { mutableStateOf(false) }
     var afterLogin by rememberSaveable { mutableStateOf<DashboardTab?>(null) }
+    val mediaOpen by remember(media) { media.state.map { it.open }.distinctUntilChanged() }
+        .collectAsStateWithLifecycle(initialValue = media.state.value.open)
+    LaunchedEffect(hosted, mediaOpen) {
+        // The Android capture tile still opens the isolated, on-device photo tools in a managed build.
+        if (hosted && mediaOpen) { showLocal = true; managed.stop() }
+    }
+    LaunchedEffect(session.tab) { if (session.tab != DashboardTab.ACCOUNT) afterLogin = null }
     val offline = (state.offline as? Reading.Ready)?.value != false
     val ime = WindowInsets.ime.getBottom(LocalDensity.current) > 0
     val secondary = rootTabs.none { it.first == session.tab }
@@ -118,8 +128,9 @@ internal fun DanaApp(
     val allowNetwork = { dispatch(DanaIntent.SetOffline(false)) }
     val openLogin = {
         afterLogin = session.tab
-        if (offline) allowNetwork() // Only from the explicitly online email button; no code is sent yet.
         dispatch(DanaIntent.Navigate(DashboardTab.ACCOUNT))
+        // Navigate before starting the preference write, which temporarily locks navigation.
+        if (offline) allowNetwork() // Only from the explicitly online email button; no code is sent yet.
     }
     BackHandler(enabled = session.tab != DashboardTab.CHAT && session.editor == null && !session.busy && !ime, onBack = back)
     Scaffold(
@@ -151,7 +162,7 @@ internal fun DanaApp(
         Box(Modifier.fillMaxSize().padding(insets).consumeWindowInsets(insets), contentAlignment = Alignment.TopCenter) {
             key(session.tab) {
                 if (session.tab == DashboardTab.CHAT) {
-                    if (hosted && !showLocal) ManagedWorkspaceScreen(managed, managedState, ManagedKind.CHAT, openLogin, allowNetwork,
+                    if (hosted && !showLocal && !mediaOpen) ManagedWorkspaceScreen(managed, managedState, ManagedKind.CHAT, openLogin, allowNetwork,
                         openLocal = { showLocal = true; managed.stop() }, modifier = Modifier.widthIn(max = 740.dp).imePadding())
                     else Column(Modifier.widthIn(max = 740.dp).imePadding().fillMaxSize()) {
                         if (hosted) TextButton(onClick = { chat.background(); media.close(); showLocal = false }) {

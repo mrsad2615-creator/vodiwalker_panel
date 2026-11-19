@@ -61,6 +61,9 @@ internal fun ManagedWorkspaceScreen(
     val selected = state.selected(kind)
     val busy = state.running != null
     val choices = state.available(kind)
+    val ready = state.resumed && !state.offline && state.catalogError == null && choices.isNotEmpty()
+    val remaining = state.catalog?.dailyRemaining ?: 0
+    val hasUnits = selected != null && selected.units <= remaining
     val prompt = if (chat) state.chatDraft else state.imageDraft
     val list = rememberLazyListState()
     val focus = LocalFocusManager.current
@@ -70,83 +73,87 @@ internal fun ManagedWorkspaceScreen(
         if (chat && state.turns.isNotEmpty()) list.requestScrollToItem(state.turns.size)
         else if (!chat && state.preview != null) list.requestScrollToItem(0)
     }
-    LazyColumn(modifier.fillMaxSize().testTag("managed-workspace-list"), state = list, contentPadding = PaddingValues(horizontal = 18.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        item {
-            SectionIntro(if (chat) R.string.managed_chat_title else R.string.art_title, R.string.managed_intro)
-            openLocal?.let { TextButton(onClick = it, enabled = !busy) { Text(stringResource(R.string.managed_open_local)) } }
-        }
-        when {
-            !state.resumed -> item {
-                GlassCard(Modifier.fillMaxWidth()) {
-                    Text(stringResource(R.string.managed_email_help), color = Titanium)
-                    Button(openAccount, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text(stringResource(R.string.managed_login)) }
-                }
+    Column(modifier.fillMaxSize()) {
+        LazyColumn(Modifier.fillMaxWidth().weight(1f).testTag("managed-workspace-list"), state = list,
+            contentPadding = PaddingValues(horizontal = 18.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            item {
+                SectionIntro(if (chat) R.string.managed_chat_title else R.string.art_title, R.string.managed_intro)
+                openLocal?.let { TextButton(onClick = it, enabled = !busy) { Text(stringResource(R.string.managed_open_local)) } }
             }
-            state.offline -> item { OfflinePanel(R.string.managed_offline, true, enableNetwork) }
-            state.catalogError != null -> item {
-                ReadError(managedError(state.catalogError))
-                if (state.catalogError == ManagedProblem.SIGN_IN) TextButton(openAccount) { Text(stringResource(R.string.managed_login)) }
-                else TextButton(model::refresh) { Text(stringResource(R.string.retry)) }
-            }
-            state.loading && state.catalog == null -> item { Loading() }
-            else -> {
-                if (chat) items(state.turns) { turn ->
+            when {
+                !state.resumed -> item {
                     GlassCard(Modifier.fillMaxWidth()) {
-                        Text(turn.question, style = MaterialTheme.typography.titleMedium)
-                        Text("${turn.model.provider} · ${turn.model.title}", color = Mint, style = MaterialTheme.typography.labelLarge)
-                        SelectionContainer { Text(turn.answer) }
+                        Text(stringResource(R.string.managed_email_help), color = Titanium)
+                        Button(openAccount, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text(stringResource(R.string.managed_login)) }
                     }
                 }
-                if (!chat) state.preview?.let { result -> item(key = result.id) {
-                    GlassCard(Modifier.fillMaxWidth()) {
-                        StudioPill(stringResource(R.string.art_ready))
-                        Image(result.bitmap.asImageBitmap(), stringResource(R.string.art_preview), Modifier.fillMaxWidth().heightIn(max = 400.dp),
-                            contentScale = ContentScale.Fit)
-                        Text(result.engine, style = MaterialTheme.typography.labelLarge)
-                        ExportButton(R.string.art_save, result.id, result.image.mime, "mrsad-image.${result.image.extension}", result.image::writeTo)
+                state.offline -> item { OfflinePanel(R.string.managed_offline, true, enableNetwork) }
+                state.catalogError != null -> item {
+                    ReadError(managedError(state.catalogError))
+                    if (state.catalogError == ManagedProblem.SIGN_IN) TextButton(openAccount) { Text(stringResource(R.string.managed_login)) }
+                    else TextButton(model::refresh) { Text(stringResource(R.string.retry)) }
+                }
+                state.loading && state.catalog == null -> item { Loading() }
+                else -> {
+                    if (chat) items(state.turns) { turn ->
+                        GlassCard(Modifier.fillMaxWidth()) {
+                            Text(turn.question, style = MaterialTheme.typography.titleMedium)
+                            Text("${turn.model.provider} · ${turn.model.title}", color = Mint, style = MaterialTheme.typography.labelLarge)
+                            SelectionContainer { Text(turn.answer) }
+                        }
                     }
-                } }
-                item {
-                    GlassCard(Modifier.fillMaxWidth()) {
-                        val catalog = state.catalog
-                        if (choices.isEmpty()) Text(stringResource(R.string.managed_no_models), color = Titanium)
-                        else {
-                            OutlinedButton(onClick = { focus.clearFocus(); keyboard?.hide(); picking = true }, enabled = !busy && !state.loading,
-                                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("managed-picker")) {
-                                Text(selected?.let { "${it.provider} · ${it.title}" } ?: stringResource(R.string.models_picker))
-                            }
-                            if (chat && state.turns.isNotEmpty()) TextButton(model::newChat, enabled = !busy) { Text(stringResource(R.string.chat_new)) }
-                            if (!chat && selected != null) {
-                                selected.quality?.let { Text(stringResource(R.string.managed_image_quality, it), color = Mint) }
-                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                    ArtShape.entries.forEach { shape ->
-                                        FilterChip(selected = state.shape == shape, onClick = { model.shape(shape) }, enabled = !busy,
-                                            modifier = Modifier.weight(1f), label = { Text(stringResource(shape.label)) })
+                    if (!chat) state.preview?.let { result -> item(key = result.id) {
+                        GlassCard(Modifier.fillMaxWidth()) {
+                            StudioPill(stringResource(R.string.art_ready))
+                            Image(result.bitmap.asImageBitmap(), stringResource(R.string.art_preview), Modifier.fillMaxWidth().heightIn(max = 400.dp),
+                                contentScale = ContentScale.Fit)
+                            Text(result.engine, style = MaterialTheme.typography.labelLarge)
+                            ExportButton(R.string.art_save, result.id, result.image.mime, "mrsad-image.${result.image.extension}", result.image::writeTo)
+                        }
+                    } }
+                    item {
+                        GlassCard(Modifier.fillMaxWidth()) {
+                            val catalog = state.catalog
+                            if (choices.isEmpty()) Text(stringResource(R.string.managed_no_models), color = Titanium)
+                            else {
+                                OutlinedButton(onClick = { focus.clearFocus(); keyboard?.hide(); picking = true }, enabled = !busy && !state.loading,
+                                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("managed-picker")) {
+                                    Text(selected?.let { "${it.provider} · ${it.title}" } ?: stringResource(R.string.models_picker))
+                                }
+                                if (chat && state.turns.isNotEmpty()) TextButton(model::newChat, enabled = !busy) { Text(stringResource(R.string.chat_new)) }
+                                if (!chat && selected != null) {
+                                    selected.quality?.let { Text(stringResource(R.string.managed_image_quality, it), color = Mint) }
+                                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                        ArtShape.entries.forEach { shape ->
+                                            FilterChip(selected = state.shape == shape, onClick = { model.shape(shape) }, enabled = !busy,
+                                                modifier = Modifier.weight(1f), label = { Text(stringResource(shape.label)) })
+                                        }
                                     }
                                 }
-                            }
-                            OutlinedTextField(prompt, { model.draft(kind, it) }, Modifier.fillMaxWidth(), enabled = !busy,
-                                label = { Text(stringResource(if (chat) R.string.chat_prompt else R.string.art_prompt)) }, minLines = 2, maxLines = 5)
-                            catalog?.let { Text(stringResource(R.string.managed_remaining, faDigits(it.dailyRemaining)), color = Titanium) }
-                            state.error?.let { ReadError(it) }
-                            if (state.error == R.string.managed_login_again) TextButton(openAccount) { Text(stringResource(R.string.managed_login)) }
-                            if (busy) {
-                                LinearProgressIndicator(Modifier.fillMaxWidth())
-                                TextButton(model::stop) { Text(stringResource(R.string.compare_stop)) }
-                            } else {
-                                val allowed = selected != null && catalog != null && selected.units <= catalog.dailyRemaining
-                                if (selected != null && !allowed) {
+                                OutlinedTextField(prompt, { model.draft(kind, it) }, Modifier.fillMaxWidth(), enabled = !busy,
+                                    label = { Text(stringResource(if (chat) R.string.chat_prompt else R.string.art_prompt)) }, minLines = 2, maxLines = 5)
+                                catalog?.let { Text(stringResource(R.string.managed_remaining, faDigits(it.dailyRemaining)), color = Titanium) }
+                                state.error?.let { ReadError(it) }
+                                if (state.error == R.string.managed_login_again) TextButton(openAccount) { Text(stringResource(R.string.managed_login)) }
+                                if (selected != null && !hasUnits && !busy) {
                                     Text(stringResource(R.string.managed_quota), color = Amber)
                                     TextButton(model::refresh, enabled = !state.loading) { Text(stringResource(R.string.managed_refresh_catalog)) }
-                                }
-                                Button(onClick = { focus.clearFocus(); keyboard?.hide(); model.propose(kind) },
-                                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp), enabled = allowed && !state.loading && prompt.isNotBlank()) {
-                                    Text(stringResource(if (chat) R.string.workspace_send else R.string.art_generate))
                                 }
                             }
                         }
                     }
+                }
+            }
+        }
+        // Keep the action above the keyboard on small screens, rather than under the model form.
+        if (ready) Column(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 5.dp)) {
+            if (busy) {
+                LinearProgressIndicator(Modifier.fillMaxWidth())
+                TextButton(model::stop, modifier = Modifier.heightIn(min = 48.dp)) { Text(stringResource(R.string.compare_stop)) }
+            } else {
+                Button(onClick = { focus.clearFocus(); keyboard?.hide(); model.propose(kind) },
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp), enabled = hasUnits && !state.loading && prompt.isNotBlank()) {
+                    Text(stringResource(if (chat) R.string.workspace_send else R.string.art_generate))
                 }
             }
         }

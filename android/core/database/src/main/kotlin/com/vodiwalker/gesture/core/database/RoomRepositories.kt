@@ -7,7 +7,6 @@ import com.vodiwalker.gesture.core.model.GestureTemplate
 import com.vodiwalker.gesture.core.model.GestureTemplateRepository
 import com.vodiwalker.gesture.core.model.SmartActionGraph
 import com.vodiwalker.gesture.core.model.TriggerRuleRepository
-import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -19,13 +18,12 @@ import javax.inject.Singleton
  * Room-backed [GestureTemplateRepository] offering both suspend snapshots (used by the recognition
  * hot path, which must never await an unbounded Flow) and reactive [Flow] observation for Compose.
  *
- * All work executes on [ioDispatcher] so SQLite page reads never block the accessibility
+ * All work executes on [Dispatchers.IO] so SQLite page reads never block the accessibility
  * service main thread.
  */
 @Singleton
 class RoomGestureTemplateRepository @Inject constructor(
     private val dao: GestureTemplateDao,
-    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) : GestureTemplateRepository {
 
     val observableTemplates: Flow<List<GestureTemplate>> =
@@ -34,28 +32,28 @@ class RoomGestureTemplateRepository @Inject constructor(
     val observableEnabledTemplates: Flow<List<GestureTemplate>> =
         dao.observeEnabledTemplates().map { entities -> entities.map { it.toDomain() } }
 
-    override suspend fun getAllTemplates(): List<GestureTemplate> = withContext(ioDispatcher) {
+    override suspend fun getAllTemplates(): List<GestureTemplate> = withContext(Dispatchers.IO) {
         dao.getAllTemplates().map { it.toDomain() }
     }
 
-    override suspend fun getEnabledTemplates(): List<GestureTemplate> = withContext(ioDispatcher) {
+    override suspend fun getEnabledTemplates(): List<GestureTemplate> = withContext(Dispatchers.IO) {
         dao.getEnabledTemplates().map { it.toDomain() }
     }
 
-    override suspend fun getTemplateById(id: String): GestureTemplate? = withContext(ioDispatcher) {
+    override suspend fun getTemplateById(id: String): GestureTemplate? = withContext(Dispatchers.IO) {
         dao.getById(id)?.toDomain()
     }
 
     override suspend fun upsertTemplate(template: GestureTemplate) {
-        withContext(ioDispatcher) { dao.upsert(template.toEntity()) }
+        withContext(Dispatchers.IO) { dao.upsert(template.toEntity()) }
     }
 
     override suspend fun deleteTemplate(id: String) {
-        withContext(ioDispatcher) { dao.deleteById(id) }
+        withContext(Dispatchers.IO) { dao.deleteById(id) }
     }
 
     override suspend fun incrementUsageCount(id: String, usedAtMillis: Long) {
-        withContext(ioDispatcher) {
+        withContext(Dispatchers.IO) {
             require(usedAtMillis >= 0L) { "usedAtMillis must be non-negative" }
             dao.incrementUsage(id)
         }
@@ -68,23 +66,22 @@ class RoomGestureTemplateRepository @Inject constructor(
 @Singleton
 class RoomTriggerRuleRepository @Inject constructor(
     private val dao: TriggerAndGraphDao,
-    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) : TriggerRuleRepository {
 
-    override suspend fun getEnabledRules() = withContext(ioDispatcher) {
+    override suspend fun getEnabledRules() = withContext(Dispatchers.IO) {
         dao.getEnabledRules().map { it.toDomain() }
     }
 
-    override suspend fun getRulesForGesture(gestureId: String) = withContext(ioDispatcher) {
+    override suspend fun getRulesForGesture(gestureId: String) = withContext(Dispatchers.IO) {
         dao.getRulesForGesture(gestureId).map { it.toDomain() }
     }
 
     override suspend fun upsertRule(rule: com.vodiwalker.gesture.core.model.AppTriggerRule) {
-        withContext(ioDispatcher) { dao.upsertRule(rule.toEntity()) }
+        withContext(Dispatchers.IO) { dao.upsertRule(rule.toEntity()) }
     }
 
     override suspend fun deleteRule(id: String) {
-        withContext(ioDispatcher) { dao.deleteRule(id) }
+        withContext(Dispatchers.IO) { dao.deleteRule(id) }
     }
 }
 
@@ -94,22 +91,21 @@ class RoomTriggerRuleRepository @Inject constructor(
 @Singleton
 class RoomActionGraphRepository @Inject constructor(
     private val dao: TriggerAndGraphDao,
-    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) : ActionGraphRepository {
 
-    override suspend fun getGraphById(id: String): SmartActionGraph? = withContext(ioDispatcher) {
+    override suspend fun getGraphById(id: String): SmartActionGraph? = withContext(Dispatchers.IO) {
         dao.getGraphById(id)?.toDomain()
     }
 
-    override suspend fun getAllGraphs(): List<SmartActionGraph> = withContext(ioDispatcher) {
+    override suspend fun getAllGraphs(): List<SmartActionGraph> = withContext(Dispatchers.IO) {
         dao.getAllGraphs().map { it.toDomain() }
     }
 
     override suspend fun upsertGraph(graph: SmartActionGraph) {
-        withContext(ioDispatcher) { dao.upsertGraph(graph.toEntity()) }
+        withContext(Dispatchers.IO) { dao.upsertGraph(graph.toEntity()) }
     }
 
     override suspend fun deleteGraph(id: String) {
-        withContext(ioDispatcher) { dao.deleteGraph(id) }
+        withContext(Dispatchers.IO) { dao.deleteGraph(id) }
     }
 }

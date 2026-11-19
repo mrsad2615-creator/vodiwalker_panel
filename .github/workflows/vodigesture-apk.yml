@@ -271,17 +271,17 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: vodigesture-latest
-          name: VodiGesture ${{ env.ASSET_NAME }} (build ${{ github.run_number }})
+          name: VodiGesture ${{ env.ASSET_NAME }} — فارسی (build ${{ github.run_number }})
           prerelease: false
           make_latest: true
           generate_release_notes: false
           body: |
-            ## VodiGesture ${{ env.ASSET_NAME }}
+            ## VodiGesture ${{ env.ASSET_NAME }} — نسخهٔ فارسی
 
             Gesture automation for Android 10–15 (minSdk 29, targetSdk 35).
 
-            ### One-click download
-            Click `${{ env.ASSET_NAME }}-release.apk` — the browser saves it directly.
+            ### Download (one click)
+            **[⬇ ${{ env.ASSET_NAME }}-release.apk](https://github.com/${{ github.repository }}/releases/download/vodigesture-latest/${{ env.ASSET_NAME }}-release.apk)**
 
             | Asset | Use |
             | --- | --- |

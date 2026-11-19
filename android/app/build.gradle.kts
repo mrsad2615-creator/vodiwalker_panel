@@ -113,18 +113,19 @@ android {
     }
 
     afterEvaluate {
-        val raw = ciKeystorePath
-        logger.lifecycle(
-            "vodigesture signing: property=${raw ?: "<unset>"} " +
-                "resolved=${ciKeystoreFile?.absolutePath ?: "<none>"} " +
-                "exists=${ciKeystoreFile?.exists() ?: false} " +
-                "requested=$ciSigningRequested",
-        )
-        if (ciSigningRequested) {
+        // A CI build MUST never publish an unsigned artefact: fail fast and loudly instead.
+        if (providers.environmentVariable("CI").getOrElse("false").toBoolean()) {
+            check(ciSigningRequested) {
+                "CI build requires a signing keystore, but -Pvodigesture.ciKeystore is unset. " +
+                    "Received: '${ciKeystorePath ?: "<none>"}'"
+            }
             check(ciKeystoreFile!!.exists()) {
                 "vodigesture.ciKeystore=${ciKeystoreFile.absolutePath} does not exist"
             }
         }
+        logger.lifecycle(
+            "vodigesture signing: requested=$ciSigningRequested keystore=${ciKeystoreFile?.absolutePath ?: "<none>"}",
+        )
     }
 
     packaging {

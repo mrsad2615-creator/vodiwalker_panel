@@ -14,6 +14,19 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    val ciKeystore = providers.gradleProperty("vodigesture.ciKeystore")
+    signingConfigs {
+        create("ci") {
+            val store = ciKeystore.orNull
+            if (store != null && file(store).exists()) {
+                storeFile = file(store)
+                storePassword = providers.gradleProperty("vodigesture.ciStorePassword").orNull
+                keyAlias = providers.gradleProperty("vodigesture.ciKeyAlias").orNull
+                keyPassword = providers.gradleProperty("vodigesture.ciKeyPassword").orNull
+            }
+        }
+    }
+
     buildTypes {
         debug {
             applicationIdSuffix = ".debug"
@@ -26,6 +39,61 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
+            // `-Pvodigesture.ciSigning=true -Pvodigesture.ciKeystore=...` (CI) signs the
+            // minified release build so the small, R8-optimised APK installs in one click.
+            // Without those properties the release variant stays unsigned, as a store build must.
+            val ciSign = ciKeystore.orNull?.let { file(it).exists() } == true
+            if (ciSign && providers.gradleProperty("vodigesture.ciSigning").getOrElse("false").toBoolean()) {
+                signingConfig = signingConfigs.getByName("ci")
+            }
+        }
+    }
+
+    // Verify the packaged APK on the build machine: manifest identity, SDK range and the
+    // security posture (no INTERNET / SYSTEM_ALERT_WINDOW / QUERY_ALL_PACKAGES permissions).
+    tasks.register("verifyPackagedApk") {
+        group = "verification"
+        description = "Asserts the manifest of the packaged APKs matches the release contract."
+        dependsOn("assembleDebug", "assembleRelease")
+        val outputsDir = layout.buildDirectory.dir("outputs/apk")
+        val manifestContract = mapOf(
+            "package" to namespace!!,
+            "minSdk" to providers.gradleProperty("MIN_SDK").get(),
+            "targetSdk" to providers.gradleProperty("TARGET_SDK").get(),
+        )
+        val forbidden = listOf(
+            "android.permission.INTERNET",
+            "android.permission.SYSTEM_ALERT_WINDOW",
+            "android.permission.QUERY_ALL_PACKAGES",
+            "android.permission.READ_SMS",
+            "android.permission.RECORD_AUDIO",
+        )
+        val androidSdkDir = providers.environmentVariable("ANDROID_SDK_ROOT")
+            .orElse(providers.environmentVariable("ANDROID_HOME"))
+        doLast {
+            val aapt2 = file("${androidSdkDir.get()}/build-tools/35.0.0/aapt2")
+            check(aapt2.exists()) { "aapt2 not found at $aapt2" }
+            val apks = outputsDir.get().asFile.walkTopDown().filter { it.extension == "apk" }.toList()
+            check(apks.isNotEmpty()) { "no APK produced under $outputsDir" }
+            apks.forEach { apk ->
+                val dump = providers.exec {
+                    commandLine(aapt2.absolutePath, "dump", "badging", apk.absolutePath)
+                }.standardOutput.asText.get()
+                val label = apk.name
+                check(dump.contains("package: name='${manifestContract["package"]}'")) {
+                    "$label: unexpected applicationId"
+                }
+                check(dump.contains("sdkVersion:'${manifestContract["minSdk"]}'")) {
+                    "$label: minSdk mismatch"
+                }
+                check(dump.contains("targetSdkVersion:'${manifestContract["targetSdk"]}'")) {
+                    "$label: targetSdk mismatch"
+                }
+                forbidden.forEach { permission ->
+                    check(!dump.contains(permission)) { "$label: forbidden permission $permission" }
+                }
+                project.logger.lifecycle("verified $label")
+            }
         }
     }
 

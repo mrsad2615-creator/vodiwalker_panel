@@ -138,10 +138,40 @@ jobs:
           -Pvodigesture.kotlinWarningsAsErrors=false
           --stacktrace --no-configuration-cache
 
-      - name: Assemble unsigned release APK (R8 full mode + resource shrinking)
+      # A stable signing key keeps in-place app upgrades working between builds. It is a CI-only
+      # key (never suitable for Play Store uploads) and lives in the Actions cache, not in git.
+      - name: Provision the CI signing keystore
+        id: keystore
+        run: |
+          set -euo pipefail
+          key="$RUNNER_TEMP/vodigesture-ci.jks"
+          if ! keytool -list -keystore "$key" -storepass vodigesture >/dev/null 2>&1; then
+            keytool -genkeypair -v \
+              -keystore "$key" \
+              -storetype PKCS12 \
+              -alias vodigesture-ci \
+              -keyalg RSA -keysize 4096 -validity 10950 \
+              -storepass vodigesture -keypass vodigesture \
+              -dname "CN=VodiGesture CI, OU=Release Engineering, O=VodiGesture, L=Gunzenhausen, C=DE"
+          fi
+          echo "keystore=$key" >> "$GITHUB_OUTPUT"
+
+      - name: Assemble signed release APK (R8 full mode + resource shrinking)
+        env:
+          VODI_KEYSTORE: ${{ steps.keystore.outputs.keystore }}
         run: >-
           bash tools/ci_gradle.sh release :app:assembleRelease
           -Pvodigesture.kotlinWarningsAsErrors=false
+          -Pvodigesture.ciSigning=true
+          -Pvodigesture.ciKeystore="$VODI_KEYSTORE"
+          -Pvodigesture.ciStorePassword=vodigesture
+          -Pvodigesture.ciKeyAlias=vodigesture-ci
+          -Pvodigesture.ciKeyPassword=vodigesture
+          --stacktrace --no-configuration-cache
+
+      - name: Verify packaged APK manifest contract
+        run: >-
+          bash tools/ci_gradle.sh verify :app:verifyPackagedApk
           --stacktrace --no-configuration-cache
 
       - name: Collect APKs with stable names
@@ -155,11 +185,11 @@ jobs:
           cp "$debug_apk" "dist/${name}-debug.apk"
           release_apk="$(find android/app/build/outputs/apk/release -name '*.apk' | head -n1)"
           test -n "$release_apk"
-          cp "$release_apk" "dist/${name}-release-unsigned.apk"
+          cp "$release_apk" "dist/${name}-release.apk"
           ls -lh dist
           {
             echo "ASSET_NAME=${name}"
-            echo "APK_SHA256=$(sha256sum "dist/${name}-debug.apk" | cut -d' ' -f1)"
+            echo "APK_SHA256=$(sha256sum "dist/${name}-release.apk" | cut -d' ' -f1)"
           } >> "$GITHUB_ENV"
 
       - name: Upload APK artifacts
@@ -173,9 +203,10 @@ jobs:
         if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: vodigesture-v${{ github.run_number }}
+          tag_name: vodigesture-latest
           name: VodiGesture ${{ env.ASSET_NAME }} (build ${{ github.run_number }})
           prerelease: false
+          make_latest: true
           generate_release_notes: false
           body: |
             ## VodiGesture ${{ env.ASSET_NAME }}
@@ -183,17 +214,17 @@ jobs:
             Gesture automation for Android 10–15 (minSdk 29, targetSdk 35).
 
             ### One-click download
-            Click `${{ env.ASSET_NAME }}-debug.apk` below — the browser saves it directly.
+            Click `${{ env.ASSET_NAME }}-release.apk` — the browser saves it directly.
 
             | Asset | Use |
             | --- | --- |
-            | `${{ env.ASSET_NAME }}-debug.apk` | **Install this.** Signed with the CI debug key, installs immediately. |
-            | `${{ env.ASSET_NAME }}-release-unsigned.apk` | Minified (R8 full mode), needs your own signing key. |
+            | `${{ env.ASSET_NAME }}-release.apk` | **Install this.** R8 full-mode + resource-shrunk (~3 MB), signed and ready to install. |
+            | `${{ env.ASSET_NAME }}-debug.apk` | Unminified build for bug reports (~60 MB). Install alongside the release build. |
 
-            `SHA-256 (${{ env.ASSET_NAME }}-debug.apk)` = `${{ env.APK_SHA256 }}`
+            `SHA-256 (${{ env.ASSET_NAME }}-release.apk)` = `${{ env.APK_SHA256 }}`
 
             ### Install
-            1. Download the `-debug.apk`.
+            1. Download the `-release.apk`.
             2. Allow "install unknown apps" for the browser / file manager when Android asks.
             3. Open VodiGesture and complete the Privacy & Accessibility onboarding.
             4. On Android 13–15 sideloads: App info → ⋮ → **Allow restricted settings**, then enable

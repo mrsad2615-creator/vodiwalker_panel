@@ -141,7 +141,8 @@ internal class WorkflowUi(private val compose: AndroidComposeTestRule<ActivitySc
             compose.onNodeWithTag(list).performScrollToNode(matcher)
         }
         compose.waitUntilAtLeastOneExists(matcher, timeoutMillis = 15_000)
-        return compose.onNode(matcher).also { if (scroll) it.performScrollTo() }.assertIsDisplayed()
+        // A lazy item can be composed while a control deep inside it is still clipped (small screens/IME).
+        return compose.onNode(matcher).also { if (scroll || list != null) it.performScrollTo() }.assertIsDisplayed()
     }
     fun noMicrophone() = assertEquals(PackageManager.PERMISSION_DENIED, context.checkSelfPermission(Manifest.permission.RECORD_AUDIO))
 }

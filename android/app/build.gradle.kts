@@ -84,8 +84,25 @@ android {
                 check(dump.contains("package: name='$expectedPackage'")) {
                     "$label: expected applicationId $expectedPackage"
                 }
-                check(dump.contains("sdkVersion:'$minSdk'")) { "$label: minSdk mismatch" }
-                check(dump.contains("targetSdkVersion:'$targetSdk'")) { "$label: targetSdk mismatch" }
+                // aapt/aapt2 across build-tools versions label this line `sdkVersion` or
+                // `minSdkVersion`; accept either spelling and report what was actually found.
+                val sdkLine = Regex("""(?:^|\n)((?:min)?[sS]dkVersion:'(\d+)')""")
+                val sdkLines = dump.lines().filter { it.contains("dkVersion") }
+                project.logger.lifecycle("$label sdk lines: $sdkLines")
+                val declaredMin = sdkLine.findAll(dump)
+                    .mapNotNull { it.groupValues[2].toIntOrNull() }
+                    .minOrNull()
+                check(declaredMin == minSdk.toInt()) {
+                    "$label: expected minSdk $minSdk, badging reported " +
+                        "sdk lines $sdkLines"
+                }
+                val declaredTarget = sdkLine.findAll(dump)
+                    .mapNotNull { it.groupValues[2].toIntOrNull() }
+                    .maxOrNull()
+                check(declaredTarget == targetSdk.toInt()) {
+                    "$label: expected targetSdk $targetSdk, badging reported " +
+                        "sdk lines $sdkLines"
+                }
                 forbidden.forEach { permission ->
                     check(!dump.contains(permission)) { "$label: forbidden permission $permission" }
                 }

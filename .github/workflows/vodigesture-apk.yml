@@ -171,6 +171,29 @@ jobs:
           bash tools/ci_gradle.sh verify :app:verifyPackagedApk
           --stacktrace --no-configuration-cache
 
+      - name: Verify release APK signature + installability
+        run: |
+          set -euo pipefail
+          apk="$(find android/app/build/outputs/apk/release -name '*.apk' | head -n1)"
+          test -n "$apk"
+          # zipalign -c proves the archive is aligned (required for install on all API levels).
+          /usr/local/lib/android/sdk/build-tools/35.0.0/zipalign -c -P 16 -v 4 "$apk" >/dev/null
+          echo "zipalign: OK"
+
+          bt=/usr/local/lib/android/sdk/build-tools/35.0.0
+          apksigner="$bt/apksigner"
+          # --print-certs exits non-zero if the APK has no valid signature.
+          "$apksigner" verify --verbose --print-certs "$apk" | tee apksigner.txt
+          # apksigner exits 0 only for a verifiable signature; also require a certificate and
+          # at least one "Verified using ... scheme" line (v1/v2/v3 depending on minSdk).
+          grep -qi "Verified using" apksigner.txt
+          grep -qi "Signer #1 certificate DN" apksigner.txt
+          echo "signature: OK"
+
+          # aapt2 badging: the file is a real APK with the expected identity.
+          "$bt/aapt2" dump badging "$apk" | head -5
+          echo "badging: OK"
+
       - name: Collect APKs with stable names
         run: |
           set -euo pipefail

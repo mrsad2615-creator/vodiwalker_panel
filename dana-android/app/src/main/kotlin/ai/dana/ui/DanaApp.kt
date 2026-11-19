@@ -95,6 +95,7 @@ internal fun DanaApp(
                 DashboardTab.CHAT -> { chat.background(); media.close() }
                 DashboardTab.ACCOUNT -> account().background()
                 DashboardTab.ART -> art().stop()
+                DashboardTab.PHONE -> phone().cancel()
                 else -> Unit
             }
         }

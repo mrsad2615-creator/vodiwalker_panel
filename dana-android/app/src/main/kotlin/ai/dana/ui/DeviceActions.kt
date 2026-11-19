@@ -38,11 +38,15 @@ internal object DeviceActions {
         is LocalAction.VolumeStep -> mediaVolume(context, null,
             if (action == LocalAction.VolumeStep.RAISE) AudioManager.ADJUST_RAISE else AudioManager.ADJUST_LOWER)
         is LocalAction.Torch -> torch(context, action.on)
-        is LocalAction.Timer, is LocalAction.Alarm -> clockIntent(action)?.let {
-            open(context, it, unavailable = R.string.phone_clock_unavailable, success = R.string.phone_clock_opened)
+        is LocalAction.Timer, is LocalAction.Alarm, is LocalAction.WifiReminder -> clockIntent(action)?.let { intent ->
+            if (action is LocalAction.WifiReminder) intent.putExtra(AlarmClock.EXTRA_MESSAGE,
+                context.getString(if (action.turnOn) R.string.phone_wifi_label_on else R.string.phone_wifi_label_off))
+            open(context, intent, unavailable = R.string.phone_clock_unavailable,
+                success = if (action is LocalAction.WifiReminder) R.string.phone_wifi_clock_opened else R.string.phone_clock_opened)
         } ?: failure(R.string.phone_invalid_time)
         LocalAction.Clock -> open(context, Intent(AlarmClock.ACTION_SHOW_ALARMS), unavailable = R.string.phone_clock_unavailable)
-        LocalAction.Wifi -> settingsPanel(context, if (Build.VERSION.SDK_INT >= 29) Settings.Panel.ACTION_WIFI else null, Settings.ACTION_WIFI_SETTINGS)
+        LocalAction.Wifi -> wifiPanel(context)
+        is LocalAction.WifiChange -> wifiPanel(context).let { if (it.ok) DeviceOutcome(R.string.phone_wifi_manual_opened) else it }
         LocalAction.Internet -> settingsPanel(context, if (Build.VERSION.SDK_INT >= 29) Settings.Panel.ACTION_INTERNET_CONNECTIVITY else null, Settings.ACTION_WIRELESS_SETTINGS)
         LocalAction.Sound -> settingsPanel(context, if (Build.VERSION.SDK_INT >= 29) Settings.Panel.ACTION_VOLUME else null, Settings.ACTION_SOUND_SETTINGS)
         LocalAction.Bluetooth -> open(context, Intent(Settings.ACTION_BLUETOOTH_SETTINGS))
@@ -71,13 +75,19 @@ internal object DeviceActions {
 
     /** Official Android Clock intents. Let the receiving clock display its UI, never request silent setup. */
     internal fun clockIntent(action: LocalAction): Intent? = when (action) {
-        is LocalAction.Timer -> if (action.seconds in 1..86_400) Intent(AlarmClock.ACTION_SET_TIMER)
-            .putExtra(AlarmClock.EXTRA_LENGTH, action.seconds).putExtra(AlarmClock.EXTRA_SKIP_UI, false) else null
+        is LocalAction.Timer -> timerIntent(action.seconds)
+        is LocalAction.WifiReminder -> timerIntent(action.seconds)
         is LocalAction.Alarm -> if (action.hour in 0..23 && action.minute in 0..59) Intent(AlarmClock.ACTION_SET_ALARM)
             .putExtra(AlarmClock.EXTRA_HOUR, action.hour).putExtra(AlarmClock.EXTRA_MINUTES, action.minute)
             .putExtra(AlarmClock.EXTRA_SKIP_UI, false) else null
         else -> null
     }
+
+    private fun timerIntent(seconds: Int): Intent? = if (seconds in 1..86_400) Intent(AlarmClock.ACTION_SET_TIMER)
+        .putExtra(AlarmClock.EXTRA_LENGTH, seconds).putExtra(AlarmClock.EXTRA_SKIP_UI, false) else null
+
+    private fun wifiPanel(context: Context): DeviceOutcome = settingsPanel(context,
+        if (Build.VERSION.SDK_INT >= 29) Settings.Panel.ACTION_WIFI else null, Settings.ACTION_WIFI_SETTINGS)
 
     internal fun calendarIntent(action: LocalAction.CalendarDraft): Intent? {
         if (action.title.length !in 1..160) return null

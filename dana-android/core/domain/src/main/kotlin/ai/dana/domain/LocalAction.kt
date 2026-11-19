@@ -6,6 +6,10 @@ sealed interface LocalAction {
     data class Timer(val seconds: Int) : LocalAction
     data class Alarm(val hour: Int, val minute: Int) : LocalAction
     data object Wifi : LocalAction
+    /** Open settings for the requested manual change; never write a radio setting. */
+    data class WifiChange(val turnOn: Boolean) : LocalAction
+    /** A labelled Clock reminder, not a scheduled change to Wi-Fi. */
+    data class WifiReminder(val seconds: Int, val turnOn: Boolean) : LocalAction
     data object Bluetooth : LocalAction
     data object Sound : LocalAction
     data object Clock : LocalAction
@@ -109,7 +113,7 @@ object LocalCommands {
     private val numberPattern = Regex("\\+?[0-9]{5,15}")
     private val units = listOf("صفر", "یک", "دو", "سه", "چهار", "پنج", "شش", "هفت", "هشت", "نه", "ده", "یازده", "دوازده", "سیزده", "چهارده", "پانزده", "شانزده", "هفده", "هجده", "نوزده")
     private val tens = listOf("بیست", "سی", "چهل", "پنجاه", "شصت", "هفتاد", "هشتاد", "نود")
-    private fun commandNumber(raw: String): Int? {
+    internal fun commandNumber(raw: String): Int? {
         val value = raw.trim()
         value.takeIf { it.isNotEmpty() && it.all { c -> c in '0'..'9' } }?.toIntOrNull()?.let { return it }
         if (value == "صد" || value == "یک صد") return 100

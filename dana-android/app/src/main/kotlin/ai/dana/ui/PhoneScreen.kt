@@ -1,16 +1,20 @@
 package ai.dana.ui
 
 import ai.dana.R
+import ai.dana.domain.DurationTarget
 import ai.dana.domain.LocalAction
 import ai.dana.domain.LocalCommands
 import ai.dana.domain.LocalText
 import ai.dana.domain.NotesRepository
+import ai.dana.domain.PhoneIntent
+import ai.dana.domain.PhoneUtterances
 import ai.dana.voice.VoiceButton
 import ai.dana.voice.VoiceStatus
 import ai.dana.voice.rememberDanaVoice
 import android.content.Context
 import android.Manifest
 import android.app.TimePickerDialog
+import android.os.SystemClock
 import java.time.LocalTime
 import androidx.annotation.StringRes
 import androidx.compose.foundation.text.KeyboardOptions
@@ -48,6 +52,8 @@ import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.window.SecureFlagPolicy
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.ViewModel
@@ -62,12 +68,17 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+internal class PhoneApproval(val action: LocalAction, val expiresAtMs: Long)
+
 internal data class PhoneState(
     val draft: String = "",
     val status: DeviceOutcome? = null,
-    val pending: LocalAction? = null,
+    val pending: PhoneApproval? = null,
+    val durationTarget: DurationTarget? = null,
     val busy: Boolean = false,
-)
+) {
+    override fun toString() = "PhoneState(pending=${pending != null}, busy=$busy)"
+}
 
 @HiltViewModel
 internal class PhoneViewModel @Inject constructor(private val notes: NotesRepository) : ViewModel() {
@@ -75,24 +86,47 @@ internal class PhoneViewModel @Inject constructor(private val notes: NotesReposi
     val state = mutable.asStateFlow()
 
     @MainThread fun draft(value: String) {
-        if (!mutable.value.busy && value.length <= LocalText.NOTE_LIMIT) mutable.update { it.copy(draft = value, status = null) }
+        if (!mutable.value.busy && value.length <= LocalText.NOTE_LIMIT) {
+            mutable.update { it.copy(draft = value, status = null, pending = null) }
+        }
+    }
+
+    @MainThread fun speech(value: String, execute: (LocalAction) -> DeviceOutcome) {
+        if (value.isBlank() || value.length > LocalText.NOTE_LIMIT || mutable.value.busy || mutable.value.pending != null) return
+        draft(value)
+        submit(execute)
     }
 
     @MainThread fun submit(execute: (LocalAction) -> DeviceOutcome) {
-        if (mutable.value.busy || mutable.value.pending != null) return
-        val action = LocalCommands.parse(mutable.value.draft)
-        if (action == null || action is LocalAction.WebSearch || action is LocalAction.Share) {
-            result(DeviceOutcome(R.string.workspace_unrecognized, ok = false), false)
-        } else if (action == LocalAction.Battery || action == LocalAction.MediaVolume) run(action, execute, clear = true)
-        else mutable.update { it.copy(pending = action, status = null) }
+        val current = mutable.value
+        if (current.busy || current.pending != null || current.draft.isBlank()) return
+        val withDuration = current.durationTarget?.let { target -> PhoneUtterances.duration(current.draft)?.let(target::action) }
+        val intent = withDuration?.let(PhoneIntent::Propose) ?: PhoneUtterances.interpret(current.draft)
+        when (intent) {
+            is PhoneIntent.Propose -> {
+                mutable.update { it.copy(durationTarget = null) }
+                val action = intent.action
+                if (action == LocalAction.Battery || action == LocalAction.MediaVolume) run(action, execute, clear = true)
+                else propose(action)
+            }
+            is PhoneIntent.NeedDuration -> mutable.update { it.copy(durationTarget = intent.target, draft = "", status = null) }
+            PhoneIntent.Unknown -> result(DeviceOutcome(if (current.durationTarget == null) R.string.workspace_unrecognized
+                else R.string.phone_duration_clarify, ok = false), false)
+        }
     }
 
-    @MainThread fun cancel() { mutable.update { it.copy(pending = null) } }
+    private fun propose(action: LocalAction) {
+        mutable.update { it.copy(pending = PhoneApproval(action, SystemClock.elapsedRealtime() + 45_000L), status = null) }
+    }
 
-    @MainThread fun confirm(execute: (LocalAction) -> DeviceOutcome) {
-        val action = mutable.value.pending ?: return
-        cancel()
-        run(action, execute, clear = true)
+    @MainThread fun cancel() { mutable.update { it.copy(pending = null, durationTarget = null) } }
+
+    @MainThread fun confirm(approval: PhoneApproval, execute: (LocalAction) -> DeviceOutcome) {
+        if (mutable.value.pending !== approval) return
+        cancel() // Consume before the effect. A stale/repeated callback cannot run anything.
+        if (SystemClock.elapsedRealtime() >= approval.expiresAtMs) {
+            result(DeviceOutcome(R.string.phone_approval_expired, ok = false), false)
+        } else run(approval.action, execute, clear = true)
     }
 
     @MainThread fun run(action: LocalAction, execute: (LocalAction) -> DeviceOutcome, clear: Boolean = false) {
@@ -158,15 +192,26 @@ internal fun PhoneScreen(model: PhoneViewModel) {
             PhoneRow(R.string.phone_new_event, R.string.phone_open_clock, !state.busy,
                 { run(LocalAction.CalendarDraft(newEvent)) }, { run(LocalAction.Clock) })
         }
+        AssistantSetup(enabled = !state.busy && state.pending == null, beforeLaunch = { focus.clearFocus(); voice.close(); model.cancel() })
         GlassCard(Modifier.fillMaxWidth()) {
             Text(stringResource(R.string.phone_command_title), style = MaterialTheme.typography.titleMedium)
+            state.durationTarget?.let { target ->
+                Text(stringResource(when (target) {
+                    DurationTarget.TIMER -> R.string.phone_ask_timer_duration
+                    DurationTarget.WIFI_OFF -> R.string.phone_ask_wifi_off_duration
+                    DurationTarget.WIFI_ON -> R.string.phone_ask_wifi_on_duration
+                }), color = Ice, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
+                TextButton(onClick = model::cancel) { Text(stringResource(R.string.cancel)) }
+            }
             OutlinedTextField(state.draft, model::draft, Modifier.fillMaxWidth(), enabled = !state.busy, maxLines = 3,
                 label = { Text(stringResource(R.string.workspace_phone_prompt)) })
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                 Button(onClick = { focus.clearFocus(); voice.close(); model.submit(execute) },
                     enabled = !state.busy && !voice.state.listening && state.draft.isNotBlank(),
                     modifier = Modifier.weight(1f).heightIn(min = 48.dp)) { Text(stringResource(R.string.workspace_run)) }
-                VoiceButton(voice, !state.busy, useSystemSpeech = false, turnMode = false, compact = true, onText = model::draft)
+                VoiceButton(voice, !state.busy, useSystemSpeech = false, turnMode = false, compact = true, onText = { finalText ->
+                    model.speech(finalText, execute)
+                })
             }
             VoiceStatus(voice.state)
             // Keep typed results close to the field as well; the first status card may have scrolled away.
@@ -205,12 +250,16 @@ internal fun PhoneScreen(model: PhoneViewModel) {
 internal fun PhoneActionReview(model: PhoneViewModel) {
     val state by model.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
-    state.pending?.let { action ->
-        AlertDialog(onDismissRequest = model::cancel, title = { Text(stringResource(R.string.chat_confirm_action)) }, text = {
+    state.pending?.let { approval ->
+        val action = approval.action
+        AlertDialog(onDismissRequest = model::cancel, properties = DialogProperties(securePolicy = SecureFlagPolicy.SecureOn),
+            title = { Text(stringResource(R.string.chat_confirm_action)) }, text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(actionText(action))
                 Text(stringResource(when (action) {
                     is LocalAction.Timer, is LocalAction.Alarm -> R.string.phone_clock_review
+                    is LocalAction.WifiChange -> R.string.phone_wifi_manual_review
+                    is LocalAction.WifiReminder -> R.string.phone_wifi_reminder_review
                     is LocalAction.Dial -> R.string.phone_dial_review
                     is LocalAction.SmsDraft -> R.string.phone_sms_review
                     is LocalAction.CalendarDraft -> R.string.phone_calendar_review
@@ -219,7 +268,13 @@ internal fun PhoneActionReview(model: PhoneViewModel) {
                 }), color = Titanium)
             }
         }, dismissButton = { TextButton(model::cancel) { Text(stringResource(R.string.cancel)) } },
-            confirmButton = { TextButton(onClick = { model.confirm { DeviceActions.execute(context, it) } }) { Text(stringResource(R.string.chat_execute)) } })
+            confirmButton = { TextButton(onClick = { model.confirm(approval) { DeviceActions.execute(context, it) } }) {
+                Text(stringResource(when (action) {
+                    is LocalAction.WifiChange -> R.string.chat_action_wifi
+                    is LocalAction.WifiReminder, is LocalAction.Timer, is LocalAction.Alarm -> R.string.phone_submit_clock
+                    else -> R.string.chat_execute
+                }))
+            } })
     }
     DisposableEffect(model) { onDispose { model.cancel() } }
 }
@@ -275,7 +330,19 @@ private fun PhoneAccess() {
         }, modifier = Modifier.heightIn(min = 48.dp)) { Text(stringResource(R.string.workspace_android_permissions)) }
         if (failed) ReadError(R.string.chat_action_unavailable)
     }
-    AssistantSetup(enabled = true)
+}
+
+@Composable
+internal fun durationText(seconds: Int): String {
+    val units = listOf(3_600 to R.string.phone_duration_hours_unit, 60 to R.string.phone_duration_minutes_unit, 1 to R.string.phone_duration_seconds_unit)
+    var rest = seconds
+    val parts = mutableListOf<String>()
+    for ((factor, label) in units) {
+        val amount = rest / factor
+        rest %= factor
+        if (amount > 0) parts += stringResource(label, faDigits(amount))
+    }
+    return parts.joinToString(" و ")
 }
 
 internal fun openAppPermissions(context: Context): Boolean = runCatching {

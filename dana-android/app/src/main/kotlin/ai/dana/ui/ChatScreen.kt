@@ -571,6 +571,10 @@ internal fun actionText(action: LocalAction): String = when (action) {
     is LocalAction.SmsDraft -> stringResource(R.string.chat_action_sms, action.number, action.text)
     is LocalAction.Share -> stringResource(R.string.chat_action_share, action.text)
     LocalAction.Wifi -> stringResource(R.string.chat_action_wifi)
+    is LocalAction.WifiChange -> stringResource(R.string.phone_wifi_plan,
+        stringResource(if (action.turnOn) R.string.phone_wifi_label_on else R.string.phone_wifi_label_off))
+    is LocalAction.WifiReminder -> stringResource(R.string.phone_wifi_reminder_plan, durationText(action.seconds),
+        stringResource(if (action.turnOn) R.string.phone_wifi_label_on else R.string.phone_wifi_label_off))
     LocalAction.Bluetooth -> stringResource(R.string.chat_action_bluetooth)
     LocalAction.Sound -> stringResource(R.string.chat_action_sound)
     LocalAction.Clock -> stringResource(R.string.chat_action_clock)

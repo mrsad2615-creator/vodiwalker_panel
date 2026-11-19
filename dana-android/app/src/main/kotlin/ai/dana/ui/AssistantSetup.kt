@@ -2,6 +2,7 @@ package ai.dana.ui
 
 import ai.dana.R
 import android.app.role.RoleManager
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.os.Build
@@ -29,7 +30,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 
 @Composable
-internal fun AssistantSetup(enabled: Boolean) {
+internal fun AssistantSetup(enabled: Boolean, beforeLaunch: () -> Unit) {
     val context = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     var held by remember(context) { mutableStateOf(isAssistant(context)) }
@@ -50,11 +51,17 @@ internal fun AssistantSetup(enabled: Boolean) {
         Text(stringResource(R.string.phone_assistant_title), style = MaterialTheme.typography.titleMedium)
         Text(stringResource(if (held) R.string.phone_assistant_active else R.string.phone_assistant_help), color = if (held) Mint else Titanium)
         OutlinedButton(onClick = {
+            beforeLaunch()
             val request = if (Build.VERSION.SDK_INT >= 29 && !held) runCatching { requestRole(context) }.getOrNull() else null
             notSelected = false
             requestedRole = request != null
-            failed = (request == null || runCatching { launcher.launch(request) }.isFailure) &&
-                runCatching { requestedRole = false; launcher.launch(Intent(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS)) }.isFailure
+            val roleOpened = request != null && runCatching { launcher.launch(request) }.isSuccess
+            failed = if (roleOpened) false else {
+                requestedRole = false
+                listOf(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS, Settings.ACTION_VOICE_INPUT_SETTINGS).none { action ->
+                    runCatching { launcher.launch(Intent(action)) }.isSuccess
+                }
+            }
         }, enabled = enabled, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
             Text(stringResource(if (held) R.string.phone_assistant_settings else R.string.phone_assistant_enable))
         }
@@ -64,8 +71,14 @@ internal fun AssistantSetup(enabled: Boolean) {
     }
 }
 
-private fun isAssistant(context: Context): Boolean = Build.VERSION.SDK_INT >= 29 &&
-    runCatching { context.getSystemService(RoleManager::class.java)?.isRoleHeld(RoleManager.ROLE_ASSISTANT) == true }.getOrDefault(false)
+private fun isAssistant(context: Context): Boolean = runCatching {
+    if (Build.VERSION.SDK_INT >= 29) {
+        context.getSystemService(RoleManager::class.java)?.isRoleHeld(RoleManager.ROLE_ASSISTANT) == true
+    } else {
+        val assistant = Settings.Secure.getString(context.contentResolver, "assistant")
+        assistant?.let(ComponentName::unflattenFromString)?.packageName == context.packageName
+    }
+}.getOrDefault(false)
 
 @RequiresApi(29)
 private fun requestRole(context: Context): Intent? = context.getSystemService(RoleManager::class.java)?.let {

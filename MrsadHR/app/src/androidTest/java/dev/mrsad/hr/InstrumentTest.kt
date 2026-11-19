@@ -45,6 +45,32 @@ class InstrumentTest {
     }
 
     @Test
+    fun backgroundCountdownFinishesWithoutRendering() {
+        val app = ui.activity.application as Studio
+        val manager =
+            requireNotNull(app.getSystemService(android.app.NotificationManager::class.java))
+        val start = android.os.SystemClock.elapsedRealtime()
+        ui.runOnUiThread {
+            app.clocks.update(false) { Clock(goal = 3500).start(start) }
+            app.startForegroundService(android.content.Intent(app, TimerService::class.java))
+        }
+        ui.activityRule.scenario.moveToState(androidx.lifecycle.Lifecycle.State.CREATED)
+        runBlocking {
+            kotlinx.coroutines.withTimeout(15000) {
+                app.clocks.timer.first { it.phase == Phase.COMPLETE }
+            }
+        }
+        Assert.assertEquals(
+            0L,
+            ClockStore(app).timer.value.value(android.os.SystemClock.elapsedRealtime()),
+        )
+        ui.waitUntil(timeoutMillis = 6000) { manager.activeNotifications.any { it.id == 3 } }
+        ui.activityRule.scenario.moveToState(androidx.lifecycle.Lifecycle.State.RESUMED)
+        ui.onNodeWithText("TIME IS UP").assertExists()
+        ui.onNodeWithText("Reset").performScrollTo().performClick()
+    }
+
+    @Test
     fun roomSurvivesReopen() {
         val ctx = ui.activity.applicationContext
         fun open() = Room.databaseBuilder(ctx, Library::class.java, "preset-test").build()

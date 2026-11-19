@@ -12,10 +12,11 @@ jobs:
       - uses: actions/setup-java@v5
         with: {distribution: temurin, java-version: '17'}
       - uses: gradle/actions/setup-gradle@v4
+        with: {cache-read-only: false}
       - name: Compile APK and run clock tests
         run: |
           ./gradlew --console=plain testDebugUnitTest assembleDebug assembleDebugAndroidTest 2>&1 | tee "$RUNNER_TEMP/compile.log" || {
-            tail -100 "$RUNNER_TEMP/compile.log" | while IFS= read -r line; do echo "::error::$line"; done
+            python3 -c 'import pathlib,os; print("::error::"+pathlib.Path(os.environ["RUNNER_TEMP"],"compile.log").read_text()[-12000:].replace("%","%25").replace("\n","%0A"))' 
             exit 1
           }
         shell: bash

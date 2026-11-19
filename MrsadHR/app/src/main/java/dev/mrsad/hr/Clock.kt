@@ -20,7 +20,7 @@ data class Clock(
 
     fun value(now: Long) = if (watch) elapsed(now) else (goal - elapsed(now)).coerceAtLeast(0)
 
-    fun start(now: Long) =
+    fun start(now: Long): Clock =
         when {
             phase == Phase.RUNNING || (!watch && goal == 0L) -> this
             phase == Phase.COMPLETE -> reset().start(now)

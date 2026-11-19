@@ -26,6 +26,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.vodiwalker.gesture.core.designsystem.R
 
 /**
  * Vazirmatn — the reference open-source Persian UI typeface (SIL OFL 1.1, bundled under

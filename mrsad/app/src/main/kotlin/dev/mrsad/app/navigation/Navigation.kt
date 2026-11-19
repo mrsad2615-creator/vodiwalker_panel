@@ -1,0 +1,208 @@
+package dev.mrsad.app.navigation
+
+import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.AutoAwesome
+import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.Insights
+import androidx.compose.material.icons.outlined.Psychology
+import androidx.compose.material.icons.outlined.Keyboard
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.navigation.NavDestination.Companion.hierarchy
+import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.rememberNavController
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.platform.LocalView
+import androidx.core.view.WindowCompat
+import dev.mrsad.app.data.AppContainer
+import dev.mrsad.app.data.settings.MrsadSettings
+import dev.mrsad.app.feature.analytics.AnalyticsScreen
+import dev.mrsad.app.feature.assistant.AssistantScreen
+import dev.mrsad.app.feature.home.HomeScreen
+import dev.mrsad.app.feature.mind.MindScreen
+import dev.mrsad.app.feature.placeholder.PlaceholderScreen
+import dev.mrsad.app.feature.read.ReadScreen
+import dev.mrsad.app.feature.settings.SettingsScreen
+import dev.mrsad.app.feature.studio.StudioScreen
+import dev.mrsad.app.feature.type.TypeScreen
+import dev.mrsad.app.ui.components.MrsadBottomBar
+import dev.mrsad.app.ui.components.MrsadBottomBarItem
+import dev.mrsad.app.ui.theme.MrsadTheme
+
+object Routes {
+    const val HOME = "home"
+    const val TYPE = "type"
+    const val MIND = "mind"
+    const val ANALYTICS = "analytics"
+    const val AI = "assistant"
+    const val READ = "read"
+    const val STUDIO = "studio"
+    const val SETTINGS = "settings"
+    const val ARENA = "arena"
+    const val FOCUS = "focus"
+    const val PLANNER = "planner"
+    const val LIBRARY = "library"
+}
+
+private data class BottomDestination(
+    val route: String,
+    val label: String,
+    val icon: ImageVector,
+)
+
+private val bottomDestinations = listOf(
+    BottomDestination(Routes.HOME, "خانه", Icons.Outlined.Home),
+    BottomDestination(Routes.TYPE, "تایپ", Icons.Outlined.Keyboard),
+    BottomDestination(Routes.MIND, "ذهن", Icons.Outlined.Psychology),
+    BottomDestination(Routes.ANALYTICS, "تحلیل", Icons.Outlined.Insights),
+    BottomDestination(Routes.AI, "دستیار", Icons.Outlined.AutoAwesome),
+)
+
+@Composable
+fun MrsadRoot(
+    container: AppContainer,
+    settings: MrsadSettings,
+) {
+    val navController = rememberNavController()
+    val backStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = backStackEntry?.destination?.route
+
+    val showBottomBar = currentRoute in bottomDestinations.map { it.route }
+
+    // Light themes need dark system-bar icons; this must follow the theme,
+    // not the device default.
+    val view = LocalView.current
+    val colors = MrsadTheme.colors
+    LaunchedEffect(colors.isLight) {
+        val window = (view.context as? android.app.Activity)?.window ?: return@LaunchedEffect
+        WindowCompat.getInsetsController(window, view).apply {
+            isAppearanceLightStatusBars = colors.isLight
+            isAppearanceLightNavigationBars = colors.isLight
+        }
+    }
+
+    Box(Modifier.fillMaxSize()) {
+        NavHost(
+            navController = navController,
+            startDestination = Routes.HOME,
+            modifier = Modifier
+                .fillMaxSize()
+                .then(if (showBottomBar) Modifier.consumeWindowInsets(WindowInsets.navigationBars) else Modifier),
+            enterTransition = {
+                fadeIn(tween(260)) + slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Start, tween(320))
+            },
+            exitTransition = { fadeOut(tween(180)) },
+            popEnterTransition = {
+                fadeIn(tween(240)) + slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.End, tween(320))
+            },
+            popExitTransition = { fadeOut(tween(180)) },
+        ) {
+            composable(Routes.HOME) {
+                HomeScreen(
+                    container = container,
+                    settings = settings,
+                    onNavigate = navController::navigateToModule,
+                )
+            }
+            composable(Routes.TYPE) {
+                TypeScreen(container = container, settings = settings)
+            }
+            composable(Routes.MIND) {
+                MindScreen(container = container, settings = settings)
+            }
+            composable(Routes.ANALYTICS) {
+                AnalyticsScreen(container = container, settings = settings)
+            }
+            composable(Routes.AI) {
+                AssistantScreen(container = container, settings = settings)
+            }
+            composable(Routes.READ) {
+                ReadScreen(container = container, settings = settings)
+            }
+            composable(Routes.STUDIO) {
+                StudioScreen(container = container, settings = settings)
+            }
+            composable(Routes.SETTINGS) {
+                SettingsScreen(
+                    container = container,
+                    settings = settings,
+                    onBack = { navController.popBackStack() },
+                )
+            }
+            composable(Routes.ARENA) {
+                PlaceholderScreen(
+                    title = "MRSAD ARENA",
+                    environment = dev.mrsad.app.ui.theme.PageEnvironment.ARENA,
+                    description = "چالش‌ها، مأموریت‌های روزانه، دستاوردها و رکوردهای شخصی — در فاز ۶ پیاده‌سازی می‌شود.",
+                    onBack = { navController.popBackStack() },
+                )
+            }
+            composable(Routes.FOCUS) {
+                PlaceholderScreen(
+                    title = "FOCUS SPACE",
+                    environment = dev.mrsad.app.ui.theme.PageEnvironment.FOCUS,
+                    description = "تایمر تمرکز با پشتیبانی قفل صفحه و اجرا در پس‌زمینه — در فاز ۶ پیاده‌سازی می‌شود.",
+                    onBack = { navController.popBackStack() },
+                )
+            }
+            composable(Routes.PLANNER) {
+                PlaceholderScreen(
+                    title = "برنامهٔ روزانه",
+                    environment = dev.mrsad.app.ui.theme.PageEnvironment.PLANNER,
+                    description = "برنامه‌ریزی فعالیت‌ها و ردیابی عادت‌ها — در فاز ۶ پیاده‌سازی می‌شود.",
+                    onBack = { navController.popBackStack() },
+                )
+            }
+            composable(Routes.LIBRARY) {
+                PlaceholderScreen(
+                    title = "کتابخانهٔ شخصی",
+                    environment = dev.mrsad.app.ui.theme.PageEnvironment.LIBRARY,
+                    description = "افزودن و مدیریت متن‌های خواندنی شخصی — در فاز ۶ پیاده‌سازی می‌شود.",
+                    onBack = { navController.popBackStack() },
+                )
+            }
+        }
+
+        if (showBottomBar) {
+            MrsadBottomBar(
+                items = bottomDestinations.map { MrsadBottomBarItem(it.route, it.label, it.icon) },
+                selectedRoute = currentRoute,
+                onSelect = { route ->
+                    navController.navigate(route) {
+                        popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                },
+                onSettings = {
+                    navController.navigate(Routes.SETTINGS) { launchSingleTop = true }
+                },
+                modifier = Modifier
+                    .align(androidx.compose.ui.Alignment.BottomCenter)
+                    .windowInsetsPadding(WindowInsets.navigationBars),
+            )
+        }
+    }
+}
+
+private fun androidx.navigation.NavHostController.navigateToModule(route: String) {
+    navigate(route) {
+        launchSingleTop = true
+    }
+}

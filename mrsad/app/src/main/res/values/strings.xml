@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Persian is the default (values/) locale: MRSAD is Persian-first. -->
+<resources>
+    <string name="app_name">مرصاد</string>
+    <string name="brand_name" translatable="false">MRSAD</string>
+
+    <!-- Navigation -->
+    <string name="nav_home">خانه</string>
+    <string name="nav_type">تایپ</string>
+    <string name="nav_mind">ذهن</string>
+    <string name="nav_analytics">تحلیل</string>
+    <string name="nav_ai">دستیار</string>
+    <string name="nav_read">خواندن</string>
+    <string name="nav_arena">آرنا</string>
+    <string name="nav_studio">استودیو</string>
+    <string name="nav_focus">تمرکز</string>
+    <string name="nav_planner">برنامه</string>
+    <string name="nav_library">کتابخانه</string>
+    <string name="nav_settings">تنظیمات</string>
+
+    <!-- Generic -->
+    <string name="action_start">شروع</string>
+    <string name="action_pause">توقف موقت</string>
+    <string name="action_resume">ادامه</string>
+    <string name="action_restart">از نو</string>
+    <string name="action_retry">تلاش دوباره</string>
+    <string name="action_close">بستن</string>
+    <string name="action_save">ذخیره</string>
+    <string name="action_cancel">انصراف</string>
+    <string name="action_back">بازگشت</string>
+    <string name="action_next">بعدی</string>
+    <string name="action_finish">پایان</string>
+    <string name="action_delete">حذف</string>
+    <string name="action_edit">ویرایش</string>
+    <string name="action_confirm">تأیید</string>
+    <string name="label_today">امروز</string>
+    <string name="label_loading">در حال بارگذاری…</string>
+    <string name="label_minutes">دقیقه</string>
+    <string name="label_seconds">ثانیه</string>
+    <string name="label_points">امتیاز</string>
+    <string name="label_percent">٪</string>
+    <string name="label_wpm">کلمه در دقیقه</string>
+    <string name="label_accuracy">دقت</string>
+    <string name="label_progress">پیشرفت</string>
+    <string name="label_offline">آفلاین</string>
+    <string name="label_error_generic">خطایی رخ داد. دوباره تلاش کنید.</string>
+    <string name="label_empty_generic">هنوز داده‌ای برای نمایش نیست.</string>
+    <string name="label_coming_soon">این بخش در مرحله بعدی توسعه قرار دارد.</string>
+
+    <!-- Splash -->
+    <string name="splash_tagline">زیست‌بوم رشد شناختی</string>
+
+    <!-- Settings -->
+    <string name="settings_title">تنظیمات</string>
+    <string name="settings_theme">ظاهر و تم</string>
+    <string name="settings_numerals">ارقام فارسی</string>
+    <string name="settings_numerals_desc">نمایش اعداد به‌صورت ۱۲۳ یا 123</string>
+    <string name="settings_motion">شدت جلوه‌های بصری</string>
+    <string name="settings_haptics">بازخورد لمسی</string>
+    <string name="settings_sound">افکت صوتی</string>
+    <string name="settings_quality">کیفیت گرافیکی</string>
+    <string name="quality_high">بالا</string>
+    <string name="quality_balanced">متعادل</string>
+    <string name="quality_performance">عملکرد</string>
+    <string name="settings_about">دربارهٔ مرصاد</string>
+    <string name="settings_privacy">حریم خصوصی</string>
+    <string name="settings_privacy_body">همهٔ داده‌های تمرین به‌صورت محلی روی همین دستگاه ذخیره می‌شوند. مرصاد به اینترنت متصل نمی‌شود و اطلاعات شما جایی ارسال نمی‌شود.</string>
+    <string name="settings_licenses">لایسنس‌ها</string>
+
+    <!-- Placeholders -->
+    <string name="placeholder_title">به‌زودی</string>
+    <string name="placeholder_body">این بخش در نقشهٔ راه مرصاد قرار دارد و به‌صورت کامل و واقعی پیاده‌سازی خواهد شد.</string>
+</resources>

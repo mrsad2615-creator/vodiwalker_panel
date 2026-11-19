@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      Launch theme: obsidian background with the MRSAD mark, handed over to the
+      Compose splash animation immediately. No artificial delay is added.
+    -->
+    <style name="Theme.MRSAD.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">#08090C</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_mark</item>
+        <item name="postSplashScreenTheme">@style/Theme.MRSAD</item>
+    </style>
+
+    <style name="Theme.MRSAD" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">#08090C</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+</resources>

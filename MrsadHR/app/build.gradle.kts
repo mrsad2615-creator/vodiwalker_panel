@@ -6,6 +6,10 @@ plugins {
 }
 
 android {
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
     namespace = "dev.mrsad.hr"
     compileSdk = 35
     defaultConfig {
@@ -24,6 +28,8 @@ android {
         }
     }
 }
+
+kotlin { jvmToolchain(17) }
 
 dependencies {
     androidTestImplementation("androidx.test:rules:1.6.1")

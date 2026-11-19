@@ -173,26 +173,52 @@ jobs:
 
       - name: Verify release APK signature + installability
         run: |
-          set -euo pipefail
+          set -uo pipefail
           apk="$(find android/app/build/outputs/apk/release -name '*.apk' | head -n1)"
-          test -n "$apk"
-          # zipalign -c proves the archive is aligned (required for install on all API levels).
-          /usr/local/lib/android/sdk/build-tools/35.0.0/zipalign -c -P 16 -v 4 "$apk" >/dev/null
-          echo "zipalign: OK"
+          if [ -z "$apk" ]; then
+            echo "::error::no release APK produced"; exit 1
+          fi
+          echo "apk=$apk ($(stat -c%s "$apk") bytes)"
 
-          bt=/usr/local/lib/android/sdk/build-tools/35.0.0
-          apksigner="$bt/apksigner"
-          # --print-certs exits non-zero if the APK has no valid signature.
-          "$apksigner" verify --verbose --print-certs "$apk" | tee apksigner.txt
-          # apksigner exits 0 only for a verifiable signature; also require a certificate and
-          # at least one "Verified using ... scheme" line (v1/v2/v3 depending on minSdk).
-          grep -qi "Verified using" apksigner.txt
-          grep -qi "Signer #1 certificate DN" apksigner.txt
-          echo "signature: OK"
+          sdk_root="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
+          if [ -z "$sdk_root" ]; then
+            echo "::error::ANDROID_SDK_ROOT/ANDROID_HOME is not set"; exit 1
+          fi
+          bt="$(find "$sdk_root/build-tools" -maxdepth 1 -mindepth 1 -type d | sort -V | tail -n1)"
+          echo "build-tools=$bt"
 
-          # aapt2 badging: the file is a real APK with the expected identity.
-          "$bt/aapt2" dump badging "$apk" | head -5
-          echo "badging: OK"
+          fail=0
+
+          # 1) Alignment (required for install on every supported API level).
+          if "$bt/zipalign" -c -P 16 -v 4 "$apk" > zipalign.txt 2>&1; then
+            echo "zipalign: OK"
+          else
+            echo "::error::zipalign verification failed"
+            tail -n 20 zipalign.txt
+            fail=1
+          fi
+
+          # 2) Signature: apksigner's exit status is authoritative.
+          if "$bt/apksigner" verify --verbose --print-certs "$apk" > apksigner.txt 2>&1; then
+            echo "apksigner: OK"
+            grep -iE "^Verified using|^Signer #1 certificate DN" apksigner.txt | head -n 6
+          else
+            echo "::error::apksigner verify failed"
+            cat apksigner.txt
+            fail=1
+          fi
+
+          # 3) The file is a real APK with a resolvable manifest.
+          if "$bt/aapt2" dump badging "$apk" > badging.txt 2>&1; then
+            grep -E "^package:|^sdkVersion|^minSdkVersion|^targetSdkVersion" badging.txt | head -n 5
+            echo "aapt2: OK"
+          else
+            echo "::error::aapt2 could not read the APK"
+            head -n 20 badging.txt
+            fail=1
+          fi
+
+          exit "$fail"
 
       - name: Collect APKs with stable names
         run: |

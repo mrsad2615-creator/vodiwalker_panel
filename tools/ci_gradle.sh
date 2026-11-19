@@ -21,6 +21,11 @@ cd "$ROOT_DIR/android"
 log="/tmp/vodigesture-gradle-${slug}.log"
 mkdir -p ci-logs
 
+# Log the exact argv: a stray word-split argument is otherwise very hard to see in CI.
+printf 'gradle args (%s):' "$#"
+printf ' [%s]' "$@"
+printf '\n'
+
 ./gradlew "$@" 2>&1 | tee "$log"
 status="${PIPESTATUS[0]}"
 

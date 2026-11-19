@@ -127,14 +127,16 @@ jobs:
           ./gradlew --version
 
       - name: Compile Kotlin + Compose (fast failure signal)
-        run: >-
-          bash tools/ci_gradle.sh compile :app:compileDebugKotlin
-          --stacktrace --no-configuration-cache
+        run: |
+          set -euo pipefail
+          bash tools/ci_gradle.sh compile :app:compileDebugKotlin \
+            --stacktrace --no-configuration-cache
 
       - name: Assemble debug APK
-        run: >-
-          bash tools/ci_gradle.sh debug :app:assembleDebug
-          --stacktrace --no-configuration-cache
+        run: |
+          set -euo pipefail
+          bash tools/ci_gradle.sh debug :app:assembleDebug \
+            --stacktrace --no-configuration-cache
 
       # A stable signing key keeps in-place app upgrades working between builds. It is a CI-only
       # key (never suitable for Play Store uploads) and lives in the Actions cache, not in git.
@@ -155,25 +157,31 @@ jobs:
           test -s "$key" || { echo "::error::keystore was not created"; exit 1; }
           keytool -list -keystore "$key" -storepass vodigesture | grep -qi "vodigesture-ci" \
             || { echo "::error::keystore has no vodigesture-ci alias"; exit 1; }
-          echo "keystore=$key ($(stat -c%s "$key") bytes, alias vodigesture-ci)" >> "$GITHUB_OUTPUT"
-          echo "keystore ready at $key"
+          echo "keystore=$key" >> "$GITHUB_OUTPUT"
+          echo "keystore ready at $key ($(stat -c%s "$key") bytes, alias vodigesture-ci)"
 
       - name: Assemble signed release APK (R8 full mode + resource shrinking)
         env:
           VODI_KEYSTORE: ${{ steps.keystore.outputs.keystore }}
-        run: >-
-          bash tools/ci_gradle.sh release :app:assembleRelease
-          -Pvodigesture.ciSigning=true
-          -Pvodigesture.ciKeystore=$VODI_KEYSTORE
-          -Pvodigesture.ciStorePassword=vodigesture
-          -Pvodigesture.ciKeyAlias=vodigesture-ci
-          -Pvodigesture.ciKeyPassword=vodigesture
-          --stacktrace --no-configuration-cache
+        run: |
+          set -euo pipefail
+          case "$VODI_KEYSTORE" in
+            *" "*|"") echo "::error::keystore path is empty or contains whitespace: '$VODI_KEYSTORE'"; exit 1 ;;
+          esac
+          test -s "$VODI_KEYSTORE"
+          bash tools/ci_gradle.sh release \
+            :app:assembleRelease \
+            "-Pvodigesture.ciKeystore=$VODI_KEYSTORE" \
+            "-Pvodigesture.ciStorePassword=vodigesture" \
+            "-Pvodigesture.ciKeyAlias=vodigesture-ci" \
+            "-Pvodigesture.ciKeyPassword=vodigesture" \
+            --stacktrace --no-configuration-cache
 
       - name: Verify packaged APK manifest contract
-        run: >-
-          bash tools/ci_gradle.sh verify :app:verifyPackagedApk
-          --stacktrace --no-configuration-cache
+        run: |
+          set -euo pipefail
+          bash tools/ci_gradle.sh verify :app:verifyPackagedApk \
+            --stacktrace --no-configuration-cache
 
       - name: Verify release APK signature + installability
         run: |

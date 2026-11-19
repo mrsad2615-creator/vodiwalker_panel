@@ -306,6 +306,16 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Point the stable tag at this build
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        run: |
+          set -euo pipefail
+          gh api -X PATCH "repos/${GITHUB_REPOSITORY}/git/refs/tags/vodigesture-latest" \
+            -f sha="$GITHUB_SHA" -F force=true >/dev/null
+          echo "vodigesture-latest -> $GITHUB_SHA"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Upload build reports on failure
         if: failure()
         uses: actions/upload-artifact@v4

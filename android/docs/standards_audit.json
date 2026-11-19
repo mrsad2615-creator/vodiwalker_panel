@@ -1,11 +1,11 @@
 {
   "stats": {
-    "kotlin_files": 38,
-    "main_files": 31,
-    "test_files": 6,
+    "kotlin_files": 45,
+    "main_files": 36,
+    "test_files": 8,
     "android_test_files": 1,
     "modules": 18,
-    "lines_of_kotlin": 10396
+    "lines_of_kotlin": 12166
   },
   "byEngine": {
     "DOC": {
@@ -35,11 +35,11 @@
     },
     {
       "engine": "MANIFEST",
-      "rule": "window-content-overreach",
+      "rule": "accessibility-flag",
       "severity": "WARN",
       "path": "android/service/accessibility/src/main/res/xml/accessibility_service_config.xml",
       "line": 1,
-      "message": "canRetrieveWindowContent should stay false unless semantic node actions are required."
+      "message": "flag flagReportViewIds not set; foreground package tracking may degrade."
     },
     {
       "engine": "DOC",

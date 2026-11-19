@@ -56,7 +56,10 @@ android {
     tasks.register("verifyPackagedApk") {
         group = "verification"
         description = "Asserts the manifest of the packaged APKs matches the release contract."
-        dependsOn("assembleDebug", "assembleRelease")
+        // Reads artefacts produced by earlier invocations. A hard dependency would rebuild
+        // packageRelease inside this task's invocation, where the signing properties are not
+        // necessarily supplied, and the signing guard rail would (correctly) refuse.
+        mustRunAfter("assembleDebug", "assembleRelease")
         val outputsDir = layout.buildDirectory.dir("outputs/apk")
         // The debug variant deliberately carries the ".debug" applicationIdSuffix so both builds
         // can be installed side by side; the release variant owns the real applicationId.

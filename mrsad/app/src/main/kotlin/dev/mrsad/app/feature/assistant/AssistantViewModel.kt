@@ -84,8 +84,8 @@ class AssistantViewModel(private val container: AppContainer) : ViewModel() {
             recentWpm = recentWpm,
             previousWpm = previousWpm,
             readingSessions = readEvents.size,
-            avgReadingWpm = readEvents.map { it.primaryMetric }.averageOrZero(),
-            avgComprehension = readEvents.map { it.secondaryMetric }.averageOrZero(),
+            avgReadingWpm = readEvents.map { it.primaryMetric }.averageOrZero().toInt(),
+            avgComprehension = readEvents.map { it.secondaryMetric }.averageOrZero().toInt(),
             mindSessions = mindEvents.size,
             avgMindScore = mindEvents.map { it.secondaryMetric * 100 }.averageOrZero(),
             focusMinutesLast7Days = focusMinutes,
@@ -196,3 +196,5 @@ class AssistantViewModel(private val container: AppContainer) : ViewModel() {
 }
 
 private fun List<Double>.averageOrZero(): Double = if (isEmpty()) 0.0 else average()
+
+private fun List<Long>.averageOrZero(): Double = if (isEmpty()) 0.0 else average()

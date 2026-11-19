@@ -244,7 +244,7 @@ private fun NumberMemoryStage(state: MindUiState, viewModel: MindViewModel, sett
             NumberEntryField(
                 entry = state.entry,
                 onAppend = {
-                    haptics.performHapticFeedback(HapticFeedbackType.KeyboardTap)
+                    haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                     viewModel.appendDigit(it, settings.hapticsEnabled)
                 },
                 onDelete = { viewModel.deleteDigit() },

@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import dev.mrsad.app.data.AppContainer
 import dev.mrsad.app.data.db.ActivityEventEntity
 import dev.mrsad.app.util.MrsadClock
+import dev.mrsad.app.util.firstValue
 import dev.mrsad.core.mind.MindGenerators
 import dev.mrsad.core.random.SplitMix64
 import kotlinx.coroutines.Dispatchers

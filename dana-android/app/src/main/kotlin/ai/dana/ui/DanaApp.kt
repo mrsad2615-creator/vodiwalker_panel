@@ -99,7 +99,7 @@ internal fun DanaApp(
     var showLocal by rememberSaveable { mutableStateOf(false) }
     var afterLogin by rememberSaveable { mutableStateOf<DashboardTab?>(null) }
     val mediaOpen by remember(media) { media.state.map { it.open }.distinctUntilChanged() }
-        .collectAsStateWithLifecycle(initialValue = media.state.value.open)
+        .collectAsStateWithLifecycle(initialValue = false)
     LaunchedEffect(hosted, mediaOpen) {
         // The Android capture tile still opens the isolated, on-device photo tools in a managed build.
         if (hosted && mediaOpen) { showLocal = true; managed.stop() }

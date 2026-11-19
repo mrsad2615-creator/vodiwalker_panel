@@ -201,5 +201,3 @@ class AssistantViewModel(private val container: AppContainer) : ViewModel() {
 }
 
 private fun List<Double>.averageOrZero(): Double = if (isEmpty()) 0.0 else average()
-
-private fun List<Long>.averageOrZero(): Double = if (isEmpty()) 0.0 else average()

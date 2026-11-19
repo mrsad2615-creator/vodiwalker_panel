@@ -10,7 +10,7 @@
 
 ```
 SHA-256 (VodiGesture-1.0.0-release.apk) =
-57a87429a3c0aa35eb84b8d8a3babbfd956b2bb161676e42f659a77b6da41ebb
+254dc980d0ca114855a6ccbd512be00b330cda37874a4e00edc25e8f702be566
 ```
 
 صفحهٔ انتشار (اختیاری): https://github.com/mrsad2615-creator/vodiwalker_panel/releases/tag/vodigesture-latest

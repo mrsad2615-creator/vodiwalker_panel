@@ -108,7 +108,7 @@ fun EditTime(item: Preset, close: () -> Unit, save: (Preset) -> Unit, delete: ()
                         name,
                         { name = it.take(40) },
                         singleLine = true,
-                        label = { Text("Preset name") },
+                        label = { Type("Preset name") },
                     )
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     listOf(Triple("Hr", h, 99), Triple("Min", m, 59), Triple("Sec", s, 59))
@@ -128,14 +128,14 @@ fun EditTime(item: Preset, close: () -> Unit, save: (Preset) -> Unit, delete: ()
                                         }
                                 },
                                 Modifier.weight(1f),
-                                label = { Text(label) },
+                                label = { Type(label) },
                                 singleLine = true,
                                 keyboardOptions =
                                     KeyboardOptions(keyboardType = KeyboardType.Number),
                             )
                         }
                 }
-                if (item.id > 0) TextButton(onClick = delete) { Text("Delete preset") }
+                if (item.id > 0) TextButton(onClick = delete) { Type("Delete preset") }
             }
         },
         confirmButton = {
@@ -143,10 +143,10 @@ fun EditTime(item: Preset, close: () -> Unit, save: (Preset) -> Unit, delete: ()
                 enabled = duration > 0 && (item.id < 0 || name.isNotBlank()),
                 onClick = { save(item.copy(name = name.trim(), duration = duration)) },
             ) {
-                Text("Apply")
+                Type("Apply")
             }
         },
-        dismissButton = { TextButton(onClick = close) { Text("Cancel") } },
+        dismissButton = { TextButton(onClick = close) { Type("Cancel") } },
     )
 }
 
@@ -248,9 +248,20 @@ fun Settings(p: Preferences, vm: Desk, sounds: () -> Unit) {
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Box(Modifier.weight(1f)) { Type(label) }
-                    Switch(checked, { vm.pref(key, it.toString()) })
+                    Switch(
+                        checked,
+                        { vm.pref(key, it.toString()) },
+                        Modifier.accessLabel(localized(label)),
+                    )
                 }
             }
+    }
+    Plate {
+        Section("Language", "EN / FA")
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Pad("English", Modifier.weight(1f), !Persian.current) { vm.pref("language", "en") }
+            Pad("فارسی", Modifier.weight(1f), Persian.current) { vm.pref("language", "fa") }
+        }
     }
     Pad("Sound preferences  →", Modifier.fillMaxWidth(), click = sounds)
     Plate {

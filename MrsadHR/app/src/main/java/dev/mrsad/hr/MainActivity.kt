@@ -31,6 +31,12 @@ import java.util.Locale
 import kotlinx.coroutines.delay
 
 class MainActivity : ComponentActivity() {
+    override fun onStart() {
+        super.onStart()
+        if ((application as Studio).clocks.timer.value.phase == Phase.RUNNING)
+            startForegroundService(android.content.Intent(this, TimerService::class.java))
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -63,7 +69,18 @@ fun Instrument(vm: Desk = viewModel()) {
     BackHandler(page != "Studio" || focus) {
         if (page != "Studio") page = "Studio" else escape = true
     }
-    CompositionLocalProvider(Reduced provides reduced) {
+    val fa =
+        get(
+            "language",
+            androidx.compose.ui.platform.LocalConfiguration.current.locales[0].language,
+        ) == "fa"
+    CompositionLocalProvider(
+        Reduced provides reduced,
+        Persian provides fa,
+        Tactile provides (get("haptic", "true") == "true"),
+        androidx.compose.ui.platform.LocalLayoutDirection provides
+            (if (fa) LayoutDirection.Rtl else LayoutDirection.Ltr),
+    ) {
         val m = blend(finishes[theme] ?: finishes.values.first())
         CompositionLocalProvider(Metal provides m) {
             val scheme =
@@ -72,18 +89,7 @@ fun Instrument(vm: Desk = viewModel()) {
                 else darkColorScheme(primary = m.beam, surface = m.panel, onSurface = m.ink)
             MaterialTheme(colorScheme = scheme) {
                 Box(
-                    Modifier.fillMaxSize()
-                        .background(
-                            Brush.linearGradient(
-                                listOf(
-                                    m.panel,
-                                    m.bg,
-                                    m.bg,
-                                    m.rim.copy(alpha = .32f).compositeOver(m.bg),
-                                ),
-                            ),
-                        )
-                        .safeDrawingPadding(),
+                    Modifier.fillMaxSize().atmosphere(theme, m).safeDrawingPadding(),
                     contentAlignment = Alignment.TopCenter,
                 ) {
                     Column(
@@ -212,7 +218,7 @@ fun Tool(glyph: String, label: String, click: () -> Unit) {
             .clip(CircleShape)
             .background(Metal.current.panel)
             .clickable(onClick = click)
-            .then(Modifier.accessLabel(label)),
+            .then(Modifier.accessLabel(localized(label))),
         contentAlignment = Alignment.Center,
     ) {
         Type(glyph, 21)
@@ -264,12 +270,19 @@ fun Readout(c: Clock) {
             }
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Tag(if (complete) "TIME IS UP" else c.phase.name, m.beam)
-                Type(
-                    digits(ms, !c.watch),
-                    if (ms >= 3600000) 32 else 49,
-                    weight = FontWeight.Medium,
-                    spacing = -1.8f,
-                )
+                val read = digits(ms, !c.watch)
+                Crossfade(
+                    read,
+                    animationSpec = tween(if (Reduced.current) 0 else 190),
+                    label = "register",
+                ) { numeral ->
+                    Type(
+                        numeral,
+                        if (ms >= 3600000) 32 else 49,
+                        weight = FontWeight.Medium,
+                        spacing = -1.8f,
+                    )
+                }
                 Tag(
                     if (c.watch) String.format(Locale.ROOT, "%03d MS", ms % 1000)
                     else if (ms >= 3600000) "HR : MIN : SEC" else "MIN : SEC",

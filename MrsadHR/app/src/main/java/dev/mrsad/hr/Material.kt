@@ -75,11 +75,11 @@ fun Type(
     spacing: Float = 0f,
 ) {
     Text(
-        s,
+        localized(s),
         color = color,
         fontSize = size.sp,
         lineHeight = (size * 1.2).sp,
-        fontFamily = Grotesk,
+        fontFamily = if (Persian.current) FontFamily(Font(R.font.vazirmatn)) else Grotesk,
         fontWeight = weight,
         letterSpacing = spacing.sp,
         style = TextStyle(fontFeatureSettings = "tnum"),
@@ -93,6 +93,8 @@ fun Tag(s: String, color: Color = Metal.current.muted) = Type(s, 10, color, Font
 fun Pad(s: String, modifier: Modifier = Modifier, hot: Boolean = false, click: () -> Unit) {
     val m = Metal.current
     val source = remember { MutableInteractionSource() }
+    val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
+    val tactile = Tactile.current
     val pressed by source.collectIsPressedAsState()
     val scale by
         animateFloatAsState(
@@ -111,7 +113,13 @@ fun Pad(s: String, modifier: Modifier = Modifier, hot: Boolean = false, click: (
             .clip(shape)
             .background(if (hot) m.beam else m.panel)
             .border(1.dp, m.rim.copy(alpha = .4f), shape)
-            .clickable(source, null, role = Role.Button, onClick = click)
+            .clickable(source, null, role = Role.Button) {
+                if (tactile)
+                    haptic.performHapticFeedback(
+                        androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove,
+                    )
+                click()
+            }
             .padding(horizontal = 12.dp, vertical = 9.dp),
         contentAlignment = Alignment.Center,
     ) {

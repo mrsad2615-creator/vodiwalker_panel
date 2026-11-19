@@ -19,3 +19,7 @@
 https://t.me/vodiwalkervpn03
 گیت هاب :
 https://github.com/Vodiwalker
+
+## MrsadHR Android
+
+The standalone Kotlin/Compose timer and stopwatch live in [MrsadHR/](MrsadHR/README.md). Its Android build does not depend on the panel server.

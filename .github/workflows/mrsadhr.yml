@@ -9,10 +9,16 @@ jobs:
     defaults: {run: {working-directory: MrsadHR}}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with: {distribution: temurin, java-version: '17'}
       - uses: gradle/actions/setup-gradle@v4
-      - run: ./gradlew testDebugUnitTest assembleDebug assembleDebugAndroidTest
+      - name: Compile APK and run clock tests
+        run: |
+          ./gradlew --console=plain testDebugUnitTest assembleDebug assembleDebugAndroidTest 2>&1 | tee "$RUNNER_TEMP/compile.log" || {
+            tail -100 "$RUNNER_TEMP/compile.log" | while IFS= read -r line; do echo "::error::$line"; done
+            exit 1
+          }
+        shell: bash
       - uses: actions/upload-artifact@v4
         with: {name: MrsadHR-debug, path: MrsadHR/app/build/outputs/apk/debug/*.apk}
       - name: Enable emulator acceleration
@@ -26,3 +32,7 @@ jobs:
           api-level: 33
           arch: x86_64
           script: cd MrsadHR && ./gradlew connectedDebugAndroidTest
+      - name: Report instrument failures
+        if: failure()
+        run: |
+          find app/build/outputs/androidTest-results -name '*.xml' -exec grep -h -A4 '<failure' {} + | while IFS= read -r line; do echo "::error::$line"; done

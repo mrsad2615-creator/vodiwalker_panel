@@ -13,30 +13,68 @@ val tracks = listOf("Minimal", "Digital", "Cinematic", "Ambient")
 class Player(private val ctx: Context) {
     private var media: MediaPlayer? = null
 
+    private val manager = requireNotNull(ctx.getSystemService(AudioManager::class.java))
+    private var request: AudioFocusRequest? = null
+
     fun stop() {
         media?.release()
         media = null
+        request?.let(manager::abandonAudioFocusRequest)
+        request = null
     }
 
     fun play(name: String, volume: Float, end: () -> Unit = {}) {
         stop()
+        val attributes =
+            AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_NOTIFICATION_EVENT)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .build()
+        val focus =
+            AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK)
+                .setAudioAttributes(attributes)
+                .setOnAudioFocusChangeListener { change ->
+                    if (change < 0) {
+                        stop()
+                        end()
+                    }
+                }
+                .build()
+        if (
+            volume <= 0 ||
+                manager.requestAudioFocus(focus) != AudioManager.AUDIOFOCUS_REQUEST_GRANTED
+        ) {
+            end()
+            return
+        }
+        request = focus
         val id =
             listOf(R.raw.minimal, R.raw.digital, R.raw.cinematic, R.raw.ambient)[
                 tracks.indexOf(name).coerceAtLeast(0)]
-        media =
-            MediaPlayer.create(ctx, id)?.apply {
-                setVolume(volume, volume)
-                setOnCompletionListener {
-                    this@Player.stop()
-                    end()
-                }
-                setOnErrorListener { _, _, _ ->
-                    this@Player.stop()
-                    end()
-                    true
-                }
-                start()
+        val sound = MediaPlayer()
+        media = sound
+        try {
+            sound.setAudioAttributes(attributes)
+            ctx.resources.openRawResourceFd(id).use {
+                sound.setDataSource(it.fileDescriptor, it.startOffset, it.length)
             }
+            sound.setVolume(volume, volume)
+            sound.setOnCompletionListener {
+                stop()
+                end()
+            }
+            sound.setOnErrorListener { _, _, _ ->
+                stop()
+                end()
+                true
+            }
+            sound.setOnPreparedListener { if (media === it) it.start() }
+            sound.prepareAsync()
+        } catch (e: Exception) {
+            stop()
+            end()
+            android.util.Log.w("MrsadHR", "Audio unavailable", e)
+        }
     }
 }
 

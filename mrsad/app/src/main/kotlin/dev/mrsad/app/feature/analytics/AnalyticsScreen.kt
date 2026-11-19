@@ -143,7 +143,7 @@ fun AnalyticsScreen(
                 SectionHeader(title = "شاخص‌های کلیدی")
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
                     MetricValue(
-                        value = if (state.bestWpm == null) "—" else formatInt(state.bestWpm, settings.persianNumerals),
+                        value = state.bestWpm?.let { formatInt(it, settings.persianNumerals) } ?: "—",
                         label = "رکورد سرعت تایپ",
                         size = type.title.fontSize,
                     )

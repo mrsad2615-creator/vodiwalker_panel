@@ -3,11 +3,9 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <!-- MRSAD is offline-first: no INTERNET permission is declared. -->
-    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <!-- Least privilege: no INTERNET, no location, no contacts. Permissions are
+         added only when the corresponding feature actually ships. -->
     <uses-permission android:name="android.permission.VIBRATE" />
-    <uses-permission android:name="android.permission.WAKE_LOCK" />
 
     <application
         android:name=".MrsadApplication"
@@ -34,13 +32,5 @@
             </intent-filter>
         </activity>
 
-        <service
-            android:name=".feature.focus.FocusTimerService"
-            android:exported="false"
-            android:foregroundServiceType="specialUse">
-            <property
-                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
-                android:value="User-started focus timer that keeps an accurate countdown while the screen is off" />
-        </service>
     </application>
 </manifest>

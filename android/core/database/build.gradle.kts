@@ -12,6 +12,5 @@ dependencies {
     api(projects.core.model)
     implementation(projects.core.common)
     implementation(projects.engine.prediction)
-    implementation(projects.engine.gesture)
     implementation(libs.kotlinx.coroutines.android)
 }

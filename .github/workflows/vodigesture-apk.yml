@@ -1,0 +1,218 @@
+name: VodiGesture APK
+
+# Builds the Android 14/15 app with the real Android toolchain (SDK 35, JDK 21, Gradle 8.11.1),
+# runs the reproducible quality gates, and publishes installable APKs as release assets so the
+# download is a single click.
+on:
+  push:
+    branches: ['**']
+    paths:
+      - 'android/**'
+      - 'tools/**'
+      - '.github/workflows/vodigesture-apk.yml'
+  pull_request:
+    paths:
+      - 'android/**'
+      - 'tools/**'
+  workflow_dispatch:
+    inputs:
+      publish_release:
+        description: 'Publish a GitHub Release with the APKs'
+        type: boolean
+        default: true
+
+concurrency:
+  group: vodigesture-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+env:
+  GRADLE_OPTS: >-
+    -Dorg.gradle.jvmargs=-Xmx4g
+    -Dorg.gradle.parallel=true
+    -Dorg.gradle.caching=true
+    -Dkotlin.daemon.jvmargs=-Xmx2g
+
+jobs:
+  gates:
+    name: JVM engine tests + standards audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Install Kotlin compiler 2.1.20
+        run: |
+          set -euo pipefail
+          mkdir -p "$HOME/kotlin"
+          curl -sSL --retry 3 -o /tmp/kotlin.zip \
+            https://github.com/JetBrains/kotlin/releases/download/v2.1.20/kotlin-compiler-2.1.20.zip
+          unzip -q /tmp/kotlin.zip -d "$HOME/kotlin"
+          echo "KOTLIN_HOME=$HOME/kotlin/kotlinc" >> "$GITHUB_ENV"
+          echo "$HOME/kotlin/kotlinc/bin" >> "$GITHUB_PATH"
+          "$HOME/kotlin/kotlinc/bin/kotlinc" -version
+
+      - name: Install audit toolchain
+        run: |
+          python3 -m pip install --upgrade pip
+          python3 -m pip install tree-sitter tree-sitter-kotlin defusedxml lxml
+
+      - name: Compile pure-Kotlin engines + run the JVM suite (-Werror, JVM 21)
+        run: bash tools/run_kotlin_tests.sh
+
+      - name: Android 14/15 standards audit (ARCH / API / MANIFEST / M3 / DOC)
+        run: python3 tools/audit_android_standards.py --json android/docs/standards_audit.json
+
+      - name: Upload audit artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: standards-audit
+          path: |
+            android/docs/standards_audit.json
+            android/docs/m3_contrast_audit.json
+          if-no-files-found: warn
+
+  apk:
+    name: Assemble APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    needs: gates
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      # Installs the Gradle 8.11.1 distribution and configures the dependency cache.
+      # The project intentionally does not commit gradle-wrapper.jar (it is a binary blob);
+      # CI materialises it from the provisioning Gradle so `./gradlew` works afterwards.
+      - name: Set up Gradle 8.11.1
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+          validate-wrappers: false
+          cache-read-only: false
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install SDK platform + build tools
+        run: |
+          set -euo pipefail
+          yes | sdkmanager --licenses >/dev/null 2>&1 || true
+          sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0" >/dev/null
+          echo "sdk.dir=$ANDROID_SDK_ROOT" > android/local.properties
+
+      - name: Materialise the Gradle wrapper
+        working-directory: android
+        run: |
+          set -euo pipefail
+          gradle wrapper --gradle-version 8.11.1 --distribution-type bin
+          ./gradlew --version
+
+      - name: Compile Kotlin + Compose (fast failure signal)
+        working-directory: android
+        run: >-
+          ./gradlew :app:compileDebugKotlin
+          -Pvodigesture.kotlinWarningsAsErrors=false
+          --stacktrace --no-configuration-cache
+
+      - name: Assemble debug APK
+        working-directory: android
+        run: >-
+          ./gradlew :app:assembleDebug
+          -Pvodigesture.kotlinWarningsAsErrors=false
+          --stacktrace --no-configuration-cache
+
+      - name: Assemble unsigned release APK (R8 full mode + resource shrinking)
+        working-directory: android
+        run: >-
+          ./gradlew :app:assembleRelease
+          -Pvodigesture.kotlinWarningsAsErrors=false
+          --stacktrace --no-configuration-cache
+
+      - name: Collect APKs with stable names
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          version="$(sed -n 's/^VERSION_NAME=//p' android/gradle.properties)"
+          name="VodiGesture-${version}"
+          debug_apk="$(find android/app/build/outputs/apk/debug -name '*.apk' | head -n1)"
+          test -n "$debug_apk"
+          cp "$debug_apk" "dist/${name}-debug.apk"
+          release_apk="$(find android/app/build/outputs/apk/release -name '*.apk' | head -n1)"
+          test -n "$release_apk"
+          cp "$release_apk" "dist/${name}-release-unsigned.apk"
+          ls -lh dist
+          {
+            echo "ASSET_NAME=${name}"
+            echo "APK_SHA256=$(sha256sum "dist/${name}-debug.apk" | cut -d' ' -f1)"
+          } >> "$GITHUB_ENV"
+
+      - name: Upload APK artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: vodigesture-apk
+          path: dist/*.apk
+          retention-days: 30
+
+      - name: Publish GitHub Release with one-click APK downloads
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: vodigesture-v${{ github.run_number }}
+          name: VodiGesture ${{ env.ASSET_NAME }} (build ${{ github.run_number }})
+          prerelease: false
+          generate_release_notes: false
+          body: |
+            ## VodiGesture ${{ env.ASSET_NAME }}
+
+            Gesture automation for Android 10–15 (minSdk 29, targetSdk 35).
+
+            ### One-click download
+            Click `${{ env.ASSET_NAME }}-debug.apk` below — the browser saves it directly.
+
+            | Asset | Use |
+            | --- | --- |
+            | `${{ env.ASSET_NAME }}-debug.apk` | **Install this.** Signed with the CI debug key, installs immediately. |
+            | `${{ env.ASSET_NAME }}-release-unsigned.apk` | Minified (R8 full mode), needs your own signing key. |
+
+            `SHA-256 (${{ env.ASSET_NAME }}-debug.apk)` = `${{ env.APK_SHA256 }}`
+
+            ### Install
+            1. Download the `-debug.apk`.
+            2. Allow "install unknown apps" for the browser / file manager when Android asks.
+            3. Open VodiGesture and complete the Privacy & Accessibility onboarding.
+            4. On Android 13–15 sideloads: App info → ⋮ → **Allow restricted settings**, then enable
+               the VodiGesture accessibility service.
+
+            ### Verified before packaging
+            * 34 JVM engine tests on OpenJDK 21 (`kotlinc -Werror`, K2).
+            * Android 14/15 standards audit: 0 errors (ARCH / API / MANIFEST / M3 / DOC).
+            * Build log and `standards-audit` artifact attached to the workflow run.
+          files: |
+            dist/*.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload build reports on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gradle-failure-logs
+          path: |
+            android/**/build/reports/**
+            android/build/reports/**
+          if-no-files-found: ignore

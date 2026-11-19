@@ -1,11 +1,11 @@
 {
   "stats": {
-    "kotlin_files": 39,
-    "main_files": 32,
+    "kotlin_files": 38,
+    "main_files": 31,
     "test_files": 6,
     "android_test_files": 1,
     "modules": 18,
-    "lines_of_kotlin": 10659
+    "lines_of_kotlin": 10383
   },
   "byEngine": {
     "DOC": {

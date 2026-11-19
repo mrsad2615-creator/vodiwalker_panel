@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Base application theme. The UI is 100% Jetpack Compose (Material 3), so this platform theme
+    only exists to give the window a correct background before the first Compose frame and to keep
+    the system splash consistent with the Obsidian Cinema surface color (#131318).
+    No AppCompat / Material Components view theme is required or referenced.
+-->
+<resources>
+    <style name="Theme.VodiGesture" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/vodi_surface_obsidian</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+        <item name="android:enforceNavigationBarContrast">false</item>
+        <item name="android:enforceStatusBarContrast">false</item>
+        <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
+    </style>
+</resources>

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- M3 surface color of the Dark "Obsidian Cinema" scheme (Color.kt: surface = 0xFF131318). -->
+    <color name="vodi_surface_obsidian">#FF131318</color>
+    <color name="vodi_ink_primary">#FFBEC2FF</color>
+</resources>

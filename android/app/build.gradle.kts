@@ -5,7 +5,7 @@ plugins {
 }
 
 android {
-    namespace = providers.gradleProperty("APPLICATION_ID").get()
+    namespace = "com.vodiwalker.gesture"
 
     defaultConfig {
         applicationId = providers.gradleProperty("APPLICATION_ID").get()
@@ -15,12 +15,27 @@ android {
     }
 
     buildTypes {
+        debug {
+            applicationIdSuffix = ".debug"
+            versionNameSuffix = "-debug"
+        }
         release {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
+            )
+        }
+    }
+
+    packaging {
+        resources {
+            excludes += setOf(
+                "/META-INF/{AL2.0,LGPL2.1}",
+                "/META-INF/DEPENDENCIES",
+                "DebugProbesKt.bin",
+                "kotlin-tooling-metadata.json",
             )
         }
     }
@@ -45,25 +60,22 @@ dependencies {
     implementation(projects.feature.permissions)
 
     implementation(libs.androidx.core.ktx)
-    implementation(libs.androidx.core.splashscreen)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)
-    implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.hilt.navigation.compose)
     implementation(libs.androidx.hilt.work)
     ksp(libs.androidx.hilt.compiler)
     implementation(libs.androidx.work.runtime.ktx)
     implementation(libs.androidx.compose.material3.navigation.suite)
     implementation(libs.androidx.compose.material.icons.extended)
-    implementation(libs.androidx.profileinstaller)
-    implementation(libs.google.ai.edge.litert)
+    implementation(libs.kotlinx.coroutines.android)
 
     testImplementation(libs.junit4)
     testImplementation(libs.kotlin.test)
     testImplementation(libs.kotlinx.coroutines.test)
-    testImplementation(libs.cash.turbine)
+
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     androidTestImplementation(libs.androidx.test.ext.junit)
     androidTestImplementation(libs.androidx.test.espresso.core)
-    androidTestImplementation(libs.androidx.test.uiautomator)
+    debugImplementation(libs.androidx.compose.ui.test.manifest)
 }

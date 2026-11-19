@@ -12,9 +12,20 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-JAVA_HOME="$(python3 -c 'import jdk4py; print(jdk4py.JAVA_HOME)')"
+# JAVA_HOME: honour the environment (CI) and fall back to the sandboxed jdk4py runtime.
+if [ -z "${JAVA_HOME:-}" ]; then
+  JAVA_HOME="$(python3 -c 'import jdk4py; print(jdk4py.JAVA_HOME)')"
+fi
 export JAVA_HOME
-KOTLIN_LIB="/opt/android-toolchain/node_modules/kotlin-compiler/lib"
+
+# Kotlin stdlib/test jars: prefer a real distribution (CI), fall back to the npm package (sandbox).
+if [ -n "${KOTLIN_HOME:-}" ] && [ -d "$KOTLIN_HOME/lib" ]; then
+  KOTLIN_LIB="$KOTLIN_HOME/lib"
+elif [ -d /opt/android-toolchain/node_modules/kotlin-compiler/lib ]; then
+  KOTLIN_LIB="/opt/android-toolchain/node_modules/kotlin-compiler/lib"
+else
+  KOTLIN_LIB="$(dirname "$(dirname "$(command -v kotlinc)")")/lib"
+fi
 BUILD_OUT="$(mktemp -d)"
 trap 'rm -rf "$BUILD_OUT"' EXIT
 

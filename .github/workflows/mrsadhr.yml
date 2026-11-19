@@ -1,0 +1,17 @@
+name: MrsadHR Android
+on:
+  workflow_dispatch:
+  push:
+    paths: ['MrsadHR/**', '.github/workflows/mrsadhr.yml']
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    defaults: {run: {working-directory: MrsadHR}}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: {distribution: temurin, java-version: '17'}
+      - uses: gradle/actions/setup-gradle@v4
+      - run: ./gradlew testDebugUnitTest assembleDebug assembleDebugAndroidTest
+      - uses: actions/upload-artifact@v4
+        with: {name: MrsadHR-debug, path: MrsadHR/app/build/outputs/apk/debug/*.apk}

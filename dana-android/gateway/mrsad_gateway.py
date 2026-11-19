@@ -17,7 +17,9 @@ import uuid
 import anyio
 import httpx
 from starlette.applications import Starlette
-from starlette.requests import Request
+from starlette.datastructures import MutableHeaders
+from starlette.middleware import Middleware
+from starlette.requests import ClientDisconnect, Request
 from starlette.responses import JSONResponse, Response
 from starlette.routing import Route as Endpoint
 
@@ -120,8 +122,13 @@ class Config:
         return cls(origin, public_key, keys, models, planner, public == "true", members, path, account, daily)
 
 
+def utf16_length(text: str) -> int:
+    return len(text) + sum(ord(c) >= 0x10000 for c in text)
+
+
 def text_value(value, max_chars: int) -> bool:
     return (isinstance(value, str) and 0 < len(value) <= max_chars and bool(value.strip())
+            and utf16_length(value) <= max_chars
             and all(ord(c) not in BIDI and not 0xD800 <= ord(c) <= 0xDFFF
                     and (ord(c) >= 32 and not 0x7F <= ord(c) <= 0x9F or c in "\t\r\n") for c in value))
 
@@ -166,10 +173,16 @@ class Usage:
     def connection(self):
         return sqlite3.connect(self.path, timeout=3, isolation_level=None)
 
-    def used(self, account: str) -> int:
+    @staticmethod
+    def spent(db, today: str, account: str):
+        return db.execute("SELECT coalesce(sum(units),0), coalesce(sum(CASE WHEN account=? THEN units ELSE 0 END),0) "
+                          "FROM attempts WHERE day=?", (account, today)).fetchone()
+
+    def remaining(self, account: str, config: Config) -> int:
         today = datetime.now(timezone.utc).date().isoformat()
         with closing(self.connection()) as db:
-            return db.execute("SELECT coalesce(sum(units),0) FROM attempts WHERE day=? AND account=?", (today, account)).fetchone()[0]
+            total, personal = self.spent(db, today, account)
+        return max(0, min(config.per_account - personal, config.global_daily - total))
 
     def reserve(self, account, request_id, units, config: Config):
         now = datetime.now(timezone.utc).date()
@@ -179,8 +192,7 @@ class Usage:
             db.execute("DELETE FROM attempts WHERE day < ?", ((now - timedelta(days=2)).isoformat(),))
             if db.execute("SELECT 1 FROM attempts WHERE account=? AND request_id=?", (account, request_id)).fetchone():
                 raise Problem(409, "already_submitted")
-            total, personal = db.execute("SELECT coalesce(sum(units),0), coalesce(sum(CASE WHEN account=? THEN units END),0) "
-                                         "FROM attempts WHERE day=?", (account, today)).fetchone()
+            total, personal = self.spent(db, today, account)
             if total + units > config.global_daily or personal + units > config.per_account:
                 raise Problem(429, "quota")
             db.execute("INSERT INTO attempts VALUES (?, ?, ?, ?)", (account, request_id, today, units))
@@ -245,7 +257,7 @@ async def request_body(request: Request):
                     raise Problem(413, "invalid_request")
                 data.extend(chunk)
         return exact_json(data.decode("utf-8"))
-    except (ValueError, RecursionError, TimeoutError) as exc:
+    except (ValueError, RecursionError, TimeoutError, ClientDisconnect) as exc:
         raise Problem(400, "invalid_request") from exc
 
 
@@ -336,6 +348,21 @@ async def render(http, config, route, prompt, shape):
         raise Problem(502, "invalid_response") from exc
 
 
+class NoCache:
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        async def decorate(message):
+            if message["type"] == "http.response.start":
+                headers = MutableHeaders(scope=message)
+                headers["Cache-Control"] = "no-store"
+                headers["X-Content-Type-Options"] = "nosniff"
+            await send(message)
+
+        await self.app(scope, receive, decorate)
+
+
 def build_app(config: Config, test_transport: httpx.AsyncBaseTransport | None = None) -> Starlette:
     @asynccontextmanager
     async def lifespan(app):
@@ -348,9 +375,9 @@ def build_app(config: Config, test_transport: httpx.AsyncBaseTransport | None = 
 
     async def catalog(request):
         account = await authorize(request, config)
-        used = await anyio.to_thread.run_sync(request.app.state.usage.used, account)
+        remaining = await anyio.to_thread.run_sync(request.app.state.usage.remaining, account, config)
         return JSONResponse({"models": [r.public() for r in config.models.values()], "planner": config.planner_id,
-                             "daily_remaining": max(0, config.per_account - used)})
+                             "daily_remaining": remaining})
 
     async def act(request):
         account = await authorize(request, config)
@@ -376,7 +403,7 @@ def build_app(config: Config, test_transport: httpx.AsyncBaseTransport | None = 
                 object_with(turn, "role", "content")
                 if turn["role"] != ("user" if i % 2 == 0 else "assistant") or not text_value(turn["content"], 4_200):
                     raise Problem(400, "invalid_request")
-                chars += len(turn["content"])
+                chars += utf16_length(turn["content"])
             if chars > 4_200:
                 raise Problem(400, "invalid_request")
         if mode == "image" and (not isinstance(data["shape"], str) or data["shape"] not in SHAPES):
@@ -417,18 +444,10 @@ def build_app(config: Config, test_transport: httpx.AsyncBaseTransport | None = 
     async def unavailable(_, __):
         return await reply_error(_, Problem(503, "service_unavailable"))
 
-    app = Starlette(routes=[Endpoint("/healthz", health), Endpoint("/v1/catalog", catalog),
-                            *(Endpoint(f"/v1/{name}", act, methods=["POST"]) for name in ("chat", "image", "command"))],
-                    lifespan=lifespan, exception_handlers={Problem: reply_error, sqlite3.Error: unavailable})
-
-    @app.middleware("http")
-    async def no_cache(request, call_next):
-        response = await call_next(request)
-        response.headers["Cache-Control"] = "no-store"
-        response.headers["X-Content-Type-Options"] = "nosniff"
-        return response
-
-    return app
+    return Starlette(routes=[Endpoint("/healthz", health), Endpoint("/v1/catalog", catalog),
+                             *(Endpoint(f"/v1/{name}", act, methods=["POST"]) for name in ("chat", "image", "command"))],
+                     lifespan=lifespan, middleware=[Middleware(NoCache)],
+                     exception_handlers={Problem: reply_error, sqlite3.Error: unavailable})
 
 
 def create_app():

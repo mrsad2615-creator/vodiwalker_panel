@@ -27,10 +27,9 @@ android {
         }
         create("compat") {
             dimension = "edition"
-            // A new app ID can install alongside older, differently signed previews.
             applicationId = "ai.dana.mrsad.compat"
-            versionCode = 11
-            versionName = "0.10.1-compat"
+            versionCode = 12
+            versionName = "0.11.0-compat"
             ndk { abiFilters.addAll(listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")) }
         }
     }
@@ -62,6 +61,11 @@ android {
 androidComponents.onVariants(androidComponents.selector().withBuildType("debug").withFlavor("edition" to "models")) { variant ->
     // Preserve both the previously published models preview ID and the signed release ID.
     variant.applicationId.set("ai.dana.mrsad.models")
+}
+
+androidComponents.onVariants(androidComponents.selector().withBuildType("debug").withFlavor("edition" to "compat")) { variant ->
+    // The new debug certificate is not an upgrade key for the published 0.10.1 Lite APK.
+    variant.applicationId.set("ai.dana.mrsad.compat.command")
 }
 
 hilt {

@@ -6,6 +6,7 @@ import ai.dana.data.network.danaHttpClient
 import ai.dana.data.provider.KeystoreVault
 import ai.dana.domain.AccountFailure
 import ai.dana.domain.AccountProblem
+import ai.dana.domain.EmailProject
 import ai.dana.domain.PrivacyPreferences
 import ai.dana.domain.SignOutResult
 import android.content.Context
@@ -17,9 +18,12 @@ import java.io.File
 import java.security.KeyStore
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicInteger
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
@@ -100,4 +104,72 @@ class EmailAccountStorageTest {
             }
         }
     }
+
+    @Test
+    fun managedAccessReusesVerifiedSessionAndCancelsOnOfflineOrSignOut() = runBlocking {
+        withTimeout(20_000) {
+            val id = UUID.randomUUID().toString()
+            val alias = "dana.test.account.$id"
+            val context = ApplicationProvider.getApplicationContext<Context>()
+            val file = File(context.cacheDir, "$id.preferences_pb")
+            val storeJob = Job()
+            val store = PreferenceDataStoreFactory.create(scope = CoroutineScope(Dispatchers.IO + storeJob)) { file }
+            val privacy = object : PrivacyPreferences {
+                override val offlineMode = MutableStateFlow(false)
+                override suspend fun setOfflineMode(enabled: Boolean) { offlineMode.value = enabled }
+            }
+            val project = checkNotNull(EmailProject.parse("https://abcdefghijklmnopqrst.supabase.co", "sb_publishable_public_test_123456"))
+            val total = AtomicInteger()
+            val transport = danaHttpClient().newBuilder().addInterceptor { chain ->
+                val req = chain.request()
+                check(req.url.host == project.host)
+                val n = total.incrementAndGet()
+                val data = when (req.url.encodedPath) {
+                    "/auth/v1/verify", "/auth/v1/token" -> """{"access_token":"access-managed-$n","expires_in":300,"refresh_token":"refresh-managed-$n","token_type":"bearer","user":{"email":"pilot@example.test","email_confirmed_at":"2026-11-17T00:00:00Z"}}"""
+                    "/auth/v1/logout" -> "{}"
+                    else -> error("Unexpected account request")
+                }
+                Response.Builder().request(req).protocol(Protocol.HTTP_1_1).code(200).message("Synthetic fixture")
+                    .body(data.toResponseBody("application/json".toMediaType())).build()
+            }.build()
+            val accounts = StoredEmailAccounts(context, project, privacy, SupabaseEmailApi(transport), store, KeystoreVault(alias))
+            try {
+                assertEquals("pilot@example.test", accounts.verify("pilot@example.test", "۸۵۹۲۷۱").email)
+                repeat(2) { assertEquals("access-managed-1", accounts.withManagedAccess { it }) }
+                assertEquals(1, total.get())
+                val prefs = store.data.first().asMap().values.map(Any::toString)
+                assertTrue(prefs.none { "access-managed" in it || "refresh-managed" in it || "example.test" in it })
+                suspend fun interrupt(expected: AccountProblem, change: suspend () -> Unit) {
+                    val started = CompletableDeferred<Unit>()
+                    val canceled = CompletableDeferred<Unit>()
+                    val work = async {
+                        try {
+                            accounts.withManagedAccess<Unit> {
+                                started.complete(Unit)
+                                try { awaitCancellation() } finally { canceled.complete(Unit) }
+                            }
+                            error("In-flight managed operation completed without cancellation")
+                        } catch (failure: AccountFailure) { failure.problem }
+                    }
+                    started.await()
+                    change()
+                    assertEquals(expected, work.await())
+                    assertTrue(canceled.isCompleted)
+                }
+                interrupt(AccountProblem.OFFLINE) { privacy.setOfflineMode(true) }
+                assertEquals(1, total.get())
+                privacy.setOfflineMode(false)
+                interrupt(AccountProblem.EXPIRED_SESSION) { assertEquals(SignOutResult.REVOKED, accounts.signOut()) }
+                assertFalse(accounts.setup.first().canResume)
+                assertEquals(3, total.get())
+            } finally {
+                storeJob.cancelAndJoin()
+                file.delete()
+                transport.connectionPool.evictAll()
+                transport.dispatcher.executorService.shutdown()
+                KeyStore.getInstance("AndroidKeyStore").apply { load(null) }.deleteEntry(alias)
+            }
+        }
+    }
+
 }

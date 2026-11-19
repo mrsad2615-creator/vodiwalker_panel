@@ -148,7 +148,9 @@ class GatewayTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual([200, 409, 409, 409], sorted(reply.status_code for reply in replies))
         replies = await asyncio.gather(*(self.send_text(client) for _ in range(5)))
         self.assertEqual([200, 429, 429, 429, 429], sorted(reply.status_code for reply in replies))
-        self.assertEqual(429, (await self.send_text(client, headers=self.headers("Bearer second-fixture-token"))).status_code)
+        second = self.headers("Bearer second-fixture-token")
+        self.assertEqual(429, (await self.send_text(client, headers=second)).status_code)
+        self.assertEqual(0, (await client.get("/v1/catalog", headers=second)).json()["daily_remaining"])
         self.assertEqual(2, len(self.provider_calls))
         raw = b"".join(file.read_bytes() for file in Path(self.directory).glob("*.sqlite3*"))
         for forbidden in ("یک سؤال از متن", "پاسخ مدل", "verified-fixture-token", "test@example.test"):
@@ -163,6 +165,12 @@ class GatewayTest(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn("redirected", blocked.text)
         self.assertEqual(409, (await self.send_text(client, headers=key)).status_code)
         self.assertEqual(413, (await self.send_text(client, prompt="الف" * 50_000)).status_code)
+        self.assertEqual(1, len(self.provider_calls))
+
+    async def test_uses_the_same_utf16_payload_limit_as_android(self):
+        client = await self.client()
+        self.assertEqual(200, (await self.send_text(client, prompt="🎨" * 1_200)).status_code)
+        self.assertEqual(400, (await self.send_text(client, prompt="🎨" * 1_201)).status_code)
         self.assertEqual(1, len(self.provider_calls))
 
     def test_catalog_cannot_enable_a_route_without_key_or_choose_an_automatic_model(self):

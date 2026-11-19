@@ -32,8 +32,8 @@ from xml.etree import ElementTree as ET
 path = Path('core/data/build/outputs/androidTest-results')
 reports = list((path / 'connected/debug').rglob('TEST-*.xml')) or list(path.rglob('TEST-*.xml'))
 cases = [case for report in reports for case in ET.parse(report).iter('testcase')]
-if len(cases) < 9 or any(case.find('skipped') is not None or case.find('failure') is not None or case.find('error') is not None for case in cases):
-    raise SystemExit('::error title=Dana device tests::core/data: expected at least nine passing tests with no failures/skips.')
+if len(cases) < 10 or any(case.find('skipped') is not None or case.find('failure') is not None or case.find('error') is not None for case in cases):
+    raise SystemExit('::error title=Dana device tests::core/data: expected at least ten passing tests with no failures/skips.')
 print(f'::notice title=Dana device storage::{len(cases)} Android storage and Keystore tests passed.')
 PYTHON
 

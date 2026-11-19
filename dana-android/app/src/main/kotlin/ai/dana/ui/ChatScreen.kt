@@ -212,7 +212,7 @@ private fun Dialogue(
                 }
             }
         }
-        if (deviceModel == null && !canSend && offline && !localOnly) {
+        if (deviceModel == null && !canSend && offline && !localOnly && DeviceModels.BUNDLED) {
             TextButton(onClick = onEnableNetwork, enabled = !chat.busy, modifier = Modifier.heightIn(min = 48.dp)) {
                 Text(stringResource(R.string.workspace_enable_ai))
             }

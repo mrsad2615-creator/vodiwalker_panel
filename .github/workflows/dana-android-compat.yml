@@ -95,7 +95,7 @@ jobs:
           "$tools/zipalign" -c -P 16 4 "$apk"
           python3 ci/check-native-alignment.py "$apk" --edition compat
           badging=$("$tools/aapt" dump badging "$apk")
-          grep -Fq "package: name='ai.dana.mrsad.compat' versionCode='11' versionName='0.10.1-compat-preview'" <<< "$badging"
+          grep -Fq "package: name='ai.dana.mrsad.compat.command' versionCode='12' versionName='0.11.0-compat-preview'" <<< "$badging"
           grep -Fxq "sdkVersion:'26'" <<< "$badging"
           printf 'sha256=%s\n' "$(sha256sum "$apk" | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
       - name: Enable KVM for compatibility tests
@@ -178,7 +178,7 @@ jobs:
           tag="mrsad-lite-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
           gh release create "$tag" mrsad-lite.apk SHA256SUMS.txt \
             --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
-            --title "mrsad Lite 0.10.1 · Android 8+ compatibility" --prerelease --latest=false \
-            --notes "Single debug-signed APK for Android 8+ (API 26), with armeabi-v7a, arm64-v8a, x86 and x86_64 native code. Separate package ai.dana.mrsad.compat; does not replace older variants or copy their data. No bundled Qwen/SmolLM2 or LiteRT-LM runtime. Local message cues, installed Persian TTS, OCR, Phone and the optional online chat/image routes remain. The exact APK installed and passed compatibility tests on API 26 x86 and API 35 x86_64; physical phones, Persian TTS availability and live provider accounts were not tested. Evidence: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID."
+            --title "mrsad Lite 0.11 · Persian Command preview (Android 8+)" --prerelease --latest=false \
+            --notes "Standalone debug-signed Command preview for Android 8+ (API 26), with armeabi-v7a, arm64-v8a, x86 and x86_64 native code. Uses ai.dana.mrsad.compat.command; install beside the prior Lite preview without deleting it. Local Persian commands, Clock and Wi-Fi settings handoffs, and an in-app Android assistant-role request are included. No hosted one-email service is configured in this APK. No bundled Qwen/SmolLM2 or LiteRT-LM runtime. The exact APK passed eight tests each on API 26 x86 and API 35 x86_64. The OTP-to-model UI and Android intent returns were exercised with isolated fixtures; live email, paid model access, OEM assistant behavior and Persian speech recognition were not verified. Evidence: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID."
           printf '\n[Download mrsad Lite APK](%s/%s/releases/download/%s/mrsad-lite.apk)\n' \
             "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$tag" >> "$GITHUB_STEP_SUMMARY"

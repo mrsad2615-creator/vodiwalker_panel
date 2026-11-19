@@ -60,7 +60,7 @@ class CompatibilityInstallTest {
         val arguments = InstrumentationRegistry.getArguments()
         arguments.getString("expectedApi")?.let { assertEquals(it.toInt(), Build.VERSION.SDK_INT) }
         arguments.getString("expected64Bit")?.let { assertEquals(it.toBooleanStrict(), Process.is64Bit()) }
-        assertEquals("ai.dana.mrsad.compat", context.packageName)
+        assertEquals("ai.dana.mrsad.compat.command", context.packageName)
         assertFalse(DeviceModels.BUNDLED)
         assertTrue(runBlocking { DeviceModels(context).available().isEmpty() })
         assertTrue(context.assets.list("models").orEmpty().isEmpty())

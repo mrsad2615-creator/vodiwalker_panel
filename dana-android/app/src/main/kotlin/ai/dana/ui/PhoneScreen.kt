@@ -319,7 +319,7 @@ internal fun PhoneScreen(
             TextButton(onClick = { examples = !examples }, modifier = Modifier.heightIn(min = 48.dp)) {
                 Text(stringResource(R.string.workspace_examples))
             }
-            if (examples) listOf(R.string.cmd_timer, R.string.workspace_settings_example, R.string.cmd_event_timed,
+            if (examples) listOf(R.string.phone_example_timer_natural, R.string.phone_example_wifi_natural, R.string.cmd_event_timed,
                 R.string.phone_sms_example, R.string.phone_dial_example).forEach { label ->
                 val example = stringResource(label)
                 FilterChip(selected = false, onClick = { model.draft(example) }, enabled = !state.working,

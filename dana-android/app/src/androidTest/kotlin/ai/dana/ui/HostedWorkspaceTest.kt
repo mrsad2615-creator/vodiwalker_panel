@@ -91,7 +91,7 @@ class HostedWorkspaceTest {
             ui.visible(ANSWER, list = LIST)
             assertEquals(listOf("chat:sample/second"), api.calls.toList())
 
-            ui.click(R.string.tab_art)
+            ui.click(DashboardTab.ART.label)
             ui.enter(R.string.art_prompt, "ساخت تصویر باغ بارانی", list = LIST)
             ui.click(R.string.art_generate, list = LIST)
             compose.onNodeWithTag("managed-outbound").assertTextEquals("ساخت تصویر باغ بارانی")

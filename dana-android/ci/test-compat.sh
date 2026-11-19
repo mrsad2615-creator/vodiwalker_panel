@@ -4,7 +4,7 @@ cd "$(dirname "${BASH_SOURCE[0]}")/.."
 
 api="$1"
 abi="$2"
-package=ai.dana.mrsad.compat
+package=ai.dana.mrsad.compat.command
 apk="$RUNNER_TEMP/dana-compat/mrsad-lite.apk"
 test_apk="$PWD/app/build/outputs/apk/androidTest/compat/debug/app-compat-debug-androidTest.apk"
 log="$RUNNER_TEMP/dana-compat-$api.log"

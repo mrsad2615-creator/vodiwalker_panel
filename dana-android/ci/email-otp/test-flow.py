@@ -7,6 +7,8 @@ from urllib.error import HTTPError
 from urllib.parse import quote
 from urllib.request import Request, urlopen
 
+from managed_check import check_managed
+
 AUTH = "http://127.0.0.1:19999"  # Direct container: the hosted gateway adds /auth/v1 and validates apikey.
 MAIL = "http://127.0.0.1:18025"
 ADDRESS = "dana-auth-smoke@dana.example.test"
@@ -82,6 +84,7 @@ assert verified_user(verified) == user_id, "Existing email did not reopen the sa
 refresh_path = f"{AUTH}/token?grant_type=refresh_token"
 rotated = require("refresh", http(refresh_path, {"refresh_token": verified["refresh_token"]}), {200})
 assert rotated["refresh_token"] != verified["refresh_token"]
+check_managed(AUTH, user_id, rotated["access_token"])
 require("revoke this session", http(logout_path, {}, rotated["access_token"]), {200, 204})
 require("revoked refresh rejected", http(refresh_path, {"refresh_token": rotated["refresh_token"]}), {400, 401, 403, 422})
-print("Real GoTrue: registration and login emails delivered to SMTP sink; incorrect and reused codes rejected; session refreshed and revoked.")
+print("Real GoTrue: registration and login emails delivered to SMTP sink; incorrect and reused codes rejected; same verified session opened gateway chat and image fixtures; refresh and revocation passed.")

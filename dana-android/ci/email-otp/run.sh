@@ -5,12 +5,13 @@ export DANA_TEST_DB_PASSWORD DANA_TEST_JWT_SECRET
 DANA_TEST_DB_PASSWORD="$(python3 -c 'import secrets; print(secrets.token_hex(24))')"
 DANA_TEST_JWT_SECRET="$(python3 -c 'import secrets; print(secrets.token_hex(40))')"
 compose=(docker compose --project-name dana-email-otp --file compose.yaml)
-log=$(mktemp)
+scratch=$(mktemp -d)
+log="$scratch/otp-fixture.log"
 cleanup() {
   local result=$?
   trap - EXIT
   "${compose[@]}" down -v --remove-orphans || true
-  rm -f "$log"
+  rm -rf "$scratch"
   exit "$result"
 }
 trap cleanup EXIT
@@ -35,9 +36,13 @@ print("::error title=Dana email integration::" + message.replace("%", "%25").rep
 PY
   exit 1
 }
+if ! python3 -m venv "$scratch/venv" > "$log" 2>&1 ||
+   ! "$scratch/venv/bin/pip" --disable-pip-version-check install -r ../../gateway/requirements.txt >> "$log" 2>&1; then
+  failure 'Could not install isolated gateway dependencies.'
+fi
 if ! "${compose[@]}" up -d --wait --wait-timeout 100 > "$log" 2>&1; then failure 'Could not start the isolated services.'; fi
 printf '\n' >> "$log"
-if ! python3 test-flow.py >> "$log" 2>&1; then failure 'The email fixture did not complete.'; fi
+if ! PYTHONPATH="$PWD/../../gateway" "$scratch/venv/bin/python" -B test-flow.py >> "$log" 2>&1; then failure 'The email fixture did not complete.'; fi
 result=$(tail -1 "$log")
 printf '::notice title=Dana isolated email delivery::%s\n' "$result"
 if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then printf '%s\n' "$result" >> "$GITHUB_STEP_SUMMARY"; fi

@@ -14,12 +14,16 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
-    val ciKeystore = providers.gradleProperty("vodigesture.ciKeystore")
+    // CI release signing. `-Pvodigesture.ciKeystore=<path>` opts in; the keystore is a throwaway
+    // CI key (never a Play upload key) and is never committed. When the property is absent the
+    // release variant stays unsigned, exactly as a store build must.
+    val ciKeystorePath = providers.gradleProperty("vodigesture.ciKeystore").orNull
+    val ciKeystoreFile = ciKeystorePath?.let { file(it) }
+    val ciSigningRequested = ciKeystoreFile != null
     signingConfigs {
-        create("ci") {
-            val store = ciKeystore.orNull
-            if (store != null && file(store).exists()) {
-                storeFile = file(store)
+        if (ciSigningRequested) {
+            create("ci") {
+                storeFile = ciKeystoreFile
                 storePassword = providers.gradleProperty("vodigesture.ciStorePassword").orNull
                 keyAlias = providers.gradleProperty("vodigesture.ciKeyAlias").orNull
                 keyPassword = providers.gradleProperty("vodigesture.ciKeyPassword").orNull
@@ -39,11 +43,9 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
-            // `-Pvodigesture.ciSigning=true -Pvodigesture.ciKeystore=...` (CI) signs the
-            // minified release build so the small, R8-optimised APK installs in one click.
-            // Without those properties the release variant stays unsigned, as a store build must.
-            val ciSign = ciKeystore.orNull?.let { file(it).exists() } == true
-            if (ciSign && providers.gradleProperty("vodigesture.ciSigning").getOrElse("false").toBoolean()) {
+            // Signing the minified release build is what makes the small, R8-optimised APK
+            // installable in one click.
+            if (ciSigningRequested) {
                 signingConfig = signingConfigs.getByName("ci")
             }
         }
@@ -107,6 +109,17 @@ android {
                 }
                 project.logger.lifecycle("verified $label")
             }
+        }
+    }
+
+    afterEvaluate {
+        if (ciSigningRequested) {
+            check(ciKeystoreFile!!.exists()) {
+                "vodigesture.ciKeystore=${ciKeystoreFile.absolutePath} was requested but does not exist"
+            }
+            logger.lifecycle(
+                "CI signing enabled with keystore ${ciKeystoreFile.absolutePath} (${ciKeystoreFile.length()} bytes)",
+            )
         }
     }
 

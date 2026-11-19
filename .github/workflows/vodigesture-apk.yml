@@ -152,7 +152,11 @@ jobs:
               -storepass vodigesture -keypass vodigesture \
               -dname "CN=VodiGesture CI, OU=Release Engineering, O=VodiGesture, L=Gunzenhausen, C=DE"
           fi
-          echo "keystore=$key" >> "$GITHUB_OUTPUT"
+          test -s "$key" || { echo "::error::keystore was not created"; exit 1; }
+          keytool -list -keystore "$key" -storepass vodigesture | grep -qi "vodigesture-ci" \
+            || { echo "::error::keystore has no vodigesture-ci alias"; exit 1; }
+          echo "keystore=$key ($(stat -c%s "$key") bytes, alias vodigesture-ci)" >> "$GITHUB_OUTPUT"
+          echo "keystore ready at $key"
 
       - name: Assemble signed release APK (R8 full mode + resource shrinking)
         env:
@@ -160,7 +164,7 @@ jobs:
         run: >-
           bash tools/ci_gradle.sh release :app:assembleRelease
           -Pvodigesture.ciSigning=true
-          -Pvodigesture.ciKeystore="$VODI_KEYSTORE"
+          -Pvodigesture.ciKeystore=$VODI_KEYSTORE
           -Pvodigesture.ciStorePassword=vodigesture
           -Pvodigesture.ciKeyAlias=vodigesture-ci
           -Pvodigesture.ciKeyPassword=vodigesture

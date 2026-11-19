@@ -2,10 +2,10 @@
 # ---------------------------------------------------------------------------------------------
 # VodiGesture — CI Gradle wrapper with actionable failure reporting
 #
-# Runs Gradle, tees the full log, and on failure republishes the compiler errors as GitHub
-# workflow annotations (`::error::…`). Artifact/workflow-log retrieval is not always possible in
-# restricted networks, whereas annotations are always returned by the Checks API, so a red build
-# stays diagnosable. The full log is also copied to `android/ci-logs/<slug>.log` for upload.
+# Runs Gradle, tees the full log, and on failure republishes the interesting part of the output as
+# GitHub workflow annotations (`::error::…`). Workflow-log and artifact download endpoints are not
+# reachable from every environment, whereas annotations are always returned by the Checks API, so
+# a red build stays diagnosable. The full log is copied to `android/ci-logs/<slug>.log` too.
 #
 # Usage: bash tools/ci_gradle.sh <slug> <gradle args...>   (invoke from anywhere)
 # ---------------------------------------------------------------------------------------------
@@ -21,23 +21,40 @@ cd "$ROOT_DIR/android"
 log="/tmp/vodigesture-gradle-${slug}.log"
 mkdir -p ci-logs
 
-set -o pipefail
 ./gradlew "$@" 2>&1 | tee "$log"
 status="${PIPESTATUS[0]}"
 
+annotate() {
+  # Annotations are single-line and must not start with a space.
+  local line="${1//$'\r'/}"
+  line="${line#"${line%%[![:space:]]*}"}"
+  [ -n "$line" ] && printf '::error::%s\n' "$line"
+}
+
 if [ "$status" -ne 0 ]; then
   echo "::group::Diagnostics (${slug})"
-  # Kotlin/Java compiler diagnostics, Gradle's own explanation block, and failed tasks.
-  grep -nE '(^e: |^w: |error:|FAILURE:|> Task .*FAILED|\* What went wrong|Caused by:|Could not (resolve|find|compile)|Unresolved reference)' "$log" \
-    | grep -vE '^w: .*(deprecated|is never used|unused)' \
-    | head -n 60 \
-    | while IFS= read -r line; do
-        # `::error::` messages must be single-line.
-        printf '::error::%s\n' "${line//$'\r'/}"
-      done
-  echo "::endgroup::"
 
-  tail -n 120 "$log"
+  # 1) Compiler diagnostics (Kotlin `e:` / javac `error:`) — the highest-signal lines.
+  grep -E '(^e: |error:|Unresolved reference|Type mismatch|Cannot access|cannot be provided)' "$log" \
+    | head -n 25 \
+    | while IFS= read -r line; do annotate "$line"; done
+
+  # 2) Gradle's own explanation block, including every continuation line.
+  awk '
+    /^\* What went wrong:/ { capture = 1 }
+    capture { print }
+    capture && /^\* Try:/ { capture = 0 }
+  ' "$log" | head -n 40 | while IFS= read -r line; do annotate "$line"; done
+
+  # 3) Failed tasks and the exception chain.
+  grep -E '(^> Task .*FAILED|^Caused by:|^Execution failed for task)' "$log" \
+    | head -n 20 \
+    | while IFS= read -r line; do annotate "$line"; done
+
+  # 4) The tail, which usually carries the final exception message.
+  tail -n 25 "$log" | while IFS= read -r line; do annotate "$line"; done
+
+  echo "::endgroup::"
   cp "$log" "ci-logs/${slug}.log"
   exit "$status"
 fi

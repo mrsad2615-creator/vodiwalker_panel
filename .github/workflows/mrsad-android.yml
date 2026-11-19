@@ -118,17 +118,7 @@ jobs:
           arch: x86_64
           emulator-boot-timeout: 420
           disable-animations: true
-          script: |
-            cd mrsad
-            ./gradlew --console=plain --no-daemon :app:connectedDebugAndroidTest > ui-test.log 2>&1 || {
-              echo "===== INSTRUMENTED TEST FAILURE ====="
-              tail -120 ui-test.log
-              echo "===== TEST XML FAILURES ====="
-              grep -r -h -A4 "<failure" app/build/outputs/androidTest-results 2>/dev/null | head -80 || true
-              exit 1
-            }
-            echo "===== INSTRUMENTED TESTS PASSED ====="
-            grep -E "Tests on|BUILD SUCCESSFUL" ui-test.log | tail -5
+          script: cd mrsad && sh .ci/run-connected-tests.sh
       - name: Upload instrumented test reports
         if: always()
         uses: actions/upload-artifact@v4

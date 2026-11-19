@@ -66,6 +66,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import com.vodiwalker.gesture.core.datastore.UserSettingsDataSource
+import com.vodiwalker.gesture.core.designsystem.R
 import com.vodiwalker.gesture.core.designsystem.component.VodiPrimaryButton
 import com.vodiwalker.gesture.core.designsystem.component.VodiSecondaryButton
 import com.vodiwalker.gesture.core.designsystem.text.PersianText

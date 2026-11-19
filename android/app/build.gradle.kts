@@ -113,13 +113,17 @@ android {
     }
 
     afterEvaluate {
+        val raw = ciKeystorePath
+        logger.lifecycle(
+            "vodigesture signing: property=${raw ?: "<unset>"} " +
+                "resolved=${ciKeystoreFile?.absolutePath ?: "<none>"} " +
+                "exists=${ciKeystoreFile?.exists() ?: false} " +
+                "requested=$ciSigningRequested",
+        )
         if (ciSigningRequested) {
             check(ciKeystoreFile!!.exists()) {
-                "vodigesture.ciKeystore=${ciKeystoreFile.absolutePath} was requested but does not exist"
+                "vodigesture.ciKeystore=${ciKeystoreFile.absolutePath} does not exist"
             }
-            logger.lifecycle(
-                "CI signing enabled with keystore ${ciKeystoreFile.absolutePath} (${ciKeystoreFile.length()} bytes)",
-            )
         }
     }
 

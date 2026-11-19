@@ -46,6 +46,7 @@ import com.vodiwalker.gesture.core.common.MonotonicClock
 import com.vodiwalker.gesture.core.common.SyntheticGestureGuard
 import com.vodiwalker.gesture.core.datastore.DarkThemeMode
 import com.vodiwalker.gesture.core.datastore.UserSettingsDataSource
+import com.vodiwalker.gesture.core.designsystem.R
 import com.vodiwalker.gesture.core.designsystem.theme.VodiGestureTheme
 import com.vodiwalker.gesture.core.model.ExecutionTelemetryRepository
 import com.vodiwalker.gesture.engine.gesture.HybridGestureEngine

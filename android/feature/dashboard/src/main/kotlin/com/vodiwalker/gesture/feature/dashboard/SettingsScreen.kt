@@ -23,7 +23,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.vodiwalker.gesture.R
+import com.vodiwalker.gesture.core.designsystem.R
 import com.vodiwalker.gesture.core.designsystem.component.VodiPrimaryButton
 import com.vodiwalker.gesture.core.designsystem.component.VodiSection
 import com.vodiwalker.gesture.core.designsystem.text.PersianText

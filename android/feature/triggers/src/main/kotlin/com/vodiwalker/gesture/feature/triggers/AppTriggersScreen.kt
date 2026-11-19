@@ -30,7 +30,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
-import com.vodiwalker.gesture.R
+import com.vodiwalker.gesture.core.designsystem.R
 import com.vodiwalker.gesture.core.designsystem.component.VodiEmptyState
 import com.vodiwalker.gesture.core.model.ActionGraphRepository
 import com.vodiwalker.gesture.core.model.AppTriggerRule

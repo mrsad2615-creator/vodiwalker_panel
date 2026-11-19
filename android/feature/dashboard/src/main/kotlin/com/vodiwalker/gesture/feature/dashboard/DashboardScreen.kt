@@ -38,7 +38,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
-import com.vodiwalker.gesture.R
+import com.vodiwalker.gesture.core.designsystem.R
 import com.vodiwalker.gesture.core.datastore.DarkThemeMode
 import com.vodiwalker.gesture.core.datastore.UserSettingsDataSource
 import com.vodiwalker.gesture.core.designsystem.component.StatusTone

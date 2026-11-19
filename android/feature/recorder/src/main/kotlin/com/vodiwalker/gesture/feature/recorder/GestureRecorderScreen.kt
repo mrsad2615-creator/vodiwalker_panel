@@ -31,7 +31,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
-import com.vodiwalker.gesture.R
+import com.vodiwalker.gesture.core.designsystem.R
 import com.vodiwalker.gesture.core.common.AppResult
 import com.vodiwalker.gesture.core.common.GestureError
 import com.vodiwalker.gesture.core.designsystem.component.CinematicGestureCanvas

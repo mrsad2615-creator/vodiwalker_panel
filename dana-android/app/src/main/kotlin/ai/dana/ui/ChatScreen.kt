@@ -22,6 +22,7 @@ import ai.dana.domain.ProviderProfile
 import ai.dana.domain.ProviderProtocol
 import ai.dana.domain.RouterFreeModel
 import ai.dana.localai.DeviceModel
+import ai.dana.localai.DeviceModels
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement

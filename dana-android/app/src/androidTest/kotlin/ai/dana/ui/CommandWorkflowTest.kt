@@ -27,6 +27,7 @@ import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTextReplacement
 import androidx.lifecycle.ViewModelProvider
+import androidx.test.espresso.Espresso.closeSoftKeyboard
 import androidx.test.espresso.intent.Intents
 import androidx.test.espresso.intent.matcher.IntentMatchers.hasAction
 import androidx.test.espresso.intent.matcher.IntentMatchers.hasExtra
@@ -134,6 +135,9 @@ internal class WorkflowUi(private val compose: AndroidComposeTestRule<ActivitySc
     }
     fun enter(id: Int, value: String, scroll: Boolean = false, list: String? = null) {
         find(hasText(text(id)) and hasSetTextAction(), scroll, list).performTextReplacement(value)
+        // Release the IME viewport just as a user can before scrolling to the reviewed action.
+        closeSoftKeyboard()
+        compose.waitForIdle()
     }
     fun find(matcher: SemanticsMatcher, scroll: Boolean = false, list: String? = null): androidx.compose.ui.test.SemanticsNodeInteraction {
         if (list != null) {

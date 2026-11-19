@@ -37,9 +37,11 @@ class InstrumentTest {
         ui.onAllNodesWithText("Select")[0].performScrollTo().performClick()
         val app = ui.activity.application as Studio
         runBlocking {
-            app.options.data.first {
-                it[stringPreferencesKey("sound")] != null &&
-                    it[stringPreferencesKey("theme")] == "Aurora"
+            kotlinx.coroutines.withTimeout(10000) {
+                app.options.data.first {
+                    it[stringPreferencesKey("sound")] == "Digital" &&
+                        it[stringPreferencesKey("theme")] == "Aurora"
+                }
             }
         }
     }

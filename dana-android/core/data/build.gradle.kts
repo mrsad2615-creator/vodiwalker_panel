@@ -8,6 +8,11 @@ plugins {
 // These are public Supabase client settings, not SMTP or service-role credentials.
 val danaEmailUrl = providers.environmentVariable("DANA_EMAIL_PROJECT_URL").orElse("").get().trim().removeSuffix("/")
 val danaEmailKey = providers.environmentVariable("DANA_EMAIL_PUBLISHABLE_KEY").orElse("").get().trim()
+val danaGateway = providers.environmentVariable("DANA_GATEWAY_URL").orElse("").get().trim().removeSuffix("/")
+require(danaGateway.isEmpty() || (danaEmailUrl.isNotEmpty() &&
+    Regex("https://[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*\\.[a-zA-Z]{2,63}").matches(danaGateway) && danaGateway.length <= 261)) {
+    "DANA_GATEWAY_URL must be one HTTPS origin and requires the fixed email project configuration."
+}
 require((danaEmailUrl.isEmpty() && danaEmailKey.isEmpty()) ||
     (Regex("https://[a-z0-9]{20}\\.supabase\\.co").matches(danaEmailUrl) &&
         Regex("sb_publishable_[a-zA-Z0-9_-]{16,96}").matches(danaEmailKey))) {
@@ -23,6 +28,7 @@ android {
     defaultConfig {
         buildConfigField("String", "EMAIL_PROJECT_URL", "\"$danaEmailUrl\"")
         buildConfigField("String", "EMAIL_PUBLISHABLE_KEY", "\"$danaEmailKey\"")
+        buildConfigField("String", "MANAGED_GATEWAY_URL", "\"$danaGateway\"")
         minSdk = libs.versions.min.sdk.get().toInt()
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

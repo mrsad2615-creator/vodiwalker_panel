@@ -2,6 +2,7 @@ package ai.dana.ui
 
 import ai.dana.R
 import ai.dana.domain.CloudEngine
+import ai.dana.domain.ManagedKind
 import ai.dana.domain.NetworkStatus
 import ai.dana.domain.PhotoSupport
 import ai.dana.domain.acceptsChat
@@ -53,6 +54,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -80,31 +82,43 @@ private val rootTabs = listOf(
 @Composable
 internal fun DanaApp(
     model: DanaViewModel, chat: ChatViewModel, media: MediaViewModel,
-    account: () -> AccountViewModel, art: () -> ArtViewModel, phone: () -> PhoneViewModel,
+    account: () -> AccountViewModel, art: () -> ArtViewModel, phone: () -> PhoneViewModel, managed: ManagedWorkspaceViewModel,
     openMessageReview: () -> Unit,
 ) {
     val state by model.uiState.collectAsStateWithLifecycle()
     val catalog by model.routerModels.collectAsStateWithLifecycle()
     val session = state.session
+    val managedState by managed.state.collectAsStateWithLifecycle()
+    val hosted = managed.configured
+    val planner = managedState.catalog?.let { catalog -> catalog.planner?.takeIf { !managedState.offline && it.units <= catalog.dailyRemaining } }
+    var showLocal by rememberSaveable { mutableStateOf(false) }
+    var afterLogin by remember { mutableStateOf<DashboardTab?>(null) }
     val offline = (state.offline as? Reading.Ready)?.value != false
     val ime = WindowInsets.ime.getBottom(LocalDensity.current) > 0
     val secondary = rootTabs.none { it.first == session.tab }
     val dispatch: (DanaIntent) -> Unit = { intent ->
         if (intent is DanaIntent.Navigate && !session.busy) {
-            if (session.tab != intent.tab) when (session.tab) {
-                DashboardTab.CHAT -> { chat.background(); media.close() }
-                DashboardTab.ACCOUNT -> account().background()
-                DashboardTab.ART -> art().stop()
-                DashboardTab.PHONE -> phone().cancel()
-                else -> Unit
+            if (session.tab != intent.tab) {
+                when (session.tab) {
+                    DashboardTab.CHAT -> { chat.background(); media.close(); if (hosted) managed.stop() }
+                    DashboardTab.ACCOUNT -> { account().background(); afterLogin = null }
+                    DashboardTab.ART -> if (hosted) managed.stop() else art().stop()
+                    DashboardTab.PHONE -> phone().cancel()
+                    else -> Unit
+                }
             }
         }
         model.dispatch(intent)
     }
     val openSettings = { dispatch(DanaIntent.Navigate(DashboardTab.SETTINGS)) }
-    val back = { dispatch(DanaIntent.Navigate(if (session.tab in setOf(DashboardTab.NOTES, DashboardTab.COMPARE, DashboardTab.ACCOUNT))
-        DashboardTab.SETTINGS else DashboardTab.CHAT)) }
+    val back = { dispatch(DanaIntent.Navigate(if (session.tab == DashboardTab.ACCOUNT && afterLogin != null) checkNotNull(afterLogin)
+        else if (session.tab in setOf(DashboardTab.NOTES, DashboardTab.COMPARE, DashboardTab.ACCOUNT)) DashboardTab.SETTINGS else DashboardTab.CHAT)) }
     val allowNetwork = { dispatch(DanaIntent.SetOffline(false)) }
+    val openLogin = {
+        afterLogin = session.tab
+        if (offline) allowNetwork() // Only from the explicitly online email button; no code is sent yet.
+        dispatch(DanaIntent.Navigate(DashboardTab.ACCOUNT))
+    }
     BackHandler(enabled = session.tab != DashboardTab.CHAT && session.editor == null && !session.busy && !ime, onBack = back)
     Scaffold(
         containerColor = Obsidian,
@@ -135,11 +149,19 @@ internal fun DanaApp(
         Box(Modifier.fillMaxSize().padding(insets).consumeWindowInsets(insets), contentAlignment = Alignment.TopCenter) {
             key(session.tab) {
                 if (session.tab == DashboardTab.CHAT) {
-                    ChatScreen(chat, media, state, onSettings = openSettings,
-                        catalog = catalog, dispatch = dispatch,
-                        onEnableNetwork = allowNetwork, modifier = Modifier.widthIn(max = 740.dp).imePadding())
+                    if (hosted && !showLocal) ManagedWorkspaceScreen(managed, managedState, ManagedKind.CHAT, openLogin, allowNetwork,
+                        openLocal = { showLocal = true; managed.stop() }, modifier = Modifier.widthIn(max = 740.dp).imePadding())
+                    else Column(Modifier.widthIn(max = 740.dp).imePadding().fillMaxSize()) {
+                        if (hosted) TextButton(onClick = { chat.background(); media.close(); showLocal = false }) {
+                            Text(stringResource(R.string.managed_open_online))
+                        }
+                        ChatScreen(chat, media, state, onSettings = openSettings, catalog = catalog, dispatch = dispatch,
+                            onEnableNetwork = allowNetwork, modifier = Modifier.weight(1f), localOnly = hosted)
+                    }
                 } else if (session.tab == DashboardTab.ART) {
-                    ArtScreen(art(), state, dispatch, Modifier.widthIn(max = 680.dp).imePadding())
+                    if (hosted) ManagedWorkspaceScreen(managed, managedState, ManagedKind.IMAGE, openLogin, allowNetwork,
+                        modifier = Modifier.widthIn(max = 680.dp).imePadding())
+                    else ArtScreen(art(), state, dispatch, Modifier.widthIn(max = 680.dp).imePadding())
                 } else LazyColumn(
                     modifier = Modifier.widthIn(max = 680.dp).fillMaxSize().imePadding(),
                     contentPadding = PaddingValues(start = 18.dp, end = 18.dp, top = 8.dp, bottom = 26.dp),
@@ -156,15 +178,18 @@ internal fun DanaApp(
                         DashboardTab.CHAT, DashboardTab.ART -> Unit
                         DashboardTab.COMPARE -> comparison(state, dispatch)
                         DashboardTab.NOTES -> notes(state, dispatch)
-                        DashboardTab.SETTINGS -> settings(state, dispatch)
-                        DashboardTab.PHONE -> item { PhoneScreen(phone()) }
-                        DashboardTab.ACCOUNT -> item { AccountScreen(account(), offline, !session.busy && state.offline is Reading.Ready, allowNetwork) }
+                        DashboardTab.SETTINGS -> if (hosted) managedSettings(state, dispatch) else settings(state, dispatch)
+                        DashboardTab.PHONE -> item { PhoneScreen(phone(), planner, if (hosted && !managedState.resumed) openLogin else null) }
+                        DashboardTab.ACCOUNT -> item {
+                            AccountScreen(account(), offline, !session.busy && state.offline is Reading.Ready, allowNetwork,
+                                managed = hosted, onEntered = afterLogin?.let { tab -> { managed.refresh(); dispatch(DanaIntent.Navigate(tab)) } })
+                        }
                     }
                 }
             }
         }
     }
-    if (session.tab == DashboardTab.PHONE) PhoneActionReview(phone())
+    if (session.tab == DashboardTab.PHONE) PhoneActionReview(phone(), planner)
     session.editor?.let { editor ->
         key(editor) { DanaEditor(editor, session, offline, dispatch) }
     }
@@ -218,6 +243,18 @@ private fun LazyListScope.notes(state: DashboardState, dispatch: (DanaIntent) ->
                     )
                 }
             }
+        }
+    }
+}
+
+private fun LazyListScope.managedSettings(state: DashboardState, dispatch: (DanaIntent) -> Unit) {
+    item { SectionIntro(R.string.workspace_settings, R.string.managed_email_help) }
+    item {
+        GlassCard(Modifier.fillMaxWidth()) {
+            Button(onClick = { dispatch(DanaIntent.Navigate(DashboardTab.ACCOUNT)) }) { Text(stringResource(R.string.account_title)) }
+            val offline = (state.offline as? Reading.Ready)?.value
+            if (offline != null) ToggleLine(R.string.offline_title, offline, !state.session.busy) { dispatch(DanaIntent.SetOffline(it)) }
+            TextButton(onClick = { dispatch(DanaIntent.Navigate(DashboardTab.NOTES)) }) { Text(stringResource(R.string.tab_notes)) }
         }
     }
 }

@@ -13,6 +13,7 @@ import ai.dana.domain.EmailProject
 import ai.dana.domain.PrivacyPreferences
 import ai.dana.domain.SignOutResult
 import android.content.Context
+import android.os.SystemClock
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
@@ -21,6 +22,7 @@ import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
@@ -47,6 +49,18 @@ internal class StoredEmailAccounts(
     private val refresh = stringPreferencesKey("protected_refresh")
     private val sessionOrigin = stringPreferencesKey("session_project_url")
 
+    // Access tokens are memory-only. The refresh token stays scoped to the verified project in Keystore.
+    private class LiveAccess(val token: String, val identity: AccountIdentity, val untilMs: Long, val epoch: Long)
+    private var live: LiveAccess? = null
+    private val sessionEpoch = MutableStateFlow(0L)
+
+    private fun invalidateAccess() {
+        live = null
+        sessionEpoch.value++
+    }
+
+    private fun usableAccess(): LiveAccess? = live?.takeIf { SystemClock.elapsedRealtime() < it.untilMs }
+
     private fun project(data: Preferences): EmailProject? = fixed ?: EmailProject.parse(data[projectUrl].orEmpty(), data[projectKey].orEmpty())
 
     override val setup = store.data.map { data ->
@@ -60,6 +74,7 @@ internal class StoredEmailAccounts(
         store.edit { data ->
             val prior = project(data)
             if (prior == null || prior.origin != newProject.origin || prior.publishableKey != newProject.publishableKey) {
+                invalidateAccess()
                 data.remove(refresh)
                 data.remove(sessionOrigin)
             }
@@ -71,6 +86,7 @@ internal class StoredEmailAccounts(
 
     override suspend fun removeProject() = lock.withLock {
         if (fixed != null) throw AccountFailure(AccountProblem.SETUP)
+        invalidateAccess()
         store.edit { it.clear() }
         Unit
     }
@@ -86,19 +102,39 @@ internal class StoredEmailAccounts(
         val otp = AccountInput.otp(code) ?: throw AccountFailure(AccountProblem.INVALID_CODE)
         val project = requireProject(store.data.first())
         // The UI cannot mark an address verified from a request to send a code.
-        online { keep(project, api.verify(project, to, otp)) }
+        online {
+            val session = api.verify(project, to, otp)
+            invalidateAccess()
+            keep(project, session)
+        }
     }
 
-    override suspend fun resume(): AccountIdentity = lock.withLock {
+    override suspend fun resume(): AccountIdentity = lock.withLock { online { refreshAccess().identity } }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    internal suspend fun <T> withManagedAccess(operation: suspend (String) -> T): T {
+        if (fixed == null) throw AccountFailure(AccountProblem.SETUP)
+        return online {
+            val snapshot = lock.withLock { usableAccess() ?: refreshAccess() }
+            sessionEpoch.mapLatest { epoch ->
+                if (epoch != snapshot.epoch) throw AccountFailure(AccountProblem.EXPIRED_SESSION)
+                operation(snapshot.token)
+            }.first()
+        }
+    }
+
+    /** Call with the mutex held and a live online guard. */
+    private suspend fun refreshAccess(): LiveAccess {
         val state = store.data.first()
         val project = requireProject(state)
         val token = readRefresh(state, project) ?: throw AccountFailure(AccountProblem.EXPIRED_SESSION)
         try {
-            online { keep(project, api.refresh(project, token)) }
+            keep(project, api.refresh(project, token))
         } catch (fault: AccountFailure) {
             if (fault.problem == AccountProblem.EXPIRED_SESSION) clearRefresh()
             throw fault
         }
+        return checkNotNull(live)
     }
 
     override suspend fun signOut(): SignOutResult = lock.withLock {
@@ -116,6 +152,7 @@ internal class StoredEmailAccounts(
     }
 
     private suspend fun clearRefresh() {
+        invalidateAccess()
         store.edit { it.remove(refresh); it.remove(sessionOrigin) }
     }
 
@@ -128,7 +165,10 @@ internal class StoredEmailAccounts(
             val sealed = vault.seal(ENTRY, scope(project), session.refresh)
             store.edit { it[refresh] = sealed; it[sessionOrigin] = project.origin }
         }
-        return AccountIdentity(session.email)
+        val identity = AccountIdentity(session.email)
+        val safeSeconds = ((session.expiresIn ?: 45L) - 15L).coerceIn(0L, 300L)
+        live = LiveAccess(session.access, identity, SystemClock.elapsedRealtime() + safeSeconds * 1_000L, sessionEpoch.value)
+        return identity
     }
 
     private fun scope(project: EmailProject) = "${project.origin}\u0000${project.publishableKey}"

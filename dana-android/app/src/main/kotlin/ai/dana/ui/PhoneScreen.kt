@@ -5,6 +5,10 @@ import ai.dana.domain.DurationTarget
 import ai.dana.domain.LocalAction
 import ai.dana.domain.LocalCommands
 import ai.dana.domain.LocalText
+import ai.dana.domain.ManagedCloud
+import ai.dana.domain.ManagedFailure
+import ai.dana.domain.ManagedModel
+import ai.dana.domain.ReviewMessage
 import ai.dana.domain.NotesRepository
 import ai.dana.domain.PhoneIntent
 import ai.dana.domain.PhoneUtterances
@@ -16,6 +20,7 @@ import android.Manifest
 import android.app.TimePickerDialog
 import android.os.SystemClock
 import java.time.LocalTime
+import java.util.UUID
 import androidx.annotation.StringRes
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
@@ -63,12 +68,14 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 internal class PhoneApproval(val action: LocalAction, val expiresAtMs: Long)
+internal class CloudPhoneReview(val model: ManagedModel, val prompt: String, val expiresAtMs: Long, val id: String = UUID.randomUUID().toString())
 
 internal data class PhoneState(
     val draft: String = "",
@@ -76,42 +83,48 @@ internal data class PhoneState(
     val pending: PhoneApproval? = null,
     val durationTarget: DurationTarget? = null,
     val busy: Boolean = false,
+    val offerCloud: Boolean = false,
+    val cloudReview: CloudPhoneReview? = null,
+    val planning: CloudPhoneReview? = null,
 ) {
+    val working get() = busy || planning != null
     override fun toString() = "PhoneState(pending=${pending != null}, busy=$busy)"
 }
 
 @HiltViewModel
-internal class PhoneViewModel @Inject constructor(private val notes: NotesRepository) : ViewModel() {
+internal class PhoneViewModel @Inject constructor(private val notes: NotesRepository, private val cloud: ManagedCloud) : ViewModel() {
     private val mutable = MutableStateFlow(PhoneState())
     val state = mutable.asStateFlow()
+    private var planningJob: Job? = null
 
     @MainThread fun draft(value: String) {
-        if (!mutable.value.busy && value.length <= LocalText.NOTE_LIMIT) {
-            mutable.update { it.copy(draft = value, status = null, pending = null) }
+        if (!mutable.value.working && value.length <= LocalText.NOTE_LIMIT) {
+            mutable.update { it.copy(draft = value, status = null, pending = null, offerCloud = false, cloudReview = null) }
         }
     }
 
     @MainThread fun speech(value: String, execute: (LocalAction) -> DeviceOutcome) {
-        if (value.isBlank() || value.length > LocalText.NOTE_LIMIT || mutable.value.busy || mutable.value.pending != null) return
+        if (value.isBlank() || value.length > LocalText.NOTE_LIMIT || mutable.value.working || mutable.value.pending != null || mutable.value.cloudReview != null) return
         draft(value)
         submit(execute)
     }
 
     @MainThread fun submit(execute: (LocalAction) -> DeviceOutcome) {
         val current = mutable.value
-        if (current.busy || current.pending != null || current.draft.isBlank()) return
+        if (current.working || current.pending != null || current.cloudReview != null || current.draft.isBlank()) return
         val withDuration = current.durationTarget?.let { target -> PhoneUtterances.duration(current.draft)?.let(target::action) }
         val intent = withDuration?.let(PhoneIntent::Propose) ?: PhoneUtterances.interpret(current.draft)
         when (intent) {
             is PhoneIntent.Propose -> {
-                mutable.update { it.copy(durationTarget = null) }
+                mutable.update { it.copy(durationTarget = null, offerCloud = false) }
                 val action = intent.action
                 if (action == LocalAction.Battery || action == LocalAction.MediaVolume) run(action, execute, clear = true)
                 else propose(action)
             }
-            is PhoneIntent.NeedDuration -> mutable.update { it.copy(durationTarget = intent.target, draft = "", status = null) }
-            PhoneIntent.Unknown -> result(DeviceOutcome(if (current.durationTarget == null) R.string.workspace_unrecognized
-                else R.string.phone_duration_clarify, ok = false), false)
+            is PhoneIntent.NeedDuration -> askDuration(intent.target)
+            PhoneIntent.Unknown -> mutable.update { it.copy(status = DeviceOutcome(if (current.durationTarget == null) R.string.workspace_unrecognized
+                else R.string.phone_duration_clarify, ok = false), offerCloud = cloud.configured && current.durationTarget == null &&
+                ReviewMessage.acceptsDraft(current.draft) && current.draft.length <= ManagedCloud.COMMAND_LIMIT) }
         }
     }
 
@@ -119,7 +132,53 @@ internal class PhoneViewModel @Inject constructor(private val notes: NotesReposi
         mutable.update { it.copy(pending = PhoneApproval(action, SystemClock.elapsedRealtime() + 45_000L), status = null) }
     }
 
-    @MainThread fun cancel() { mutable.update { it.copy(pending = null, durationTarget = null) } }
+    private fun askDuration(target: DurationTarget) {
+        mutable.update { it.copy(durationTarget = target, draft = "", status = null, offerCloud = false) }
+    }
+
+    @MainThread fun reviewOnline(model: ManagedModel) {
+        val state = mutable.value
+        if (!cloud.configured || !state.offerCloud || state.working || state.pending != null || state.cloudReview != null) return
+        val prompt = state.draft.trim().takeIf { it.isNotBlank() && it.length <= ManagedCloud.COMMAND_LIMIT && ReviewMessage.acceptsDraft(it) } ?: return
+        mutable.update { it.copy(cloudReview = CloudPhoneReview(model, prompt, SystemClock.elapsedRealtime() + 45_000L)) }
+    }
+
+    @MainThread fun dismissOnline() { mutable.update { it.copy(cloudReview = null) } }
+
+    @MainThread fun interpretOnline(review: CloudPhoneReview, currentModel: ManagedModel?) {
+        val state = mutable.value
+        if (state.cloudReview !== review || state.working || review.model != currentModel) return
+        dismissOnline()
+        if (SystemClock.elapsedRealtime() >= review.expiresAtMs) {
+            result(DeviceOutcome(R.string.phone_approval_expired, ok = false), false)
+            return
+        }
+        mutable.update { it.copy(planning = review, status = null, offerCloud = false) }
+        planningJob = viewModelScope.launch {
+            try {
+                val answer = cloud.command(review.model, review.prompt, review.id)
+                if (mutable.value.planning !== review) return@launch
+                when (answer) {
+                    is PhoneIntent.Propose -> propose(answer.action) // Even an online read is presented for confirmation.
+                    is PhoneIntent.NeedDuration -> askDuration(answer.target)
+                    PhoneIntent.Unknown -> result(DeviceOutcome(R.string.workspace_unrecognized, ok = false), false)
+                }
+            } catch (canceled: CancellationException) {
+                throw canceled
+            } catch (error: Exception) {
+                if (mutable.value.planning === review) result(DeviceOutcome(
+                    (error as? ManagedFailure)?.problem?.let(::managedError) ?: R.string.managed_network_error, ok = false), false)
+            } finally {
+                if (mutable.value.planning === review) mutable.update { it.copy(planning = null) }
+            }
+        }
+    }
+
+    @MainThread fun cancel() {
+        mutable.update { it.copy(pending = null, durationTarget = null, planning = null, cloudReview = null, offerCloud = false) }
+        planningJob?.cancel()
+        planningJob = null
+    }
 
     @MainThread fun confirm(approval: PhoneApproval, execute: (LocalAction) -> DeviceOutcome) {
         if (mutable.value.pending !== approval) return
@@ -130,7 +189,7 @@ internal class PhoneViewModel @Inject constructor(private val notes: NotesReposi
     }
 
     @MainThread fun run(action: LocalAction, execute: (LocalAction) -> DeviceOutcome, clear: Boolean = false) {
-        if (mutable.value.busy) return
+        if (mutable.value.working) return
         if (action is LocalAction.Note) {
             mutable.update { it.copy(busy = true) }
             viewModelScope.launch {
@@ -150,7 +209,7 @@ internal class PhoneViewModel @Inject constructor(private val notes: NotesReposi
 }
 
 @Composable
-internal fun PhoneScreen(model: PhoneViewModel) {
+internal fun PhoneScreen(model: PhoneViewModel, planner: ManagedModel? = null, login: (() -> Unit)? = null) {
     val state by model.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val focus = LocalFocusManager.current
@@ -172,7 +231,7 @@ internal fun PhoneScreen(model: PhoneViewModel) {
         SectionIntro(R.string.workspace_phone_title, R.string.workspace_phone_intro)
         GlassCard(Modifier.fillMaxWidth()) {
             Text(stringResource(R.string.phone_quick_title), style = MaterialTheme.typography.titleMedium)
-            PhoneRow(R.string.phone_battery, R.string.phone_media_volume, !state.busy,
+            PhoneRow(R.string.phone_battery, R.string.phone_media_volume, !state.working,
                 { run(LocalAction.Battery) }, { run(LocalAction.MediaVolume) })
             state.status?.takeUnless { !it.ok && state.draft.isNotBlank() }?.let { outcome ->
                 if (!outcome.ok) ReadError(outcome.message) else Text(
@@ -180,7 +239,7 @@ internal fun PhoneScreen(model: PhoneViewModel) {
                     color = Mint, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
                 )
             }
-            PhoneRow(R.string.phone_timer_button, R.string.phone_alarm_button, !state.busy,
+            PhoneRow(R.string.phone_timer_button, R.string.phone_alarm_button, !state.working,
                 { focus.clearFocus(); voice.close(); timer = true },
                 {
                     focus.clearFocus(); voice.close()
@@ -189,10 +248,10 @@ internal fun PhoneScreen(model: PhoneViewModel) {
                         now.hour, now.minute, android.text.format.DateFormat.is24HourFormat(context)).show()
                 })
             val newEvent = stringResource(R.string.phone_new_event)
-            PhoneRow(R.string.phone_new_event, R.string.phone_open_clock, !state.busy,
+            PhoneRow(R.string.phone_new_event, R.string.phone_open_clock, !state.working,
                 { run(LocalAction.CalendarDraft(newEvent)) }, { run(LocalAction.Clock) })
         }
-        AssistantSetup(enabled = !state.busy && state.pending == null, beforeLaunch = { focus.clearFocus(); voice.close(); model.cancel() })
+        AssistantSetup(enabled = !state.working && state.pending == null, beforeLaunch = { focus.clearFocus(); voice.close(); model.cancel() })
         GlassCard(Modifier.fillMaxWidth()) {
             Text(stringResource(R.string.phone_command_title), style = MaterialTheme.typography.titleMedium)
             state.durationTarget?.let { target ->
@@ -203,39 +262,50 @@ internal fun PhoneScreen(model: PhoneViewModel) {
                 }), color = Ice, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
                 TextButton(onClick = model::cancel) { Text(stringResource(R.string.cancel)) }
             }
-            OutlinedTextField(state.draft, model::draft, Modifier.fillMaxWidth(), enabled = !state.busy, maxLines = 3,
+            OutlinedTextField(state.draft, model::draft, Modifier.fillMaxWidth(), enabled = !state.working, maxLines = 3,
                 label = { Text(stringResource(R.string.workspace_phone_prompt)) })
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                 Button(onClick = { focus.clearFocus(); voice.close(); model.submit(execute) },
-                    enabled = !state.busy && !voice.state.listening && state.draft.isNotBlank(),
+                    enabled = !state.working && !voice.state.listening && state.draft.isNotBlank(),
                     modifier = Modifier.weight(1f).heightIn(min = 48.dp)) { Text(stringResource(R.string.workspace_run)) }
-                VoiceButton(voice, !state.busy, useSystemSpeech = false, turnMode = false, compact = true, onText = { finalText ->
+                VoiceButton(voice, !state.working, useSystemSpeech = false, turnMode = false, compact = true, onText = { finalText ->
                     model.speech(finalText, execute)
                 })
             }
             VoiceStatus(voice.state)
             // Keep typed results close to the field as well; the first status card may have scrolled away.
             state.status?.takeIf { state.draft.isNotBlank() && !it.ok }?.let { ReadError(it.message) }
+            if (state.planning != null) {
+                Text(stringResource(R.string.managed_command_running), color = Titanium)
+                TextButton(model::cancel) { Text(stringResource(R.string.compare_stop)) }
+            } else if (state.offerCloud) {
+                if (planner != null) {
+                    Text(stringResource(R.string.managed_command_help), color = Titanium)
+                    OutlinedButton(onClick = { focus.clearFocus(); voice.close(); model.reviewOnline(planner) }, modifier = Modifier.fillMaxWidth()) {
+                        Text(stringResource(R.string.managed_command_button))
+                    }
+                } else if (login != null) TextButton(onClick = login) { Text(stringResource(R.string.managed_command_login)) }
+            }
             TextButton(onClick = { examples = !examples }, modifier = Modifier.heightIn(min = 48.dp)) {
                 Text(stringResource(R.string.workspace_examples))
             }
             if (examples) listOf(R.string.cmd_timer, R.string.workspace_settings_example, R.string.cmd_event_timed,
                 R.string.phone_sms_example, R.string.phone_dial_example).forEach { label ->
                 val example = stringResource(label)
-                FilterChip(selected = false, onClick = { model.draft(example) }, enabled = !state.busy,
+                FilterChip(selected = false, onClick = { model.draft(example) }, enabled = !state.working,
                     modifier = Modifier.heightIn(min = 48.dp), label = { Text(example) })
             }
         }
         GlassCard(Modifier.fillMaxWidth()) {
             Text(stringResource(R.string.workspace_controls), style = MaterialTheme.typography.titleMedium)
-            PhoneRow(R.string.workspace_quieter, R.string.workspace_louder, !state.busy,
+            PhoneRow(R.string.workspace_quieter, R.string.workspace_louder, !state.working,
                 { run(LocalAction.VolumeStep.LOWER) }, { run(LocalAction.VolumeStep.RAISE) })
-            if (flash) PhoneRow(R.string.phone_torch_on, R.string.phone_torch_off, !state.busy,
+            if (flash) PhoneRow(R.string.phone_torch_on, R.string.phone_torch_off, !state.working,
                 { run(LocalAction.Torch(true)) }, { run(LocalAction.Torch(false)) })
             else Text(stringResource(R.string.workspace_no_flash), style = MaterialTheme.typography.bodySmall, color = Titanium)
-            PhoneRow(R.string.phone_internet, R.string.chat_action_bluetooth, !state.busy,
+            PhoneRow(R.string.phone_internet, R.string.chat_action_bluetooth, !state.working,
                 { run(LocalAction.Internet) }, { run(LocalAction.Bluetooth) })
-            PhoneRow(R.string.chat_action_sound, R.string.phone_settings, !state.busy,
+            PhoneRow(R.string.chat_action_sound, R.string.phone_settings, !state.working,
                 { run(LocalAction.Sound) }, { run(LocalAction.Panel.SETTINGS) })
         }
         TextButton(onClick = { access = !access }, modifier = Modifier.heightIn(min = 48.dp)) {
@@ -247,7 +317,7 @@ internal fun PhoneScreen(model: PhoneViewModel) {
 
 /** Stable dialog host, outside the scrolling content that can be recycled during IME transitions. */
 @Composable
-internal fun PhoneActionReview(model: PhoneViewModel) {
+internal fun PhoneActionReview(model: PhoneViewModel, planner: ManagedModel? = null) {
     val state by model.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
     state.pending?.let { approval ->
@@ -274,6 +344,20 @@ internal fun PhoneActionReview(model: PhoneViewModel) {
                     is LocalAction.WifiReminder, is LocalAction.Timer, is LocalAction.Alarm -> R.string.phone_submit_clock
                     else -> R.string.chat_execute
                 }))
+            } })
+    }
+    state.cloudReview?.let { review ->
+        AlertDialog(onDismissRequest = model::dismissOnline, properties = DialogProperties(securePolicy = SecureFlagPolicy.SecureOn),
+            title = { Text(stringResource(R.string.managed_command_button)) }, text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("${review.model.provider} · ${review.model.title}", style = MaterialTheme.typography.titleMedium)
+                    Text(stringResource(R.string.managed_preview_help, faDigits(review.model.units)), color = Titanium)
+                    Text(stringResource(R.string.managed_command_review), color = Titanium)
+                    Text(review.prompt)
+                }
+            }, dismissButton = { TextButton(model::dismissOnline) { Text(stringResource(R.string.cancel)) } },
+            confirmButton = { TextButton(enabled = review.model == planner, onClick = { model.interpretOnline(review, planner) }) {
+                Text(stringResource(R.string.message_send_once))
             } })
     }
     DisposableEffect(model) { onDispose { model.cancel() } }

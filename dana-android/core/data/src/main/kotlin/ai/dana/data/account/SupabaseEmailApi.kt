@@ -12,6 +12,8 @@ import java.io.IOException
 import javax.net.ssl.SSLException
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.longOrNull
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import okhttp3.Call
@@ -25,7 +27,7 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import okio.BufferedSink
 
-internal class VerifiedSession(val email: String, val refresh: ApiCredential, val access: String) {
+internal class VerifiedSession(val email: String, val refresh: ApiCredential, val access: String, val expiresIn: Long?) {
     override fun toString() = "VerifiedSession([redacted])"
 }
 
@@ -117,7 +119,8 @@ internal class SupabaseEmailApi(private val client: OkHttpClient) {
         if (email == null || confirmedAt.isNullOrBlank() || (expected != null && !expected.equals(email, true)) ||
             !type.equals("bearer", true) || access == null || access.length !in 1..8192 || access.any { it !in '!'..'~' } || refresh == null
         ) throw AccountFailure(AccountProblem.RESPONSE)
-        return VerifiedSession(email, ApiCredential.parse(refresh), access)
+        val expiresIn = (root["expires_in"] as? JsonPrimitive)?.longOrNull?.takeIf { it in 1..86_400 }
+        return VerifiedSession(email, ApiCredential.parse(refresh), access, expiresIn)
     }
 
     private class Once(private val delegate: RequestBody) : RequestBody() {

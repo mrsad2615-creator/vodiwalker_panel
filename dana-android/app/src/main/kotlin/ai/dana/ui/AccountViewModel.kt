@@ -70,12 +70,13 @@ internal class AccountViewModel @Inject constructor(private val accounts: EmailA
     }
 
     @MainThread
-    fun verify(code: String) {
+    fun verify(code: String, onEntered: (() -> Unit)? = null) {
         val pending = mutable.value.pending ?: return
         val clean = AccountInput.otp(code) ?: return fail(AccountProblem.INVALID_CODE)
         run {
             val verified = accounts.verify(pending.email, clean)
             mutable.update { it.copy(identity = verified, pending = null) }
+            onEntered?.invoke()
         }
     }
 
@@ -83,9 +84,10 @@ internal class AccountViewModel @Inject constructor(private val accounts: EmailA
     fun changeEmail() { if (!mutable.value.busy) mutable.update { it.copy(pending = null, problem = null) } }
 
     @MainThread
-    fun resume() = run {
+    fun resume(onEntered: (() -> Unit)? = null) = run {
         val verified = accounts.resume()
         mutable.update { it.copy(identity = verified, pending = null) }
+        onEntered?.invoke()
     }
 
     @MainThread

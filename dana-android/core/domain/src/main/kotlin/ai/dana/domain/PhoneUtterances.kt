@@ -35,9 +35,10 @@ object PhoneUtterances {
         Regex("وای فای(?: را| رو)?(?: الان| همین حالا)? $SWITCH$EXECUTE"),
         Regex("$SWITCH(?: کردن)? وای فای(?: را| رو)?$EXECUTE"),
     )
+    private const val WIFI_CLAUSE = "((?:وای فای|خاموش|روشن|قطع|وصل|غیر ?فعال|فعال) .+)"
     private val wifiBefore = listOf(
-        Regex("$AFTER $SLOT,? (.+)"),
-        Regex("(?:تا )?$SLOT $LATER,? (.+)"),
+        Regex("$AFTER $SLOT,? $WIFI_CLAUSE"),
+        Regex("(?:تا )?$SLOT $LATER,? $WIFI_CLAUSE"),
     )
     private val wifiWithin = listOf(
         Regex("وای فای(?: را| رو)? $AFTER $SLOT $SWITCH$EXECUTE"),

@@ -42,7 +42,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.delay
 
 @Composable
-internal fun AccountScreen(model: AccountViewModel, offline: Boolean, canAllow: Boolean, onAllow: () -> Unit) {
+internal fun AccountScreen(model: AccountViewModel, offline: Boolean, canAllow: Boolean, onAllow: () -> Unit,
+    managed: Boolean = false, onEntered: (() -> Unit)? = null,
+) {
     val account by model.state.collectAsStateWithLifecycle()
     val status by model.setup.collectAsStateWithLifecycle()
     var configure by remember { mutableStateOf(false) }
@@ -53,7 +55,7 @@ internal fun AccountScreen(model: AccountViewModel, offline: Boolean, canAllow: 
     val host = setup?.host
 
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        SectionIntro(R.string.account_title, R.string.account_blurb)
+        SectionIntro(R.string.account_title, if (managed) R.string.managed_email_help else R.string.account_blurb)
         if (account.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
         if (!configure) account.problem?.let { ReadError(accountMessage(it)) }
         account.signOut?.let { Text(stringResource(if (it == SignOutResult.REVOKED) R.string.account_signed_out else R.string.account_signed_out_local), color = Titanium) }
@@ -64,7 +66,7 @@ internal fun AccountScreen(model: AccountViewModel, offline: Boolean, canAllow: 
             setup == null || host == null -> GlassCard(Modifier.fillMaxWidth()) {
                 Text(stringResource(R.string.account_email_title), style = MaterialTheme.typography.titleLarge)
                 Text(stringResource(R.string.account_unconfigured), color = Titanium)
-                if (setup?.editable == true) Button(onClick = { model.clearProblem(); configure = true },
+                if (setup?.editable == true && !managed) Button(onClick = { model.clearProblem(); configure = true },
                     modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp), enabled = !account.busy) {
                     Text(stringResource(R.string.account_configure))
                 }
@@ -73,22 +75,27 @@ internal fun AccountScreen(model: AccountViewModel, offline: Boolean, canAllow: 
                 val current = account.identity
                 val pending = account.pending
                 GlassCard(Modifier.fillMaxWidth()) {
-                    Text(stringResource(R.string.account_host), style = MaterialTheme.typography.labelMedium, color = Titanium)
-                    TechnicalText(host)
+                    if (!managed) {
+                        Text(stringResource(R.string.account_host), style = MaterialTheme.typography.labelMedium, color = Titanium)
+                        TechnicalText(host)
+                    }
                     when {
                         current != null -> {
                             Text(stringResource(R.string.account_verified), style = MaterialTheme.typography.titleLarge, color = Mint)
                             TechnicalText(current.email, maxLines = 4)
+                            if (managed && onEntered != null) Button(onClick = { model.resume(onEntered) }, enabled = !offline && !account.busy) {
+                                Text(stringResource(R.string.account_continue))
+                            }
                             TextButton(enabled = !account.busy, onClick = { signOut = true }) { Text(stringResource(R.string.account_logout)) }
                         }
                         setup.canResume -> {
                             Text(stringResource(R.string.account_saved), style = MaterialTheme.typography.titleMedium)
-                            Button(onClick = model::resume, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp), enabled = !offline && !account.busy) {
+                            Button(onClick = { model.resume(onEntered) }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp), enabled = !offline && !account.busy) {
                                 Text(stringResource(R.string.account_continue))
                             }
                             TextButton(enabled = !account.busy, onClick = { signOut = true }) { Text(stringResource(R.string.account_forget)) }
                         }
-                        pending != null -> CodeForm(pending, !offline && !account.busy, model)
+                        pending != null -> CodeForm(pending, !offline && !account.busy, model, onEntered)
                         else -> {
                             Text(stringResource(R.string.account_email_title), style = MaterialTheme.typography.titleLarge)
                             Text(stringResource(R.string.account_send_help), color = Titanium)
@@ -101,7 +108,7 @@ internal fun AccountScreen(model: AccountViewModel, offline: Boolean, canAllow: 
                     }
                 }
                 if (offline && current == null) OfflinePanel(R.string.account_offline_help, canAllow && !account.busy, onAllow)
-                if (current == null && !setup.canResume && pending == null && setup.editable) {
+                if (current == null && !setup.canResume && pending == null && setup.editable && !managed) {
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         TextButton(onClick = { model.clearProblem(); configure = true }, enabled = !account.busy) { Text(stringResource(R.string.edit)) }
                         TextButton(onClick = { remove = true }, enabled = !account.busy) { Text(stringResource(R.string.account_remove_config)) }
@@ -109,7 +116,7 @@ internal fun AccountScreen(model: AccountViewModel, offline: Boolean, canAllow: 
                 }
             }
         }
-        Text(stringResource(R.string.account_data_boundary), style = MaterialTheme.typography.bodySmall, color = Titanium)
+        Text(stringResource(if (managed) R.string.managed_account_boundary else R.string.account_data_boundary), style = MaterialTheme.typography.bodySmall, color = Titanium)
     }
 
     if (configure) ProjectDialog(setup, account, { if (!account.busy) { configure = false; model.clearProblem() } }, model) { configure = false }
@@ -128,7 +135,7 @@ internal fun AccountScreen(model: AccountViewModel, offline: Boolean, canAllow: 
 }
 
 @Composable
-private fun CodeForm(pending: PendingCode, enabled: Boolean, model: AccountViewModel) {
+private fun CodeForm(pending: PendingCode, enabled: Boolean, model: AccountViewModel, onEntered: (() -> Unit)?) {
     var code by remember(pending) { mutableStateOf("") }
     var remain by remember(pending) { mutableLongStateOf(60L) }
     LaunchedEffect(pending) {
@@ -141,7 +148,7 @@ private fun CodeForm(pending: PendingCode, enabled: Boolean, model: AccountViewM
     TechnicalText(pending.email)
     Text(stringResource(R.string.account_inbox), color = Titanium)
     AccountField(code, { code = it.take(10) }, R.string.account_code, KeyboardType.NumberPassword, enabled)
-    Button(onClick = { model.verify(code) }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+    Button(onClick = { model.verify(code, onEntered) }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
         enabled = enabled && AccountInput.otp(code) != null) { Text(stringResource(R.string.account_verify)) }
     TextButton(onClick = { model.requestCode(pending.email) }, enabled = enabled && remain == 0L) {
         Text(if (remain == 0L) stringResource(R.string.account_resend) else stringResource(R.string.account_resend_wait, faDigits(remain)))

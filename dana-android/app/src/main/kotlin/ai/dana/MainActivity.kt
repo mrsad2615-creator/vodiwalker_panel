@@ -10,6 +10,7 @@ import ai.dana.ui.DanaApp
 import ai.dana.ui.DanaIntent
 import ai.dana.ui.DanaTheme
 import ai.dana.ui.DanaViewModel
+import ai.dana.ui.ManagedWorkspaceViewModel
 import ai.dana.ui.PhoneViewModel
 import android.content.Intent
 import android.graphics.Color
@@ -44,7 +45,7 @@ class MainActivity : ComponentActivity() {
         if (savedInstanceState == null) handleExternal(intent)
         setContent {
             DanaTheme {
-                DanaApp(model, chat, media, { account }, { art }, { phone }) {
+                DanaApp(model, chat, media, { account }, { art }, { phone }, managed) {
                     startActivity(Intent(this, MessageReviewActivity::class.java))
                 }
             }
@@ -73,6 +74,7 @@ class MainActivity : ComponentActivity() {
         if (!isChangingConfigurations) {
             model.dispatch(DanaIntent.StopRemoteRequests)
             chat.background()
+            if (managedDelegate.isInitialized()) managed.stop()
             if (accountDelegate.isInitialized()) account.background()
             if (artDelegate.isInitialized()) art.stop()
             if (phoneDelegate.isInitialized()) phone.cancel()

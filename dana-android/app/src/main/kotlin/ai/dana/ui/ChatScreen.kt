@@ -89,11 +89,14 @@ internal fun ChatScreen(
     dispatch: (DanaIntent) -> Unit,
     onEnableNetwork: () -> Unit,
     modifier: Modifier = Modifier,
+    localOnly: Boolean = false,
 ) {
     val chat by model.state.collectAsStateWithLifecycle()
     val bundled by model.deviceChoices.collectAsStateWithLifecycle()
-    val profiles = remember(dashboard.profiles) { (dashboard.profiles as? Reading.Ready)?.value.orEmpty().filter { it.config.acceptsChat } }
-    val offline = (dashboard.offline as? Reading.Ready)?.value != false
+    val profiles = remember(dashboard.profiles, localOnly) {
+        if (localOnly) emptyList() else (dashboard.profiles as? Reading.Ready)?.value.orEmpty().filter { it.config.acceptsChat }
+    }
+    val offline = localOnly || (dashboard.offline as? Reading.Ready)?.value != false
     BackHandler(enabled = chat.page != ChatPage.CONVERSATION && chat.dialog == null && !chat.busy) {
         model.page(ChatPage.CONVERSATION)
     }
@@ -116,7 +119,7 @@ internal fun ChatScreen(
         }
         when (chat.page) {
             ChatPage.CONVERSATION -> Dialogue(chat, model, media::open, profiles, offline, bundled, catalog,
-                onSettings, dispatch, onEnableNetwork)
+                onSettings, dispatch, onEnableNetwork, localOnly)
             ChatPage.HISTORY -> Archive(chat, model)
             ChatPage.MEMORY -> MemoryVault(chat, model)
         }
@@ -137,6 +140,7 @@ private fun Dialogue(
     onSettings: () -> Unit,
     dispatch: (DanaIntent) -> Unit,
     onEnableNetwork: () -> Unit,
+    localOnly: Boolean,
 ) {
     val voice = rememberDanaVoice()
     val focus = LocalFocusManager.current
@@ -165,7 +169,7 @@ private fun Dialogue(
         choose = { model.select(it); dismissPicker() },
         signIn = { dismissPicker(); dispatch(DanaIntent.OpenRouterSignIn(it)) },
         fetch = { dispatch(DanaIntent.ReadFreeModels) }, onSettings = { dismissPicker(); onSettings() },
-        onTeam = { dismissPicker(); model.dialog(ChatDialog.PickTeam) }, dismiss = dismissPicker)
+        onTeam = { dismissPicker(); model.dialog(ChatDialog.PickTeam) }, dismiss = dismissPicker, localOnly = localOnly)
     val useSystemSpeech = deviceModel == null && systemSpeech && !offline && chat.voiceOpen
     LaunchedEffect(offline, chat.voiceOpen, deviceModel) {
         if ((deviceModel != null || offline || !chat.voiceOpen) && systemSpeech) {
@@ -208,7 +212,7 @@ private fun Dialogue(
                 }
             }
         }
-        if (deviceModel == null && !canSend && offline) {
+        if (deviceModel == null && !canSend && offline && !localOnly) {
             TextButton(onClick = onEnableNetwork, enabled = !chat.busy, modifier = Modifier.heightIn(min = 48.dp)) {
                 Text(stringResource(R.string.workspace_enable_ai))
             }
@@ -238,7 +242,7 @@ private fun Dialogue(
             }
             if (chat.turns.isEmpty() && team == null && !chat.voiceOpen) item(key = "welcome") {
                 ReadyModels(bundled, chat.destination.takeUnless { isTeam }, !chat.busy,
-                    onSelect = { model.select(ChatDestination.Local(it)) }, onMore = chooseModel)
+                    onSelect = { model.select(ChatDestination.Local(it)) }, onMore = chooseModel, localOnly = localOnly)
                 if (canSend && !chat.busy && chat.draft.isBlank()) {
                     val example = stringResource(if (deviceModel == DeviceModel.SMOL) R.string.models_smol_example else R.string.workspace_example_chat)
                     TextButton(onClick = { model.draft(example) }, modifier = Modifier.heightIn(min = 48.dp)) { Text(example) }

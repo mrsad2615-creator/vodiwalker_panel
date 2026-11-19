@@ -38,18 +38,22 @@ import androidx.compose.ui.unit.dp
 @Composable
 internal fun ReadyModels(
     bundled: Set<DeviceModel>?, selected: ChatDestination?, enabled: Boolean,
-    onSelect: (DeviceModel) -> Unit, onMore: () -> Unit,
+    onSelect: (DeviceModel) -> Unit, onMore: () -> Unit, localOnly: Boolean = false,
 ) {
     GlassCard(Modifier.fillMaxWidth()) {
         Text(stringResource(R.string.workspace_chat_title), style = MaterialTheme.typography.headlineSmall)
-        Text(stringResource(if (DeviceModels.BUNDLED) R.string.models_first_launch else R.string.models_compat_summary),
+        Text(stringResource(when {
+            DeviceModels.BUNDLED -> R.string.models_first_launch
+            localOnly -> R.string.managed_lite_local
+            else -> R.string.models_compat_summary
+        }),
             style = MaterialTheme.typography.bodyMedium, color = Titanium)
         if (DeviceModels.BUNDLED) Column(Modifier.fillMaxWidth().selectableGroup()) {
             DeviceModel.entries.forEach { model ->
                 LocalModelRow(model, bundled, selected == ChatDestination.Local(model), enabled, onSelect)
             }
         }
-        OutlinedButton(onClick = onMore, enabled = enabled, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
+        if (!localOnly) OutlinedButton(onClick = onMore, enabled = enabled, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
             Text(stringResource(if (DeviceModels.BUNDLED) R.string.models_online_browse else R.string.models_compat_pick))
         }
     }
@@ -60,7 +64,7 @@ internal fun ModelPicker(
     bundled: Set<DeviceModel>?, selected: ChatDestination?, profiles: List<ProviderProfile>,
     catalog: Reading<List<RouterFreeModel>>?, offline: Boolean,
     choose: (ChatDestination) -> Unit, signIn: (RouterFreeModel) -> Unit,
-    fetch: () -> Unit, onSettings: () -> Unit, onTeam: () -> Unit, dismiss: () -> Unit,
+    fetch: () -> Unit, onSettings: () -> Unit, onTeam: () -> Unit, dismiss: () -> Unit, localOnly: Boolean = false,
 ) {
     val freeAccount = profiles.firstOrNull { it.config.protocol == ProviderProtocol.OPENROUTER_FREE && it.hasCredential }
     val otherProfiles = profiles.filter { it.config.protocol != ProviderProtocol.OPENROUTER_FREE && it.config.endpoint.acceptsCredential(it.hasCredential) }
@@ -72,7 +76,11 @@ internal fun ModelPicker(
                 items(DeviceModel.entries, key = { it.id }) { model ->
                     LocalModelRow(model, bundled, selected == ChatDestination.Local(model), true) { choose(ChatDestination.Local(it)) }
                 }
-                item { HorizontalDivider(Modifier.padding(vertical = 5.dp)) }
+                if (!localOnly) item { HorizontalDivider(Modifier.padding(vertical = 5.dp)) }
+            }
+            if (localOnly) {
+                if (!DeviceModels.BUNDLED) item { Text(stringResource(R.string.managed_lite_local), color = Titanium) }
+                return@LazyColumn
             }
             item {
                 GroupTitle(R.string.models_online_title)

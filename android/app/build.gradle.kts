@@ -56,11 +56,11 @@ android {
         description = "Asserts the manifest of the packaged APKs matches the release contract."
         dependsOn("assembleDebug", "assembleRelease")
         val outputsDir = layout.buildDirectory.dir("outputs/apk")
-        val manifestContract = mapOf(
-            "package" to namespace!!,
-            "minSdk" to providers.gradleProperty("MIN_SDK").get(),
-            "targetSdk" to providers.gradleProperty("TARGET_SDK").get(),
-        )
+        // The debug variant deliberately carries the ".debug" applicationIdSuffix so both builds
+        // can be installed side by side; the release variant owns the real applicationId.
+        val releasePackage = providers.gradleProperty("APPLICATION_ID").get()
+        val minSdk = providers.gradleProperty("MIN_SDK").get()
+        val targetSdk = providers.gradleProperty("TARGET_SDK").get()
         val forbidden = listOf(
             "android.permission.INTERNET",
             "android.permission.SYSTEM_ALERT_WINDOW",
@@ -80,15 +80,12 @@ android {
                     commandLine(aapt2.absolutePath, "dump", "badging", apk.absolutePath)
                 }.standardOutput.asText.get()
                 val label = apk.name
-                check(dump.contains("package: name='${manifestContract["package"]}'")) {
-                    "$label: unexpected applicationId"
+                val expectedPackage = if (label.contains("debug")) "$releasePackage.debug" else releasePackage
+                check(dump.contains("package: name='$expectedPackage'")) {
+                    "$label: expected applicationId $expectedPackage"
                 }
-                check(dump.contains("sdkVersion:'${manifestContract["minSdk"]}'")) {
-                    "$label: minSdk mismatch"
-                }
-                check(dump.contains("targetSdkVersion:'${manifestContract["targetSdk"]}'")) {
-                    "$label: targetSdk mismatch"
-                }
+                check(dump.contains("sdkVersion:'$minSdk'")) { "$label: minSdk mismatch" }
+                check(dump.contains("targetSdkVersion:'$targetSdk'")) { "$label: targetSdk mismatch" }
                 forbidden.forEach { permission ->
                     check(!dump.contains(permission)) { "$label: forbidden permission $permission" }
                 }

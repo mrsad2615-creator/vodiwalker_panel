@@ -36,3 +36,5 @@ A user-started `specialUse` foreground service owns countdown expiry and the sys
 ## Verification beyond CI
 
 Before release, compare a long interval against an external clock across screen lock, Doze, process recreation, and wall-clock changes. Exercise notification denial, audio interruption, font scaling, TalkBack, Persian RTL, and each finish on physical devices. Emulator tests are not proof of OEM-specific power behavior or sustained 60 FPS.
+
+For a repository handoff, an explicit `[deliver apk]` marker in a push commit requests a copy under `releases/` at repository root. Only after the emulator tests pass will CI attach the debug APK and its SHA-256 to that same branch. Ordinary builds publish temporary Actions artifacts only.

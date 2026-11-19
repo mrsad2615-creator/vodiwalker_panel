@@ -15,7 +15,7 @@ jobs:
         with: {cache-read-only: false}
       - name: Compile APK and run clock tests
         run: |
-          ./gradlew --console=plain testDebugUnitTest assembleDebug assembleDebugAndroidTest 2>&1 | tee "$RUNNER_TEMP/compile.log" || {
+          ./gradlew --console=plain testDebugUnitTest assembleDebug assembleDebugAndroidTest assembleRelease 2>&1 | tee "$RUNNER_TEMP/compile.log" || {
             grep -Ei '(^e:|^error:|^exception:|^> |failed|caused by:|incompatible)' "$RUNNER_TEMP/compile.log" | tail -35 > "$RUNNER_TEMP/errors.log"
             python3 -c 'import pathlib,os; print("::error::"+pathlib.Path(os.environ["RUNNER_TEMP"],"errors.log").read_text()[-3800:].replace("%","%25").replace("\n","%0A"))' 
             exit 1
@@ -44,3 +44,24 @@ jobs:
                   err=t.find('failure')
                   if err is not None: print('::error::'+t.attrib['name']+': '+(err.text or '')[:3600].replace('\n','%0A'))
           PYTEST
+
+  # Explicit opt-in: only attach the tested binary to the branch that requested it.
+  deliver:
+    needs: verify
+    if: github.event_name == 'push' && contains(github.event.head_commit.message, '[deliver apk]')
+    permissions: {contents: write, actions: read}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with: {name: MrsadHR-debug, path: '${{ runner.temp }}/package'}
+      - name: Save verified installable
+        run: |
+          mkdir -p releases
+          cp "$RUNNER_TEMP/package/app-debug.apk" releases/MrsadHR-debug.apk
+          sha256sum releases/MrsadHR-debug.apk > releases/MrsadHR-debug.apk.sha256
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add releases/MrsadHR-debug.apk releases/MrsadHR-debug.apk.sha256
+          git commit -m 'Attach emulator-tested MrsadHR debug APK'
+          git push origin "HEAD:refs/heads/$GITHUB_REF_NAME"

@@ -347,8 +347,9 @@ class SmartActionEngine(
                         detail = "Circuit breaker open after repeated failures.",
                     ),
                 )
-                if (node.fallbackNodeId != null) {
-                    queue.addLast(node.fallbackNodeId)
+                val fallbackNodeId = node.fallbackNodeId
+                if (fallbackNodeId != null) {
+                    queue.addLast(fallbackNodeId)
                 } else {
                     terminalFailure = true
                 }

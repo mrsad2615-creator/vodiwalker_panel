@@ -49,7 +49,11 @@ private fun Project.configureKotlinAndroid(commonExtension: CommonExtension<*, *
             // (tools/run_kotlin_tests.sh) keeps -Werror for all pure-Kotlin modules.
             allWarningsAsErrors.set(strictWarnings)
             freeCompilerArgs.addAll(
+                // Coroutines test-dispatcher APIs used by the engine suites.
                 "-opt-in=kotlinx.coroutines.ExperimentalCoroutinesApi",
+                // PointerInputChange.historical — the 120/240 Hz batched-sample path in the
+                // gesture canvas (Compose UI 1.7.x).
+                "-opt-in=androidx.compose.ui.ExperimentalComposeUiApi",
                 "-Xconsistent-data-class-copy-visibility",
             )
         }

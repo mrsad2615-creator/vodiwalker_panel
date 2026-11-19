@@ -86,19 +86,18 @@ android {
                 }
                 // aapt/aapt2 across build-tools versions label this line `sdkVersion` or
                 // `minSdkVersion`; accept either spelling and report what was actually found.
-                val sdkLine = Regex("""(?:^|\n)((?:min)?[sS]dkVersion:'(\d+)')""")
+                val sdkLine = Regex("""(?m)^(min|target)?[sS]dkVersion:'(\d+)'""")
                 val sdkLines = dump.lines().filter { it.contains("dkVersion") }
                 project.logger.lifecycle("$label sdk lines: $sdkLines")
-                val declaredMin = sdkLine.findAll(dump)
-                    .mapNotNull { it.groupValues[2].toIntOrNull() }
-                    .minOrNull()
+                val sdkValues = sdkLine.findAll(dump)
+                    .mapNotNull { m -> m.groupValues[2].toIntOrNull() }
+                    .toList()
+                val declaredMin = sdkValues.minOrNull()
                 check(declaredMin == minSdk.toInt()) {
                     "$label: expected minSdk $minSdk, badging reported " +
                         "sdk lines $sdkLines"
                 }
-                val declaredTarget = sdkLine.findAll(dump)
-                    .mapNotNull { it.groupValues[2].toIntOrNull() }
-                    .maxOrNull()
+                val declaredTarget = sdkValues.maxOrNull()
                 check(declaredTarget == targetSdk.toInt()) {
                     "$label: expected targetSdk $targetSdk, badging reported " +
                         "sdk lines $sdkLines"

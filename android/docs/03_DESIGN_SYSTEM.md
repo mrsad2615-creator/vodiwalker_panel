@@ -153,3 +153,32 @@ telemetry row. Rejection → `REJECT_DOUBLE_THUD` + collapse, never a modal inte
 
 **Privacy** → if the foreground surface is sensitive, the overlay visibly desaturates and shows the
 shield glyph; strokes are still drawable but never recognized, and no haptic confirmation fires.
+
+---
+
+## 7. Persian-first localisation contract
+
+The interface is Persian (fa) with an English mirror. The rules below are enforced, not aspirational.
+
+### 7.1 Type and script
+| Rule | Implementation |
+| --- | --- |
+| Persian UI typeface | Vazirmatn (SIL OFL 1.1), bundled in `core:designsystem/res/font`, licence in `res/raw` |
+| Line boxes | 1.55–1.7× font size; headings 1.35× — Persian ascenders, dots and marks need the room |
+| Tracking | `letterSpacing = 0.sp` on every style: spacing tears cursive joins apart |
+| Digits | `PersianText` converts to ۰۱۲۳۴۵۶۷۸۹ with the Persian thousands separator (U+066C) |
+| Quotation | Persian guillemets «…» via `PersianText.quote` |
+| Mixed scripts | LTR fragments (package names, versions) wrapped in Unicode isolates (U+2066…U+2069) |
+
+### 7.2 Direction
+- `android:supportsRtl="true"`, `localeConfig` lists `fa` first, `en` second.
+- No screen uses `padding(left/right=)`; all spacing is `start/end`.
+- Trailing controls (switches) sit in a `SpaceBetween` row, so they land on the end edge in both
+  directions without any explicit alignment.
+- Directional icons come from `Icons.AutoMirrored.*`, per Material's RTL mirroring guidance.
+
+### 7.3 Copy
+- 137 strings per locale, key-for-key identical (`values/` ↔ `values-fa/`).
+- No user-facing literal in Kotlin: ViewModels emit semantic state (`RecorderFeedback`,
+  `StatusTone`) and the composable resolves the string.
+- Optional permissions are labelled `اختیاری` and never gate the primary action.

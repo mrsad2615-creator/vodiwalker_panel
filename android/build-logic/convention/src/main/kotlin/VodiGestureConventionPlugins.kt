@@ -15,10 +15,6 @@ import org.jetbrains.kotlin.gradle.dsl.KotlinAndroidProjectExtension
 import org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension
 
 private fun Project.configureKotlinAndroid(commonExtension: CommonExtension<*, *, *, *, *, *>) {
-    // Resolved once on the Project receiver so the nested extension lambda stays unambiguous.
-    val strictWarnings = providers.gradleProperty("vodigesture.kotlinWarningsAsErrors")
-        .getOrElse("true")
-        .toBoolean()
     commonExtension.apply {
         compileSdk = providers.gradleProperty("COMPILE_SDK").get().toInt()
         defaultConfig {
@@ -45,9 +41,11 @@ private fun Project.configureKotlinAndroid(commonExtension: CommonExtension<*, *
     extensions.configure<KotlinAndroidProjectExtension> {
         compilerOptions {
             jvmTarget.set(JvmTarget.JVM_21)
-            // Toggleable so an APK build can succeed while the strict JVM engine gate
-            // (tools/run_kotlin_tests.sh) keeps -Werror for all pure-Kotlin modules.
-            allWarningsAsErrors.set(strictWarnings)
+            // Deliberately NOT allWarningsAsErrors for Android modules: KSP/Hilt/Room code
+            // generation inherits this flag and emits warnings from generated sources we do not
+            // own, which would block a release build for reasons the team cannot act on. Strict
+            // -Werror enforcement lives in the pure-Kotlin gate (tools/run_kotlin_tests.sh) and
+            // in the JvmLibraryConventionPlugin below.
             freeCompilerArgs.addAll(
                 // Coroutines test-dispatcher APIs used by the engine suites.
                 "-opt-in=kotlinx.coroutines.ExperimentalCoroutinesApi",

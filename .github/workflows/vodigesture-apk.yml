@@ -129,13 +129,11 @@ jobs:
       - name: Compile Kotlin + Compose (fast failure signal)
         run: >-
           bash tools/ci_gradle.sh compile :app:compileDebugKotlin
-          -Pvodigesture.kotlinWarningsAsErrors=false
           --stacktrace --no-configuration-cache
 
       - name: Assemble debug APK
         run: >-
           bash tools/ci_gradle.sh debug :app:assembleDebug
-          -Pvodigesture.kotlinWarningsAsErrors=false
           --stacktrace --no-configuration-cache
 
       # A stable signing key keeps in-place app upgrades working between builds. It is a CI-only
@@ -161,7 +159,6 @@ jobs:
           VODI_KEYSTORE: ${{ steps.keystore.outputs.keystore }}
         run: >-
           bash tools/ci_gradle.sh release :app:assembleRelease
-          -Pvodigesture.kotlinWarningsAsErrors=false
           -Pvodigesture.ciSigning=true
           -Pvodigesture.ciKeystore="$VODI_KEYSTORE"
           -Pvodigesture.ciStorePassword=vodigesture

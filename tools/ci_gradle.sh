@@ -28,8 +28,9 @@ status="${PIPESTATUS[0]}"
 if [ "$status" -ne 0 ]; then
   echo "::group::Diagnostics (${slug})"
   # Kotlin/Java compiler diagnostics, Gradle's own explanation block, and failed tasks.
-  grep -nE '(^e: |^w: .*error|error:|FAILURE:|> Task .*FAILED|\* What went wrong|Caused by:|Could not (resolve|find|compile)|Unresolved reference)' "$log" \
-    | head -n 40 \
+  grep -nE '(^e: |^w: |error:|FAILURE:|> Task .*FAILED|\* What went wrong|Caused by:|Could not (resolve|find|compile)|Unresolved reference)' "$log" \
+    | grep -vE '^w: .*(deprecated|is never used|unused)' \
+    | head -n 60 \
     | while IFS= read -r line; do
         # `::error::` messages must be single-line.
         printf '::error::%s\n' "${line//$'\r'/}"

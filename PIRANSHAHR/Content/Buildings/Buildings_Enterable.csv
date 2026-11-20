@@ -1,0 +1,6 @@
+BuildingId,NameFa,WorldX,WorldY,Enterable,InteriorCell,DescriptionFa
+Home_Player,خانه بازیکن,0,0,true,1001,خانه شروع بازی — قابل ورود، تخت خواب برای ذخیره
+Shop_Bazaar,مغازه بازار,320,180,true,1002,مغازه بازار پیرانشهر — خرید قطعات
+Mosque_Jame,مسجد جامع,120,300,true,1003,مسجد جامع — فضای معنوی، اذان
+Service_Peykan,تعمیرگاه پیکان,-80,140,true,1004,تعمیرگاه — تعمیر و ارتقا خودرو
+School_Adab,مدرسه ادب,200,-150,true,1005,مدرسه — ماموریت تحویل کتاب

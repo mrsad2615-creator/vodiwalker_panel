@@ -1,0 +1,6 @@
+RowName,TitleFa,DescriptionFa,Type,StartX,StartY,EndX,EndY,RewardToman,TimeLimitSec
+Taxi_Bazaar,تاکسی بازار,مسافر را از میدان اصلی به بازار برسانید,Taxi,0,0,320,180,45000,120
+Taxi_Hospital,تاکسی بیمارستان,بیمار را سریع به بیمارستان برسانید,Taxi,180,120,-200,80,60000,90
+Delivery_Bread,تحویل نان,نان را به محله جنوبی برسانید,Delivery,-150,-100,220,-180,35000,150
+Delivery_Parts,تحویل قطعه,قطعه پیکان را به تعمیرگاه ببرید,RepairShop,80,60,-80,140,80000,180
+FreeRoam_Night,گشت شبانه,پیرانشهر را در شب بگردید,FreeRoam,0,0,0,0,0,0

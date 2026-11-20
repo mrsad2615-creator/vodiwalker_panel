@@ -2,8 +2,27 @@ import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig({
-  server: { host: '0.0.0.0', port: 5173 },
-  preview: { host: '0.0.0.0', port: 5173 },
+  server: {
+    host: '0.0.0.0',
+    port: 5173,
+    // Allow Arena preview host (e2b.app) — no origin rejection
+    cors: true,
+    hmr: { host: 'localhost' },
+    // Vite 5: disable host check (or list allowed hosts)
+    // allowedHosts: true allows any host (useful for preview proxy)
+    allowedHosts: true,
+  },
+  preview: {
+    host: '0.0.0.0',
+    port: 5173,
+    cors: true,
+    allowedHosts: true,
+    // Required headers for PWA / sharedArrayBuffer if needed
+    headers: {
+      'Cross-Origin-Opener-Policy': 'same-origin',
+      'Cross-Origin-Embedder-Policy': 'require-corp',
+    },
+  },
   plugins: [
     VitePWA({
       registerType: 'autoUpdate',

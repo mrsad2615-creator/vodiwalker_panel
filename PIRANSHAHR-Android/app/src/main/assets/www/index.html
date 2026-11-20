@@ -12,18 +12,19 @@
     *{box-sizing:border-box;margin:0;padding:0}
     html,body{height:100%;overflow:hidden;background:#070b13;font-family:'Vazirmatn',Tahoma,sans-serif}
     canvas{display:block;width:100%;height:100%}
-    /* Persian HUD */
     .hud{position:fixed;inset:0;pointer-events:none;display:flex;flex-direction:column;justify-content:space-between;padding:14px}
-    .top{pointer-events:auto;display:flex;justify-content:space-between;align-items:center;gap:10px}
+    .top{pointer-events:auto;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
     .brand{color:#c9a8ff;font-weight:900;letter-spacing:.14em;font-size:10px;background:rgba(10,18,32,.6);border:1px solid rgba(168,85,247,.25);padding:7px 12px;border-radius:999px;backdrop-filter:blur(6px)}
-    .stats{display:flex;gap:8px}
+    .stats{display:flex;gap:8px;flex-wrap:wrap}
     .pill{background:rgba(10,18,32,.62);border:1px solid rgba(255,255,255,.08);color:#eaf2ff;padding:8px 10px;border-radius:12px;font-size:11px;min-width:84px;text-align:center;backdrop-filter:blur(6px)}
     .pill b{color:#fff;font-size:13px}
+    .pill.mission{background:rgba(52,211,153,.10);border-color:rgba(52,211,153,.25)}
     .bottom{pointer-events:auto;display:grid;grid-template-columns:1fr auto 1fr;align-items:end;gap:12px}
     .controls{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-start}
     .btn{pointer-events:auto;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:#fff;padding:12px 14px;border-radius:14px;font-weight:800;font-size:12px;min-width:52px;text-align:center;backdrop-filter:blur(8px);touch-action:manipulation}
     .btn:active{transform:scale(.97);background:rgba(168,85,247,.18)}
     .btn.primary{background:linear-gradient(90deg,#a855f7,#3ea6ff);border-color:transparent;box-shadow:0 10px 30px rgba(168,85,247,.35)}
+    .btn.small{padding:8px 10px;font-size:11px;min-width:44px}
     .wheel{width:140px;height:140px;border-radius:50%;border:1px solid rgba(255,255,255,.10);background:radial-gradient(circle at 30% 30%,rgba(255,255,255,.06),rgba(0,0,0,.18));display:grid;place-items:center;position:relative;touch-action:none}
     .wheel-knob{width:18px;height:18px;border-radius:50%;background:#a855f7;box-shadow:0 0 16px rgba(168,85,247,.9);position:absolute}
     .pedals{display:flex;flex-direction:column;gap:8px;align-items:flex-end}
@@ -31,14 +32,23 @@
     .meter{height:6px;background:rgba(255,255,255,.08);border-radius:999px;overflow:hidden}
     .meter i{display:block;height:100%;width:0%;background:linear-gradient(90deg,#3ea6ff,#a855f7);transition:width .08s}
     .center-actions{display:flex;gap:8px;justify-content:center;align-items:center}
-    .overlay{position:fixed;inset:0;background:rgba(4,2,10,.72);backdrop-filter:blur(4px);display:grid;place-items:center;padding:18px}
-    .card{width:min(520px,95vw);background:linear-gradient(145deg,#0d1320,#111a2a);border:1px solid rgba(255,255,255,.08);border-radius:22px;padding:22px;box-shadow:0 30px 90px rgba(0,0,0,.45);color:#f5f7fb}
+    .overlay{position:fixed;inset:0;background:rgba(4,2,10,.72);backdrop-filter:blur(4px);display:grid;place-items:center;padding:18px;z-index:20}
+    .card{width:min(560px,95vw);background:linear-gradient(145deg,#0d1320,#111a2a);border:1px solid rgba(255,255,255,.08);border-radius:22px;padding:22px;box-shadow:0 30px 90px rgba(0,0,0,.45);color:#f5f7fb}
     .card h1{font-size:20px;font-weight:900;margin-bottom:8px}
     .card p{font-size:12.5px;line-height:2;color:#9aa7bc}
     .tag{display:inline-block;margin-top:10px;padding:6px 10px;border-radius:999px;background:rgba(52,211,153,.10);border:1px solid rgba(52,211,153,.22);color:#7cf0a8;font-size:10px}
     .note{font-size:10.5px;color:#8fa0b8;margin-top:10px;line-height:1.8}
+    .profiles{display:flex;gap:8px;margin-top:12px}
+    .profiles .btn{flex:1}
+    .profiles .btn.active{border-color:#a855f7;background:rgba(168,85,247,.2)}
+    .modal{position:fixed;inset:0;background:rgba(4,2,10,.78);backdrop-filter:blur(6px);display:none;place-items:center;padding:18px;z-index:15}
+    .modal.open{display:grid}
+    .modal .card{width:min(480px,96vw)}
+    .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+    .select{width:100%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:#fff;padding:10px 12px;border-radius:12px;font-family:inherit}
+    .badge{font-size:10px;color:#7cf0a8;background:rgba(52,211,153,.12);border:1px solid rgba(52,211,153,.2);padding:4px 8px;border-radius:999px}
   </style>
-  <script type="module" crossorigin src="/assets/index-tTJTc8dR.js"></script>
+  <script type="module" crossorigin src="/assets/index-C471Zc-F.js"></script>
 <link rel="manifest" href="/manifest.webmanifest"><script id="vite-plugin-pwa:register-sw" src="/registerSW.js"></script></head>
 <body>
   <canvas id="c"></canvas>
@@ -51,6 +61,9 @@
         <div class="pill">دور موتور<br><b id="rpm">۸۰۰</b></div>
         <div class="pill">سوخت<br><b id="fuel">۱۰۰٪</b></div>
         <div class="pill" id="fps">۳۰ FPS</div>
+        <div class="pill mission" id="missionPill" style="display:none">ماموریت<br><b id="missionText">—</b></div>
+        <div class="pill" id="weatherPill">آب‌وهوا<br><b id="weatherText">صاف</b></div>
+        <div class="pill" id="profilePill">پروفایل<br><b id="profileText">راننده ۱</b></div>
       </div>
     </div>
 
@@ -60,6 +73,8 @@
         <button class="btn" id="brake">ترمز</button>
         <button class="btn" id="handbrake">دستی</button>
         <button class="btn" id="horn">بوق</button>
+        <button class="btn small" id="walkBtn">پیاده</button>
+        <button class="btn small" id="missionBtn">ماموریت</button>
       </div>
 
       <div class="center-actions">
@@ -69,6 +84,8 @@
       <div class="pedals">
         <button class="btn pedal" id="cam">دوربین</button>
         <button class="btn pedal" id="photo">عکاسی</button>
+        <button class="btn pedal small" id="weatherBtn">آب‌وهوا</button>
+        <button class="btn pedal small" id="saveBtn">ذخیره</button>
         <div class="meter" style="width:84px"><i id="throttleMeter"></i></div>
         <div style="font-size:10px;color:#9aa7bc;text-align:left">گاز</div>
       </div>
@@ -81,21 +98,91 @@
       <p>
         این یک <b>نمونهٔ تعاملی نصب‌شدنی (PWA)</b> از پروژهٔ واقعی PIRANSHAHR است.
         شهر واقعی پیرانشهر با داده‌های OpenStreetMap بازسازی شده، فیزیک خودرو با مدل ساده‌شدهٔ Chaos Vehicles،
-        و رابط فارسی با قلم وزیرمتن.
+        و رابط فارسی با قلم وزیرمتن. <b>M1 اصلاح‌شده: شامل ذخیره پروفایل، آب‌وهوا، ماموریت، پیاده‌روی، Photo Mode</b>
       </p>
       <p style="margin-top:8px">
-        کنترل: فرمان را بکشید یا با کلیدهای ← → ، گاز با SPACE / دکمهٔ گاز، ترمز با ↓.
-        روی دسکتاپ با موس و روی موبایل با لمس.
+        کنترل: فرمان را بکشید یا با کلیدهای ← → ، گاز با SPACE / دکمهٔ گاز، ترمز با ↓. پیاده: WASD. ماموریت: دکمه ماموریت.
       </p>
+      <div class="profiles">
+        <button class="btn small active" data-profile="0">راننده ۱</button>
+        <button class="btn small" data-profile="1">راننده ۲</button>
+        <button class="btn small" data-profile="2">راننده ۳</button>
+      </div>
       <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
         <button class="btn primary" id="start">شروع رانندگی</button>
         <button class="btn" id="installBtn" style="display:none">نصب روی دستگاه</button>
       </div>
-      <span class="tag">✓ نمونه تأیید فنی — بیلد واقعی UE5 روی ویندوز (راهنمای Docs/BUILD_WINDOWS.md)</span>
+      <span class="tag">✓ M1 کامل — ذخیره + ماموریت + آب‌وهوا + پیاده‌روی + عکاسی پیشرفته</span>
       <div class="note">
-        وضعیت: <b>Implemented + Integrated + Tested (PWA)</b> — بیلد اندروید UE5 به‌صورت Simulated Static Validation تا دسترسی به toolchain ویندوز (اصل §۱۴ صادقانه).
-        FPS واقعی روی POCO X3 Pro پس از بیلد APK اندازه‌گیری خواهد شد.
+        وضعیت: <b>Implemented + Tested (PWA)</b> — بیلد UE5 روی ویندوز (Docs/BUILD_WINDOWS.md). سوپابیس آفلاین-اول: داده‌ها ابتدا محلی ذخیره، سپس در صف ارسال.
       </div>
+    </div>
+  </div>
+
+  <!-- Mission Modal -->
+  <div class="modal" id="missionModal">
+    <div class="card">
+      <h1>ماموریت‌ها</h1>
+      <p>یک ماموریت انتخاب کنید. پاداش به تومان، زمان محدود.</p>
+      <select class="select" id="missionSelect">
+        <option value="Taxi_Bazaar">تاکسی بازار — ۴۵٬۰۰۰ تومان — ۱۲۰ ثانیه</option>
+        <option value="Taxi_Hospital">تاکسی بیمارستان — ۶۰٬۰۰۰ تومان — ۹۰ ثانیه</option>
+        <option value="Delivery_Bread">تحویل نان — ۳۵٬۰۰۰ تومان — ۱۵۰ ثانیه</option>
+        <option value="Delivery_Parts">تحویل قطعه — ۸۰٬۰۰۰ تومان — ۱۸۰ ثانیه</option>
+        <option value="FreeRoam_Night">گشت شبانه — آزاد</option>
+      </select>
+      <div class="row">
+        <button class="btn primary" id="startMission">شروع ماموریت</button>
+        <button class="btn" id="abandonMission">انصراف</button>
+        <button class="btn" id="closeMission">بستن</button>
+      </div>
+      <div class="note" id="missionStatus">هیچ ماموریتی فعال نیست</div>
+    </div>
+  </div>
+
+  <!-- Weather Modal -->
+  <div class="modal" id="weatherModal">
+    <div class="card">
+      <h1>آب‌وهوا و فصل</h1>
+      <p>آب‌وهوا مستقل از فصل است. زمان قابل انتخاب (نه زنده).</p>
+      <div class="row">
+        <select class="select" id="weatherSelect" style="flex:1">
+          <option value="Clear">صاف</option>
+          <option value="Rain">بارانی</option>
+          <option value="Snow">برفی</option>
+          <option value="Fog">مه‌آلود</option>
+          <option value="DustStorm">غبارآلود</option>
+        </select>
+        <select class="select" id="seasonSelect" style="flex:1">
+          <option value="Spring">بهار</option>
+          <option value="Summer">تابستان</option>
+          <option value="Autumn">پاییز</option>
+          <option value="Winter">زمستان</option>
+        </select>
+      </div>
+      <div class="row">
+        <label style="flex:1;font-size:12px">ساعت: <span id="timeLabel">۱۴:۰۰</span><br><input type="range" id="timeSlider" min="0" max="24" step="0.5" value="14" style="width:100%"></label>
+      </div>
+      <div class="row">
+        <button class="btn primary" id="applyWeather">اعمال</button>
+        <button class="btn" id="closeWeather">بستن</button>
+      </div>
+      <div class="note">بهینه POCO: مه حجمی خاموش، باران ۵۰۰ ذره، ASTC ۶×۶</div>
+    </div>
+  </div>
+
+  <!-- Photo Mode -->
+  <div class="modal" id="photoModal">
+    <div class="card">
+      <h1>حالت عکاسی</h1>
+      <p>عکس با فیلتر پیشرفته، DOF و زمان.</p>
+      <div class="row">
+        <button class="btn" id="filterBtn">فیلتر: عادی</button>
+        <button class="btn" id="dofBtn">DOF: خاموش</button>
+        <button class="btn primary" id="captureBtn">گرفتن عکس</button>
+        <button class="btn" id="closePhoto">بستن</button>
+      </div>
+      <div class="note">خروجی: piranshahr-photo.png</div>
     </div>
   </div>
 

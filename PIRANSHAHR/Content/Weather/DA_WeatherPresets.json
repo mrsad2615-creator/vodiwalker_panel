@@ -1,0 +1,8 @@
+{
+  "presets": [
+    { "id": "clear_spring", "weather": "Clear", "season": "Spring", "time": 14, "labelFa": "بهار صاف", "fogDensity": 0.002, "rainParticles": 0 },
+    { "id": "rain_autumn", "weather": "Rain", "season": "Autumn", "time": 16, "labelFa": "پاییز بارانی", "fogDensity": 0.01, "rainParticles": 500 },
+    { "id": "snow_winter", "weather": "Snow", "season": "Winter", "time": 11, "labelFa": "زمستان برفی", "fogDensity": 0.015, "rainParticles": 0 },
+    { "id": "dust_summer", "weather": "DustStorm", "season": "Summer", "time": 18, "labelFa": "تابستان غبارآلود", "fogDensity": 0.02, "rainParticles": 0 }
+  ]
+}

@@ -16,7 +16,7 @@ on:
       baseline_ref:
         description: 'The revision the redesign is compared against'
         required: false
-        default: '465b3e5'
+        default: '465b3e532cadeefb167a9fa2c8303fcea6549d41'
   push:
     paths:
       - 'mrsad/**'
@@ -39,14 +39,11 @@ jobs:
       matrix:
         include:
           - label: baseline
-            ref: ${{ github.event.inputs.baseline_ref || '465b3e5' }}
+            ref: ${{ github.event.inputs.baseline_ref || '465b3e532cadeefb167a9fa2c8303fcea6549d41' }}
             checkout: baseline
           - label: redesign
             ref: ${{ github.sha }}
             checkout: head
-    defaults:
-      run:
-        working-directory: mrsad
     steps:
       - uses: actions/checkout@v4
         with:
@@ -64,10 +61,16 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          source_dir="instrument/mrsad/app/src/androidTest/kotlin/dev/mrsad/app"
-          target_dir="${{ matrix.checkout }}/mrsad/app/src/androidTest/kotlin/dev/mrsad/app"
+          checkout="$GITHUB_WORKSPACE/${{ matrix.checkout }}"
+          source_dir="$GITHUB_WORKSPACE/instrument/mrsad/app/src/androidTest/kotlin/dev/mrsad/app"
+          target_dir="$checkout/mrsad/app/src/androidTest/kotlin/dev/mrsad/app"
           mkdir -p "$target_dir"
           cp "$source_dir/PerformanceBenchmarkTest.kt" "$target_dir/"
+          # The runner script is part of the instrument as well: the
+          # baseline revision does not have it.
+          mkdir -p "$checkout/mrsad/.ci"
+          cp "$GITHUB_WORKSPACE/instrument/mrsad/.ci/run-perf-benchmark.sh" "$checkout/mrsad/.ci/"
+          chmod +x "$checkout/mrsad/.ci/run-perf-benchmark.sh"
           echo "the benchmark of the head revision now measures ${{ matrix.ref }}"
 
       - uses: actions/setup-java@v5
@@ -89,7 +92,7 @@ jobs:
           # The measurement has to see the animated application, so the
           # platform animations are left alone.
           disable-animations: false
-          script: cd ${{ matrix.checkout }}/mrsad && sh .ci/run-perf-benchmark.sh . "$GITHUB_WORKSPACE/perf-${{ matrix.label }}.json"
+          script: cd $GITHUB_WORKSPACE/${{ matrix.checkout }}/mrsad && sh .ci/run-perf-benchmark.sh . "$GITHUB_WORKSPACE/perf-${{ matrix.label }}.json" "$GITHUB_WORKSPACE/screenshots-${{ matrix.label }}"
       - name: Collect the report
         if: always()
         shell: bash
@@ -106,7 +109,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: mrsad-perf-${{ matrix.label }}
-          path: perf-${{ matrix.label }}.json
+          path: |
+            perf-${{ matrix.label }}.json
+            screenshots-${{ matrix.label }}/**
           if-no-files-found: ignore
 
   compare:
@@ -140,5 +145,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: mrsad-perf-comparison
-          path: PERF-COMPARISON.md
+          path: |
+            PERF-COMPARISON.md
+            baseline/**
+            redesign/**
           if-no-files-found: ignore

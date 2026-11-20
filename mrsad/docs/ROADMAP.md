@@ -128,6 +128,68 @@ Legend: ✅ done & verified · 🟡 implemented, awaiting verification · 🟠 p
 * The version shown on the Settings screen is read from the build, so it can
   never drift away from the released artifact.
 
+## Phase 9 — Interface quality ✅
+
+The app was technically correct and visually dead: a flat vertical
+gradient, one drifting particle sheet, and a "core" that was a drawing of
+a core rather than a modelled one. This phase replaces the visual
+vocabulary of the app and measures the result.
+
+### The motion system
+
+* `ui/theme/Motion.kt` holds the published Material 3 duration and easing
+  tokens and the Material 3 Expressive springs, split into the **spatial**
+  family (things that occupy space and may overshoot) and the **effects**
+  family (things that only fade and must never overshoot). The two are
+  never mixed.
+* `MrsadTheme.motion` is the only place that decides how the interface
+  moves: the user's reduce-motion setting, the device's graphics tier and
+  the motion scheme all resolve there.
+* Reduced motion switches the spatial family off and keeps a short, calm
+  fade; the instrumentation hook takes the same path, so the tests can
+  still reach idle.
+* Every duration, easing and spring in the app now comes from this file —
+  there is no second, ad-hoc vocabulary left.
+
+### The 3D core
+
+* `ui/components/Core3D.kt` is a hand-written renderer: a 20-facet
+  icosahedral shell around a lit nucleus, two orbital rings split at the
+  depth of the body, a key light, a fill light, a specular term, a rim
+  term and a real perspective projection. No bitmap, no 3D library, no
+  fake data.
+* The geometry, the winding of the facets, the depth ordering and the
+  projection are checked by `CoreGeometryTest` — on the JVM, without a
+  device.
+* The object reacts to the finger: it turns with a drag, keeps travelling
+  after a fling, and answers a tap with a shockwave.
+* What it shows is real: the nucleus is today's goal progress, the sparks
+  are the streak, and the graduations of the outer ring are the personal
+  record.
+
+### The material
+
+* `MrsadSurface` builds a card in five layers — shadow, gradient, sheen,
+  bottom shade and a fading hairline — instead of a flat panel with a
+  uniform border.
+* The floating navigation bar has a lit top edge and a spring-driven
+  selection; the screens have drifting light pools, a vignette and a
+  particle field with real depth.
+* State changes move: the press of a card, the entrance of a screen, the
+  transition between two screens and the reveal of a chart when its data
+  changes.
+
+### The measurement
+
+* `PerformanceBenchmarkTest` runs the *real, animated* application on a
+  device, drives it through a scripted session and records the platform's
+  own `FrameMetrics`, the CPU time of the process and its memory. It also
+  takes the screenshots of the session.
+* The `MRSAD Performance` workflow runs that benchmark twice — on the
+  revision before this phase and on the revision after it — on the same
+  emulator, in the same job, with the same instrument, and writes the
+  comparison into `PERF-COMPARISON.md`.
+
 ---
 
 ## Known limitations (honest list)
@@ -156,3 +218,8 @@ Legend: ✅ done & verified · 🟡 implemented, awaiting verification · 🟠 p
    certificate, so two releases can be compared without downloading
    anything. The fingerprint only helps if the key is not rotated: a
    rotation still breaks the upgrade path of every existing install.
+10. The performance comparison is measured on an x86_64 emulator, not on a
+    physical phone: the frame times are the platform's own numbers, but a
+    real device with a different GPU will behave differently. The
+    benchmark is reproducible and re-runnable, not a claim about every
+    device.

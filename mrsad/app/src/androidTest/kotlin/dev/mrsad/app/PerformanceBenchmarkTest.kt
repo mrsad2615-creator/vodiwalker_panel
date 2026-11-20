@@ -92,6 +92,7 @@ class PerformanceBenchmarkTest {
         // ---- Phase 1: the object and the atmosphere on their own --------
         collector.startPhase("idle")
         SystemClock.sleep(IDLE_MILLIS)
+        capture(context, "01-home.png")
 
         // ---- Phase 2: scrolling the home screen --------------------------
         collector.startPhase("scroll")
@@ -109,6 +110,7 @@ class PerformanceBenchmarkTest {
             tap(width / 2f, height * 0.30f)
             SystemClock.sleep(TAP_PAUSE_MILLIS)
         }
+        capture(context, "02-core.png")
 
         // ---- Phase 4: the navigation -------------------------------------
         collector.startPhase("navigate")
@@ -116,6 +118,7 @@ class PerformanceBenchmarkTest {
         SystemClock.sleep(NAVIGATE_MILLIS)
         tap(bottomBarX(0, width, density), bottomBarY(height, density))
         SystemClock.sleep(NAVIGATE_MILLIS)
+        capture(context, "03-after-navigation.png")
 
         val cpuEnd = Process.getElapsedCpuTime()
         val wallEnd = SystemClock.uptimeMillis()
@@ -168,6 +171,31 @@ class PerformanceBenchmarkTest {
     }
 
     // ---- helpers ------------------------------------------------------------
+
+    /**
+     * Writes a screenshot of the device to the application's own storage.
+     *
+     * The pictures are the visual evidence of the benchmark: they show
+     * the interface that produced the numbers, on the device that
+     * produced them.
+     */
+    private fun capture(context: android.content.Context, name: String) {
+        val directory = context.getExternalFilesDir(null) ?: return
+        try {
+            val bitmap = InstrumentationRegistry.getInstrumentation()
+                .uiAutomation
+                .takeScreenshot()
+            if (bitmap == null) return
+            val file = File(directory, name)
+            file.outputStream().use { stream ->
+                bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, stream)
+            }
+            bitmap.recycle()
+            android.util.Log.i(REPORT_TAG, "screenshot: ${file.absolutePath}")
+        } catch (error: Throwable) {
+            android.util.Log.w(REPORT_TAG, "the screenshot $name failed: $error")
+        }
+    }
 
     /** The x of a bottom-bar destination, counted from the right. */
     private fun bottomBarX(index: Int, width: Float, density: Float): Float {

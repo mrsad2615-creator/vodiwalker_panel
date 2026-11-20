@@ -1,18 +1,20 @@
 #!/usr/bin/env bash
 #
-# Runs the performance benchmark on a connected device and extracts the
-# report the benchmark itself produced.
+# Runs the performance benchmark on a connected device and collects what it
+# produced: the report the benchmark printed and the screenshots it took.
 #
 # The benchmark prints a single line that starts with `MRSAD_PERF_JSON:`;
 # the instrumentation runner captures it in the JUnit XML, so the report
-# can be recovered without any device tooling.
+# can be recovered without any device tooling. The screenshots are written
+# to the application's own external storage and are pulled with `adb`.
 #
-# Usage: run-perf-benchmark.sh <gradle-project-dir> <output-file>
+# Usage: run-perf-benchmark.sh <gradle-project-dir> <output-file> [screenshot-dir]
 
 set -uo pipefail
 
-GRADLE_DIR="${1:?usage: run-perf-benchmark.sh <gradle-project-dir> <output-file>}"
-OUTPUT="${2:?usage: run-perf-benchmark.sh <gradle-project-dir> <output-file>}"
+GRADLE_DIR="${1:?usage: run-perf-benchmark.sh <gradle-project-dir> <output-file> [screenshot-dir]}"
+OUTPUT="${2:?usage: run-perf-benchmark.sh <gradle-project-dir> <output-file> [screenshot-dir]}"
+SCREENSHOT_DIR="${3:-}"
 
 cd "$GRADLE_DIR"
 
@@ -41,3 +43,16 @@ fi
 printf '%s\n' "$REPORT" > "$OUTPUT"
 echo "the performance report was written to $OUTPUT"
 cat "$OUTPUT"
+
+# The screenshots are the visual evidence of the measurement.
+if [ -n "$SCREENSHOT_DIR" ]; then
+  mkdir -p "$SCREENSHOT_DIR"
+  for package in dev.mrsad.app.debug dev.mrsad.app; do
+    if adb shell "ls /sdcard/Android/data/$package/files/" >/dev/null 2>&1; then
+      adb pull "/sdcard/Android/data/$package/files/." "$SCREENSHOT_DIR" || true
+      break
+    fi
+  done
+  echo "the screenshots were collected into $SCREENSHOT_DIR"
+  ls -la "$SCREENSHOT_DIR" || true
+fi

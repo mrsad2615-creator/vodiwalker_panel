@@ -62,6 +62,30 @@ object TypeTexts {
                 "وقتی انگشتان این حروف را می‌شناسند، سرعت بدون از دست رفتن دقت بالا می‌رود. " +
                 "هدف، تایپ بی‌خطا با ریتمی پایدار است.",
         ),
+        PracticeText(
+            id = "fa-basic-3",
+            title = "گام کوچک",
+            level = 1,
+            body = "امروز فقط یک خط بنویس. نه بیشتر، نه کمتر. " +
+                "یک خط که بی‌نقص تمام شود، بیشتر از ده خطِ رهاشده ارزش دارد. " +
+                "فردا دوباره برگرد و همان یک خط را تکرار کن.",
+        ),
+        PracticeText(
+            id = "fa-mid-3",
+            title = "دقت زیر فشار",
+            level = 2,
+            body = "تایپ سریع وقتی ارزشمند است که زیر فشار هم دقت را نگه دارد. " +
+                "در تمرین‌های زمان‌دار، ذهن به دنبال راه‌های کوتاه می‌گردد و همین‌جاست که چند خطای کوچک ردیف می‌شود. " +
+                "برای همین، اول با سرعت کم شروع کن تا دست‌ها راه را پیدا کنند، بعد فشار را بالا ببر.",
+        ),
+        PracticeText(
+            id = "fa-hard-3",
+            title = "جمله‌های بلند",
+            level = 3,
+            body = "جملهٔ بلند، آزمون واقعی ریتم است؛ چون ذهن در میانهٔ راه باید پیوند میان دو نیم‌جمله را نگه دارد. " +
+                "هنگام تایپ، نقطهٔ مکث را پیش از رسیدن به آن حدس بزنید و آهسته‌تر از بخش دیگر پیش بروید. " +
+                "اگر نیم‌جملهٔ اول را رها کنید، نیم‌جملهٔ دوم را هم گم می‌کنید.",
+        ),
     )
 
     val english: List<PracticeText> = listOf(
@@ -99,6 +123,29 @@ object TypeTexts {
             level = 3,
             body = "Punctuation is part of rhythm: commas pause, periods land, and semicolons connect; " +
                 "parentheses quietly hold (extra detail) without breaking the sentence's flow.",
+        ),
+        PracticeText(
+            id = "en-basic-3",
+            title = "One line",
+            level = 1,
+            body = "Type one clean line today. Not ten lines, not five — one. " +
+                "A single line finished without a mistake is worth more than ten abandoned ones.",
+        ),
+        PracticeText(
+            id = "en-mid-3",
+            title = "Under pressure",
+            level = 2,
+            body = "Speed only counts when accuracy survives it. " +
+                "In timed drills the mind looks for shortcuts, and that is exactly where small errors line up. " +
+                "Start slower until your hands know the path, then add pressure.",
+        ),
+        PracticeText(
+            id = "en-hard-2",
+            title = "Long sentences",
+            level = 3,
+            body = "A long sentence is the real test of rhythm, because the mind has to hold the join " +
+                "between two halves while the fingers keep moving. " +
+                "Anticipate the break before you reach it and slow down on the way in.",
         ),
     )
 

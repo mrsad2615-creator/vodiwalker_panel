@@ -116,8 +116,7 @@ fun MrsadMarkView(
                 drawPath(
                     path = pathOf(plate),
                     brush = Brush.linearGradient(
-                        startColor,
-                        endColor,
+                        colors = listOf(startColor, endColor),
                         start = Offset(start.x * scale, start.y * scale),
                         end = Offset(end.x * scale, end.y * scale),
                     ),

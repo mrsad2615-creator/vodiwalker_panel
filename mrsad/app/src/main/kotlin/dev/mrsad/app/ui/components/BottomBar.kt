@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -91,6 +92,9 @@ fun MrsadBottomBar(
                         if (colors.isLight) colors.accent.copy(alpha = bgAlpha * 0.16f)
                         else colors.metalMid.copy(alpha = bgAlpha)
                     )
+                    // A 22dp icon is not a 22dp target: the destination
+                    // keeps a full 48dp of touchable area in both directions.
+                    .heightIn(min = MrsadTokens.TouchTarget)
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = ripple(color = colors.metalLight),
@@ -122,7 +126,7 @@ fun MrsadBottomBar(
         Box(
             Modifier
                 .testTag(MrsadTestTags.NAV_SETTINGS)
-                .size(38.dp)
+                .size(MrsadTokens.TouchTarget)
                 .clip(CircleShape)
                 .clickable(role = Role.Button, onClick = onSettings),
             contentAlignment = Alignment.Center,

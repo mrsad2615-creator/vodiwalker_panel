@@ -119,14 +119,14 @@ private fun MindLobby(state: MindUiState, viewModel: MindViewModel, settings: Mr
                     size = type.headline.fontSize,
                 )
                 MetricValue(
-                    value = formatInt(state.level, settings.persianNumerals),
-                    label = "سطح فعلی",
+                    value = formatInt(state.practisedExercises, settings.persianNumerals),
+                    label = "تمرین‌های فعال",
                     size = type.headline.fontSize,
                 )
             }
             if (state.totalSessions == 0) {
                 Text(
-                    "هنوز داده‌ای ثبت نشده است. با یک تمرین شروع کنید؛ سطح تمرین‌ها به‌صورت خودکار با نتایج شما تنظیم می‌شود.",
+                    "هنوز داده‌ای ثبت نشده است. با یک تمرین شروع کنید؛ سطح هر تمرین به‌صورت خودکار با نتایج خودِ همان تمرین تنظیم می‌شود.",
                     style = type.caption,
                     color = colors.textMuted,
                 )
@@ -136,7 +136,7 @@ private fun MindLobby(state: MindUiState, viewModel: MindViewModel, settings: Mr
         SectionHeader(title = "تمرین‌ها")
         LazyVerticalGrid(
             columns = GridCells.Fixed(2),
-            modifier = Modifier.fillMaxWidth().height((MindExercise.entries.size / 2 + MindExercise.entries.size % 2).let { (it * 132).dp }),
+            modifier = Modifier.fillMaxWidth().height((MindExercise.entries.size / 2 + MindExercise.entries.size % 2).let { (it * 148).dp }),
             horizontalArrangement = Arrangement.spacedBy(MrsadTokens.Spacing.xs),
             verticalArrangement = Arrangement.spacedBy(MrsadTokens.Spacing.xs),
             userScrollEnabled = false,
@@ -144,6 +144,8 @@ private fun MindLobby(state: MindUiState, viewModel: MindViewModel, settings: Mr
             itemsIndexed(MindExercise.entries) { _, exercise ->
                 ExerciseCard(
                     exercise = exercise,
+                    levelLabel = "سطح ${formatInt(state.levelOf(exercise) + 1, settings.persianNumerals)}",
+                    hasHistory = state.bestScores.containsKey(exercise),
                     bestLabel = state.bestScores[exercise]?.let {
                         "بهترین: ${formatPercent(it, settings.persianNumerals)}"
                     },
@@ -155,7 +157,8 @@ private fun MindLobby(state: MindUiState, viewModel: MindViewModel, settings: Mr
         MrsadSurface(Modifier.fillMaxWidth()) {
             Text("چطور مرصاد سختی را تنظیم می‌کند؟", style = type.title, color = colors.textPrimary)
             Text(
-                "سطح بر اساس میانگین امتیازهای اخیر شما تعیین می‌شود: بالای ۸۵٪ یک سطح بالاتر، زیر ۵۰٪ یک سطح پایین‌تر. " +
+                "هر تمرین نردبان سختی خودش را دارد؛ یعنی حافظهٔ بصری با سرعت محاسبه قاطی نمی‌شود. " +
+                    "دو جلسهٔ پیاپی بالای ۸۵٪ یک سطح بالاتر و دو جلسهٔ پیاپی زیر ۵۰٪ یک سطح پایین‌تر می‌آورد. " +
                     "این تنظیم فقط بر داده‌های واقعی شما متکی است و هیچ ادعای پزشکی یا علمی دربارهٔ افزایش هوش مطرح نمی‌کند.",
                 style = type.body,
                 color = colors.textSecondary,
@@ -166,11 +169,29 @@ private fun MindLobby(state: MindUiState, viewModel: MindViewModel, settings: Mr
 }
 
 @Composable
-private fun ExerciseCard(exercise: MindExercise, bestLabel: String?, onClick: () -> Unit) {
+private fun ExerciseCard(
+    exercise: MindExercise,
+    levelLabel: String,
+    hasHistory: Boolean,
+    bestLabel: String?,
+    onClick: () -> Unit,
+) {
     val colors = MrsadTheme.colors
     val type = MrsadTheme.type
-    MrsadSurface(modifier = Modifier.fillMaxWidth().height(126.dp), onClick = onClick) {
-        Icon(exercise.icon, null, tint = colors.metalMid, modifier = Modifier.size(24.dp))
+    MrsadSurface(modifier = Modifier.fillMaxWidth().height(142.dp), onClick = onClick) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.Top,
+        ) {
+            Icon(exercise.icon, null, tint = colors.metalMid, modifier = Modifier.size(22.dp))
+            // The exercise's own ladder position, so the profile of each
+            // skill is visible before it is started.
+            MrsadChip(
+                text = levelLabel,
+                tint = if (hasHistory) colors.metalMid else colors.textMuted,
+            )
+        }
         Spacer(Modifier.height(2.dp))
         Text(exercise.titleFa, style = type.body.copy(fontWeight = FontWeight.SemiBold), color = colors.textPrimary, maxLines = 1)
         Text(exercise.subtitleFa, style = type.caption, color = colors.textMuted, maxLines = 2)
@@ -193,7 +214,7 @@ private fun MindPlayer(state: MindUiState, viewModel: MindViewModel, settings: M
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
-                Modifier.size(38.dp).clip(RoundedCornerShape(MrsadTokens.Radius.sm)).clickable { viewModel.abort() },
+                Modifier.size(MrsadTokens.TouchTarget).clip(RoundedCornerShape(MrsadTokens.Radius.sm)).clickable { viewModel.abort() },
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(Icons.Outlined.ArrowForward, "بازگشت", tint = colors.textPrimary)

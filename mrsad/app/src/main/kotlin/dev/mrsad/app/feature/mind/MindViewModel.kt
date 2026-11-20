@@ -9,6 +9,7 @@ import dev.mrsad.app.data.db.ActivityEventEntity
 import dev.mrsad.app.util.MrsadClock
 import dev.mrsad.app.util.firstValue
 import dev.mrsad.core.mind.MindGenerators
+import dev.mrsad.core.mind.MindProgression
 import dev.mrsad.core.random.SplitMix64
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -32,8 +33,15 @@ data class MindUiState(
     val screen: MindScreenState = MindScreenState.LOBBY,
     val exercise: MindExercise? = null,
     // adaptive level & history
+    /**
+     * The difficulty ladder of the exercise being played, 0-based.
+     * Each exercise carries its own ladder — see [levels].
+     */
     val level: Int = 0,
+    /** The level the ladder reaches after the round that just finished. */
     val nextLevel: Int = 0,
+    /** Per-exercise difficulty levels, derived from each exercise's own scores. */
+    val levels: Map<MindExercise, Int> = emptyMap(),
     val totalSessions: Int = 0,
     val averageScore: Double = 0.0,
     val bestScores: Map<MindExercise, Double> = emptyMap(),
@@ -65,6 +73,12 @@ data class MindUiState(
     val levelUp: Boolean = false,
     val saved: Boolean = false,
 ) {
+    /** The difficulty level of one exercise, 0 when it has never been played. */
+    fun levelOf(exercise: MindExercise): Int = levels[exercise] ?: 0
+
+    /** The number of exercises the user has real history for. */
+    val practisedExercises: Int get() = levels.size
+
     val progress: Float
         get() = when (exercise) {
             MindExercise.NUMBER_MEMORY, MindExercise.PATTERN_MEMORY ->
@@ -81,9 +95,15 @@ data class MindUiState(
  * MRSAD MIND controller.
  *
  * Scoring is always "fraction of correct responses", reaction time comes from
- * the monotonic clock, and adaptive level updates use explicit thresholds:
- * ≥ 85% → level +1 (max 8), < 50% → level −1 (min 0). Every finished session is
- * persisted to the activity log so Home/Analytics/Coach can use real data.
+ * the monotonic clock, and adaptive level updates follow the ladder in
+ * `dev.mrsad.core.mind.MindProgression`: a level moves only after two
+ * consecutive strong (≥ 85 %) or two consecutive weak (< 50 %) rounds, and
+ * **every exercise carries its own ladder**, so a skill is never dragged up
+ * or down by an unrelated one. The level is a pure function of the recorded
+ * scores, so it survives a restart unchanged.
+ *
+ * Every finished session is persisted to the activity log so Home/Analytics/
+ * Coach can use real data.
  */
 class MindViewModel(private val container: AppContainer) : ViewModel() {
 
@@ -91,7 +111,15 @@ class MindViewModel(private val container: AppContainer) : ViewModel() {
     val state: StateFlow<MindUiState> = _state.asStateFlow()
 
     private var sessionSeed: Long = 0L
-    private var levelInit = false
+
+    /**
+     * The recorded scores of every exercise, oldest first.
+     *
+     * This mirrors what the activity log holds; it is kept in memory so the
+     * ladder can be advanced the moment a round finishes, without waiting
+     * for the database round trip. Nothing here changes what is persisted.
+     */
+    private val scoreHistory = LinkedHashMap<MindExercise, MutableList<Double>>()
 
     init {
         loadHistory()
@@ -110,35 +138,40 @@ class MindViewModel(private val container: AppContainer) : ViewModel() {
                     exercise to group.maxOf { it.secondaryMetric }
                 }
                 .toMap()
+            // The DAO returns newest first; the ladder needs oldest first.
+            val chronological = events.asReversed()
+            scoreHistory.clear()
+            chronological.forEach { event ->
+                val exercise = MindExercise.entries
+                    .firstOrNull { it.name == event.payload.substringBefore(';') } ?: return@forEach
+                scoreHistory.getOrPut(exercise) { mutableListOf() }.add(event.secondaryMetric)
+            }
+            val levels = scoreHistory.mapValues { (_, scores) ->
+                MindProgression.levelFrom(scores)
+            }
+            val lastExercise = chronological.lastOrNull()?.payload?.substringBefore(';')
+                ?.let { name -> MindExercise.entries.firstOrNull { it.name == name } }
             _state.update {
                 it.copy(
                     totalSessions = events.size,
                     averageScore = avg,
                     bestScores = best,
-                    level = adaptiveLevel(avg, events.size),
+                    levels = levels,
+                    level = lastExercise?.let { e -> levels[e] ?: 0 } ?: 0,
                 )
             }
         }
     }
 
-    private fun adaptiveLevel(averageScore: Double, sessions: Int): Int {
-        if (sessions == 0) return 0
-        // Map the running average onto the 0..8 difficulty scale conservatively.
-        return when {
-            averageScore >= 0.85 -> 4
-            averageScore >= 0.7 -> 3
-            averageScore >= 0.55 -> 2
-            averageScore >= 0.4 -> 1
-            else -> 0
-        }
-    }
-
     fun openExercise(exercise: MindExercise) {
         sessionSeed = System.currentTimeMillis() xor SplitMix64.seedFor(exercise.name)
+        val level = _state.value.levelOf(exercise)
         _state.update {
             it.copy(
                 screen = MindScreenState.PLAYING,
                 exercise = exercise,
+                level = level,
+                nextLevel = level,
                 roundCounter = 1,
                 questionIndex = 0,
                 correctAnswers = 0,
@@ -365,16 +398,24 @@ class MindViewModel(private val container: AppContainer) : ViewModel() {
 
     private fun finishSingleRound(score: Double, detail: String) {
         val current = _state.value
+        val exercise = current.exercise
         val average = if (current.totalSessions == 0) score
         else (current.averageScore * current.totalSessions + score) / (current.totalSessions + 1)
-        val adjusted = current.level
-        val levelUp = score >= 0.85
-        val levelDown = score < 0.5
-        val nextLevel = when {
-            levelUp -> (current.level + 1).coerceAtMost(MAX_LEVEL)
-            levelDown -> (current.level - 1).coerceAtLeast(0)
-            else -> current.level
+
+        // The ladder is a pure function of the recorded scores, so the level
+        // after this round is the level the history implies — no hidden
+        // counter that could drift away from what is on disk.
+        var newLevels = current.levels
+        var nextLevel = current.level
+        if (exercise != null) {
+            val history = scoreHistory.getOrPut(exercise) { mutableListOf() }
+            history += score
+            nextLevel = MindProgression.levelFrom(history)
+            newLevels = current.levels + (exercise to nextLevel)
         }
+        val levelUp = nextLevel > current.level
+        val levelDown = nextLevel < current.level
+
         _state.update {
             it.copy(
                 screen = MindScreenState.RESULT,
@@ -382,6 +423,7 @@ class MindViewModel(private val container: AppContainer) : ViewModel() {
                 resultDetailFa = detail,
                 averageScore = average,
                 totalSessions = current.totalSessions + 1,
+                levels = newLevels,
                 nextLevel = nextLevel,
                 levelAdjusted = levelUp || levelDown,
                 levelUp = levelUp,
@@ -430,6 +472,7 @@ class MindViewModel(private val container: AppContainer) : ViewModel() {
             it.copy(
                 screen = MindScreenState.PLAYING,
                 level = current.nextLevel,
+                levels = it.levels + (exercise to current.nextLevel),
                 roundCounter = current.roundCounter + 1,
                 questionIndex = 0,
                 correctAnswers = 0,
@@ -437,12 +480,7 @@ class MindViewModel(private val container: AppContainer) : ViewModel() {
                 selectedCells = emptySet(),
             )
         }
-        applyLevel(current.nextLevel)
         startRound()
-    }
-
-    private fun applyLevel(level: Int) {
-        _state.update { it.copy(level = level) }
     }
 
     fun backToLobby() {
@@ -464,9 +502,5 @@ class MindViewModel(private val container: AppContainer) : ViewModel() {
     class Factory(private val container: AppContainer) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T = MindViewModel(container) as T
-    }
-
-    private companion object {
-        const val MAX_LEVEL = 8
     }
 }

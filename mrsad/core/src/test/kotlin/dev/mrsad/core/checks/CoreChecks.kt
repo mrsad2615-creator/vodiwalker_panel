@@ -7,6 +7,7 @@ import dev.mrsad.core.coach.Coach
 import dev.mrsad.core.coach.CoachAnswer
 import dev.mrsad.core.coach.SkillSnapshot
 import dev.mrsad.core.mind.MindGenerators
+import dev.mrsad.core.mind.MindProgression
 import dev.mrsad.core.random.SplitMix64
 import dev.mrsad.core.reading.ReadingEngine
 import dev.mrsad.core.session.FocusSession
@@ -369,6 +370,56 @@ object CoreChecks {
             expect(points.all { it.x >= 0f && it.x <= MrsadMark.WIDTH }, "mark exceeds its width")
             expect(points.all { it.y >= 0f && it.y <= MrsadMark.HEIGHT }, "mark exceeds its height")
             expect(abs(MrsadMark.ASPECT - 703f / 653f) < 1e-6f, "aspect drifted")
+        }
+
+        check("Mind: the level only moves after two rounds in the same direction") {
+            expect(MindProgression.levelFrom(emptyList()) == 0, "a new exercise starts at level 0")
+            expect(MindProgression.levelFrom(listOf(1.0)) == 0, "one strong round must not promote")
+            expect(MindProgression.levelFrom(listOf(1.0, 1.0)) == 1, "two strong rounds promote once")
+            expect(MindProgression.levelFrom(listOf(1.0, 1.0, 1.0, 1.0)) == 2, "each pair promotes again")
+            expect(MindProgression.levelFrom(listOf(0.2)) == 0, "one weak round must not demote")
+            expect(MindProgression.levelFrom(listOf(0.2, 0.2)) == 0, "cannot demote below level 0")
+            expect(
+                MindProgression.levelFrom(listOf(1.0, 1.0, 0.2, 0.2)) == 0,
+                "two weak rounds must undo one promotion",
+            )
+            expect(
+                MindProgression.levelFrom(listOf(0.7, 0.7, 0.7)) == 0,
+                "a middling score must not move the ladder",
+            )
+        }
+        check("Mind: the ladder is capped at both ends") {
+            val manyPerfect = List(40) { 1.0 }
+            expect(MindProgression.levelFrom(manyPerfect) == MindProgression.MAX_LEVEL, "must cap at the top")
+            val manyWeak = List(40) { 0.0 }
+            expect(MindProgression.levelFrom(manyWeak) == 0, "must cap at the bottom")
+        }
+        check("Mind: the level is a pure function of the recorded scores") {
+            // The level the user sees after a restart must be the level they
+            // had before it, so it cannot depend on hidden state.
+            val history = listOf(0.9, 0.9, 0.4, 0.95, 0.95, 0.6, 0.88, 0.88)
+            val level = MindProgression.levelFrom(history)
+            expect(
+                MindProgression.levelFrom(history) == level,
+                "replaying the same history must give the same level",
+            )
+            expect(
+                MindProgression.levelFrom(history.take(5)) <= level,
+                "a shorter history cannot sit above the full one",
+            )
+        }
+        check("Mind: the step prediction matches the level it describes") {
+            val history = listOf(0.9, 0.9)
+            expect(MindProgression.step(history, 0.95) == 0, "one more strong round must not promote yet")
+            expect(
+                MindProgression.step(history + 0.95, 0.95) == 1,
+                "the second consecutive strong round promotes",
+            )
+            expect(MindProgression.step(history, 0.1) == 0, "one weak round must not demote yet")
+            expect(
+                MindProgression.step(history + 0.1, 0.1) == -1,
+                "the second consecutive weak round demotes",
+            )
         }
 
         val failures = results.filter { it.second != null }

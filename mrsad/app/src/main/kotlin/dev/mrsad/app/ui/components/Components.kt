@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -73,6 +74,16 @@ object MrsadTokens {
         val xl = 28.dp
         val pill = 100.dp
     }
+
+    /**
+     * The minimum size of a touch target.
+     *
+     * Compose gives a control a touch target exactly as big as the control
+     * itself, so a 22dp icon is a 22dp target — far below the 48dp the
+     * Material accessibility guidance asks for. Every interactive element in
+     * the app reserves at least this much in both directions.
+     */
+    val TouchTarget = 48.dp
 
     object Motion {
         const val fast = 140
@@ -189,15 +200,17 @@ fun SectionHeader(
     ) {
         Text(title, style = type.title, color = colors.textPrimary)
         if (actionLabel != null && onAction != null) {
-            Text(
-                actionLabel,
-                style = type.label,
-                color = colors.accent,
+            // The label stays small, but the tap target is a full 48dp.
+            Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(MrsadTokens.Radius.pill))
                     .clickable(onClick = onAction)
-                    .padding(horizontal = MrsadTokens.Spacing.xs, vertical = 2.dp),
-            )
+                    .heightIn(min = MrsadTokens.TouchTarget)
+                    .padding(horizontal = MrsadTokens.Spacing.xs),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(actionLabel, style = type.label, color = colors.accent)
+            }
         }
     }
 }
@@ -228,6 +241,7 @@ fun MrsadPrimaryButton(
                     Brush.verticalGradient(listOf(colors.disabled, colors.disabled))
                 }
             )
+            .heightIn(min = MrsadTokens.TouchTarget)
             .clickable(
                 enabled = enabled,
                 interactionSource = interaction,
@@ -271,6 +285,7 @@ fun MrsadSecondaryButton(
         modifier = modifier
             .clip(RoundedCornerShape(MrsadTokens.Radius.pill))
             .border(1.dp, if (enabled) colors.borderStrong else colors.disabled, RoundedCornerShape(MrsadTokens.Radius.pill))
+            .heightIn(min = MrsadTokens.TouchTarget)
             .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
             .padding(horizontal = MrsadTokens.Spacing.lg, vertical = MrsadTokens.Spacing.sm),
         horizontalArrangement = Arrangement.Center,
@@ -304,7 +319,15 @@ fun MrsadChip(
             .clip(RoundedCornerShape(MrsadTokens.Radius.pill))
             .background(color.copy(alpha = 0.10f))
             .border(1.dp, color.copy(alpha = 0.28f), RoundedCornerShape(MrsadTokens.Radius.pill))
-            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+            .then(
+                if (onClick != null) {
+                    Modifier
+                        .heightIn(min = MrsadTokens.TouchTarget)
+                        .clickable(onClick = onClick)
+                } else {
+                    Modifier
+                }
+            )
             .padding(horizontal = MrsadTokens.Spacing.sm, vertical = 5.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(MrsadTokens.Spacing.xxs),

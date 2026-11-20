@@ -79,7 +79,7 @@ fun SettingsScreen(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
                     Modifier
-                        .size(38.dp)
+                        .size(MrsadTokens.TouchTarget)
                         .clip(RoundedCornerShape(MrsadTokens.Radius.sm))
                         .clickable(onClick = onBack),
                     contentAlignment = Alignment.Center,

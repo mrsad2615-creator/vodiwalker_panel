@@ -120,33 +120,50 @@ private fun ReadSetup(
 
     MrsadSurface(Modifier.fillMaxWidth()) {
         SectionHeader(title = "متن")
-        ReadTexts.all.forEach { text ->
-            val selected = text.id == state.selectedTextId
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(MrsadTokens.Radius.sm))
-                    .background(if (selected) colors.accentSoft else androidx.compose.ui.graphics.Color.Transparent)
-                    .padding(MrsadTokens.Spacing.sm)
-                    .clip(RoundedCornerShape(MrsadTokens.Radius.sm)),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Icon(Icons.Outlined.MenuBook, null, tint = colors.metalMid, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(MrsadTokens.Spacing.xs))
-                Column(
+        // Grouped by difficulty tier so the corpus reads as a progression
+        // rather than a flat list.
+        ReadTexts.all.groupBy { it.level }.toSortedMap().forEach { (level, texts) ->
+            Text(
+                text = when (level) {
+                    1 -> "آسان — جمله‌های کوتاه و ساختار روشن"
+                    2 -> "متوسط — جمله‌های ترکیبی"
+                    else -> "دشوار — متن متراکم با وابسته‌های پیاپی"
+                },
+                style = type.caption,
+                color = colors.textMuted,
+                modifier = Modifier.padding(
+                    top = MrsadTokens.Spacing.xs,
+                    bottom = MrsadTokens.Spacing.xxs,
+                ),
+            )
+            texts.forEach { text ->
+                val selected = text.id == state.selectedTextId
+                Row(
                     Modifier
-                        .weight(1f)
+                        .fillMaxWidth()
                         .clip(RoundedCornerShape(MrsadTokens.Radius.sm))
-                        .clickable { onText(text.id) }
+                        .background(if (selected) colors.accentSoft else androidx.compose.ui.graphics.Color.Transparent)
+                        .padding(MrsadTokens.Spacing.sm)
+                        .clip(RoundedCornerShape(MrsadTokens.Radius.sm)),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(text.title, style = type.body, color = colors.textPrimary, fontWeight = FontWeight.Medium)
-                    Text(
-                        "${formatInt(text.wordCount, persianNumerals)} کلمه — ${text.category}",
-                        style = type.caption,
-                        color = colors.textMuted,
-                    )
+                    Icon(Icons.Outlined.MenuBook, null, tint = colors.metalMid, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(MrsadTokens.Spacing.xs))
+                    Column(
+                        Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(MrsadTokens.Radius.sm))
+                            .clickable { onText(text.id) }
+                    ) {
+                        Text(text.title, style = type.body, color = colors.textPrimary, fontWeight = FontWeight.Medium)
+                        Text(
+                            "${formatInt(text.wordCount, persianNumerals)} کلمه — ${text.category}",
+                            style = type.caption,
+                            color = colors.textMuted,
+                        )
+                    }
+                    if (selected) MrsadChip(text = "انتخاب‌شده", tint = colors.accent)
                 }
-                if (selected) MrsadChip(text = "انتخاب‌شده", tint = colors.accent)
             }
         }
     }

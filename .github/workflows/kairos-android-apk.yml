@@ -1,0 +1,89 @@
+name: Build KAIROS Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'kairos-app/**'
+      - '.github/workflows/kairos-android-apk.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: kairos-apk
+  cancel-in-progress: true
+
+env:
+  VERSION: '1.2.0'
+  TAG: 'kairos-v1.2.0'
+
+jobs:
+  build-android-apk:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: kairos-app/package-lock.json
+
+      - name: Setup Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Setup Android SDK
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.0.0" > /dev/null
+
+      - name: Quality gates (typecheck, lint, tests)
+        working-directory: kairos-app
+        run: |
+          npm ci --no-audit --no-fund
+          npm run typecheck
+          npm run lint
+          npm test
+
+      - name: Build web bundle and sync Capacitor
+        working-directory: kairos-app
+        run: |
+          npm run build
+          npx cap sync android
+
+      - name: Assemble APK
+        working-directory: kairos-app/android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+          mkdir -p ../artifacts
+          cp app/build/outputs/apk/debug/app-debug.apk "../artifacts/KAIROS-v${VERSION}.apk"
+          ls -lh "../artifacts/KAIROS-v${VERSION}.apk"
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: KAIROS-v${{ env.VERSION }}-APK
+          path: kairos-app/artifacts/KAIROS-v${{ env.VERSION }}.apk
+          if-no-files-found: error
+
+      - name: Publish to GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          APK="kairos-app/artifacts/KAIROS-v${VERSION}.apk"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "$APK" --clobber
+          else
+            gh release create "$TAG" "$APK" \
+              --target "${{ github.sha }}" \
+              --title "KAIROS v${VERSION} — Android APK" \
+              --notes "نسخه ${VERSION} کایروس با رابط کاربری بازطراحی‌شده (ساده و حرفه‌ای)."
+          fi
+          echo "### دانلود: https://github.com/${{ github.repository }}/releases/download/$TAG/KAIROS-v${VERSION}.apk" >> "$GITHUB_STEP_SUMMARY"

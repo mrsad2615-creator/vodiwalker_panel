@@ -262,12 +262,19 @@ jobs:
           cp "$APK" mrsad.apk
           sha256sum mrsad.apk > SHA256SUMS.txt
           echo "the release APK is $(wc -c < mrsad.apk) bytes"
+          echo "the checksum is $(cut -d' ' -f1 SHA256SUMS.txt)"
 
           TAG="v$(sed -n 's/.*versionName = "\(.*\)".*/\1/p' app/build.gradle.kts | head -1)"
+          echo "the release is $TAG"
 
           cat > notes.md <<EOF
           MRSAD — Persian command centre for focus, typing and reading.
 
+          * A redesigned interface: an ambient background, floating navigation,
+            material surfaces, a geometric core that reacts to light and to typing,
+            and motion that follows the Material duration ladder.
+          * The orbital rings are drawn as a single path instead of forty separate
+            lines, which is the largest rendering change in this build.
           * Offline by design: no INTERNET permission, everything stays on the device.
           * New brand mark: the "Geometric M" is now generated from one geometry and
             shared by the launcher icon, the splash and the in-app brand mark.
@@ -301,40 +308,113 @@ jobs:
           signature.
           EOF
 
-          # The upload host is a host of its own and it does drop
-          # connections now and then, so every file is uploaded until it
-          # is really there. A release that fails halfway is worse than a
-          # release that takes a minute longer.
-          upload() {
-            local file="$1"
-            local attempt
+          # The release assets are uploaded through the documented two-step
+          # dance: create the asset, then PUT the file to the URL that comes
+          # back. `curl --http1.1` is used on purpose: the upload host drops
+          # HTTP/2 streams often enough to end the transfer with an EOF, and
+          # HTTP/1.1 does not.
+          upload_asset() {
+            local file="$1" name="$2" release_id asset_id upload_url attempt
+            release_id=$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG" --jq .id) || return 1
+
+            asset_id=$(gh api "repos/$GITHUB_REPOSITORY/releases/$release_id/assets" \
+                         --jq ".[] | select(.name == \"$name\") | .id" | head -1)
+            if [ -n "$asset_id" ]; then
+              gh api -X DELETE "repos/$GITHUB_REPOSITORY/releases/assets/$asset_id" >/dev/null 2>&1 || true
+            fi
+
             for attempt in 1 2 3 4 5; do
-              if gh release upload "$TAG" "$file" --clobber; then
-                return 0
+              upload_url=$(gh api -X POST \
+                "repos/$GITHUB_REPOSITORY/releases/$release_id/assets?name=$name" \
+                --jq .upload_url 2>/dev/null) || upload_url=""
+              if [ -n "$upload_url" ]; then
+                upload_url="${upload_url%%\{*}"
+                if curl --http1.1 --silent --show-error --fail \
+                     --retry 5 --retry-all-errors --retry-delay 5 \
+                     -H "Authorization: Bearer $GH_TOKEN" \
+                     -H "Content-Type: application/octet-stream" \
+                     --data-binary "@$file" \
+                     "${upload_url}?name=$name"; then
+                  echo "uploaded $name"
+                  return 0
+                fi
+                echo "the upload of $name failed (attempt $attempt), trying again"
+              else
+                echo "the asset $name could not be created (attempt $attempt), trying again"
               fi
-              echo "the upload of $file failed (attempt $attempt), trying again"
-              sleep $((attempt * 10))
+              sleep $((attempt * 5))
             done
             return 1
           }
 
           OK=1
+
           if gh release view "$TAG" >/dev/null 2>&1; then
+            IMMUTABLE=$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG" --jq '.immutable' 2>/dev/null)
+            if [ "$IMMUTABLE" = "true" ]; then
+              # A published, immutable release cannot receive new assets. The
+              # honest thing is to check what is already there rather than to
+              # pretend the upload worked.
+              echo "$TAG is an immutable release; its assets are checked instead"
+              for asset in mrsad.apk SHA256SUMS.txt; do
+                if ! gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG" \
+                       --jq ".assets[] | select(.name == \"$asset\") | .name" | grep -qx "$asset"; then
+                  echo "::error title=MRSAD release::$TAG is immutable and has no $asset"
+                  OK=0
+                fi
+              done
+              # The published checksum is compared with the one of the build
+              # that was made here: an immutable release that carries another
+              # build is not the release of this commit.
+              PUBLISHED=$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$TAG" \
+                            --jq ".assets[] | select(.name == \"SHA256SUMS.txt\") | .id")
+              if [ -n "$PUBLISHED" ]; then
+                gh api -H "Accept: application/octet-stream" \
+                  "repos/$GITHUB_REPOSITORY/releases/assets/$PUBLISHED" > published-sums.txt 2>/dev/null || true
+                if [ -s published-sums.txt ]; then
+                  if ! grep -q "$(cut -d' ' -f1 SHA256SUMS.txt)" published-sums.txt; then
+                    echo "::error title=MRSAD release::$TAG is immutable and carries another build"
+                    OK=0
+                  else
+                    echo "$TAG carries the same build as this one"
+                  fi
+                fi
+              fi
+            else
+              for asset in mrsad.apk SHA256SUMS.txt; do
+                if ! upload_asset "$asset" "$asset"; then
+                  echo "::error title=MRSAD release::the upload of $asset failed five times"
+                  OK=0
+                fi
+              done
+              if ! gh release edit "$TAG" --notes-file notes.md; then
+                echo "::error title=MRSAD release::the notes of $TAG could not be written"
+                OK=0
+              fi
+            fi
+          else
+            # The release is created as a draft first: a published release
+            # becomes immutable, and an immutable release can no longer take
+            # its assets. The draft takes the files first and is published
+            # afterwards.
+            if ! gh release create "$TAG" --draft --target "$COMMIT" \
+                 --title "MRSAD $TAG" --notes-file notes.md; then
+              echo "::error title=MRSAD release::the release $TAG could not be created"
+              exit 1
+            fi
             for asset in mrsad.apk SHA256SUMS.txt; do
-              if ! upload "$asset"; then
+              if ! upload_asset "$asset" "$asset"; then
                 echo "::error title=MRSAD release::the upload of $asset failed five times"
                 OK=0
               fi
             done
-            if ! gh release edit "$TAG" --notes-file notes.md; then
-              echo "::error title=MRSAD release::the notes of $TAG could not be written"
-              OK=0
-            fi
-          else
-            if ! gh release create "$TAG" mrsad.apk SHA256SUMS.txt \
-                 --title "MRSAD $TAG" --notes-file notes.md; then
-              echo "::error title=MRSAD release::the release $TAG could not be created"
-              OK=0
+            if [ "$OK" = "1" ]; then
+              if ! gh release edit "$TAG" --draft=false; then
+                echo "::error title=MRSAD release::the release $TAG could not be published"
+                OK=0
+              fi
+            else
+              echo "::error title=MRSAD release::$TAG stays a draft, because its files are missing"
             fi
           fi
 

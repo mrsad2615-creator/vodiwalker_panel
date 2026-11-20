@@ -84,11 +84,18 @@ read_report() {
 
   # The application writes its report into its own storage as well. If
   # the output of the run was lost, that file is the second way to the
-  # number.
+  # number. It must be a file that this session wrote: the file is
+  # removed before the session starts, and its time is compared with the
+  # start of the session as well.
   if [ -z "$report" ]; then
     for directory in "/data/user/0/$APP_ID/files" "/data/data/$APP_ID/files"; do
       if adb shell "cat $directory/mrsad-perf.json" > "$GRADLE_DIR/device-report.json" 2>/dev/null; then
         if [ -s "$GRADLE_DIR/device-report.json" ]; then
+          STAMP=$(adb shell "stat -c %Y $directory/mrsad-perf.json" 2>/dev/null | tr -d '\r' || true)
+          if [ -n "$STAMP" ] && [ "$STAMP" -lt "${SESSION_START:-0}" ]; then
+            echo "the report on the device is older than this session and is not used"
+            continue
+          fi
           report=$(cat "$GRADLE_DIR/device-report.json")
           break
         fi
@@ -157,11 +164,31 @@ collect_screenshots() {
 
 # ---- 6. The sessions --------------------------------------------------------
 mkdir -p "$OUTPUT_DIR"
+
+# A session that failed says nothing about the application, and a session
+# that failed without a report must not be counted. At least this many
+# sessions have to succeed for the measurement to mean something: one
+# run of a shared emulator says more about the machine than about the
+# application.
+MIN_SESSIONS="${MRSAD_PERF_MIN_SESSIONS:-3}"
+if [ "$MIN_SESSIONS" -gt "$RUNS" ]; then
+  MIN_SESSIONS="$RUNS"
+fi
+
+FAILED=""
 for run in $(seq 1 "$RUNS"); do
   echo "===== session $run of $RUNS =====" | tee -a "$LOG"
   # Where the log ends before this session: only what comes after it
   # belongs to this session.
   LOG_OFFSET=$(wc -c < "$LOG")
+  SESSION_START=$(date +%s)
+
+  # The report of the session before must not be able to pass as the
+  # report of this one, so it is taken away first.
+  rm -f "$GRADLE_DIR/device-report.json"
+  adb shell "rm -f /data/user/0/$APP_ID/files/mrsad-perf.json /data/data/$APP_ID/files/mrsad-perf.json" \
+    >/dev/null 2>&1 || true
+  rm -rf app/build/outputs/androidTest-results app/build/reports/androidTests
 
   adb shell am instrument -w \
     -e class dev.mrsad.app.PerformanceBenchmarkTest \
@@ -169,10 +196,20 @@ for run in $(seq 1 "$RUNS"); do
   STATUS=${PIPESTATUS[0]}
   echo "session $run finished with status $STATUS" | tee -a "$LOG"
 
+  if [ "$STATUS" -ne 0 ]; then
+    # The instrumentation failed. Its numbers, if there are any, are not
+    # used: a session that did not finish cannot describe the interface.
+    echo "session $run failed with status $STATUS; its numbers are not used" >&2
+    FAILED="$FAILED $run"
+    continue
+  fi
+
   if read_report "$OUTPUT_DIR/perf-session-$run.json"; then
     echo "the report of session $run was written"
   else
     echo "session $run produced no report" >&2
+    FAILED="$FAILED $run"
+    continue
   fi
 
   if [ -n "$SCREENSHOT_DIR" ]; then
@@ -191,7 +228,23 @@ fi
 
 REPORTS=$(ls "$OUTPUT_DIR"/perf-session-*.json 2>/dev/null | wc -l)
 echo "$REPORTS of $RUNS sessions produced a report"
+if [ -n "$FAILED" ]; then
+  echo "the sessions$FAILED did not produce a usable report"
+fi
+
+# The summary is written next to the reports, so that the number of
+# usable sessions travels with the numbers themselves.
+{
+  echo "sessions: $RUNS"
+  echo "usable reports: $REPORTS"
+  echo "failed sessions:${FAILED:- none}"
+} > "$OUTPUT_DIR/summary.txt"
+
 if [ "$REPORTS" -eq 0 ]; then
   echo "no performance report was produced by the benchmark" >&2
+  exit 1
+fi
+if [ "$REPORTS" -lt "$MIN_SESSIONS" ]; then
+  echo "only $REPORTS of $RUNS sessions produced a report; at least $MIN_SESSIONS are needed" >&2
   exit 1
 fi

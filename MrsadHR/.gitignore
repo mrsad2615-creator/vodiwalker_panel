@@ -1,0 +1,16 @@
+# Gradle / Android Studio
+.gradle/
+build/
+local.properties
+*.iml
+.idea/
+captures/
+.externalNativeBuild/
+.cxx/
+*.apk
+*.aab
+*.idsig
+*.keystore
+
+# The shipped debug build is part of the deliverable.
+!dist/mrsadhr-debug.apk

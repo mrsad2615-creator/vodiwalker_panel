@@ -7,10 +7,15 @@ name: MRSAD Performance
 # revision after it. The numbers come from the platform's own
 # `FrameMetrics`, so the comparison is a measurement and not an estimate.
 #
-# The report of every run is uploaded as an artefact, the comparison of
-# the two runs is written into `PERF-COMPARISON.md`, and both the report
-# and the comparison are published as annotations, so that they can be
-# read without downloading anything.
+# Every build is measured several times: an emulator shares its cores
+# with everything else that runs on it, so a single run says more about
+# the machine than about the application. The comparison reports the
+# middle of the runs and the spread of the runs.
+#
+# The reports of every run are uploaded as an artefact, the comparison of
+# the two sides is written into `PERF-COMPARISON.md`, and both the
+# reports and the comparison are published as annotations, so that they
+# can be read without downloading anything.
 
 on:
   workflow_dispatch:
@@ -19,6 +24,10 @@ on:
         description: 'The revision the redesign is compared against'
         required: false
         default: '465b3e532cadeefb167a9fa2c8303fcea6549d41'
+      runs:
+        description: 'How many times each build is measured'
+        required: false
+        default: '5'
   push:
     paths:
       - 'mrsad/**'
@@ -35,7 +44,7 @@ jobs:
   measure:
     name: Measure (${{ matrix.label }})
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
@@ -46,6 +55,8 @@ jobs:
           - label: redesign
             ref: ${{ github.sha }}
             checkout: head
+    env:
+      MRSAD_PERF_RUNS: ${{ github.event.inputs.runs || '5' }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -53,7 +64,7 @@ jobs:
           path: ${{ matrix.checkout }}
 
       # The benchmark itself is taken from the head of the branch, so the
-      # two runs are measured by exactly the same instrument.
+      # two sides are measured by exactly the same instrument.
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.sha }}
@@ -94,7 +105,7 @@ jobs:
           # The measurement has to see the animated application, so the
           # platform animations are left alone.
           disable-animations: false
-          script: cd $GITHUB_WORKSPACE/${{ matrix.checkout }}/mrsad && bash .ci/run-perf-benchmark.sh . "$GITHUB_WORKSPACE/perf-${{ matrix.label }}.json" "$GITHUB_WORKSPACE/screenshots-${{ matrix.label }}"
+          script: cd $GITHUB_WORKSPACE/${{ matrix.checkout }}/mrsad && bash .ci/run-perf-benchmark.sh . "$GITHUB_WORKSPACE/perf-${{ matrix.label }}" "$GITHUB_WORKSPACE/screenshots-${{ matrix.label }}"
       - name: Report what happened
         if: failure() || cancelled()
         shell: bash
@@ -102,35 +113,39 @@ jobs:
           set -uo pipefail
           python3 "$GITHUB_WORKSPACE/instrument/mrsad/.ci/report_failure.py" \
             "$GITHUB_WORKSPACE/${{ matrix.checkout }}/mrsad/perf-benchmark.log" || true
-      - name: Collect the report
-        if: always()
-        shell: bash
-        run: |
-          set -euo pipefail
-          if [ -f "$GITHUB_WORKSPACE/perf-${{ matrix.label }}.json" ]; then
-            echo "the report of the ${{ matrix.label }} run:"
-            cat "$GITHUB_WORKSPACE/perf-${{ matrix.label }}.json"
-          else
-            echo "the ${{ matrix.label }} run produced no report"
-          fi
-      - name: Publish the report and the screenshots
+      - name: Collect the reports
         if: always()
         shell: bash
         run: |
           set -uo pipefail
-          python3 "$GITHUB_WORKSPACE/instrument/.github/scripts/annotate.py" \
-            "$GITHUB_WORKSPACE/perf-${{ matrix.label }}.json" \
-            "MRSAD measurement (${{ matrix.label }})"
+          for report in "$GITHUB_WORKSPACE"/perf-${{ matrix.label }}/perf-session-*.json; do
+            if [ -f "$report" ]; then
+              echo "== $(basename "$report") =="
+              cat "$report"
+            fi
+          done
+      - name: Publish the reports and the screenshots
+        if: always()
+        shell: bash
+        run: |
+          set -uo pipefail
+          for report in "$GITHUB_WORKSPACE"/perf-${{ matrix.label }}/perf-session-*.json; do
+            if [ -f "$report" ]; then
+              python3 "$GITHUB_WORKSPACE/instrument/.github/scripts/annotate.py" \
+                "$report" \
+                "MRSAD measurement (${{ matrix.label }}, $(basename "$report"))"
+            fi
+          done
           python3 "$GITHUB_WORKSPACE/instrument/.github/scripts/annotate.py" \
             "$GITHUB_WORKSPACE/${{ matrix.checkout }}/mrsad/screenshot-collection.txt" \
             "MRSAD screenshots (${{ matrix.label }})"
-      - name: Upload the report
+      - name: Upload the reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: mrsad-perf-${{ matrix.label }}
           path: |
-            perf-${{ matrix.label }}.json
+            perf-${{ matrix.label }}/**
             screenshots-${{ matrix.label }}/**
           if-no-files-found: ignore
 
@@ -154,17 +169,17 @@ jobs:
       - name: Write the comparison
         shell: bash
         run: |
-          set -euo pipefail
+          set -uo pipefail
           python3 .github/scripts/compare_perf.py \
-            baseline/perf-baseline.json \
-            redesign/perf-redesign.json \
+            baseline/perf-baseline \
+            redesign/perf-redesign \
             PERF-COMPARISON.md
           echo "----- the comparison -----"
           cat PERF-COMPARISON.md
       - name: Publish the comparison
         shell: bash
         run: |
-          set -euo pipefail
+          set -uo pipefail
           {
             echo "## The measurement"
             echo

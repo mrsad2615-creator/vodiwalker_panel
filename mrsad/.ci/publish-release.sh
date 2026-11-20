@@ -122,6 +122,24 @@ release_exists() {
   [ -n "$(release_id)" ]
 }
 
+# A draft that was just created does not appear in the list of the
+# releases straight away: the list lags behind by a few seconds. The
+# lookup is therefore retried for a minute instead of being trusted
+# once, and a draft that cannot be found is reported with the reason
+# instead of a bare "cannot be found".
+wait_release_id() {
+  local attempt id
+  for attempt in 1 2 3 4 5 6 7 8 9 10 11 12; do
+    id="$(release_id)"
+    if [ -n "$id" ]; then
+      echo "$id"
+      return 0
+    fi
+    sleep 5
+  done
+  return 1
+}
+
 release_is_immutable() {
   local id
   id="$(release_id)"
@@ -131,18 +149,23 @@ release_is_immutable() {
 
 # The release is published by hand: the tag of a draft does not exist
 # until it is published, and the tag has to point at the commit that was
-# built.
+# built. The tag name is sent along because a PATCH without it resets
+# the tag name of a draft to an "untagged-..." placeholder, and a
+# release published that way carries no tag at all.
 publish_release() {
   local id="$1"
-  gh api -X PATCH "repos/$REPO/releases/$id" -F draft=false >/dev/null 2>&1
+  gh api -X PATCH "repos/$REPO/releases/$id" \
+    -F "tag_name=$TAG" -F "target_commitish=$COMMIT" -F draft=false >/dev/null 2>&1
 }
 
 # The notes are written through the API as well: a release that is still
 # a draft cannot be found by its tag, and the notes are part of the
-# release that is being filled.
+# release that is being filled. The tag name is sent along for the same
+# reason as in the publish: without it the draft loses its tag name.
 update_notes() {
   local id="$1"
-  gh api -X PATCH "repos/$REPO/releases/$id" -F "body=@$NOTES" >/dev/null 2>&1
+  gh api -X PATCH "repos/$REPO/releases/$id" \
+    -F "tag_name=$TAG" -F "body=@$NOTES" >/dev/null 2>&1
 }
 
 # The documented upload: the address of the upload is a property of the
@@ -261,6 +284,10 @@ if release_exists; then
     FAILED=1
   fi
   [ "$FAILED" -eq 0 ] || exit 1
+  if ! publish_release "$ID"; then
+    fail "the release $TAG could not be published"
+    exit 1
+  fi
   log "released $TAG"
   exit 0
 fi
@@ -274,9 +301,9 @@ if ! gh release create "$TAG" --draft --target "$COMMIT" \
   exit 1
 fi
 
-ID="$(release_id)"
+ID="$(wait_release_id)"
 if [ -z "$ID" ]; then
-  fail "the draft $TAG cannot be found"
+  fail "the draft $TAG cannot be found in the list of the releases"
   exit 1
 fi
 

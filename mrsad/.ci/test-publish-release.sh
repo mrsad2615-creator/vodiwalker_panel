@@ -82,6 +82,19 @@ if [ "${1:-}" = "api" ]; then
   # only way to find one.
   if [ "$path" = "repos/$GITHUB_REPOSITORY/releases" ]; then
     if [ "${STUB_EXISTS:-0}" = "1" ] || [ -f "$STUB_LOG.created" ]; then
+      # The list of the releases can lag behind a draft that was just
+      # created: the first calls answer with nothing, and only a later
+      # one sees the draft. STUB_DELAY_ID says how many calls lag.
+      if [ -n "${STUB_DELAY_ID:-}" ]; then
+        count_file="$STUB_LOG.count"
+        count=0
+        [ -f "$count_file" ] && count="$(cat "$count_file")"
+        count=$((count + 1))
+        echo "$count" > "$count_file"
+        if [ "$count" -le "$STUB_DELAY_ID" ]; then
+          exit 0
+        fi
+      fi
       echo "${STUB_RELEASE_ID:-1}"
     fi
     exit 0
@@ -249,6 +262,12 @@ grep -q "release create v9.9.9 --draft" "$LOG" && ok "the release was created as
   || bad "the release was not created as a draft"
 grep -q "patched" "$LOG" && ok "the draft was published afterwards" \
   || bad "the draft was never published"
+grep -q "draft=false" "$LOG" && ok "the publish asked for the release to be published" \
+  || bad "the publish did not ask for the release to be published"
+grep -q "tag_name=v9.9.9" "$LOG" && ok "the publish carried the tag name" \
+  || bad "the publish did not carry the tag name"
+grep -q "target_commitish=0123456789abcdef" "$LOG" && ok "the publish carried the commit the tag points at" \
+  || bad "the publish did not carry the commit the tag points at"
 grep -q "sent .* from mrsad.apk" "$LOG" && ok "the APK was uploaded" || bad "the APK was not uploaded"
 grep -q "sent .* from SHA256SUMS.txt" "$LOG" && ok "the checksum was uploaded" || bad "the checksum was not uploaded"
 grep -q "sent .* from BUILD.txt" "$LOG" && ok "the build record was uploaded" || bad "the build record was not uploaded"
@@ -259,7 +278,11 @@ echo "== a release that exists and can still be changed =="
 run_case mutable v9.9.9 STUB_EXISTS=1 STUB_IMMUTABLE=false
 [ "$STATUS" -eq 0 ] && ok "the publish succeeded" || bad "the publish failed with $STATUS"
 grep -q "sent .* from mrsad.apk" "$LOG" && ok "the APK was uploaded" || bad "the APK was not uploaded"
-grep -q "patched" "$LOG" && ok "the notes were written" || bad "the notes were not written"
+grep -q "body=@" "$LOG" && ok "the notes were written" || bad "the notes were not written"
+grep -q "draft=false" "$LOG" && ok "the draft was published afterwards" \
+  || bad "the draft was filled but never published"
+grep -q "tag_name=v9.9.9" "$LOG" && ok "the publish carried the tag name" \
+  || bad "the publish did not carry the tag name"
 
 echo "== an immutable release that carries the same build =="
 run_case immutable_same v9.9.9 \
@@ -291,6 +314,12 @@ source digest: $EXPECTED_DIGEST
 apk sha256: something"
 [ "$STATUS" -ne 0 ] && ok "the publish failed, as it should" || bad "the publish succeeded over an older source"
 grep -q "raise the version number" "$LOG" && ok "the reason was said" || bad "the reason was not said"
+
+echo "== a new release that the list does not see straight away =="
+run_case delayed v9.9.9 STUB_EXISTS=0 STUB_DELAY_ID=3
+[ "$STATUS" -eq 0 ] && ok "the publish succeeded" || bad "the publish failed with $STATUS"
+grep -q "draft=false" "$LOG" && ok "the draft was published once it appeared" \
+  || bad "the draft was not published once it appeared"
 
 echo "== a new release, with the upload host down =="
 run_case upload_down v9.9.9 STUB_EXISTS=0 STUB_UPLOAD_DOWN=1

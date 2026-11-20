@@ -29,9 +29,15 @@ on:
         required: false
         default: '5'
   push:
+    # The measurement only has to run again when something that can
+    # change it changes: the application, the domain core, the benchmark
+    # itself or the comparison. A document does not move a single frame.
     paths:
-      - 'mrsad/**'
+      - 'mrsad/app/**'
+      - 'mrsad/core/**'
+      - 'mrsad/.ci/**'
       - '.github/workflows/mrsad-perf.yml'
+      - '.github/scripts/compare_perf.py'
 
 permissions:
   contents: read

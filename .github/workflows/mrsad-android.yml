@@ -248,11 +248,20 @@ jobs:
           VERSION: ${{ github.run_number }}
           COMMIT: ${{ github.sha }}
         run: |
-          set -euo pipefail
+          set -uo pipefail
+          # Everything the step prints is kept, so a failing publish can be
+          # read without downloading the log of the run.
+          exec > >(tee release.log) 2>&1
+
           set -- app/build/outputs/apk/release/*.apk
           APK="$1"
+          if [ ! -f "$APK" ]; then
+            echo "there is no release APK at $APK"
+            exit 1
+          fi
           cp "$APK" mrsad.apk
           sha256sum mrsad.apk > SHA256SUMS.txt
+          echo "the release APK is $(wc -c < mrsad.apk) bytes"
 
           TAG="v$(sed -n 's/.*versionName = "\(.*\)".*/\1/p' app/build.gradle.kts | head -1)"
 
@@ -292,13 +301,50 @@ jobs:
           signature.
           EOF
 
+          # The upload host is a host of its own and it does drop
+          # connections now and then, so every file is uploaded until it
+          # is really there. A release that fails halfway is worse than a
+          # release that takes a minute longer.
+          upload() {
+            local file="$1"
+            local attempt
+            for attempt in 1 2 3 4 5; do
+              if gh release upload "$TAG" "$file" --clobber; then
+                return 0
+              fi
+              echo "the upload of $file failed (attempt $attempt), trying again"
+              sleep $((attempt * 10))
+            done
+            return 1
+          }
+
+          OK=1
           if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release upload "$TAG" mrsad.apk SHA256SUMS.txt --clobber
-            gh release edit "$TAG" --notes-file notes.md
+            for asset in mrsad.apk SHA256SUMS.txt; do
+              if ! upload "$asset"; then
+                echo "::error title=MRSAD release::the upload of $asset failed five times"
+                OK=0
+              fi
+            done
+            if ! gh release edit "$TAG" --notes-file notes.md; then
+              echo "::error title=MRSAD release::the notes of $TAG could not be written"
+              OK=0
+            fi
           else
-            gh release create "$TAG" mrsad.apk SHA256SUMS.txt \
-              --title "MRSAD $TAG" --notes-file notes.md
+            if ! gh release create "$TAG" mrsad.apk SHA256SUMS.txt \
+                 --title "MRSAD $TAG" --notes-file notes.md; then
+              echo "::error title=MRSAD release::the release $TAG could not be created"
+              OK=0
+            fi
           fi
 
           echo "released $TAG"
+          exit $((1 - OK))
+
+      - name: Report what happened
+        if: failure() || cancelled()
+        shell: bash
+        run: |
+          set -uo pipefail
+          python3 ../.github/scripts/annotate.py release.log "MRSAD release log" || true
           gh release view "$TAG" --json url --jq .url

@@ -18,6 +18,8 @@ class AppContainer(context: Context) {
 
     private val applicationContext = context.applicationContext
 
+    fun appContextOrNull(): android.content.Context? = applicationContext
+
     val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     val database: MrsadDatabase = MrsadDatabase.build(applicationContext)

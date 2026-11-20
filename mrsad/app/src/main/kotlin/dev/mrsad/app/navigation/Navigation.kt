@@ -34,6 +34,7 @@ import dev.mrsad.app.data.AppContainer
 import dev.mrsad.app.data.settings.MrsadSettings
 import dev.mrsad.app.feature.analytics.AnalyticsScreen
 import dev.mrsad.app.feature.assistant.AssistantScreen
+import dev.mrsad.app.feature.focus.FocusScreen
 import dev.mrsad.app.feature.home.HomeScreen
 import dev.mrsad.app.feature.mind.MindScreen
 import dev.mrsad.app.feature.placeholder.PlaceholderScreen
@@ -154,10 +155,9 @@ fun MrsadRoot(
                 )
             }
             composable(Routes.FOCUS) {
-                PlaceholderScreen(
-                    title = "FOCUS SPACE",
-                    environment = dev.mrsad.app.ui.theme.PageEnvironment.FOCUS,
-                    description = "تایمر تمرکز با پشتیبانی قفل صفحه و اجرا در پس‌زمینه — در فاز ۶ پیاده‌سازی می‌شود.",
+                FocusScreen(
+                    container = container,
+                    settings = settings,
                     onBack = { navController.popBackStack() },
                 )
             }

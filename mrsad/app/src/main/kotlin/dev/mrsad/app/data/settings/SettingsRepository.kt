@@ -1,5 +1,6 @@
 package dev.mrsad.app.data.settings
 
+import android.app.ActivityManager
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
@@ -87,9 +88,33 @@ class SettingsRepository(private val context: Context) {
             )
         }
 
+    /**
+     * Seeds defaults once. Visual quality is chosen from real device memory:
+     * low-RAM devices start at Balanced (not High) so the first launch is
+     * smooth even before the user visits Studio (spec §26 adaptive graphics).
+     */
     suspend fun ensureDefaults() {
         context.dataStore.edit { prefs ->
-            if (prefs[Keys.defaultsSeeded] != true) prefs[Keys.defaultsSeeded] = true
+            if (prefs[Keys.defaultsSeeded] != true) {
+                if (prefs[Keys.quality] == null) {
+                    prefs[Keys.quality] = defaultQualityForDevice().id
+                }
+                prefs[Keys.defaultsSeeded] = true
+            }
+        }
+    }
+
+    private fun defaultQualityForDevice(): GraphicsQuality {
+        val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
+            ?: return GraphicsQuality.BALANCED
+        val memoryInfo = ActivityManager.MemoryInfo()
+        activityManager.getMemoryInfo(memoryInfo)
+        val totalRamMb = memoryInfo.totalMem / (1024L * 1024L)
+        return when {
+            activityManager.isLowRamDevice -> GraphicsQuality.PERFORMANCE
+            totalRamMb < 3_000 -> GraphicsQuality.BALANCED
+            totalRamMb >= 6_000 -> GraphicsQuality.HIGH
+            else -> GraphicsQuality.BALANCED
         }
     }
 

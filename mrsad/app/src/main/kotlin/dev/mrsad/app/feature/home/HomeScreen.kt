@@ -48,6 +48,7 @@ import dev.mrsad.app.testing.MrsadTestTags
 import dev.mrsad.app.ui.components.LocalBottomBarClearance
 import dev.mrsad.app.ui.components.MetricValue
 import dev.mrsad.app.ui.components.MrsadCore
+import dev.mrsad.app.ui.components.MrsadReveal
 import dev.mrsad.app.ui.components.MrsadMarkView
 import dev.mrsad.app.ui.components.MrsadSurface
 import dev.mrsad.app.ui.components.MrsadTokens
@@ -90,74 +91,86 @@ fun HomeScreen(
             verticalArrangement = Arrangement.spacedBy(MrsadTokens.Spacing.md),
             contentPadding = PaddingValues(top = MrsadTokens.Spacing.lg, bottom = MrsadTokens.Spacing.lg),
         ) {
-            item { HomeHeader() }
+            item {
+                MrsadReveal(modifier = Modifier.fillMaxWidth(), index = 0) { HomeHeader() }
+            }
 
             item {
-                Box(
-                    Modifier
-                        .testTag(MrsadTestTags.HOME_CORE)
-                        .fillMaxWidth()
-                        .height(292.dp)
-                ) {
-                    MrsadCore(
-                        energy = state.energy,
-                        modifier = Modifier.fillMaxSize(),
-                        streakDays = state.streakDays,
-                        bestWpm = state.bestWpm ?: 0,
-                    )
-                    Column(
-                        modifier = Modifier
-                            .align(Alignment.BottomCenter)
-                            .padding(bottom = 2.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
+                MrsadReveal(modifier = Modifier.fillMaxWidth(), index = 1) {
+                    Box(
+                        Modifier
+                            .testTag(MrsadTestTags.HOME_CORE)
+                            .fillMaxWidth()
+                            .height(300.dp)
                     ) {
-                        Text(
-                            text = if (state.hasAnyData) "هستهٔ فعالیت شما" else "هسته در انتظار اولین تمرین",
-                            style = type.caption,
-                            color = colors.textMuted,
+                        MrsadCore(
+                            energy = state.energy,
+                            modifier = Modifier.fillMaxSize(),
+                            streakDays = state.streakDays,
+                            bestWpm = state.bestWpm ?: 0,
                         )
-                        if (state.hasAnyData) {
+                        Column(
+                            modifier = Modifier
+                                .align(Alignment.BottomCenter)
+                                .padding(bottom = 2.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                        ) {
                             Text(
-                                text = "${formatPercent(state.todayProgress * 100.0, settings.persianNumerals)} از هدف امروز",
-                                style = type.label,
-                                color = colors.textSecondary,
+                                text = if (state.hasAnyData) "هستهٔ فعالیت شما" else "هسته در انتظار اولین تمرین",
+                                style = type.caption,
+                                color = colors.textMuted,
                             )
+                            if (state.hasAnyData) {
+                                Text(
+                                    text = "${formatPercent(state.todayProgress * 100.0, settings.persianNumerals)} از هدف امروز",
+                                    style = type.label,
+                                    color = colors.textSecondary,
+                                )
+                            }
                         }
                     }
                 }
             }
 
             item {
-                Row(horizontalArrangement = Arrangement.spacedBy(MrsadTokens.Spacing.xs)) {
-                    StatCell(
-                        modifier = Modifier.weight(1f),
-                        value = formatInt(state.todayMinutes, settings.persianNumerals),
-                        label = "دقیقه امروز",
-                        icon = Icons.Outlined.SelfImprovement,
-                    )
-                    StatCell(
-                        modifier = Modifier.weight(1f),
-                        value = formatInt(state.todaySessions, settings.persianNumerals),
-                        label = "تمرین امروز",
-                        icon = Icons.Outlined.EmojiEvents,
-                    )
-                    StatCell(
-                        modifier = Modifier.weight(1f),
-                        value = formatInt(state.streakDays, settings.persianNumerals),
-                        label = "روز پیوسته",
-                        icon = Icons.Outlined.LocalFireDepartment,
-                    )
+                MrsadReveal(modifier = Modifier.fillMaxWidth(), index = 2) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(MrsadTokens.Spacing.xs)) {
+                        StatCell(
+                            modifier = Modifier.weight(1f),
+                            value = formatInt(state.todayMinutes, settings.persianNumerals),
+                            label = "دقیقه امروز",
+                            icon = Icons.Outlined.SelfImprovement,
+                        )
+                        StatCell(
+                            modifier = Modifier.weight(1f),
+                            value = formatInt(state.todaySessions, settings.persianNumerals),
+                            label = "تمرین امروز",
+                            icon = Icons.Outlined.EmojiEvents,
+                        )
+                        StatCell(
+                            modifier = Modifier.weight(1f),
+                            value = formatInt(state.streakDays, settings.persianNumerals),
+                            label = "روز پیوسته",
+                            icon = Icons.Outlined.LocalFireDepartment,
+                        )
+                    }
                 }
             }
 
-            item { SectionHeader(title = "ماژول‌ها") }
             item {
-                LazyRow(
-                    modifier = Modifier.testTag(MrsadTestTags.HOME_MODULES),
-                    horizontalArrangement = Arrangement.spacedBy(MrsadTokens.Spacing.xs),
-                ) {
-                    items(moduleEntries) { entry ->
-                        ModuleCard(entry = entry, onClick = { onNavigate(entry.route) })
+                MrsadReveal(modifier = Modifier.fillMaxWidth(), index = 3) {
+                    SectionHeader(title = "ماژول‌ها")
+                }
+            }
+            item {
+                MrsadReveal(modifier = Modifier.fillMaxWidth(), index = 4) {
+                    LazyRow(
+                        modifier = Modifier.testTag(MrsadTestTags.HOME_MODULES),
+                        horizontalArrangement = Arrangement.spacedBy(MrsadTokens.Spacing.xs),
+                    ) {
+                        items(moduleEntries) { entry ->
+                            ModuleCard(entry = entry, onClick = { onNavigate(entry.route) })
+                        }
                     }
                 }
             }

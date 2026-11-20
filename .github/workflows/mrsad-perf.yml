@@ -1,0 +1,144 @@
+name: MRSAD Performance
+
+# The performance comparison of the interface.
+#
+# Two builds of the app are measured on the same emulator, in the same
+# job, with the same script: the revision before the redesign and the
+# revision after it. The numbers come from the platform's own
+# `FrameMetrics`, so the comparison is a measurement and not an estimate.
+#
+# The report of every run is uploaded as an artefact, and the comparison
+# of the two runs is written into `PERF-COMPARISON.md`.
+
+on:
+  workflow_dispatch:
+    inputs:
+      baseline_ref:
+        description: 'The revision the redesign is compared against'
+        required: false
+        default: '465b3e5'
+  push:
+    paths:
+      - 'mrsad/**'
+      - '.github/workflows/mrsad-perf.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mrsad-perf-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  measure:
+    name: Measure (${{ matrix.label }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: baseline
+            ref: ${{ github.event.inputs.baseline_ref || '465b3e5' }}
+            checkout: baseline
+          - label: redesign
+            ref: ${{ github.sha }}
+            checkout: head
+    defaults:
+      run:
+        working-directory: mrsad
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ matrix.ref }}
+          path: ${{ matrix.checkout }}
+
+      # The benchmark itself is taken from the head of the branch, so the
+      # two runs are measured by exactly the same instrument.
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: instrument
+
+      - name: Install the benchmark into the checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          source_dir="instrument/mrsad/app/src/androidTest/kotlin/dev/mrsad/app"
+          target_dir="${{ matrix.checkout }}/mrsad/app/src/androidTest/kotlin/dev/mrsad/app"
+          mkdir -p "$target_dir"
+          cp "$source_dir/PerformanceBenchmarkTest.kt" "$target_dir/"
+          echo "the benchmark of the head revision now measures ${{ matrix.ref }}"
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Enable KVM access
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Run the benchmark on the emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 33
+          arch: x86_64
+          emulator-boot-timeout: 420
+          # The measurement has to see the animated application, so the
+          # platform animations are left alone.
+          disable-animations: false
+          script: cd ${{ matrix.checkout }}/mrsad && sh .ci/run-perf-benchmark.sh . "$GITHUB_WORKSPACE/perf-${{ matrix.label }}.json"
+      - name: Collect the report
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -f "$GITHUB_WORKSPACE/perf-${{ matrix.label }}.json" ]; then
+            echo "the report of the ${{ matrix.label }} run:"
+            cat "$GITHUB_WORKSPACE/perf-${{ matrix.label }}.json"
+          else
+            echo "the ${{ matrix.label }} run produced no report"
+          fi
+      - name: Upload the report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mrsad-perf-${{ matrix.label }}
+          path: perf-${{ matrix.label }}.json
+          if-no-files-found: ignore
+
+  compare:
+    name: Compare
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: measure
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: mrsad-perf-baseline
+          path: baseline
+        continue-on-error: true
+      - uses: actions/download-artifact@v4
+        with:
+          name: mrsad-perf-redesign
+          path: redesign
+        continue-on-error: true
+      - name: Write the comparison
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 .github/scripts/compare_perf.py \
+            baseline/perf-baseline.json \
+            redesign/perf-redesign.json \
+            PERF-COMPARISON.md
+          echo "----- the comparison -----"
+          cat PERF-COMPARISON.md
+      - name: Upload the comparison
+        uses: actions/upload-artifact@v4
+        with:
+          name: mrsad-perf-comparison
+          path: PERF-COMPARISON.md
+          if-no-files-found: ignore

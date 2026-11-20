@@ -1,5 +1,6 @@
 package dev.mrsad.app.ui.components
 
+import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -9,6 +10,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
@@ -16,6 +19,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.unit.dp
 import dev.mrsad.app.ui.theme.MrsadTheme
 
@@ -84,6 +88,10 @@ object SparkGeometry {
  * A `null` slot is a day without a measurement, not a zero: the line breaks
  * there instead of dipping to the floor, so the chart never invents a
  * session the user did not have.
+ *
+ * When the data changes, the curve is *revealed* from left to right
+ * instead of jumping. The values themselves are never altered: the
+ * animation only moves the edge of the drawing.
  */
 @Composable
 fun SparkLine(
@@ -93,8 +101,24 @@ fun SparkLine(
     label: String? = null,
 ) {
     val colors = MrsadTheme.colors
+    val motion = MrsadTheme.motion
     val lineColor = tint ?: colors.metalMid
     val present = values.filterNotNull()
+
+    // The reveal of the curve. It restarts whenever the data changes —
+    // and only then: the key is the *content* of the series, not the
+    // identity of the list, so a caller that rebuilds its list on every
+    // recomposition does not make the curve flicker.
+    val reveal = remember { Animatable(0f) }
+    val signature = remember(values) { values.hashCode() }
+    LaunchedEffect(signature) {
+        if (motion.deterministic || motion.reducedMotion) {
+            reveal.snapTo(1f)
+            return@LaunchedEffect
+        }
+        reveal.snapTo(0f)
+        reveal.animateTo(1f, motion.spatialDefault())
+    }
 
     Column(modifier) {
         if (label != null) {
@@ -122,37 +146,42 @@ fun SparkLine(
             fun xOf(index: Int): Float = index * stepX
             fun yOf(height: Float): Float = size.height - height * size.height
 
-            // Each run of consecutive measured days is drawn as its own
-            // curve, so a gap breaks the line instead of bridging it.
-            SparkGeometry.runs(values).forEach { run ->
-                val path = Path().apply {
-                    moveTo(xOf(run.first().index), yOf(run.first().height))
-                    run.drop(1).forEach { lineTo(xOf(it.index), yOf(it.height)) }
-                }
-                val fill = Path().apply {
-                    addPath(path)
-                    lineTo(xOf(run.last().index), size.height)
-                    lineTo(xOf(run.first().index), size.height)
-                    close()
-                }
-                drawPath(
-                    fill,
-                    Brush.verticalGradient(
-                        listOf(lineColor.copy(alpha = 0.22f), Color.Transparent),
+            // The curve is revealed from the left; the edge of the reveal
+            // is the only thing that moves.
+            val revealX = size.width * reveal.value.coerceIn(0f, 1f)
+            clipRect(right = revealX) {
+                // Each run of consecutive measured days is drawn as its own
+                // curve, so a gap breaks the line instead of bridging it.
+                SparkGeometry.runs(values).forEach { run ->
+                    val path = Path().apply {
+                        moveTo(xOf(run.first().index), yOf(run.first().height))
+                        run.drop(1).forEach { lineTo(xOf(it.index), yOf(it.height)) }
+                    }
+                    val fill = Path().apply {
+                        addPath(path)
+                        lineTo(xOf(run.last().index), size.height)
+                        lineTo(xOf(run.first().index), size.height)
+                        close()
+                    }
+                    drawPath(
+                        fill,
+                        Brush.verticalGradient(
+                            listOf(lineColor.copy(alpha = 0.22f), Color.Transparent),
+                        )
                     )
-                )
-                drawPath(path, lineColor, style = Stroke(width = 1.8.dp.toPx(), cap = StrokeCap.Round))
-            }
+                    drawPath(path, lineColor, style = Stroke(width = 1.8.dp.toPx(), cap = StrokeCap.Round))
+                }
 
-            // The most recent measurement is the one worth pointing at.
-            val lastIndex = values.indexOfLast { it != null }
-            if (lastIndex >= 0) {
-                val value = values[lastIndex] ?: 0.0
-                drawCircle(
-                    lineColor,
-                    radius = 2.6.dp.toPx(),
-                    center = Offset(xOf(lastIndex), yOf(SparkGeometry.height(value, values))),
-                )
+                // The most recent measurement is the one worth pointing at.
+                val lastIndex = values.indexOfLast { it != null }
+                if (lastIndex >= 0) {
+                    val value = values[lastIndex] ?: 0.0
+                    drawCircle(
+                        lineColor,
+                        radius = 2.6.dp.toPx(),
+                        center = Offset(xOf(lastIndex), yOf(SparkGeometry.height(value, values))),
+                    )
+                }
             }
         }
     }

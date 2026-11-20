@@ -167,29 +167,8 @@ fun colorsFor(variant: ThemeVariant): MrsadColors = when (variant) {
     ThemeVariant.SPECTRUM -> SpectrumColors
 }
 
-/** Motion/effects budget derived from user settings + quality. */
-@Immutable
-data class MrsadMotion(
-    val animationsEnabled: Boolean,
-    val particleCount: Int,
-    val animationScale: Float,
-    val quality: GraphicsQuality,
-) {
-    companion object {
-        /**
-         * Derives the motion budget from the user's settings.
-         *
-         * [MrsadTestHooks.isDeterministic] collapses the budget to "no motion
-         * at all" so instrumented tests never wait on an infinite transition.
-         */
-        fun of(settings: MrsadSettings, deterministic: Boolean = MrsadTestHooks.isDeterministic) = MrsadMotion(
-            animationsEnabled = settings.animationsEnabled && !deterministic,
-            particleCount = if (deterministic) 0 else settings.particleCount,
-            animationScale = if (settings.reduceMotion) 0.6f else 1f,
-            quality = settings.quality,
-        )
-    }
-}
+// The motion budget itself lives in `Motion.kt`, next to the Material 3
+// duration, easing and spring tokens it resolves.
 
 val LocalMrsadColors = staticCompositionLocalOf { ObsidianColors }
 val LocalMrsadTypography = staticCompositionLocalOf<MrsadTypography> { MrsadTypography.default }

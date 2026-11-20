@@ -1,38 +1,52 @@
 package dev.mrsad.app.ui.components
 
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.util.VelocityTracker
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
-import dev.mrsad.app.testing.MrsadTestHooks
+import dev.mrsad.app.data.settings.GraphicsQuality
+import dev.mrsad.app.ui.theme.MrsadColors
 import dev.mrsad.app.ui.theme.MrsadTheme
-import kotlin.math.cos
+import kotlin.math.exp
+import kotlin.math.max
 import kotlin.math.sin
 
 /**
- * The MRSAD Core: the home dashboard's living object.
+ * The MRSAD Core: the home dashboard's centrepiece.
  *
- * It is procedural (no bitmaps, no fake 3D library): layered faceted metal
- * rings with real depth shading, an orbital ring and an energy field whose
- * intensity and layout are driven by *actual* user activity passed in by the
- * screen. When [energy] is 0 the object is calm; every completed exercise
- * raises it. Nothing here displays fake data — it only visualises values the
- * caller measured.
+ * It is a real three-dimensional object, rendered by hand: a faceted
+ * icosahedral shell around a lit nucleus, wrapped in two orbital rings.
+ * There is no bitmap, no 3D library and no fake data anywhere in the
+ * pipeline — the geometry, the perspective projection and the lighting all
+ * live in [Core3D] and [CoreGeometry], and the object reacts to the user's
+ * own finger.
+ *
+ * The values it visualises are real ones the caller measured: [energy] is
+ * the actual progress towards today's goal, [streakDays] is the real
+ * streak, and [bestWpm] is the real personal record. The object's
+ * brightness, the density of its graduations and the number of sparks in
+ * its orbit are all functions of those numbers, and nothing else.
  */
 @Composable
 fun MrsadCore(
@@ -44,182 +58,503 @@ fun MrsadCore(
 ) {
     val colors = MrsadTheme.colors
     val motion = MrsadTheme.motion
-    // The orbit/breathing loop requests frames forever; a deterministic test
-    // must not depend on it.
-    val deterministic = MrsadTestHooks.isDeterministic
+    val quality = motion.quality
 
-    val phase = if (!deterministic && motion.animationsEnabled && pulse) {
-        val transition = rememberInfiniteTransition(label = "core")
-        val orbit by transition.animateFloat(
-            initialValue = 0f,
-            targetValue = 360f,
-            animationSpec = infiniteRepeatable(
-                animation = tween((24000f / motion.animationScale).toInt().coerceAtLeast(6000), easing = LinearEasing),
-            ),
-            label = "orbit",
-        )
-        val breathe by transition.animateFloat(
-            initialValue = 0.94f,
-            targetValue = 1.03f,
-            animationSpec = infiniteRepeatable(
-                animation = tween(4200, easing = LinearEasing),
-            ),
-            label = "breathe",
-        )
-        CorePhase(orbitDeg = orbit, breathe = breathe)
-    } else {
-        CorePhase(orbitDeg = 24f, breathe = 1f)
+    // The number of segments in an orbital ring follows the graphics tier:
+    // a smooth ring on a strong device, a coarse one on a weak device.
+    val ringSegments = when (quality) {
+        GraphicsQuality.HIGH -> 56
+        GraphicsQuality.BALANCED -> 40
+        GraphicsQuality.PERFORMANCE -> 24
+    }
+    val engine = remember(ringSegments) { Core3D(ringSegments) }
+    val scene = remember { CoreScene() }
+    val clampedEnergy = energy.coerceIn(0f, 1f)
+
+    // The clock of the object. It is a real frame clock rather than an
+    // infinite transition, because the object has to integrate momentum
+    // from the user's finger: a fling has to keep travelling after the
+    // finger has left the glass.
+    //
+    // It also stops completely when the motion budget says so, which is
+    // what keeps an instrumented test from waiting for a frame that will
+    // never come.
+    LaunchedEffect(motion.animationsEnabled, pulse) {
+        if (!motion.animationsEnabled) return@LaunchedEffect
+        var last = 0L
+        while (true) {
+            withFrameNanos { now ->
+                val delta = if (last == 0L) {
+                    0f
+                } else {
+                    ((now - last) / 1_000_000_000f).coerceIn(0f, 0.05f)
+                }
+                last = now
+                scene.advance(delta, turntable = pulse)
+            }
+        }
     }
 
     Box(modifier, contentAlignment = androidx.compose.ui.Alignment.Center) {
-        Canvas(Modifier.fillMaxSize()) {
+        Canvas(
+            Modifier
+                .fillMaxSize()
+                .semantics {
+                    contentDescription = "هستهٔ سه‌بعدی MRSAD"
+                }
+                // The drag detector comes first: it is the one that consumes
+                // a moving pointer, and the tap detector has to see that
+                // consumption in order to stay silent after a drag.
+                .pointerInput(Unit) {
+                    val tracker = VelocityTracker()
+                    detectDragGestures(
+                        onDragStart = { tracker.resetTracking() },
+                        onDrag = { change, amount ->
+                            change.consume()
+                            tracker.addPosition(change.uptimeMillis, change.position)
+                            scene.onDrag(amount)
+                        },
+                        onDragEnd = {
+                            val velocity = tracker.calculateVelocity()
+                            scene.onRelease(velocity.x)
+                        },
+                        onDragCancel = { scene.onRelease(0f) },
+                    )
+                }
+                .pointerInput(motion.animationsEnabled) {
+                    detectTapGestures(
+                        onTap = {
+                            if (motion.animationsEnabled) scene.onTap()
+                        },
+                    )
+                },
+        ) {
             drawCore(
-                phase = phase,
-                energy = energy.coerceIn(0f, 1f),
+                engine = engine,
+                scene = scene,
                 colors = colors,
+                energy = clampedEnergy,
                 streakDays = streakDays,
-                quality = motion.quality,
+                bestWpm = bestWpm,
+                quality = quality,
             )
         }
     }
 }
 
-private data class CorePhase(val orbitDeg: Float, val breathe: Float)
+/**
+ * The mutable state of the core.
+ *
+ * Every field is a Compose state, but they are only ever *read* inside the
+ * draw phase, so the object animates without a single recomposition: the
+ * frame loop writes a float and the canvas redraws.
+ */
+private class CoreScene {
 
+    /** The clock of the object, in seconds. */
+    var time by mutableFloatStateOf(0f)
+
+    /** The accumulated rotation around the vertical axis. */
+    var yaw by mutableFloatStateOf(0.62f)
+
+    /** The tilt the user has dragged the object into. */
+    var userPitch by mutableFloatStateOf(-0.12f)
+
+    /** The angular velocity of a fling, in radians per second. */
+    var yawVelocity by mutableFloatStateOf(0f)
+
+    /** The progress of the shockwave, or -1 when there is none. */
+    var pulseProgress by mutableFloatStateOf(-1f)
+
+    /** How long the turntable has been held back, in seconds. */
+    private var idleDelay = 0f
+
+    /** The pitch the object is drawn at. */
+    val pitch: Float get() = (userPitch + 0.10f * sin(time * 0.45f)).coerceIn(-1.1f, 1.1f)
+
+    /** The roll the object is drawn at. */
+    val roll: Float get() = 0.05f * sin(time * 0.33f)
+
+    /**
+     * Advances the object by one frame.
+     *
+     * @param delta the length of the frame, in seconds
+     * @param turntable whether the slow idle rotation is allowed
+     */
+    fun advance(delta: Float, turntable: Boolean) {
+        time += delta
+
+        // The momentum of a fling.
+        yaw += yawVelocity * delta
+        yawVelocity *= exp(-INERTIA_FRICTION * delta)
+        if (yawVelocity < -0.001f || yawVelocity > 0.001f) {
+            idleDelay = IDLE_RAMP
+        }
+
+        // The turntable: a very slow rotation that waits for the user to
+        // stop touching the object before it takes over again.
+        idleDelay = max(0f, idleDelay - delta)
+        if (turntable) {
+            val ramp = 1f - (idleDelay / IDLE_RAMP)
+            yaw += IDLE_SPEED * ramp * delta
+        }
+
+        // The shockwave.
+        if (pulseProgress >= 0f) {
+            pulseProgress += delta / PULSE_DURATION
+            if (pulseProgress >= 1f) pulseProgress = -1f
+        }
+    }
+
+    /** The user is dragging the object. */
+    fun onDrag(amount: Offset) {
+        yaw += amount.x * DRAG_SENSITIVITY
+        userPitch = (userPitch + amount.y * DRAG_SENSITIVITY).coerceIn(-0.9f, 0.9f)
+        idleDelay = IDLE_RAMP
+    }
+
+    /** The user let go of the object, possibly with a velocity. */
+    fun onRelease(velocityX: Float) {
+        yawVelocity = (velocityX * DRAG_SENSITIVITY).coerceIn(-MAX_SPIN, MAX_SPIN)
+        idleDelay = IDLE_RAMP
+    }
+
+    /** The user tapped the object. */
+    fun onTap() {
+        pulseProgress = 0f
+        idleDelay = IDLE_RAMP
+    }
+
+    private companion object {
+        /** Radians per pixel of drag. */
+        const val DRAG_SENSITIVITY = 0.006f
+
+        /** The fastest the object may spin after a fling. */
+        const val MAX_SPIN = 7f
+
+        /** How quickly a fling loses its speed. */
+        const val INERTIA_FRICTION = 2.4f
+
+        /** The speed of the idle turntable, in radians per second. */
+        const val IDLE_SPEED = 0.16f
+
+        /** How long the turntable stays out of the way after a touch. */
+        const val IDLE_RAMP = 1.6f
+
+        /** How long the shockwave takes to travel. */
+        const val PULSE_DURATION = 0.85f
+    }
+}
+
+/**
+ * Draws the core.
+ *
+ * The order of the passes is the order of the light: the bloom first, then
+ * the part of the object that is behind the body, then the body, then the
+ * part that is in front, and the highlights last.
+ */
 private fun DrawScope.drawCore(
-    phase: CorePhase,
+    engine: Core3D,
+    scene: CoreScene,
+    colors: MrsadColors,
     energy: Float,
-    colors: dev.mrsad.app.ui.theme.MrsadColors,
     streakDays: Int,
-    quality: dev.mrsad.app.data.settings.GraphicsQuality,
+    bestWpm: Int,
+    quality: GraphicsQuality,
 ) {
-    val center = Offset(size.width / 2f, size.height / 2f)
-    val radius = size.minDimension * 0.30f * phase.breathe
-    val highQuality = quality == dev.mrsad.app.data.settings.GraphicsQuality.HIGH
+    val centerX = size.width / 2f
+    // The object hovers: a very small, slow vertical drift.
+    val centerY = size.height / 2f + sin(scene.time * 0.62f) * size.minDimension * 0.006f
+    val radiusPx = size.minDimension * 0.215f
 
-    // 1) Outer atmosphere: energy halo grows with real activity.
+    engine.update(
+        yaw = scene.yaw,
+        pitch = scene.pitch,
+        roll = scene.roll,
+        centerX = centerX,
+        centerY = centerY,
+        radiusPx = radiusPx,
+    )
+
+    val shadow = lerpColor(colors.metalDark, colors.accent, 0.35f)
+    val body = colors.metalMid
+    val highlight = colors.metalLight
+    val pulse = if (scene.pulseProgress in 0f..1f) scene.pulseProgress else -1f
+    val pulseGlow = if (pulse >= 0f) (1f - pulse) else 0f
+
+    // ---- 1. The light that surrounds the object ------------------------------
+    val bloomRadius = radiusPx * 2.15f
     drawCircle(
         brush = Brush.radialGradient(
             colors = listOf(
-                colors.accent.copy(alpha = 0.06f + 0.16f * energy),
+                colors.accent.copy(alpha = 0.08f + 0.18f * energy + 0.10f * pulseGlow),
                 Color.Transparent,
             ),
-            center = center,
-            radius = radius * 2.2f,
+            center = Offset(centerX, centerY),
+            radius = bloomRadius,
         ),
-        radius = radius * 2.2f,
-        center = center,
+        radius = bloomRadius,
+        center = Offset(centerX, centerY),
     )
 
-    // 2) Tilted orbital rings (the "spatial" layer).
-    rotate(degrees = -18f + phase.orbitDeg * 0.25f, pivot = center) {
-        for (i in 0 until if (highQuality) 3 else 2) {
-            val ringRadius = radius * (1.32f + i * 0.16f)
-            drawOval(
-                color = colors.metalMid.copy(alpha = 0.16f - i * 0.04f),
-                topLeft = Offset(center.x - ringRadius, center.y - ringRadius * 0.42f),
-                size = androidx.compose.ui.geometry.Size(ringRadius * 2, ringRadius * 0.84f),
-                style = Stroke(width = 1.dp.toPx()),
-            )
-        }
-    }
-
-    // 3) Faceted metallic body: 12 planar sectors with light from top-left.
-    val facets = if (highQuality) 14 else 10
-    for (i in 0 until facets) {
-        val startAngle = i * (360f / facets) + phase.orbitDeg * 0.08f
-        val shade = fakeLight(startAngle)
-        val inner = radius * 0.55f
-        val outer = radius
-        val path = Path().apply {
-            val a0 = Math.toRadians(startAngle.toDouble())
-            val a1 = Math.toRadians((startAngle + 360f / facets * 0.92f).toDouble())
-            moveTo(center.x + (cos(a0) * inner).toFloat(), center.y + (sin(a0) * inner).toFloat())
-            lineTo(center.x + (cos(a0) * outer).toFloat(), center.y + (sin(a0) * outer).toFloat())
-            lineTo(center.x + (cos(a1) * outer).toFloat(), center.y + (sin(a1) * outer).toFloat())
-            lineTo(center.x + (cos(a1) * inner).toFloat(), center.y + (sin(a1) * inner).toFloat())
-            close()
-        }
-        val base = lerpColor(colors.metalDark, colors.metalLight, shade)
-        drawPath(
-            path = path,
-            brush = Brush.linearGradient(
-                colors = listOf(
-                    base.copy(alpha = 0.75f),
-                    lerpColor(colors.surface, base, 0.35f).copy(alpha = 0.85f),
-                ),
-                start = Offset(center.x - radius, center.y - radius),
-                end = Offset(center.x + radius, center.y + radius),
+    // ---- 2. The pool of light the object stands in --------------------------
+    val poolWidth = radiusPx * 2.6f
+    val poolHeight = radiusPx * 0.66f
+    val poolCenter = Offset(centerX, centerY + radiusPx * 1.12f)
+    drawOval(
+        brush = Brush.radialGradient(
+            colors = listOf(
+                colors.accent.copy(alpha = 0.10f + 0.08f * energy),
+                Color.Transparent,
             ),
-        )
-        drawPath(path, color = colors.metalLight.copy(alpha = 0.06f + 0.05f * shade), style = Stroke(0.6.dp.toPx()))
+            center = poolCenter,
+            radius = poolWidth / 2f,
+        ),
+        topLeft = Offset(poolCenter.x - poolWidth / 2f, poolCenter.y - poolHeight / 2f),
+        size = Size(poolWidth, poolHeight),
+    )
+
+    // ---- 3. The half of each ring that is behind the body -------------------
+    drawRingHalf(
+        engine = engine,
+        offset = 0,
+        centerX = centerX,
+        centerY = centerY,
+        radiusPx = radiusPx,
+        bandWidth = radiusPx * 0.075f,
+        near = colors.metalLight,
+        far = colors.accent,
+        front = false,
+    )
+    drawRingHalf(
+        engine = engine,
+        offset = engine.secondRingOffset,
+        centerX = centerX,
+        centerY = centerY,
+        radiusPx = radiusPx,
+        bandWidth = radiusPx * 0.018f,
+        near = colors.metalLight,
+        far = colors.metalMid,
+        front = false,
+    )
+
+    // ---- 4. The body --------------------------------------------------------
+    // The facets are translucent, so the light of the nucleus shines
+    // through the shell instead of being hidden behind it.
+    val path = Path()
+    for (index in 0 until engine.faceCount) {
+        val face = CoreGeometry.faces[engine.faceOrder[index]]
+        path.reset()
+        path.moveTo(engine.screenX[face[0]], engine.screenY[face[0]])
+        path.lineTo(engine.screenX[face[1]], engine.screenY[face[1]])
+        path.lineTo(engine.screenX[face[2]], engine.screenY[face[2]])
+        path.close()
+        val shade = engine.faceShade[engine.faceOrder[index]]
+        val fill = lerpColor(shadow, highlight, shade).copy(alpha = 0.13f + 0.13f * shade)
+        drawPath(path, fill)
     }
 
-    // 4) Inner glass sphere with a bright specular point.
+    // ---- 5. The nucleus -----------------------------------------------------
+    val nucleusRadius = radiusPx * (0.30f + 0.12f * energy + 0.14f * pulseGlow)
     drawCircle(
         brush = Brush.radialGradient(
             colors = listOf(
-                colors.background.copy(alpha = 0.55f),
-                colors.surfaceHigh.copy(alpha = 0.92f),
+                highlight.copy(alpha = 0.60f + 0.30f * energy + 0.30f * pulseGlow),
+                colors.accent.copy(alpha = 0.34f + 0.28f * energy),
+                Color.Transparent,
             ),
-            center = Offset(center.x - radius * 0.25f, center.y - radius * 0.3f),
-            radius = radius * 0.62f,
+            center = Offset(centerX, centerY),
+            radius = nucleusRadius,
         ),
-        radius = radius * 0.55f,
-        center = center,
+        radius = nucleusRadius,
+        center = Offset(centerX, centerY),
     )
     drawCircle(
-        color = colors.metalLight.copy(alpha = 0.5f + 0.3f * energy),
-        radius = (radius * 0.10f) * (0.8f + energy * 0.6f),
-        center = Offset(center.x - radius * 0.22f, center.y - radius * 0.24f),
+        color = highlight.copy(alpha = 0.75f + 0.25f * energy),
+        radius = radiusPx * (0.055f + 0.035f * energy),
+        center = Offset(centerX, centerY),
     )
 
-    // 5) Energy arc: length = real activity progress.
-    if (energy > 0.01f) {
-        rotate(degrees = phase.orbitDeg, pivot = center) {
-            drawArc(
-                brush = Brush.sweepGradient(
-                    listOf(Color.Transparent, colors.accent.copy(alpha = 0.85f), Color.Transparent),
-                    center = center,
-                ),
-                startAngle = 0f,
-                sweepAngle = 300f * energy,
-                useCenter = false,
-                topLeft = Offset(center.x - radius * 0.78f, center.y - radius * 0.78f),
-                size = androidx.compose.ui.geometry.Size(radius * 1.56f, radius * 1.56f),
-                style = Stroke(width = 2.dp.toPx()),
+    // ---- 6. The edges of the shell ------------------------------------------
+    if (quality != GraphicsQuality.PERFORMANCE) {
+        val edgeWidth = if (quality == GraphicsQuality.HIGH) 1.25f else 1f
+        for (e in CoreGeometry.edges.indices) {
+            val edge = CoreGeometry.edges[e]
+            val owners = CoreGeometry.edgeFaces[e]
+            val shade = if (owners.size == 2) {
+                0.5f * (engine.faceShade[owners[0]] + engine.faceShade[owners[1]])
+            } else {
+                0.5f
+            }
+            val rim = if (owners.size == 2) {
+                0.5f * (engine.faceRim[owners[0]] + engine.faceRim[owners[1]])
+            } else {
+                0f
+            }
+            val color = lerpColor(body, highlight, shade)
+                .copy(alpha = (0.30f + 0.55f * shade + 0.22f * rim).coerceIn(0f, 1f))
+            drawLine(
+                color = color,
+                start = Offset(engine.screenX[edge[0]], engine.screenY[edge[0]]),
+                end = Offset(engine.screenX[edge[1]], engine.screenY[edge[1]]),
+                strokeWidth = edgeWidth.dp.toPx(),
             )
         }
     }
 
-    // 6) Streak sparks orbiting the core: one per active streak day (max 30).
-    val sparks = streakDays.coerceIn(0, 30)
+    // ---- 7. The half of each ring that is in front of the body --------------
+    drawRingHalf(
+        engine = engine,
+        offset = 0,
+        centerX = centerX,
+        centerY = centerY,
+        radiusPx = radiusPx,
+        bandWidth = radiusPx * 0.075f,
+        near = colors.metalLight,
+        far = colors.accent,
+        front = true,
+    )
+    drawRingHalf(
+        engine = engine,
+        offset = engine.secondRingOffset,
+        centerX = centerX,
+        centerY = centerY,
+        radiusPx = radiusPx,
+        bandWidth = radiusPx * 0.018f,
+        near = colors.metalLight,
+        far = colors.metalMid,
+        front = true,
+    )
+
+    // ---- 8. The sparks of the streak ----------------------------------------
+    val sparks = streakDays.coerceIn(0, 24)
     if (sparks > 0) {
-        val orbitRadius = radius * 1.18f
         for (s in 0 until sparks) {
-            val angle = Math.toRadians((s * 360.0 / sparks) + phase.orbitDeg)
+            val index = (s * engine.ringSegments / sparks) % engine.ringSegments
+            val depth = (engine.ringZ[index] + 1.8f) / 3.6f
+            val x = engine.ringScreenX(0, index, centerX, radiusPx)
+            val y = engine.ringScreenY(0, index, centerY, radiusPx)
+            val radius = radiusPx * (0.018f + 0.016f * depth.coerceIn(0f, 1f))
             drawCircle(
-                color = colors.accent.copy(alpha = 0.55f),
-                radius = 1.6.dp.toPx(),
-                center = Offset(
-                    center.x + (cos(angle) * orbitRadius).toFloat(),
-                    center.y + (sin(angle) * orbitRadius * 0.55f).toFloat(),
-                ),
+                color = colors.accent.copy(alpha = (0.35f + 0.55f * depth).coerceIn(0f, 0.9f)),
+                radius = radius,
+                center = Offset(x, y),
+            )
+        }
+    }
+
+    // ---- 9. The graduations of the record -----------------------------------
+    // The outer ring is graduated like a dial, and the number of
+    // graduations follows the personal record: a faster typist gets a
+    // denser dial.
+    if (quality != GraphicsQuality.PERFORMANCE && bestWpm > 0) {
+        val ticks = 12 + (bestWpm / 8).coerceIn(0, 24)
+        val step = engine.ringSegments / ticks
+        if (step > 0) {
+            for (t in 0 until ticks) {
+                val index = (t * step) % engine.ringSegments
+                val x = engine.ringScreenX(engine.secondRingOffset, index, centerX, radiusPx)
+                val y = engine.ringScreenY(engine.secondRingOffset, index, centerY, radiusPx)
+                val innerX = centerX + (x - centerX) * 0.90f
+                val innerY = centerY + (y - centerY) * 0.90f
+                drawLine(
+                    color = colors.metalLight.copy(alpha = 0.32f),
+                    start = Offset(innerX, innerY),
+                    end = Offset(x, y),
+                    strokeWidth = 0.9f.dp.toPx(),
+                )
+            }
+        }
+    }
+
+    // ---- 10. The broad highlight --------------------------------------------
+    val sheenColor = if (colors.isLight) colors.metalLight else Color.White
+    val sheenCenter = Offset(centerX - radiusPx * 0.34f, centerY - radiusPx * 0.40f)
+    val sheenRadius = radiusPx * 0.92f
+    drawCircle(
+        brush = Brush.radialGradient(
+            colors = listOf(sheenColor.copy(alpha = 0.09f), Color.Transparent),
+            center = sheenCenter,
+            radius = sheenRadius,
+        ),
+        radius = sheenRadius,
+        center = sheenCenter,
+    )
+
+    // ---- 11. The shockwave ---------------------------------------------------
+    if (pulse >= 0f) {
+        val waveRadius = radiusPx * (0.5f + 1.6f * pulse)
+        drawCircle(
+            color = colors.accent.copy(alpha = (1f - pulse) * 0.5f),
+            radius = waveRadius,
+            center = Offset(centerX, centerY),
+            style = Stroke(width = (0.6f + (1f - pulse) * 2.4f).dp.toPx()),
+        )
+    }
+}
+
+/**
+ * Draws one half of an orbital ring.
+ *
+ * The ring is split at the depth of the body: the half that is behind it
+ * is drawn before the body and the half that is in front of it after, so
+ * the ring passes *through* the object instead of floating over it.
+ */
+private fun DrawScope.drawRingHalf(
+    engine: Core3D,
+    offset: Int,
+    centerX: Float,
+    centerY: Float,
+    radiusPx: Float,
+    bandWidth: Float,
+    near: Color,
+    far: Color,
+    front: Boolean,
+) {
+    val segments = engine.ringSegments
+    for (i in 0 until segments) {
+        val j = i + 1
+        val depth = (engine.ringZ[offset + i] + engine.ringZ[offset + j]) / 2f
+        val isFront = depth >= 0f
+        if (isFront != front) continue
+
+        val x1 = engine.ringScreenX(offset, i, centerX, radiusPx)
+        val y1 = engine.ringScreenY(offset, i, centerY, radiusPx)
+        val x2 = engine.ringScreenX(offset, j, centerX, radiusPx)
+        val y2 = engine.ringScreenY(offset, j, centerY, radiusPx)
+
+        // How near the segment is, in 0..1.
+        val closeness = ((depth + 1.8f) / 3.6f).coerceIn(0f, 1f)
+        val width = bandWidth * (0.55f + 0.55f * closeness)
+        val band = lerpColor(far, near, closeness)
+            .copy(alpha = if (front) 0.30f + 0.45f * closeness else 0.14f + 0.22f * closeness)
+
+        // The band itself.
+        drawLine(
+            color = band,
+            start = Offset(x1, y1),
+            end = Offset(x2, y2),
+            strokeWidth = width,
+        )
+        // The lit edge along the top of the band.
+        if (front) {
+            drawLine(
+                color = near.copy(alpha = 0.30f + 0.45f * closeness),
+                start = Offset(x1, y1),
+                end = Offset(x2, y2),
+                strokeWidth = max(0.7f, width * 0.22f),
             )
         }
     }
 }
 
-/** Deterministic fake light: top-left source. */
-private fun fakeLight(angleDeg: Float): Float {
-    val rad = Math.toRadians((angleDeg - 225f).toDouble())
-    val v = (cos(rad) * 0.5 + 0.5).toFloat() // 1 at top-left, 0 at bottom-right
-    return 0.18f + 0.82f * v * v
+/** Blends two colours. */
+private fun lerpColor(a: Color, b: Color, t: Float): Color {
+    val fraction = t.coerceIn(0f, 1f)
+    return Color(
+        red = a.red + (b.red - a.red) * fraction,
+        green = a.green + (b.green - a.green) * fraction,
+        blue = a.blue + (b.blue - a.blue) * fraction,
+        alpha = a.alpha + (b.alpha - a.alpha) * fraction,
+    )
 }
-
-private fun lerpColor(a: Color, b: Color, t: Float): Color = Color(
-    red = a.red + (b.red - a.red) * t,
-    green = a.green + (b.green - a.green) * t,
-    blue = a.blue + (b.blue - a.blue) * t,
-    alpha = a.alpha + (b.alpha - a.alpha) * t,
-)

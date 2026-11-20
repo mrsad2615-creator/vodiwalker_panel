@@ -1,9 +1,8 @@
 package dev.mrsad.app.ui.components
 
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -30,6 +29,7 @@ import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -37,6 +37,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -50,6 +51,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import dev.mrsad.app.testing.MrsadTestHooks
+import kotlinx.coroutines.delay
 import dev.mrsad.app.ui.theme.MrsadTheme
 
 /**
@@ -85,17 +87,29 @@ object MrsadTokens {
      */
     val TouchTarget = 48.dp
 
-    object Motion {
-        const val fast = 140
-        const val normal = 240
-        const val slow = 420
-        const val cinematic = 760
-    }
+    // Durations, easings and springs do not live here: they are the
+    // Material 3 motion tokens in `ui/theme/Motion.kt`, and every animation
+    // in the app resolves them through `MrsadTheme.motion`.
 }
 
 /**
- * The core surface material: brushed glass over obsidian with a 1dp silver
- * hairline and a very subtle top sheen. Used for every card/panel.
+ * The core surface material.
+ *
+ * A card is not a rectangle with a border, it is a lit object. The
+ * material is built in five layers, from the back to the front:
+ *
+ *  1. a soft shadow that lifts the card off the page,
+ *  2. a vertical gradient, so the card is brighter where the light falls
+ *     on it and darker where it does not,
+ *  3. a sheen along the top edge,
+ *  4. a shade along the bottom edge, where the card rests on something,
+ *  5. a hairline that fades out towards the bottom instead of ringing the
+ *     card like a fence.
+ *
+ * The press is a *spatial* movement — the card physically moves — so it
+ * uses a spatial spring, and the change of the surface brightness is an
+ * *effect*, so it uses an effects spring. The two families are never
+ * mixed.
  */
 @Composable
 fun MrsadSurface(
@@ -107,37 +121,69 @@ fun MrsadSurface(
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val colors = MrsadTheme.colors
+    val motion = MrsadTheme.motion
     val surfaceColor = if (elevated) colors.surfaceHigh else colors.surface
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
-    val scale by animateFloatAsState(if (pressed) 0.985f else 1f, tween(MrsadTokens.Motion.fast), label = "press")
+    val scale by animateFloatAsState(
+        targetValue = if (pressed) 0.985f else 1f,
+        animationSpec = motion.spatialFast(),
+        label = "surfacePress",
+    )
+    val highlight by animateFloatAsState(
+        targetValue = if (pressed) 1f else 0f,
+        animationSpec = motion.effectsDefault(),
+        label = "surfaceHighlight",
+    )
 
     Column(
         modifier = modifier
             .graphicsLayer { scaleX = scale; scaleY = scale }
+            .shadow(
+                elevation = 12.dp,
+                shape = shape,
+                clip = false,
+            )
             .clip(shape)
             .background(
                 Brush.verticalGradient(
                     listOf(
-                        surfaceColor.copy(alpha = if (colors.isLight) 0.98f else 0.94f),
-                        surfaceColor.copy(alpha = if (colors.isLight) 0.92f else 0.82f),
+                        surfaceColor.copy(alpha = if (colors.isLight) 0.99f else 0.97f),
+                        surfaceColor.copy(alpha = if (colors.isLight) 0.93f else 0.84f),
                     )
                 )
             )
-            .border(
-                BorderStroke(1.dp, accent?.copy(alpha = 0.45f) ?: colors.border),
-                shape,
-            )
             .drawBehind {
-                // Top sheen: one hairline of light, the "material" signal.
+                // The sheen along the top edge: the light is above.
                 drawRect(
                     brush = Brush.verticalGradient(
-                        listOf((accent ?: colors.metalLight).copy(alpha = 0.10f), Color.Transparent),
+                        listOf(
+                            (accent ?: colors.metalLight).copy(alpha = 0.13f + 0.05f * highlight),
+                            Color.Transparent,
+                        ),
                         startY = 0f,
-                        endY = 96f,
+                        endY = 108f,
+                    )
+                )
+                // The shade along the bottom edge: the card rests on
+                // something, and that something casts back.
+                drawRect(
+                    brush = Brush.verticalGradient(
+                        listOf(Color.Transparent, Color.Black.copy(alpha = if (colors.isLight) 0.05f else 0.26f)),
+                        startY = size.height - 96f,
+                        endY = size.height,
                     )
                 )
             }
+            .border(
+                Brush.verticalGradient(
+                    listOf(
+                        (accent ?: colors.borderStrong).copy(alpha = if (accent != null) 0.5f else 0.42f),
+                        (accent ?: colors.borderStrong).copy(alpha = 0.10f),
+                    )
+                ),
+                shape,
+            )
             .then(
                 if (onClick != null) {
                     Modifier.clickable(
@@ -153,6 +199,52 @@ fun MrsadSurface(
         content = content,
     )
 }
+
+/**
+ * The entrance of a piece of content.
+ *
+ * Content that simply appears reads as a glitch; it arrives instead. It
+ * fades in while it moves a short distance upwards, and the pieces of a
+ * screen arrive one after the other instead of all at the same instant.
+ *
+ * The movement is spatial, so it uses a spatial spring; the fade is an
+ * effect, so it uses an effects spring. Under reduced motion — and inside
+ * instrumentation — the content is simply there.
+ */
+@Composable
+fun MrsadReveal(
+    modifier: Modifier = Modifier,
+    index: Int = 0,
+    content: @Composable () -> Unit,
+) {
+    val motion = MrsadTheme.motion
+    val progress = remember { Animatable(0f) }
+    LaunchedEffect(Unit) {
+        if (motion.deterministic || motion.reducedMotion) {
+            progress.snapTo(1f)
+            return@LaunchedEffect
+        }
+        // The stagger is short on purpose: a screen that takes a second to
+        // assemble feels slow, a screen that assembles in a fifth of a
+        // second feels alive.
+        delay(index * REVEAL_STAGGER_MILLIS)
+        progress.animateTo(1f, motion.spatialDefault())
+    }
+    Box(
+        modifier.graphicsLayer {
+            alpha = progress.value
+            translationY = (1f - progress.value) * REVEAL_TRAVEL.toPx()
+        }
+    ) {
+        content()
+    }
+}
+
+/** The delay between two pieces of content that arrive one after another. */
+private const val REVEAL_STAGGER_MILLIS = 55L
+
+/** How far a piece of content travels while it arrives. */
+private val REVEAL_TRAVEL = 16.dp
 
 /** Large numeric readout (tabular figures, metal gradient text). */
 @Composable
@@ -227,18 +319,32 @@ fun MrsadPrimaryButton(
 ) {
     val colors = MrsadTheme.colors
     val type = MrsadTheme.type
+    val motion = MrsadTheme.motion
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
-    val scale by animateFloatAsState(if (pressed) 0.97f else 1f, tween(MrsadTokens.Motion.fast), label = "btn")
+    // The button moves, so the press is a spatial spring.
+    val scale by animateFloatAsState(
+        targetValue = if (pressed) 0.97f else 1f,
+        animationSpec = motion.spatialFast(),
+        label = "btn",
+    )
+    // The sheen is an effect, so it uses an effects spring.
+    val sheen by animateFloatAsState(
+        targetValue = if (pressed) 1f else 0f,
+        animationSpec = motion.effectsDefault(),
+        label = "btnSheen",
+    )
     // A button whose only content is an icon has to name itself, or a
     // screen reader announces an unlabelled control. When there is a
     // visible label the icon is decoration and must stay silent.
     val spokenLabel = if (text.isBlank()) iconContentDescription else null
+    val shape = RoundedCornerShape(MrsadTokens.Radius.pill)
 
     Row(
         modifier = modifier
             .graphicsLayer { scaleX = scale; scaleY = scale }
-            .clip(RoundedCornerShape(MrsadTokens.Radius.pill))
+            .shadow(elevation = 8.dp, shape = shape, clip = false)
+            .clip(shape)
             .background(
                 if (enabled) {
                     Brush.verticalGradient(colors.metalGradient)
@@ -246,6 +352,19 @@ fun MrsadPrimaryButton(
                     Brush.verticalGradient(listOf(colors.disabled, colors.disabled))
                 }
             )
+            .drawBehind {
+                // The lit top edge of the metal.
+                drawRect(
+                    brush = Brush.verticalGradient(
+                        listOf(
+                            Color.White.copy(alpha = 0.22f + 0.18f * sheen),
+                            Color.Transparent,
+                        ),
+                        startY = 0f,
+                        endY = 22f,
+                    )
+                )
+            }
             .heightIn(min = MrsadTokens.TouchTarget)
             .clickable(
                 enabled = enabled,
@@ -369,8 +488,14 @@ fun MrsadProgressBar(
     height: Dp = 6.dp,
 ) {
     val colors = MrsadTheme.colors
+    val motion = MrsadTheme.motion
     val clamped = progress.coerceIn(0f, 1f)
-    val animated by animateFloatAsState(clamped, tween(MrsadTokens.Motion.normal), label = "progress")
+    // The bar grows, so it moves in space: a spatial spring.
+    val animated by animateFloatAsState(
+        targetValue = clamped,
+        animationSpec = motion.spatialDefault(),
+        label = "progress",
+    )
     Box(
         modifier = modifier
             .fillMaxWidth()
@@ -503,9 +628,10 @@ fun MrsadDivider(modifier: Modifier = Modifier) {
 @Composable
 fun LiveDot(color: Color = MrsadTheme.colors.accent, modifier: Modifier = Modifier) {
     val colors = MrsadTheme.colors
+    val motion = MrsadTheme.motion
     val animated = animateColorAsState(
         targetValue = if (colors.isLight) color else color.copy(alpha = 0.6f),
-        animationSpec = tween(1200),
+        animationSpec = motion.effectsDefault(),
         label = "live",
     )
     Box(

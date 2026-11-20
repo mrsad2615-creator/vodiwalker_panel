@@ -1,7 +1,6 @@
 package dev.mrsad.app.navigation
 
 import androidx.compose.animation.AnimatedContentTransitionScope
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Box
@@ -88,6 +87,7 @@ fun MrsadRoot(
     container: AppContainer,
     settings: MrsadSettings,
 ) {
+    val motion = MrsadTheme.motion
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
@@ -120,14 +120,27 @@ fun MrsadRoot(
                 modifier = Modifier
                     .fillMaxSize()
                     .then(if (showBottomBar) Modifier.consumeWindowInsets(WindowInsets.navigationBars) else Modifier),
+                // The screen moves in space, so it uses the spatial
+                // spring; the fade is an effect and uses the effects
+                // spring. The exit is quicker than the entrance, which is
+                // what makes a navigation feel responsive rather than
+                // slow.
                 enterTransition = {
-                    fadeIn(tween(260)) + slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Start, tween(320))
+                    fadeIn(animationSpec = motion.effectsDefault()) +
+                        slideIntoContainer(
+                            towards = AnimatedContentTransitionScope.SlideDirection.Start,
+                            animationSpec = motion.spatialDefault(),
+                        )
                 },
-                exitTransition = { fadeOut(tween(180)) },
+                exitTransition = { fadeOut(animationSpec = motion.effectsFast()) },
                 popEnterTransition = {
-                    fadeIn(tween(240)) + slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.End, tween(320))
+                    fadeIn(animationSpec = motion.effectsDefault()) +
+                        slideIntoContainer(
+                            towards = AnimatedContentTransitionScope.SlideDirection.End,
+                            animationSpec = motion.spatialDefault(),
+                        )
                 },
-                popExitTransition = { fadeOut(tween(180)) },
+                popExitTransition = { fadeOut(animationSpec = motion.effectsFast()) },
             ) {
                 composable(Routes.HOME) {
                     HomeScreen(

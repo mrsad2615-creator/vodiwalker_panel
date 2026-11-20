@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">مرصاد امبینت</string>
+    <string name="notification_listener_label">اعلان‌های مرصاد امبینت</string>
+    <string name="ambient_active">نمایشگر امبینت فعال است</string>
+    <string name="ambient_inactive">نمایشگر امبینت در حالت آماده</string>
+    <string name="activate_now">اجرای جلسه نمایشگر امبینت</string>
+    <string name="lcd_notice">توجه سخت‌افزاری IPS LCD: گوشی Poco X3 Pro دارای نمایشگر IPS LCD است. جلسات نمایش با روشن شدن کنترل‌شده، زمان‌بندی کوتاه و خاموش شدن خودکار صفحه انجام می‌شوند و از ادعای خاموش کردن تک‌پیکسل‌ها پرهیز شده است.</string>
+    <string name="nav_dashboard">داشبورد</string>
+    <string name="nav_editor">ویرایشگر</string>
+    <string name="nav_themes">پوسته‌ها</string>
+    <string name="nav_diagnostics">گزارش‌ها</string>
+    <string name="nav_settings">تنظیمات</string>
+    <string name="estimated_label">تخمینی</string>
+    <string name="measured_label">اندازه‌گیری‌شده</string>
+</resources>

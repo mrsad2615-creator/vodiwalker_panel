@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">MRSAD Ambient</string>
+    <string name="notification_listener_label">MRSAD Ambient Notifications</string>
+    <string name="ambient_active">Ambient Display Active</string>
+    <string name="ambient_inactive">Ambient Display Standby</string>
+    <string name="activate_now">Activate Ambient Session</string>
+    <string name="lcd_notice">IPS LCD Hardware Notice: Poco X3 Pro uses an IPS LCD panel. Sessions use controlled short wakeups and automatic screen-off rather than permanent AMOLED-style illumination.</string>
+    <string name="nav_dashboard">Dashboard</string>
+    <string name="nav_editor">Editor</string>
+    <string name="nav_themes">Themes</string>
+    <string name="nav_diagnostics">Diagnostics</string>
+    <string name="nav_settings">Settings</string>
+    <string name="estimated_label">Estimated</string>
+    <string name="measured_label">Measured</string>
+</resources>

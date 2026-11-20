@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#000000"
+        android:pathData="M0,0h108v108h-108z" />
+    <!-- Outer geometric precision ring -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2.5"
+        android:pathData="M54,20 A34,34 0 1,1 53.99,20 Z" />
+    <!-- Inner architectural M-monogram / horizon -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="3"
+        android:strokeLineCap="square"
+        android:strokeLineJoin="miter"
+        android:pathData="M34,64 L34,42 L54,56 L74,42 L74,64" />
+    <!-- Center precision dot -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,68 m-3,0 a3,3 0 1,0 6,0 a3,3 0 1,0 -6,0" />
+</vector>

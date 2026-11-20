@@ -127,6 +127,16 @@ Legend: ✅ done & verified · 🟡 implemented, awaiting verification · 🟠 p
   bottom bar to prove the destinations run from right to left.
 * The version shown on the Settings screen is read from the build, so it can
   never drift away from the released artifact.
+* A published release cannot be changed. GitHub makes a release immutable
+  once it is published, and an immutable release refuses new assets with
+  `Cannot delete asset from an immutable release` — so the assets are
+  uploaded into a **draft**, and the draft is published only after both
+  files are there. The version number is the name of the release, which
+  means a new build is a new version number, never a second attempt at an
+  old one. The files go up over HTTP/1.1, because the upload host drops
+  HTTP/2 streams often enough to end the transfer with an EOF.
+* The release points at the commit that was built (`--target`), so the tag
+  is proof of what is inside the APK rather than a name.
 
 ## Phase 9 — Interface quality ✅
 

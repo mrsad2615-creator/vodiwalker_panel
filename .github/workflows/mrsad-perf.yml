@@ -35,7 +35,7 @@ on:
     paths:
       - 'mrsad/app/**'
       - 'mrsad/core/**'
-      - 'mrsad/.ci/**'
+      - 'mrsad/.ci/run-perf-benchmark.sh'
       - '.github/workflows/mrsad-perf.yml'
       - '.github/scripts/compare_perf.py'
 

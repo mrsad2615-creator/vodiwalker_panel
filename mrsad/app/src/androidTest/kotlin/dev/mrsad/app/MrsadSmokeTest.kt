@@ -1,9 +1,10 @@
 package dev.mrsad.app
 
-import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.isSelected
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
@@ -79,11 +80,9 @@ class MrsadSmokeTest {
     /** Waits until a tagged node reports itself as selected. */
     private fun awaitSelected(tag: String, timeoutMillis: Long = 20_000) {
         composeRule.waitUntil(timeoutMillis) {
-            composeRule.onAllNodesWithTag(tag)
+            composeRule.onAllNodes(hasTestTag(tag) and isSelected())
                 .fetchSemanticsNodes()
-                .firstOrNull()
-                ?.config
-                ?.getOrNull(SemanticsProperties.Selected) == true
+                .isNotEmpty()
         }
     }
 

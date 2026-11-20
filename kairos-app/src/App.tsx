@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { AppProvider, useApp } from '@/context/AppContext';
 import { AppShell } from '@/components/layout/AppShell';
-import { MrsadSplashIntro } from '@/components/ui/MrsadSplashIntro';
+import { LaunchScreen } from '@/components/ui/LaunchScreen';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { DashboardPage } from '@/features/dashboard/DashboardPage';
 import { TasksPage } from '@/features/tasks/TasksPage';
@@ -13,13 +13,16 @@ import { FocusPage } from '@/features/focus/FocusPage';
 import { AnalyticsPage } from '@/features/analytics/AnalyticsPage';
 import { SettingsPage } from '@/features/settings/SettingsPage';
 
-type SplashPhase = 'playing' | 'mounting_app' | 'exiting' | 'done';
+type SplashPhase = 'playing' | 'exiting' | 'done';
 
 /** Single source of truth for the launch choreography (mirrors design-system.css). */
 const LAUNCH = {
-  splashHoldMs: 700,
-  exitFadeMs: 240,
-  bootFailsafeMs: 2500,
+  /** Minimum on-screen time so the logo motion can finish (ms). */
+  splashHoldMs: 900,
+  /** Cross-fade into the shell (ms). */
+  exitFadeMs: 260,
+  /** Above this the app shows the recovery screen instead of an endless splash. */
+  bootFailsafeMs: 4000,
 } as const;
 
 function BootRecovery() {
@@ -44,38 +47,67 @@ function KairosRouter() {
   const { ready, activeTab } = useApp();
   const [phase, setPhase] = useState<SplashPhase>('playing');
   const [bootStalled, setBootStalled] = useState(false);
+  const [fontsReady, setFontsReady] = useState(false);
+  const [minDwellElapsed, setMinDwellElapsed] = useState(false);
 
-  // Hold the launch screen briefly, then mount the shell underneath it so the
-  // first frame the user sees is already fully rendered.
+  // Minimum dwell so the launch motion is never cut in half.
   useEffect(() => {
-    const mountTimer = window.setTimeout(() => {
-      setPhase((prev) => (prev === 'playing' ? 'mounting_app' : prev));
-    }, LAUNCH.splashHoldMs);
+    const timer = window.setTimeout(() => setMinDwellElapsed(true), LAUNCH.splashHoldMs);
+    return () => window.clearTimeout(timer);
+  }, []);
 
-    const failsafeTimer = window.setTimeout(() => {
-      setBootStalled(true);
-    }, LAUNCH.bootFailsafeMs);
-
+  // Typography gate: never reveal the shell with fallback glyphs.
+  useEffect(() => {
+    let alive = true;
+    const fonts = typeof document !== 'undefined' ? document.fonts : undefined;
+    if (!fonts || typeof fonts.load !== 'function') {
+      setFontsReady(true);
+      return;
+    }
+    const weights: Array<Promise<unknown>> = [];
+    try {
+      weights.push(fonts.load('600 16px Vazirmatn'));
+      weights.push(fonts.load('600 16px "Space Grotesk"'));
+    } catch {
+      // Font loading API quirks — the readiness promise below still gates us.
+    }
+    Promise.allSettled([...weights, fonts.ready])
+      .then(() => {
+        if (alive) setFontsReady(true);
+      })
+      .catch(() => {
+        if (alive) setFontsReady(true);
+      });
     return () => {
-      window.clearTimeout(mountTimer);
-      window.clearTimeout(failsafeTimer);
+      alive = false;
     };
   }, []);
 
+  // Recovery path: if the local database never resolves, offer a reload instead
+  // of leaving the user on the splash forever.
   useEffect(() => {
-    if (!ready || phase !== 'mounting_app') return;
-    const exitTimer = window.setTimeout(() => setPhase('exiting'), 0);
-    return () => window.clearTimeout(exitTimer);
-  }, [ready, phase]);
+    const timer = window.setTimeout(() => setBootStalled(true), LAUNCH.bootFailsafeMs);
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  // Hand over to the shell once data + fonts are in and the dwell has passed.
+  useEffect(() => {
+    if (phase !== 'playing') return;
+    if (!ready || !fontsReady || !minDwellElapsed) return;
+    setPhase('exiting');
+  }, [ready, fontsReady, minDwellElapsed, phase]);
 
   useEffect(() => {
     if (phase !== 'exiting') return;
-    const doneTimer = window.setTimeout(() => setPhase('done'), LAUNCH.exitFadeMs);
-    return () => window.clearTimeout(doneTimer);
+    const timer = window.setTimeout(() => setPhase('done'), LAUNCH.exitFadeMs);
+    return () => window.clearTimeout(timer);
   }, [phase]);
 
   const handleSkipIntro = useCallback(() => setPhase('done'), []);
 
+  const progress = phase !== 'playing' ? 1 : ready ? (fontsReady ? 0.94 : 0.62) : fontsReady ? 0.34 : 0.16;
+  // Mount the shell only once we start handing over: while the splash owns the
+  // screen the tree stays out of the a11y tree (and never mounts twice).
   const shouldRenderApp = ready && phase !== 'playing';
 
   if (!ready && bootStalled) return <BootRecovery />;
@@ -83,7 +115,7 @@ function KairosRouter() {
   return (
     <>
       {phase !== 'done' && (
-        <MrsadSplashIntro exiting={phase === 'exiting'} onSkip={handleSkipIntro} />
+        <LaunchScreen exiting={phase === 'exiting'} progress={progress} onSkip={handleSkipIntro} />
       )}
 
       {shouldRenderApp && (

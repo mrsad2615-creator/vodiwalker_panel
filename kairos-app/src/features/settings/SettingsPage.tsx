@@ -32,6 +32,7 @@ import { LuxuryCard } from '@/components/ui/LuxuryCard';
 import { Numeric } from '@/components/ui/Numeric';
 import { NumericInput } from '@/components/ui/NumericInput';
 import { KairosLogoMark } from '@/components/ui/KairosMark';
+import { SafeAreaDiagnostics } from '@/components/ui/SafeAreaDiagnostics';
 import type { KairosBackupPayload } from '@/types/domain';
 
 export function SettingsPage() {
@@ -438,6 +439,8 @@ export function SettingsPage() {
           </div>
         </div>
       </LuxuryCard>
+
+      <SafeAreaDiagnostics />
     </div>
   );
 }

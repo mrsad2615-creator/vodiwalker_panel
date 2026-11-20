@@ -1,7 +1,7 @@
 import { Capacitor } from '@capacitor/core';
 import { Haptics, ImpactStyle, NotificationType } from '@capacitor/haptics';
-import { StatusBar, Style } from '@capacitor/status-bar';
 import { SplashScreen } from '@capacitor/splash-screen';
+import { syncSafeArea } from '@/lib/safeArea';
 
 export function isNativeAndroid(): boolean {
   return Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android';
@@ -9,12 +9,10 @@ export function isNativeAndroid(): boolean {
 
 export async function initNativeShell(): Promise<void> {
   if (!Capacitor.isNativePlatform()) return;
-  try {
-    await StatusBar.setStyle({ style: Style.Dark });
-    await StatusBar.setBackgroundColor({ color: '#0A0A0C' });
-  } catch {
-    // Graceful no-op outside native shell
-  }
+  // Status bar styling is owned by Capacitor's SystemBars plugin
+  // (capacitor.config.ts → plugins.SystemBars); calling the legacy StatusBar
+  // plugin here used to fight it and break edge-to-edge insets.
+  syncSafeArea();
   try {
     await SplashScreen.hide();
   } catch {

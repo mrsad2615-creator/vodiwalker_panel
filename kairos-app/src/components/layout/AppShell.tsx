@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import type { NavTab } from '@/types/domain';
 import { useApp } from '@/context/AppContext';
-import { KairosLogoMark } from '@/components/ui/KairosMark';
+import { KairosMarkTile } from '@/components/ui/KairosMark';
 import { Numeric } from '@/components/ui/Numeric';
 import { ToastHost } from '@/components/ui/ToastHost';
 import { formatTimerSeconds } from '@/lib/format';
@@ -83,7 +83,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             aria-label="خانه"
             className="flex items-center gap-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-fg)]"
           >
-            <KairosLogoMark size={26} />
+            <KairosMarkTile size={26} />
             <span className="font-brand text-[12px] font-semibold text-[var(--text)]">KAIROS</span>
           </button>
 
@@ -104,7 +104,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
         <nav
           aria-label="ناوبری اصلی"
-          className="pointer-events-none fixed inset-x-0 bottom-0 z-40 mx-auto w-full max-w-[480px] px-3 app-safe-tabbar"
+          className="app-safe-tabbar app-safe-x pointer-events-none fixed inset-x-0 bottom-0 z-40 mx-auto w-full max-w-[480px] px-3"
         >
           <div className="luxury-glass-dock pointer-events-auto grid grid-cols-5 items-center gap-0.5 p-1">
             {PRIMARY_TABS.map((item) => {
@@ -162,7 +162,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               role="dialog"
               aria-modal="true"
               aria-label="بخش‌های دیگر"
-              className="app-safe-tabbar relative w-full max-w-[480px] px-3"
+              className="app-safe-bottom-sheet relative w-full max-w-[480px] px-3"
             >
               <div className="luxury-glass-sheet overflow-hidden p-2">
                 {SECONDARY_TABS.map((item) => {

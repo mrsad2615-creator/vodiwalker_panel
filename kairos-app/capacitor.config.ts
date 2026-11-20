@@ -21,10 +21,6 @@ const config: CapacitorConfig = {
       initialViewportFitValueHint: 'cover',
       style: 'DARK',
     },
-    StatusBar: {
-      style: 'DARK',
-      backgroundColor: '#0A0A0C',
-    },
     SplashScreen: {
       launchAutoHide: true,
       launchShowDuration: 0,
@@ -32,7 +28,7 @@ const config: CapacitorConfig = {
       showSpinner: false,
     },
     LocalNotifications: {
-      iconColor: '#8052D6',
+      iconColor: '#6E56CF',
       sound: 'default',
     },
   },

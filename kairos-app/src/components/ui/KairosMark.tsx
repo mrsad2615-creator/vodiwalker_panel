@@ -18,50 +18,75 @@ import {
 } from 'lucide-react';
 import type { HabitIconName } from '@/types/domain';
 
-export function KairosLogoMark({ size = 28 }: { size?: number }) {
+/**
+ * The KAIROS mark, traced to vector from the shipped app icon
+ * (assets/kairos-mark.png → 4 contours, 172 path characters, IoU 0.93).
+ * Filled with `currentColor`, so colour is decided by the caller.
+ */
+const MARK_PATHS = [
+  'M0,0 21,0 21,194 1,214Z',
+  'M256,0 389,2 21,371 21,432 0,432 1,255Z',
+  'M264,19 21,263 21,343 343,20Z',
+  'M196,239 388,432 249,432 219,402 125,307 139,292 260,413 341,413 185,256 183,251Z',
+] as const;
+
+export const KAIROS_MARK_VIEWBOX = { width: 389, height: 432 } as const;
+
+interface KairosLogoMarkProps {
+  /** Rendered height in px (width follows the 389:432 ratio). */
+  size?: number;
+  className?: string;
+  /** Provide an accessible name when the mark stands alone. */
+  title?: string;
+}
+
+export function KairosLogoMark({ size = 28, className = '', title }: KairosLogoMarkProps) {
+  const width = (size * KAIROS_MARK_VIEWBOX.width) / KAIROS_MARK_VIEWBOX.height;
   return (
     <svg
-      width={size}
+      width={width}
       height={size}
-      viewBox="0 0 40 40"
-      fill="none"
+      viewBox={`0 0 ${KAIROS_MARK_VIEWBOX.width} ${KAIROS_MARK_VIEWBOX.height}`}
+      fill="currentColor"
+      fillRule="evenodd"
       xmlns="http://www.w3.org/2000/svg"
-      aria-hidden="true"
+      role={title ? 'img' : undefined}
+      aria-label={title}
+      aria-hidden={title ? undefined : true}
+      className={className}
+      focusable="false"
     >
-      <rect
-        x="1"
-        y="1"
-        width="38"
-        height="38"
-        rx="11"
-        fill="#16161A"
-        stroke="#A99BF0"
-        strokeOpacity="0.24"
-      />
-      <circle
-        cx="20"
-        cy="20"
-        r="12.5"
-        stroke="url(#kairosGrad)"
-        strokeWidth="2.1"
-        strokeLinecap="round"
-        strokeDasharray="60 19"
-      />
-      <path
-        d="M13 26.5V15L20 22.5L27 15V26.5"
-        stroke="#ECECEF"
-        strokeWidth="2.3"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <circle cx="20" cy="11.8" r="1.6" fill="#A99BF0" />
-      <defs>
-        <linearGradient id="kairosGrad" x1="8" y1="8" x2="32" y2="32" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#A99BF0" />
-          <stop offset="1" stopColor="#6E56CF" />
-        </linearGradient>
-      </defs>
+      {title ? <title>{title}</title> : null}
+      {MARK_PATHS.map((d) => (
+        <path key={d} d={d} />
+      ))}
     </svg>
+  );
+}
+
+/** Mark inside the brand tile — used by the app header and the settings hero. */
+export function KairosMarkTile({
+  size = 26,
+  radius,
+}: {
+  size?: number;
+  radius?: number;
+}) {
+  const r = radius ?? Math.round(size * 0.3);
+  return (
+    <span
+      className="inline-flex shrink-0 items-center justify-center"
+      style={{
+        width: size,
+        height: size,
+        borderRadius: r,
+        background: 'var(--surface-2)',
+        boxShadow: 'inset 0 0 0 1px var(--border-strong)',
+        color: 'var(--accent-fg)',
+      }}
+    >
+      <KairosLogoMark size={Math.round(size * 0.58)} />
+    </span>
   );
 }
 

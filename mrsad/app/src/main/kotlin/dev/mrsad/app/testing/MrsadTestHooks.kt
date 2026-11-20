@@ -1,7 +1,7 @@
 package dev.mrsad.app.testing
 
+import android.util.Log
 import androidx.compose.runtime.mutableStateOf
-import dev.mrsad.app.BuildConfig
 
 /**
  * Deterministic-test hook.
@@ -18,16 +18,21 @@ import dev.mrsad.app.BuildConfig
  *
  * The emulator's "disable animations" switch only scales *Android* animators
  * to zero — a Compose infinite transition keeps requesting frames regardless,
- * so an instrumentation test would wait for idle forever.
+ * so an instrumentation test would wait for idle forever. Espresso's
+ * `onIdle()` has no timeout of its own, so such a test hangs the whole job.
  *
  * Instrumented tests turn the hook on *before* the activity is created, so the
  * very first rendered frame is already static and the Compose idling resource
  * can reach idle. The flag is a Compose state, so flipping it later also
  * disposes animations that are already running.
  *
- * The hook is inert in a release build: it can never be switched on there.
+ * The hook lives in the application source set (a Compose state cannot be
+ * shared with the test source set otherwise) and is never enabled by the
+ * product: only instrumentation tests call [enableDeterministicMode].
  */
 object MrsadTestHooks {
+
+    const val TAG = "MrsadTest"
 
     private val deterministic = mutableStateOf(false)
 
@@ -38,15 +43,16 @@ object MrsadTestHooks {
     /**
      * Turns off every recurring animation and timer.
      *
-     * Only instrumentation tests may call this, and only in a debug build.
+     * Only instrumentation tests call this.
      */
     fun enableDeterministicMode() {
-        if (!BuildConfig.DEBUG) return
         deterministic.value = true
+        Log.i(TAG, "deterministic mode enabled")
     }
 
     /** Restores the normal, animated behaviour. */
     fun disableDeterministicMode() {
         deterministic.value = false
+        Log.i(TAG, "deterministic mode disabled")
     }
 }

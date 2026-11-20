@@ -105,7 +105,6 @@ dependencies {
 
     implementation("androidx.datastore:datastore-preferences:1.1.2")
     implementation("androidx.core:core-splashscreen:1.0.1")
-    implementation("androidx.work:work-runtime-ktx:2.10.0")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")

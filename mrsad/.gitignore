@@ -7,3 +7,9 @@ captures/
 .externalNativeBuild/
 .cxx/
 .kotlin/
+__pycache__/
+*.pyc
+# CI artefacts produced by .ci/run-connected-tests.sh on the runner
+ui-test.log
+ui-test-results/
+ui-test-dumps/

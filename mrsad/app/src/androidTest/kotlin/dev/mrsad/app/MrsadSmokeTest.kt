@@ -11,7 +11,6 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import androidx.test.platform.app.InstrumentationRegistry
 import dev.mrsad.app.data.settings.ThemeVariant
 import dev.mrsad.app.navigation.Routes
 import dev.mrsad.app.testing.MrsadTestHooks
@@ -53,10 +52,11 @@ class MrsadSmokeTest {
     private val deterministicModeRule = TestRule { base, _ ->
         object : Statement() {
             override fun evaluate() {
-                // Written on the main thread so that the value is visible to
-                // the composition the moment it starts.
-                InstrumentationRegistry.getInstrumentation().runOnMainSync {
-                    MrsadTestHooks.enableDeterministicMode()
+                // Must happen before the activity rule launches MainActivity:
+                // the very first rendered frame has to be free of animations.
+                MrsadTestHooks.enableDeterministicMode()
+                check(MrsadTestHooks.isDeterministic) {
+                    "the deterministic test hook did not take effect"
                 }
                 base.evaluate()
             }

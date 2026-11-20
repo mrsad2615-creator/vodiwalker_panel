@@ -96,7 +96,7 @@ jobs:
   e2e:
     name: Emulator smoke test
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 40
     needs: build
     steps:
       - uses: actions/checkout@v4
@@ -120,8 +120,12 @@ jobs:
           script: cd mrsad && sh .ci/run-connected-tests.sh
       # NOTE: this job has NO `working-directory` override, so its paths are
       # relative to the repository root — the opposite of the build job.
+      # `cancelled()` matters: a Compose test that never reaches idle blocks
+      # in waitForIdle(), which has no timeout, and the job-level timeout is
+      # what ends it. Without this condition the reporter would be skipped
+      # exactly when its output is most needed.
       - name: Report instrumented test failure details
-        if: failure()
+        if: failure() || cancelled()
         shell: bash
         run: |
           python3 mrsad/.ci/report_failure.py mrsad/ui-test.log
@@ -132,6 +136,8 @@ jobs:
           name: mrsad-androidtest-reports
           path: |
             mrsad/ui-test.log
+            mrsad/ui-test-results/**
+            mrsad/ui-test-dumps/**
             mrsad/app/build/reports/androidTests/**
             mrsad/app/build/outputs/androidTest-results/**
           if-no-files-found: ignore

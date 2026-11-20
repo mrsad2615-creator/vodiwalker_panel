@@ -30,3 +30,9 @@ SOURCES=$(find app/src/main/java -name "*.kt" | grep -v "/android/" || true)
   -nowarn
 
 java -Djava.awt.headless=true -cp "$OUT:$STDLIB" com.mrsadhr.test.RunTests
+
+# Device-shaped stress pass: every screen, theme, language and mode at extreme viewports, font
+# scales and inset combinations, plus a long run of frames. A layout fault that only shows up on a
+# phone (a zero-sized viewport, a split-screen window, a huge font) fails here instead of shipping.
+echo "==> device-shaped stress pass"
+java -Djava.awt.headless=true -cp "$OUT:$STDLIB" com.mrsadhr.preview.StageStress app/src/main/assets/fonts

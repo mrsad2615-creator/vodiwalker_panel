@@ -54,8 +54,8 @@ echo "==> 2/7 link resources"
   --manifest "$BUILD/AndroidManifest.xml" \
   --min-sdk-version 23 \
   --target-sdk-version 35 \
-  --version-code 2 \
-  --version-name "1.0.1" \
+  --version-code 3 \
+  --version-name "1.0.2" \
   --java "$BUILD/gen" \
   "$BUILD/resources.zip"
 

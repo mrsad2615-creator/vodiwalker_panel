@@ -33,12 +33,35 @@ class AndroidTypeface(val face: ATypeface) : Typeface() {
 
 class AndroidShader(val shader: AShader) : Shader()
 
-/** Loads the bundled OFL fonts straight out of `assets/fonts`. */
-class AndroidFontLoader(private val assets: AssetManager) : FontLoader {
+/**
+ * Loads the bundled OFL fonts straight out of `assets/fonts`.
+ *
+ * A font that a device refuses to parse must not cost the whole app: a missing or rejected face
+ * degrades to the platform default, which is why [systemOnly] exists (safe mode boots without the
+ * bundled files at all, to tell a font fault apart from an app fault).
+ */
+class AndroidFontLoader(
+    private val assets: AssetManager,
+    private val systemOnly: Boolean = false,
+) : FontLoader {
     private val cache = HashMap<String, AndroidTypeface>()
 
-    override fun load(fileName: String): Typeface = cache.getOrPut(fileName) {
-        AndroidTypeface(ATypeface.createFromAsset(assets, "fonts/$fileName"))
+    override fun load(fileName: String): Typeface {
+        cache[fileName]?.let { return it }
+        if (systemOnly) {
+            val fallback = AndroidTypeface(ATypeface.DEFAULT)
+            cache[fileName] = fallback
+            return fallback
+        }
+        val face = try {
+            ATypeface.createFromAsset(assets, "fonts/$fileName") ?: ATypeface.DEFAULT
+        } catch (error: Throwable) {
+            SafeMode.note("font $fileName: ${error.javaClass.simpleName}: ${error.message}")
+            ATypeface.DEFAULT
+        }
+        val typeface = AndroidTypeface(face)
+        cache[fileName] = typeface
+        return typeface
     }
 }
 

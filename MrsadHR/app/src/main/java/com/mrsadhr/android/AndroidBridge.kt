@@ -5,6 +5,7 @@ import com.mrsadhr.app.Action
 import com.mrsadhr.app.AppController
 import com.mrsadhr.platform.HapticKind
 import com.mrsadhr.platform.PlatformBridge
+import com.mrsadhr.platform.SoundEngine
 
 /**
  * Connects the pure controller to Android: foreground service, notifications, haptics, the screen
@@ -12,11 +13,26 @@ import com.mrsadhr.platform.PlatformBridge
  */
 class AndroidBridge(
     private val context: Context,
-    private val sounds: SoundPlayer,
+    private val sounds: SoundEngine,
     private val haptics: Haptics,
 ) : PlatformBridge {
 
-    private val notifications = Notifications(context).also { it.ensureChannels() }
+    /** Null when the device refuses the notification service; every caller tolerates that. */
+    private val notifications: Notifications? =
+        if (SafeMode.enabled) {
+            null
+        } else {
+            try {
+                Notifications(context).also { it.ensureChannels() }
+            } catch (error: Throwable) {
+                SafeMode.note("notifications: ${error.javaClass.simpleName}: ${error.message}")
+                null
+            }
+        }
+
+    private val hapticsEnabled: Boolean get() = !SafeMode.enabled
+
+    private val backgroundAllowed: Boolean get() = !SafeMode.enabled && notifications != null
     private var controller: AppController? = null
 
     /** Wired by the view: the activity is the only one that can hold the screen awake. */
@@ -38,11 +54,11 @@ class AndroidBridge(
         val state = controller?.state()
         val notify = state?.settings?.notifications ?: false
         keepScreenOn(state != null && state.settings.keepScreenOn && running)
-        if (running && notify && notifications.canPost()) {
+        if (running && notify && backgroundAllowed && notifications?.canPost() == true) {
             TimerService.start(context, durationMs, remainingMs)
         } else {
             TimerService.stop(context)
-            notifications.cancelRunning()
+            notifications?.cancelRunning()
         }
         if (!running) sounds.stopCompletion()
     }
@@ -50,9 +66,9 @@ class AndroidBridge(
     override fun onTimerCompleted(soundId: String, volume: Float, playSound: Boolean) {
         val state = controller?.state()
         if (playSound) sounds.playCompletion(soundId, volume)
-        if (state != null && state.settings.notifications && notifications.canPost()) {
+        if (state != null && state.settings.notifications && backgroundAllowed && notifications?.canPost() == true) {
             if (state.settings.soundId.isNotEmpty()) {
-                notifications.notifyCompleted(
+                notifications?.notifyCompleted(
                     state.timer.durationMs,
                     state.settings.language,
                     soundId,
@@ -63,10 +79,12 @@ class AndroidBridge(
 
     override fun onTimerDismissed() {
         sounds.stopCompletion()
-        notifications.cancelCompleted()
+        notifications?.cancelCompleted()
     }
 
-    override fun haptic(kind: HapticKind) = haptics.play(kind)
+    override fun haptic(kind: HapticKind) {
+        if (hapticsEnabled) haptics.play(kind)
+    }
 
     override fun keepScreenOn(enabled: Boolean) {
         screenOnListener?.invoke(enabled)
@@ -85,11 +103,11 @@ class AndroidBridge(
         controller?.dispatch(action)
     }
 
-    fun canPostNotifications(): Boolean = notifications.canPost()
+    fun canPostNotifications(): Boolean = notifications?.canPost() == true
 
     fun cancelAllNotifications() {
-        notifications.cancelRunning()
-        notifications.cancelCompleted()
+        notifications?.cancelRunning()
+        notifications?.cancelCompleted()
     }
 
     val isSoundEnabled: Boolean get() = wantsSound()

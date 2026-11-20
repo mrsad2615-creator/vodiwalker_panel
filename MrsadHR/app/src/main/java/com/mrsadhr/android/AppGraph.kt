@@ -3,6 +3,8 @@ package com.mrsadhr.android
 import android.content.Context
 import com.mrsadhr.app.AppController
 import com.mrsadhr.core.time.TimeSource
+import com.mrsadhr.platform.NoopSoundEngine
+import com.mrsadhr.platform.SoundEngine
 
 /** Monotonic device clock: never affected by the wall clock changing. */
 class AndroidTimeSource : TimeSource {
@@ -19,7 +21,7 @@ class AppGraph private constructor(context: Context) {
 
     val controller: AppController
     val bridge: AndroidBridge
-    val sounds: SoundPlayer
+    val sounds: SoundEngine
     val prefs: PrefsStore
     val haptics: Haptics
 
@@ -27,7 +29,11 @@ class AppGraph private constructor(context: Context) {
         val app = context.applicationContext
         prefs = PrefsStore(app)
         haptics = Haptics(app)
-        sounds = SoundPlayer(app)
+        // Audio is the most device dependent subsystem in the app: a phone that rejects the audio
+        // stack must still get a working timer, so it degrades to silence instead of failing.
+        sounds = if (SafeMode.enabled) NoopSoundEngine else SafeMode.attempt("audio", NoopSoundEngine) {
+            SoundPlayer(app)
+        }
         bridge = AndroidBridge(app, sounds, haptics)
         controller = AppController(AndroidTimeSource(), prefs, bridge, sounds)
         bridge.attach(controller)

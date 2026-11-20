@@ -34,8 +34,13 @@ class TimerAppView @JvmOverloads constructor(
     private var visible = true
     private var lastDrawnThemeIsLight: Boolean? = null
     private var painter: AndroidPainter? = null
+    private var firstFrameDone = false
+    private var loopStopped = false
 
     var onThemeChanged: ((light: Boolean) -> Unit)? = null
+
+    /** Fired once, when the first frame is actually on screen: proof that startup is healthy. */
+    var onFirstFrame: (() -> Unit)? = null
 
     private val frameCallback = Choreographer.FrameCallback {
         frameScheduled = false
@@ -52,17 +57,33 @@ class TimerAppView @JvmOverloads constructor(
     }
 
     private fun renderFrame() {
-        if (!attached || !visible) return
-        val now = SystemClock.elapsedRealtime()
-        stage.update(now)
-        invalidate()
-        syncScreenAwake()
-        notifyTheme()
-        scheduleNext(now)
+        if (!attached || !visible || loopStopped) return
+        try {
+            val now = SystemClock.elapsedRealtime()
+            stage.update(now)
+            invalidate()
+            syncScreenAwake()
+            notifyTheme()
+            scheduleNext(now)
+        } catch (error: Throwable) {
+            // A failure in the frame loop would otherwise kill the process from a callback, where
+            // no other code can catch it. Stop the loop and paint the reason instead.
+            stopLoop()
+            CrashGuard.write(context, error, "frame")
+            invalidate()
+        }
+    }
+
+    /** Halts the frame loop for good; used when the activity hands the window to an error screen. */
+    fun stopLoop() {
+        loopStopped = true
+        attached = false
+        choreographer.removeFrameCallback(frameCallback)
+        frameScheduled = false
     }
 
     private fun scheduleNext(now: Long) {
-        if (!attached || !visible) return
+        if (!attached || !visible || loopStopped) return
         if (frameScheduled) return
         frameScheduled = true
         if (stage.needsFrame(now)) {
@@ -75,7 +96,7 @@ class TimerAppView @JvmOverloads constructor(
     }
 
     fun requestFrame() {
-        if (!attached || !visible) return
+        if (!attached || !visible || loopStopped) return
         if (frameScheduled) return
         frameScheduled = true
         choreographer.postFrameCallback(frameCallback)
@@ -97,17 +118,27 @@ class TimerAppView @JvmOverloads constructor(
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
         if (::stage.isInitialized) {
-            stage.setViewport(w.toFloat(), h.toFloat(), resources.displayMetrics.density)
-            stage.fontScale = resources.configuration.fontScale
-            requestFrame()
+            try {
+                stage.setViewport(w.toFloat(), h.toFloat(), resources.displayMetrics.density)
+                stage.fontScale = resources.configuration.fontScale
+                requestFrame()
+            } catch (error: Throwable) {
+                stopLoop()
+                CrashGuard.write(context, error, "onSizeChanged")
+            }
         }
     }
 
     override fun onApplyWindowInsets(insets: WindowInsets): WindowInsets {
         if (::stage.isInitialized) {
-            stage.safeTop = insets.systemWindowInsetTop.toFloat()
-            stage.safeBottom = insets.systemWindowInsetBottom.toFloat()
-            requestFrame()
+            try {
+                stage.safeTop = insets.systemWindowInsetTop.toFloat()
+                stage.safeBottom = insets.systemWindowInsetBottom.toFloat()
+                requestFrame()
+            } catch (error: Throwable) {
+                stopLoop()
+                CrashGuard.write(context, error, "insets")
+            }
         }
         return super.onApplyWindowInsets(insets)
     }
@@ -127,6 +158,7 @@ class TimerAppView @JvmOverloads constructor(
 
     override fun onVisibilityChanged(changedView: View, visibility: Int) {
         super.onVisibilityChanged(changedView, visibility)
+        if (loopStopped) return
         visible = visibility == VISIBLE
         if (visible && attached) {
             if (::stage.isInitialized) {
@@ -145,6 +177,13 @@ class TimerAppView @JvmOverloads constructor(
         p.bind(canvas, width.toFloat(), height.toFloat())
         try {
             stage.draw(p)
+            if (!firstFrameDone) {
+                firstFrameDone = true
+                try {
+                    onFirstFrame?.invoke()
+                } catch (_: Throwable) {
+                }
+            }
         } catch (error: Throwable) {
             // Never let a drawing fault kill the app: paint the reason so it can be reported.
             if (!drawFatal) {
@@ -167,8 +206,7 @@ class TimerAppView @JvmOverloads constructor(
         var y = 120f
         canvas.drawText("MrsadHR drawing error", 32f, y, text)
         y += 40f
-        val lines = (error.toString() + "\n" + (error.stackTrace.take(8).joinToString("\n") { "  at $it" }))
-            .split("\n")
+        val lines = CrashGuard.shortTrace(error).split("\n")
         for (line in lines) {
             canvas.drawText(line.take(58), 32f, y, text)
             y += 34f
@@ -186,7 +224,14 @@ class TimerAppView @JvmOverloads constructor(
             MotionEvent.ACTION_CANCEL -> TouchAction.Cancel
             else -> return false
         }
-        stage.onTouch(TouchEvent(event.x, event.y, action), now)
+        try {
+            stage.onTouch(TouchEvent(event.x, event.y, action), now)
+        } catch (error: Throwable) {
+            stopLoop()
+            CrashGuard.write(context, error, "onTouchEvent")
+            invalidate()
+            return false
+        }
         if (action == TouchAction.Up) performClick()
         invalidate()
         requestFrame()

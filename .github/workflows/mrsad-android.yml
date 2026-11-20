@@ -65,14 +65,9 @@ jobs:
 
       - name: Report failure details
         if: failure()
+        shell: bash
         run: |
-          echo "----- last 80 lines -----"
-          tail -80 build.log || true
-          echo "----- errors -----"
-          grep -nE '^(e: |w: .*error|.*error:|.*Error:|FAILURE|> Task .*FAILED|Caused by)' build.log | head -60 || true
-          if [ -f app/build/reports/lint-results-debug.txt ]; then
-            head -40 app/build/reports/lint-results-debug.txt || true
-          fi
+          python3 mrsad/.ci/report_failure.py mrsad/build.log mrsad/app/build/reports/lint-results-debug.txt
 
       - name: Upload debug APK
         if: success()

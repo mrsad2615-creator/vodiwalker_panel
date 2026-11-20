@@ -1,11 +1,14 @@
 package dev.mrsad.app.feature.focus
 
+import android.Manifest
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
+import android.content.pm.PackageManager
 import android.os.Build
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 import androidx.core.app.NotificationManagerCompat
 import dev.mrsad.app.R
 import dev.mrsad.core.session.FocusSession
@@ -70,7 +73,12 @@ object FocusNotifications {
     }
 
     private fun canNotify(context: Context): Boolean {
-        val manager = NotificationManagerCompat.from(context)
-        return manager.areNotificationsEnabled()
+        if (Build.VERSION.SDK_INT >= 33 &&
+            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) !=
+            PackageManager.PERMISSION_GRANTED
+        ) {
+            return false
+        }
+        return NotificationManagerCompat.from(context).areNotificationsEnabled()
     }
 }

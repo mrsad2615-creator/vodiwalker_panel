@@ -15,8 +15,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: '1.3.2'
-  TAG: 'kairos-v1.3.2'
+  VERSION: '1.3.3'
+  TAG: 'kairos-v1.3.3'
 
 jobs:
   build-android-apk:
@@ -103,27 +103,34 @@ jobs:
           path: kairos-app/artifacts/*.apk
           if-no-files-found: error
 
+      # One release per build (tag = kairos-v<version>-b<run>). The create path is
+      # the reliable one, and it gives every build an immutable, unique URL — no
+      # overwriting a shared asset, no stale download.
       - name: Publish to GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          set -euo pipefail
+          BUILD_TAG="kairos-v${VERSION}-b${GITHUB_RUN_NUMBER}"
+          REPO="$GITHUB_REPOSITORY"
           UNIQUE="kairos-app/artifacts/${BUILD_FILE}.apk"
           STABLE="kairos-app/artifacts/KAIROS-v${VERSION}.apk"
-          NOTES="نسخه ${VERSION} — build ${GITHUB_RUN_NUMBER} (${GITHUB_SHA::7}).
-          فایل نام‌گذاری‌شده با شمارهٔ بیلد برای اطمینان از دریافت نسخهٔ جدید است؛
-          KAIROS-v${VERSION}.apk همان بیلد با نام ثابت است."
-          if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release upload "$TAG" "$UNIQUE" --clobber
-            gh release upload "$TAG" "$STABLE" --clobber
+          ls -lh kairos-app/artifacts/
+          if gh release view "$BUILD_TAG" --repo "$REPO" > /dev/null 2>&1; then
+            echo "release $BUILD_TAG exists → uploading"
+            gh release upload "$BUILD_TAG" "$UNIQUE" --clobber --repo "$REPO"
+            gh release upload "$BUILD_TAG" "$STABLE" --clobber --repo "$REPO"
           else
-            gh release create "$TAG" "$UNIQUE" "$STABLE" \
-              --target "${{ github.sha }}" \
-              --title "KAIROS ${VERSION} — Android APK" \
-              --notes "$NOTES"
+            echo "creating release $BUILD_TAG"
+            gh release create "$BUILD_TAG" "$UNIQUE" "$STABLE" \
+              --repo "$REPO" \
+              --target "$GITHUB_SHA" \
+              --title "KAIROS ${VERSION} · build ${GITHUB_RUN_NUMBER}" \
+              --notes "نسخهٔ ${VERSION} — بیلد ${GITHUB_RUN_NUMBER} (${GITHUB_SHA::7}). فایل نام‌گذاری‌شده با شمارهٔ بیلد یکتاست؛ KAIROS-v${VERSION}.apk همان بیلد با نام ثابت است."
           fi
           {
             echo ""
-            echo "**دانلود:** https://github.com/${{ github.repository }}/releases/download/$TAG/${BUILD_FILE}.apk"
+            echo "**دانلود:** https://github.com/$REPO/releases/download/$BUILD_TAG/${BUILD_FILE}.apk"
             echo ""
-            echo "**لینک ثابت:** https://github.com/${{ github.repository }}/releases/download/$TAG/KAIROS-v${VERSION}.apk"
+            echo "**لینک ثابت:** https://github.com/$REPO/releases/download/$BUILD_TAG/KAIROS-v${VERSION}.apk"
           } >> "$GITHUB_STEP_SUMMARY"

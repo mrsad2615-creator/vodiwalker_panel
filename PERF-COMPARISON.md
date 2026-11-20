@@ -13,48 +13,48 @@ whether the difference is larger than the spread of the runs; a
 difference *inside the spread* is the machine talking, not the
 application.
 
-- versions: 1.1.0-debug
+- versions: 1.1.0-debug, 1.2.0-debug
 
 ## Frames, whole session
 
 | metric | baseline | redesign | change |
 | --- | --- | --- | --- |
-| frames | 519 | 512 | -1.3% inside the spread |
-| mean frame (ms) | 38 | 37 | -2.6% inside the spread |
-| p50 frame (ms) | 36 | 35 | -2.8% inside the spread |
-| p90 frame (ms) | 50 | 50 | +0.0% inside the spread |
-| p95 frame (ms) | 51 | 52 | +2.0% inside the spread |
-| p99 frame (ms) | 151 | 127 | -15.9% better |
-| worst frame (ms) | 184 | 201 | +9.2% inside the spread |
+| frames | 522 | 444 | -14.9% worse |
+| mean frame (ms) | 33 | 57 | +72.7% worse |
+| p50 frame (ms) | 34 | 50 | +47.1% worse |
+| p90 frame (ms) | 50 | 67 | +34.0% worse |
+| p95 frame (ms) | 50 | 83 | +66.0% worse |
+| p99 frame (ms) | 150 | 167 | +11.3% worse |
+| worst frame (ms) | 167 | 286 | +71.3% worse |
 | jank (%) | 100 | 100 | +0.0% inside the spread |
 
 ## Frames, per phase
 
 | phase | metric | baseline | redesign | change |
 | --- | --- | --- | --- | --- |
-| idle | idle (the object turns on its own) · p50 (ms) | 37 | 36 | -2.7% inside the spread |
-| idle | idle (the object turns on its own) · p95 (ms) | 51 | 51 | +0.0% inside the spread |
+| idle | idle (the object turns on its own) · p50 (ms) | 31 | 50 | +61.3% worse |
+| idle | idle (the object turns on its own) · p95 (ms) | 50 | 67 | +34.0% worse |
 | idle | idle (the object turns on its own) · jank (%) | 100 | 100 | +0.0% inside the spread |
-| scroll | scroll · p50 (ms) | 37 | 37 | +0.0% inside the spread |
-| scroll | scroll · p95 (ms) | 67 | 52 | -22.4% inside the spread |
+| scroll | scroll · p50 (ms) | 36 | 52 | +44.4% inside the spread |
+| scroll | scroll · p95 (ms) | 67 | 68 | +1.5% inside the spread |
 | scroll | scroll · jank (%) | 100 | 100 | +0.0% inside the spread |
-| touch | touch (the object under the finger) · p50 (ms) | 36 | 36 | +0.0% inside the spread |
-| touch | touch (the object under the finger) · p95 (ms) | 48 | 100 | +108.3% worse |
+| touch | touch (the object under the finger) · p50 (ms) | 36 | 55 | +52.8% worse |
+| touch | touch (the object under the finger) · p95 (ms) | 39 | 167 | +328.2% worse |
 | touch | touch (the object under the finger) · jank (%) | 100 | 100 | +0.0% inside the spread |
-| navigate | navigate · p50 (ms) | 21 | 32 | +52.4% inside the spread |
-| navigate | navigate · p95 (ms) | 50 | 50 | +0.0% inside the spread |
+| navigate | navigate · p50 (ms) | 20 | 50 | +150.0% worse |
+| navigate | navigate · p95 (ms) | 50 | 69 | +38.0% worse |
 | navigate | navigate · jank (%) | 100 | 100 | +0.0% inside the spread |
 
 ## The process
 
 | metric | baseline | redesign | change |
 | --- | --- | --- | --- |
-| CPU time (ms) | 7750 | 8194 | +5.7% worse |
-| CPU load (%) | 85 | 89 | +4.7% worse |
-| PSS at the end (kB) | 169497 | 171209 | +1.0% inside the spread |
-| PSS growth (kB) | -6990 | -3283 | -53.0% inside the spread |
-| Java heap in use (kB) | 8937 | 9973 | +11.6% inside the spread |
-| native heap (kB) | 19098 | 20386 | +6.7% inside the spread |
+| CPU time (ms) | 7434 | 8860 | +19.2% worse |
+| CPU load (%) | 82 | 94 | +14.6% worse |
+| PSS at the end (kB) | 170150 | 170599 | +0.3% inside the spread |
+| PSS growth (kB) | 2264 | 828 | -63.4% inside the spread |
+| Java heap in use (kB) | 9296 | 9801 | +5.4% inside the spread |
+| native heap (kB) | 19540 | 20476 | +4.8% inside the spread |
 
 ## The spread of the runs
 
@@ -63,11 +63,11 @@ difference that is smaller than this is not a difference.
 
 | metric | baseline | redesign |
 | --- | --- | --- |
-| p50 frame (ms) | 22–36 | 35–46 |
-| p95 frame (ms) | 50–55 | 51–67 |
-| worst frame (ms) | 167–200 | 167–267 |
-| CPU load (%) | 79–87 | 88–91 |
-| PSS at the end (kB) | 167873–172995 | 168356–172853 |
+| p50 frame (ms) | 21–36 | 50–51 |
+| p95 frame (ms) | 50–52 | 67–85 |
+| worst frame (ms) | 153–201 | 250–367 |
+| CPU load (%) | 76–84 | 93–96 |
+| PSS at the end (kB) | 169382–171593 | 167690–172274 |
 
 ## The frame budget
 

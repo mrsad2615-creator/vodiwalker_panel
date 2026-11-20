@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import dev.mrsad.app.data.AppContainer
 import dev.mrsad.app.data.db.ActivityEventEntity
+import dev.mrsad.app.testing.MrsadTestHooks
 import dev.mrsad.app.util.MrsadClock
 import dev.mrsad.app.util.firstValue
 import dev.mrsad.core.session.FocusSession
@@ -142,6 +143,13 @@ class FocusViewModel(private val container: AppContainer) : ViewModel() {
 
     private fun startTicker() {
         ticker?.cancel()
+        if (MrsadTestHooks.isDeterministic) {
+            // Deterministic mode: the phase engine is not driven by a wall
+            // clock, so the dial reflects the session exactly as configured
+            // and the Compose idling resource can reach idle.
+            refreshFromSession()
+            return
+        }
         ticker = viewModelScope.launch {
             while (_state.value.isRunning) {
                 val active = session ?: break
@@ -168,6 +176,20 @@ class FocusViewModel(private val container: AppContainer) : ViewModel() {
                 }
                 delay(500)
             }
+        }
+    }
+
+    /** Re-reads the session's real state without advancing the phase engine. */
+    private fun refreshFromSession() {
+        val active = session ?: return
+        val now = SystemClock.elapsedRealtime()
+        _state.update {
+            it.copy(
+                phase = active.phase,
+                round = active.round,
+                remainingMillis = active.remainingMillis(now),
+                progress = active.progress(now),
+            )
         }
     }
 

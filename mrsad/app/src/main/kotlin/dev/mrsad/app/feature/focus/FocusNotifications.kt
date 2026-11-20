@@ -56,7 +56,18 @@ object FocusNotifications {
     }
 
     fun notifyPhase(context: Context, phase: FocusSession.Phase, round: Int, rounds: Int) {
-        if (!canNotify(context)) return
+        // POST_NOTIFICATIONS is declared in AndroidManifest.xml. Lint only
+        // accepts the runtime guard when the permission check dominates the
+        // notify() call below, so the check stays inline in this method
+        // instead of hiding behind a helper function.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) !=
+            PackageManager.PERMISSION_GRANTED
+        ) {
+            return
+        }
+        if (!NotificationManagerCompat.from(context).areNotificationsEnabled()) return
+
         val (title, text) = when (phase) {
             FocusSession.Phase.FOCUS -> "شروع تمرکز" to "دور $round از $rounds"
             FocusSession.Phase.BREAK -> "وقت استراحت" to "دور $round از $rounds تمام شد؛ چند دقیقه استراحت کنید"
@@ -70,15 +81,5 @@ object FocusNotifications {
 
     fun cancel(context: Context) {
         runCatching { NotificationManagerCompat.from(context).cancel(NOTIFICATION_ID) }
-    }
-
-    private fun canNotify(context: Context): Boolean {
-        if (Build.VERSION.SDK_INT >= 33 &&
-            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) !=
-            PackageManager.PERMISSION_GRANTED
-        ) {
-            return false
-        }
-        return NotificationManagerCompat.from(context).areNotificationsEnabled()
     }
 }

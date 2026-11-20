@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -29,12 +30,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import dev.mrsad.app.data.AppContainer
 import dev.mrsad.app.data.settings.GraphicsQuality
 import dev.mrsad.app.data.settings.MrsadSettings
 import dev.mrsad.app.data.settings.ThemeVariant
+import dev.mrsad.app.testing.MrsadTestTags
 import dev.mrsad.app.ui.components.MrsadPrimaryButton
 import dev.mrsad.app.ui.components.MrsadSecondaryButton
 import dev.mrsad.app.ui.components.MrsadSurface
@@ -64,6 +68,7 @@ fun SettingsScreen(
     AmbientBackground(PageEnvironment.SETTINGS) {
         Column(
             Modifier
+                .testTag(MrsadTestTags.SETTINGS_ROOT)
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
                 .padding(MrsadTokens.Spacing.md),
@@ -84,7 +89,11 @@ fun SettingsScreen(
                 Text("تنظیمات", style = type.headline, color = colors.textPrimary)
             }
 
-            MrsadSurface(Modifier.fillMaxWidth()) {
+            MrsadSurface(
+                Modifier
+                    .testTag(MrsadTestTags.SETTINGS_THEME_SECTION)
+                    .fillMaxWidth(),
+            ) {
                 Text("تم بصری", style = type.title, color = colors.textPrimary)
                 Text(
                     "تم انتخابی روی همهٔ صفحات اعمال می‌شود.",
@@ -107,7 +116,11 @@ fun SettingsScreen(
                 }
             }
 
-            MrsadSurface(Modifier.fillMaxWidth()) {
+            MrsadSurface(
+                Modifier
+                    .testTag(MrsadTestTags.SETTINGS_QUALITY_SECTION)
+                    .fillMaxWidth(),
+            ) {
                 Text("کیفیت گرافیکی", style = type.title, color = colors.textPrimary)
                 Text(
                     "سطح جلوه‌های بصری، مصرف باتری را متعادل می‌کند.",
@@ -124,20 +137,27 @@ fun SettingsScreen(
                                 GraphicsQuality.PERFORMANCE -> "عملکرد"
                             },
                             selected = settings.quality == quality,
-                            modifier = Modifier.weight(1f),
+                            modifier = Modifier
+                                .testTag(MrsadTestTags.settingsQuality(quality.id))
+                                .weight(1f),
                             onClick = { scope.launch { repo.setQuality(quality) } },
                         )
                     }
                 }
             }
 
-            MrsadSurface(Modifier.fillMaxWidth()) {
+            MrsadSurface(
+                Modifier
+                    .testTag(MrsadTestTags.SETTINGS_TOGGLES)
+                    .fillMaxWidth(),
+            ) {
                 Text("نمايش و ورودی", style = type.title, color = colors.textPrimary)
                 ToggleRow(
                     title = "ارقام فارسی",
                     subtitle = "نمایش اعداد به‌صورت ۱۲۳ به‌جای 123",
                     checked = settings.persianNumerals,
                     onCheckedChange = { scope.launch { repo.setPersianNumerals(it) } },
+                    modifier = Modifier.testTag(MrsadTestTags.SETTINGS_PERSIAN_NUMERALS),
                 )
                 ToggleRow(
                     title = "بازخورد لمسی",
@@ -150,6 +170,7 @@ fun SettingsScreen(
                     subtitle = "خاموش‌کردن انیمیشن‌های پس‌زمینه (دسترس‌پذیری)",
                     checked = settings.reduceMotion,
                     onCheckedChange = { scope.launch { repo.setReduceMotion(it) } },
+                    modifier = Modifier.testTag(MrsadTestTags.SETTINGS_REDUCE_MOTION),
                 )
                 ToggleRow(
                     title = "افکت صوتی",
@@ -182,7 +203,9 @@ fun SettingsScreen(
             MrsadSecondaryButton(
                 text = "بازگردانی تنظیمات پیش‌فرض",
                 onClick = { scope.launch { repo.restoreDefaults() } },
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .testTag(MrsadTestTags.SETTINGS_RESTORE_DEFAULTS)
+                    .fillMaxWidth(),
             )
             Spacer(Modifier.height(96.dp))
         }
@@ -200,13 +223,21 @@ private fun ThemeSwatch(
     val type = MrsadTheme.type
     Column(
         modifier = modifier
+            .testTag(MrsadTestTags.settingsTheme(variant.id))
             .clip(RoundedCornerShape(MrsadTokens.Radius.md))
             .border(
                 1.dp,
                 if (selected) MrsadTheme.colors.borderStrong else MrsadTheme.colors.border,
                 RoundedCornerShape(MrsadTokens.Radius.md),
             )
-            .clickable(onClick = onClick)
+            // A theme swatch is an option in a group, not a plain button:
+            // `selectable` publishes the selected state to accessibility
+            // services and to instrumented tests.
+            .selectable(
+                selected = selected,
+                role = Role.RadioButton,
+                onClick = onClick,
+            )
             .padding(6.dp),
     ) {
         Box(
@@ -243,7 +274,11 @@ private fun QualityChoice(
             .clip(RoundedCornerShape(MrsadTokens.Radius.sm))
             .background(if (selected) colors.accentSoft else colors.surfaceHigh.copy(alpha = 0.5f))
             .border(1.dp, if (selected) colors.borderStrong else colors.border, RoundedCornerShape(MrsadTokens.Radius.sm))
-            .clickable(onClick = onClick)
+            .selectable(
+                selected = selected,
+                role = Role.RadioButton,
+                onClick = onClick,
+            )
             .padding(vertical = 10.dp),
         contentAlignment = Alignment.Center,
     ) {
@@ -258,6 +293,7 @@ private fun ToggleRow(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
     enabled: Boolean = true,
+    modifier: Modifier = Modifier,
 ) {
     val colors = MrsadTheme.colors
     val type = MrsadTheme.type
@@ -279,6 +315,7 @@ private fun ToggleRow(
                 uncheckedThumbColor = colors.textMuted,
                 uncheckedTrackColor = colors.surfaceHigh,
             ),
+            modifier = modifier,
         )
     }
 }

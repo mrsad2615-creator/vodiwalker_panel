@@ -33,6 +33,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -42,6 +43,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import dev.mrsad.app.data.AppContainer
 import dev.mrsad.app.data.settings.MrsadSettings
 import dev.mrsad.app.navigation.Routes
+import dev.mrsad.app.testing.MrsadTestTags
 import dev.mrsad.app.ui.components.MetricValue
 import dev.mrsad.app.ui.components.MrsadCore
 import dev.mrsad.app.ui.components.MrsadSurface
@@ -89,6 +91,7 @@ fun HomeScreen(
             item {
                 Box(
                     Modifier
+                        .testTag(MrsadTestTags.HOME_CORE)
                         .fillMaxWidth()
                         .height(292.dp)
                 ) {
@@ -145,7 +148,10 @@ fun HomeScreen(
 
             item { SectionHeader(title = "ماژول‌ها") }
             item {
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(MrsadTokens.Spacing.xs)) {
+                LazyRow(
+                    modifier = Modifier.testTag(MrsadTestTags.HOME_MODULES),
+                    horizontalArrangement = Arrangement.spacedBy(MrsadTokens.Spacing.xs),
+                ) {
                     items(moduleEntries) { entry ->
                         ModuleCard(entry = entry, onClick = { onNavigate(entry.route) })
                     }
@@ -238,6 +244,7 @@ fun HomeScreen(
                             text = "شروع تمرین تایپ",
                             icon = Icons.Outlined.Keyboard,
                             onClick = { onNavigate(Routes.TYPE) },
+                            modifier = Modifier.testTag(MrsadTestTags.HOME_PRIMARY_CTA),
                         )
                     }
                 }
@@ -277,7 +284,12 @@ private fun HomeHeader() {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f)) {
-            Text("MRSAD", style = type.display.copy(letterSpacing = 4.sp), color = colors.textPrimary)
+            Text(
+                "MRSAD",
+                style = type.display.copy(letterSpacing = 4.sp),
+                color = colors.textPrimary,
+                modifier = Modifier.testTag(MrsadTestTags.HOME_BRAND),
+            )
             Text("زیست‌بوم رشد شناختی", style = type.caption, color = colors.textSecondary)
         }
         Box(
@@ -322,7 +334,12 @@ private fun StatCell(
 private fun ModuleCard(entry: ModuleEntry, onClick: () -> Unit) {
     val colors = MrsadTheme.colors
     val type = MrsadTheme.type
-    MrsadSurface(modifier = Modifier.width(152.dp), onClick = onClick) {
+    MrsadSurface(
+        modifier = Modifier
+            .testTag(MrsadTestTags.homeModule(entry.route))
+            .width(152.dp),
+        onClick = onClick,
+    ) {
         Icon(entry.icon, contentDescription = null, tint = colors.metalMid, modifier = Modifier.size(26.dp))
         Spacer(Modifier.height(MrsadTokens.Spacing.xs))
         Text(

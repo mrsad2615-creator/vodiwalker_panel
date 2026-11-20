@@ -63,11 +63,15 @@ jobs:
           set -o pipefail
           ./gradlew --console=plain --no-daemon :app:lintDebug 2>&1 | tee -a build.log
 
+      # NOTE: this job runs with `working-directory: mrsad`, so every path
+      # handed to the reporter must be relative to `mrsad/`, not to the
+      # repository root. Passing root-relative paths made the reporter exit
+      # before it could annotate anything.
       - name: Report failure details
         if: failure()
         shell: bash
         run: |
-          python3 mrsad/.ci/report_failure.py mrsad/build.log mrsad/app/build/reports/lint-results-debug.txt
+          python3 .ci/report_failure.py build.log app/build/reports/lint-results-debug.txt
 
       - name: Upload debug APK
         if: success()
@@ -114,10 +118,20 @@ jobs:
           emulator-boot-timeout: 420
           disable-animations: true
           script: cd mrsad && sh .ci/run-connected-tests.sh
+      # NOTE: this job has NO `working-directory` override, so its paths are
+      # relative to the repository root — the opposite of the build job.
+      - name: Report instrumented test failure details
+        if: failure()
+        shell: bash
+        run: |
+          python3 mrsad/.ci/report_failure.py mrsad/ui-test.log
       - name: Upload instrumented test reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: mrsad-androidtest-reports
-          path: mrsad/app/build/reports/androidTests/**
+          path: |
+            mrsad/ui-test.log
+            mrsad/app/build/reports/androidTests/**
+            mrsad/app/build/outputs/androidTest-results/**
           if-no-files-found: ignore

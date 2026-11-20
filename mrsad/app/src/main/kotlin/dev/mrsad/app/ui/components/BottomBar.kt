@@ -35,7 +35,9 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import dev.mrsad.app.testing.MrsadTestTags
 import dev.mrsad.app.ui.theme.MrsadTheme
 
 data class MrsadBottomBarItem(
@@ -64,6 +66,7 @@ fun MrsadBottomBar(
         modifier = modifier
             .padding(horizontal = MrsadTokens.Spacing.md, vertical = MrsadTokens.Spacing.sm)
             .fillMaxWidth()
+            .testTag(MrsadTestTags.NAV_BAR)
             .clip(RoundedCornerShape(MrsadTokens.Radius.xl))
             .background(Brush.verticalGradient(listOf(colors.surfaceHigh.copy(alpha = 0.97f), colors.surface.copy(alpha = 0.94f))))
             .border(1.dp, colors.border, RoundedCornerShape(MrsadTokens.Radius.xl))
@@ -82,6 +85,7 @@ fun MrsadBottomBar(
 
             Row(
                 modifier = Modifier
+                    .testTag(MrsadTestTags.navItem(item.route))
                     .clip(RoundedCornerShape(MrsadTokens.Radius.pill))
                     .background(
                         if (colors.isLight) colors.accent.copy(alpha = bgAlpha * 0.16f)
@@ -117,6 +121,7 @@ fun MrsadBottomBar(
         // Settings lives in the bar as a secondary affordance.
         Box(
             Modifier
+                .testTag(MrsadTestTags.NAV_SETTINGS)
                 .size(38.dp)
                 .clip(CircleShape)
                 .clickable(role = Role.Button, onClick = onSettings),

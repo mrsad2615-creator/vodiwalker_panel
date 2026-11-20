@@ -4,6 +4,7 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -47,6 +48,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import dev.mrsad.app.testing.MrsadTestHooks
 import dev.mrsad.app.ui.theme.MrsadTheme
 
 /**
@@ -384,12 +386,26 @@ fun EmptyState(
 
 @Composable
 fun LoadingState(modifier: Modifier = Modifier) {
+    val colors = MrsadTheme.colors
+    // An indeterminate spinner animates forever and would keep an instrumented
+    // test from ever reaching idle, so the deterministic mode draws a static
+    // ring instead.
+    val deterministic = MrsadTestHooks.isDeterministic
     Box(modifier.fillMaxWidth().padding(MrsadTokens.Spacing.xl), contentAlignment = Alignment.Center) {
-        CircularProgressIndicator(
-            color = MrsadTheme.colors.metalMid,
-            strokeWidth = 2.dp,
-            modifier = Modifier.size(28.dp),
-        )
+        if (deterministic) {
+            Canvas(Modifier.size(28.dp)) {
+                drawCircle(
+                    color = colors.metalMid.copy(alpha = 0.35f),
+                    style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2.dp.toPx()),
+                )
+            }
+        } else {
+            CircularProgressIndicator(
+                color = colors.metalMid,
+                strokeWidth = 2.dp,
+                modifier = Modifier.size(28.dp),
+            )
+        }
     }
 }
 

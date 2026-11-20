@@ -24,6 +24,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.compose.runtime.DisposableEffect
+import dev.mrsad.app.testing.MrsadTestHooks
 import dev.mrsad.core.random.SplitMix64
 
 /** Each major page has its own environmental identity (spec §10). */
@@ -49,6 +50,9 @@ fun AmbientBackground(
 ) {
     val colors = MrsadTheme.colors
     val motion = MrsadTheme.motion
+    // An infinite transition requests frames forever, which would keep an
+    // instrumented test from ever reaching idle.
+    val deterministic = MrsadTestHooks.isDeterministic
     var appResumed by remember { mutableStateOf(true) }
     val lifecycleOwner = LocalLifecycleOwner.current
 
@@ -101,7 +105,7 @@ fun AmbientBackground(
             drawRect(horizon)
         }
 
-        if (motion.particleCount > 0 && motion.animationsEnabled) {
+        if (!deterministic && motion.particleCount > 0 && motion.animationsEnabled) {
             val transition = rememberInfiniteTransition(label = "ambient")
             val drift by transition.animateFloat(
                 initialValue = 0f,

@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import dev.mrsad.app.data.AppContainer
+import dev.mrsad.app.testing.MrsadTestHooks
 import dev.mrsad.app.util.MrsadClock
 import dev.mrsad.core.text.PersianText
 import dev.mrsad.core.typing.TypingLanguage
@@ -213,6 +214,7 @@ class TypeViewModel(private val container: AppContainer) : ViewModel() {
     private fun refreshLive(engineTime: Long) {
         val active = session ?: return
         val snapshot = active.liveSnapshot(engineTime)
+        refreshRemaining(engineTime)
         _state.update {
             it.copy(
                 liveWpm = snapshot.wpm,
@@ -226,22 +228,36 @@ class TypeViewModel(private val container: AppContainer) : ViewModel() {
 
     private fun startTicker() {
         ticker?.cancel()
+        if (MrsadTestHooks.isDeterministic) {
+            // Deterministic mode: no recurring state updates. The remaining
+            // time is recomputed on every keystroke instead, so the screen
+            // stays still and the Compose idling resource can reach idle.
+            refreshRemaining()
+            return
+        }
         ticker = viewModelScope.launch {
             while (true) {
                 val engineTime = engineNow()
-                val started = firstKeyAt
-                val elapsed = if (started == null) 0L else (engineTime - started).coerceAtLeast(0L)
-                val total = _state.value.selectedDurationSeconds * 1000L
-                val remaining = (total - elapsed).coerceAtLeast(0L)
-                _state.update { it.copy(remainingMillis = remaining) }
+                // The clock is updated first so that it stays correct even if
+                // the session was released underneath us.
+                refreshRemaining(engineTime)
                 refreshLive(engineTime)
-                if (started != null && remaining == 0L) {
+                if (firstKeyAt != null && _state.value.remainingMillis == 0L) {
                     finish(completed = false)
                     return@launch
                 }
                 delay(100)
             }
         }
+    }
+
+    /** Remaining time of the current run, derived from the monotonic clock. */
+    private fun refreshRemaining(engineTime: Long = engineNow()) {
+        val started = firstKeyAt
+        val elapsed = if (started == null) 0L else (engineTime - started).coerceAtLeast(0L)
+        val total = _state.value.selectedDurationSeconds * 1000L
+        val remaining = (total - elapsed).coerceAtLeast(0L)
+        _state.update { it.copy(remainingMillis = remaining) }
     }
 
     /** Ends the session and persists it (real data only). */

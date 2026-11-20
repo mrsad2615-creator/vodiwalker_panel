@@ -12,6 +12,7 @@ import androidx.compose.ui.graphics.Color
 import dev.mrsad.app.data.settings.GraphicsQuality
 import dev.mrsad.app.data.settings.MrsadSettings
 import dev.mrsad.app.data.settings.ThemeVariant
+import dev.mrsad.app.testing.MrsadTestHooks
 
 /**
  * MRSAD semantic colour system.
@@ -173,9 +174,15 @@ data class MrsadMotion(
     val quality: GraphicsQuality,
 ) {
     companion object {
-        fun of(settings: MrsadSettings) = MrsadMotion(
-            animationsEnabled = settings.animationsEnabled,
-            particleCount = settings.particleCount,
+        /**
+         * Derives the motion budget from the user's settings.
+         *
+         * [MrsadTestHooks.isDeterministic] collapses the budget to "no motion
+         * at all" so instrumented tests never wait on an infinite transition.
+         */
+        fun of(settings: MrsadSettings, deterministic: Boolean = MrsadTestHooks.isDeterministic) = MrsadMotion(
+            animationsEnabled = settings.animationsEnabled && !deterministic,
+            particleCount = if (deterministic) 0 else settings.particleCount,
             animationScale = if (settings.reduceMotion) 0.6f else 1f,
             quality = settings.quality,
         )
@@ -203,7 +210,10 @@ object MrsadTheme {
 fun MrsadTheme(settings: MrsadSettings, content: @Composable () -> Unit) {
     val colors = colorsFor(settings.theme)
     val typography = MrsadTypography.remember(fontScale = settings.fontScale, readingFont = false)
-    val motion = MrsadMotion.of(settings)
+    // Observed here so that switching the deterministic-test hook rebuilds the
+    // whole motion budget and disposes any running infinite transition.
+    val deterministic = MrsadTestHooks.isDeterministic
+    val motion = MrsadMotion.of(settings, deterministic)
 
     val materialScheme = if (colors.isLight) {
         lightColorScheme(

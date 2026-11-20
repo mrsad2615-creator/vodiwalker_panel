@@ -41,6 +41,7 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.key.utf16CodePoint
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -52,6 +53,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import dev.mrsad.app.data.AppContainer
 import dev.mrsad.app.data.settings.MrsadSettings
+import dev.mrsad.app.testing.MrsadTestHooks
+import dev.mrsad.app.testing.MrsadTestTags
 import dev.mrsad.app.ui.components.MrsadChip
 import dev.mrsad.app.ui.components.MrsadPrimaryButton
 import dev.mrsad.app.ui.components.MrsadProgressBar
@@ -90,8 +93,12 @@ fun TypeScreen(
     val keyboardInput = remember { KeyboardInputState() }
 
     // Auto-focus the hidden input when a run starts so hardware + soft keyboards work.
+    //
+    // Deterministic mode skips the focus request: a focused text field starts
+    // a blinking-cursor job, and the deterministic suite must not depend on
+    // any recurring UI work. The product behaviour is unchanged.
     LaunchedEffect(state.phase) {
-        if (state.phase == TypePhase.RUNNING) {
+        if (state.phase == TypePhase.RUNNING && !MrsadTestHooks.isDeterministic) {
             delay(80)
             runCatching { focusRequester.requestFocus() }
         }
@@ -184,7 +191,11 @@ private fun SetupPanel(
     val colors = MrsadTheme.colors
     val type = MrsadTheme.type
 
-    MrsadSurface(Modifier.fillMaxWidth()) {
+    MrsadSurface(
+        Modifier
+            .testTag(MrsadTestTags.TYPE_SETUP)
+            .fillMaxWidth(),
+    ) {
         SectionHeader(title = "زبان")
         Row(horizontalArrangement = Arrangement.spacedBy(MrsadTokens.Spacing.xs)) {
             SelectableChoice(
@@ -253,7 +264,9 @@ private fun SetupPanel(
             text = "شروع تمرین",
             icon = Icons.Outlined.PlayArrow,
             onClick = onStart,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .testTag(MrsadTestTags.TYPE_START)
+                .fillMaxWidth(),
         )
     }
 }
@@ -331,7 +344,12 @@ private fun RunningPanel(
         )
     }
 
-    MrsadSurface(Modifier.fillMaxWidth(), elevated = true) {
+    MrsadSurface(
+        Modifier
+            .testTag(MrsadTestTags.TYPE_RUNNING)
+            .fillMaxWidth(),
+        elevated = true,
+    ) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Text(state.title, style = type.caption, color = colors.textMuted, modifier = Modifier.weight(1f))
             Text(
@@ -408,7 +426,9 @@ private fun RunningPanel(
             MrsadSecondaryButton(
                 text = "پایان",
                 onClick = onFinishEarly,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier
+                    .testTag(MrsadTestTags.TYPE_FINISH)
+                    .weight(1f),
             )
             MrsadSecondaryButton(
                 text = "",
@@ -465,7 +485,12 @@ private fun ResultsPanel(
     val type = MrsadTheme.type
     val result = state.result ?: return
 
-    MrsadSurface(Modifier.fillMaxWidth(), elevated = true) {
+    MrsadSurface(
+        Modifier
+            .testTag(MrsadTestTags.TYPE_RESULTS)
+            .fillMaxWidth(),
+        elevated = true,
+    ) {
         Text(
             if (result.completed) "تمرین کامل شد" else "زمان تمام شد",
             style = type.headline,
@@ -531,12 +556,16 @@ private fun ResultsPanel(
                 text = "تمرین دوباره",
                 icon = Icons.Outlined.Refresh,
                 onClick = onRetry,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier
+                    .testTag(MrsadTestTags.TYPE_RETRY)
+                    .weight(1f),
             )
             MrsadSecondaryButton(
                 text = "انتخاب متن دیگر",
                 onClick = onRestart,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier
+                    .testTag(MrsadTestTags.TYPE_BACK_TO_SETUP)
+                    .weight(1f),
             )
         }
     }

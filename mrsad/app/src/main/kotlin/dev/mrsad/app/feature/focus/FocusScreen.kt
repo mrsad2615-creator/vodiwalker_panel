@@ -46,6 +46,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -54,6 +55,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import dev.mrsad.app.data.AppContainer
 import dev.mrsad.app.data.settings.MrsadSettings
+import dev.mrsad.app.testing.MrsadTestHooks
+import dev.mrsad.app.testing.MrsadTestTags
 import dev.mrsad.app.ui.components.MrsadChip
 import dev.mrsad.app.ui.components.MrsadPrimaryButton
 import dev.mrsad.app.ui.components.MrsadSecondaryButton
@@ -93,6 +96,7 @@ fun FocusScreen(
     AmbientBackground(PageEnvironment.FOCUS) {
         Column(
             Modifier
+                .testTag(MrsadTestTags.FOCUS_ROOT)
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
                 .padding(MrsadTokens.Spacing.md),
@@ -119,6 +123,7 @@ fun FocusScreen(
             // Dial
             Box(
                 Modifier
+                    .testTag(MrsadTestTags.FOCUS_DIAL)
                     .fillMaxWidth()
                     .height(300.dp),
                 contentAlignment = Alignment.Center,
@@ -152,7 +157,9 @@ fun FocusScreen(
                             }
                             viewModel.start()
                         },
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier
+                            .testTag(MrsadTestTags.FOCUS_START)
+                            .weight(1f),
                     )
                 } else {
                     MrsadSecondaryButton(
@@ -165,7 +172,9 @@ fun FocusScreen(
                         text = "پایان",
                         icon = Icons.Outlined.Stop,
                         onClick = viewModel::stop,
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier
+                            .testTag(MrsadTestTags.FOCUS_STOP)
+                            .weight(1f),
                     )
                 }
             }
@@ -221,7 +230,9 @@ fun FocusScreen(
 private fun FocusDial(state: FocusUiState) {
     val colors = MrsadTheme.colors
     val motion = MrsadTheme.motion
-    val rotation = if (motion.animationsEnabled && state.isRunning && !state.isPaused) {
+    // The running dial spins forever; a deterministic test must not depend on it.
+    val deterministic = MrsadTestHooks.isDeterministic
+    val rotation = if (!deterministic && motion.animationsEnabled && state.isRunning && !state.isPaused) {
         val transition = rememberInfiniteTransition(label = "dial")
         val value by transition.animateFloat(
             initialValue = 0f,

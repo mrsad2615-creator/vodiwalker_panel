@@ -19,6 +19,7 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.unit.dp
+import dev.mrsad.app.testing.MrsadTestHooks
 import dev.mrsad.app.ui.theme.MrsadTheme
 import kotlin.math.cos
 import kotlin.math.sin
@@ -43,8 +44,11 @@ fun MrsadCore(
 ) {
     val colors = MrsadTheme.colors
     val motion = MrsadTheme.motion
+    // The orbit/breathing loop requests frames forever; a deterministic test
+    // must not depend on it.
+    val deterministic = MrsadTestHooks.isDeterministic
 
-    val phase = if (motion.animationsEnabled && pulse) {
+    val phase = if (!deterministic && motion.animationsEnabled && pulse) {
         val transition = rememberInfiniteTransition(label = "core")
         val orbit by transition.animateFloat(
             initialValue = 0f,

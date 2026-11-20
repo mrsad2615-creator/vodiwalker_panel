@@ -7,8 +7,11 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.mrsad.app.data.settings.MrsadSettings
@@ -46,8 +49,19 @@ class MainActivity : ComponentActivity() {
             }
 
             MrsadTheme(settings = settings) {
-                Surface(modifier = Modifier.fillMaxSize()) {
-                    MrsadRoot(container = container, settings = settings)
+                // The app speaks Persian only, so the layout has to run
+                // right-to-left on every device. The direction of the root
+                // view follows the *system* locale, so an English phone
+                // would otherwise lay the whole app out left-to-right and
+                // put the navigation and the back arrows on the wrong
+                // side. The override is explicit, so the UI never depends
+                // on the language the device happens to be set to.
+                CompositionLocalProvider(
+                    LocalLayoutDirection provides LayoutDirection.Rtl,
+                ) {
+                    Surface(modifier = Modifier.fillMaxSize()) {
+                        MrsadRoot(container = container, settings = settings)
+                    }
                 }
             }
         }

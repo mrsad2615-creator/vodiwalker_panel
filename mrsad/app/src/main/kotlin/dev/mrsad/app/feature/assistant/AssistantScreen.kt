@@ -20,8 +20,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.Send
 import androidx.compose.material.icons.outlined.AutoAwesome
-import androidx.compose.material.icons.outlined.Send
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
@@ -140,7 +140,7 @@ fun AssistantScreen(
                 Spacer(Modifier.width(MrsadTokens.Spacing.xs))
                 MrsadPrimaryButton(
                     text = "ارسال",
-                    icon = Icons.Outlined.Send,
+                    icon = Icons.AutoMirrored.Outlined.Send,
                     onClick = {
                         if (input.isNotBlank()) {
                             viewModel.ask(input.trim(), settings.persianNumerals)

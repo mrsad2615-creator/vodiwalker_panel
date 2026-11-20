@@ -1,9 +1,9 @@
 package dev.mrsad.app
 
 import androidx.compose.ui.semantics.SemanticsActions
-import androidx.compose.ui.semantics.SemanticsMatcher
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.ComposeTimeoutException
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
@@ -198,6 +198,46 @@ class MrsadSmokeTest {
         }
         check(composeRule.onAllNodes(tappable).fetchSemanticsNodes().isNotEmpty()) {
             "the audit found no tappable control at all"
+        }
+    }
+
+    @Test
+    fun theLayoutIsRightToLeftOnEveryDevice() {
+        // The app is Persian only, but the direction of the root view
+        // follows the *system* locale — an English phone would lay the
+        // whole app out from left to right and put the navigation and the
+        // back arrows on the wrong side.
+        //
+        // The bottom bar is a Row, so its first destination ends up on the
+        // right in a right-to-left layout and on the left in a left-to-right
+        // one. The emulator in CI is not Persian, so this check is what
+        // proves the app forces the direction instead of inheriting it
+        // from the device.
+        awaitTag(MrsadTestTags.NAV_BAR)
+
+        val routes = listOf(
+            Routes.HOME,
+            Routes.TYPE,
+            Routes.MIND,
+            Routes.ANALYTICS,
+            Routes.AI,
+        )
+        val bounds = routes.map { route ->
+            composeRule.onAllNodesWithTag(MrsadTestTags.navItem(route))
+                .fetchSemanticsNodes()
+                .single()
+                .boundsInRoot
+        }
+
+        check(bounds.none { it.width <= 0f || it.height <= 0f }) {
+            "every bottom-bar destination must be laid out on screen, but " +
+                "one of them has no size: " +
+                bounds.joinToString(", ") { "[${it.left}, ${it.right}]" }
+        }
+        check(bounds.zipWithNext().all { (first, next) -> first.left > next.left }) {
+            "the bottom bar must run from right to left, but its destinations " +
+                "were laid out from left to right: " +
+                bounds.joinToString(", ") { "[${it.left}, ${it.right}]" }
         }
     }
 

@@ -99,7 +99,11 @@ Legend: ✅ done & verified · 🟡 implemented, awaiting verification · 🟠 p
 
 * CI pipeline: core JUnit gate → debug build + lint + unit tests → APK artifact
   → emulator smoke tests (Home renders, brand mark drawn, nav to Type, typing
-  session, Settings applies a persisted theme).
+  session, every control reachable by name, right-to-left layout, Settings
+  applies a persisted theme). The runner executes one method per Gradle
+  invocation under a timeout, so a hanging test cannot eat the whole workflow
+  budget; a unit test compares that method list with the test class, so a
+  method that is never executed fails the build instead of passing silently.
 * Release APK: signed with a key held in the Actions cache (never in git),
   published as `mrsad.apk` + `SHA256SUMS.txt`.
 * The accessibility floor is enforced by tests, not by eye: the colour system
@@ -109,9 +113,14 @@ Legend: ✅ done & verified · 🟡 implemented, awaiting verification · 🟠 p
 * Screen-reader semantics are enforced the same way. A source audit fails the
   build when an icon-only button loses its name, and an emulator test walks
   the real semantics tree and fails when a tappable control cannot be
-  reached by name. The back arrow uses the auto-mirrored icon so it points
-  the right way in a right-to-left layout, and the selected bottom-bar
-  destination does not announce its label twice.
+  reached by name. The selected bottom-bar destination does not announce its
+  label twice.
+* The layout is right-to-left on every device. The direction of the root view
+  follows the *system* locale, so the composition root forces it explicitly —
+  the app is Persian only and must not depend on the phone's language. The
+  directional icons (the back arrows and the send arrow) use the
+  auto-mirrored variants, and an emulator test reads the real bounds of the
+  bottom bar to prove the destinations run from right to left.
 * The version shown on the Settings screen is read from the build, so it can
   never drift away from the released artifact.
 

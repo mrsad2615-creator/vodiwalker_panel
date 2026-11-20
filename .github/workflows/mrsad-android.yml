@@ -232,9 +232,12 @@ jobs:
             plot, and the newest marker points at the real latest measurement.
           * Accessibility: every control reserves the 48dp minimum touch target, the
             metric type scale stops clipping Persian digits, the colour system is
-            checked against the WCAG contrast floor by a unit test, every tappable
-            control has a name a screen reader can reach, and the back arrow points
-            the right way in a right-to-left layout.
+            checked against the WCAG contrast floor by a unit test, and every tappable
+            control has a name a screen reader can reach.
+          * Right-to-left on every device: the app is Persian only, so the layout
+            direction no longer follows the phone's language. The back arrow and the
+            send arrow are the auto-mirrored icons, and the navigation runs from
+            right to left whatever the system locale happens to be.
           * Build: commit \`${COMMIT:0:7}\`
           * CI run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}
 

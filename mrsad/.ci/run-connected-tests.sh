@@ -31,9 +31,16 @@ PER_TEST_TIMEOUT=${MRSAD_TEST_TIMEOUT_SECONDS:-180}
 # still hung, so the dump reflects the hang and not the teardown.
 DUMP_LEAD=${MRSAD_TEST_DUMP_LEAD_SECONDS:-20}
 
+# Every method of the smoke class has to run here. A test that is not
+# listed is a test that never runs, which looks exactly like a test that
+# passes — so the list is kept in sync with the class by hand and reviewed
+# whenever a method is added.
 METHODS="homeShowsBrandAndLivingCore
+theBrandMarkIsDrawnWhereTheProductIntroducesItself
 bottomNavigationReachesTypeSetup
 typingSessionStartsAndAbandonsWithoutFabricatingARecord
+everyInteractiveControlIsNamed
+theLayoutIsRightToLeftOnEveryDevice
 settingsOpensAndAppliesTheChosenTheme"
 
 : > "$LOG"

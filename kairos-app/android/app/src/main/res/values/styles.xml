@@ -22,7 +22,7 @@
     <!-- Crisp Vector Splash Screen -> Instant handoff into 60fps mrsad Motion-Graphic Intro -->
     <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
         <item name="windowSplashScreenBackground">@color/kairosBackground</item>
-        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_vector</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_mark</item>
         <item name="postSplashScreenTheme">@style/AppTheme.NoActionBar</item>
         <item name="android:statusBarColor">@color/kairosBackground</item>
         <item name="android:navigationBarColor">@color/kairosBackground</item>

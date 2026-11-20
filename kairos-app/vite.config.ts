@@ -10,7 +10,7 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['kairos-icon.svg', 'kairos-icon-192.png', 'kairos-icon-512.png'],
+      includeAssets: ['favicon-32.png', 'kairos-icon-192.png', 'kairos-icon-512.png', 'kairos-icon-maskable-512.png'],
       manifest: {
         name: 'KAIROS — کایروس | استودیوی نظم و تمرکز',
         short_name: 'KAIROS',
@@ -20,21 +20,33 @@ export default defineConfig({
         start_url: '/',
         display: 'standalone',
         orientation: 'portrait',
-        background_color: '#09090D',
-        theme_color: '#09090D',
+        background_color: '#0A0A0C',
+        theme_color: '#0A0A0C',
         categories: ['productivity', 'lifestyle'],
         icons: [
           {
             src: '/kairos-icon-192.png',
             sizes: '192x192',
             type: 'image/png',
-            purpose: 'any maskable',
+            purpose: 'any',
           },
           {
             src: '/kairos-icon-512.png',
             sizes: '512x512',
             type: 'image/png',
-            purpose: 'any maskable',
+            purpose: 'any',
+          },
+          {
+            src: '/kairos-icon-maskable-192.png',
+            sizes: '192x192',
+            type: 'image/png',
+            purpose: 'maskable',
+          },
+          {
+            src: '/kairos-icon-maskable-512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable',
           },
         ],
       },

@@ -131,7 +131,8 @@ PASSED=0
 echo "===== WARM-UP BUILD =====" >> "$LOG"
 date -u +"begin %Y-%m-%dT%H:%M:%SZ" >> "$LOG"
 timeout --signal=TERM --kill-after=30 "${MRSAD_BUILD_TIMEOUT_SECONDS:-900}" \
-    ./gradlew --console=plain --no-daemon :app:assembleDebugAndroidTest >> "$LOG" 2>&1
+    ./gradlew --console=plain --no-daemon \
+    :app:assembleDebug :app:assembleDebugAndroidTest >> "$LOG" 2>&1
 build_rc=$?
 echo "===== END WARM-UP BUILD exit=$build_rc =====" >> "$LOG"
 date -u +"end %Y-%m-%dT%H:%M:%SZ" >> "$LOG"

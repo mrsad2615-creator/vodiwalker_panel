@@ -34,6 +34,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 import dev.mrsad.app.data.AppContainer
@@ -109,6 +110,7 @@ fun MrsadRoot(
         // The floating bar is measured so that the screens behind it can
         // reserve exactly the right amount of clearance at the bottom of
         // their scroll viewport.
+        val density = LocalDensity.current
         var bottomBarHeight by remember { mutableStateOf(0.dp) }
 
         CompositionLocalProvider(LocalBottomBarClearance provides bottomBarHeight) {
@@ -210,7 +212,10 @@ fun MrsadRoot(
                 modifier = Modifier
                     .align(androidx.compose.ui.Alignment.BottomCenter)
                     .windowInsetsPadding(WindowInsets.navigationBars)
-                    .onSizeChanged { bottomBarHeight = it.height },
+                    .onSizeChanged { size ->
+                        // `size.height` is in pixels; the clearance is a Dp.
+                        bottomBarHeight = with(density) { size.height.toDp() }
+                    },
             )
         }
     }

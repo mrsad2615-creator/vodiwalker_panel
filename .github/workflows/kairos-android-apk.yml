@@ -15,8 +15,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: '1.2.0'
-  TAG: 'kairos-v1.2.0'
+  VERSION: '1.3.0'
+  TAG: 'kairos-v1.3.0'
 
 jobs:
   build-android-apk:
@@ -45,8 +45,7 @@ jobs:
 
       # Debug builds are signed with ~/.android/debug.keystore, which Gradle
       # creates fresh on every runner. Caching it keeps ONE signing identity
-      # across builds, so a newer APK can be installed over the previous one
-      # instead of forcing an uninstall.
+      # across builds, so a newer APK installs over the previous one.
       - name: Cache Android debug keystore
         uses: actions/cache@v4
         with:
@@ -63,39 +62,68 @@ jobs:
 
       - name: Build web bundle and sync Capacitor
         working-directory: kairos-app
+        env:
+          KAIROS_BUILD_SHA: ${{ github.sha }}
+          KAIROS_BUILD_NUMBER: ${{ github.run_number }}
+          KAIROS_BUILD_TIME: ${{ github.event.head_commit.timestamp || '' }}
         run: |
           npm run build
           npx cap sync android
 
+      # Every build gets its own file name (version + build number + short sha)
+      # so the download URL is never the same twice — no stale browser or CDN
+      # cache handing back an older APK, and the name on the phone tells you
+      # exactly which build you installed.
       - name: Assemble APK
         working-directory: kairos-app/android
         run: |
           chmod +x gradlew
           ./gradlew assembleDebug --no-daemon
+          SHORT_SHA="${GITHUB_SHA::7}"
+          BUILD_FILE="KAIROS-${VERSION}-b${GITHUB_RUN_NUMBER}-${SHORT_SHA}"
           mkdir -p ../artifacts
+          cp app/build/outputs/apk/debug/app-debug.apk "../artifacts/${BUILD_FILE}.apk"
           cp app/build/outputs/apk/debug/app-debug.apk "../artifacts/KAIROS-v${VERSION}.apk"
-          ls -lh "../artifacts/KAIROS-v${VERSION}.apk"
-          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --print-certs \
-            "../artifacts/KAIROS-v${VERSION}.apk" | head -3 || true
+          ls -lh ../artifacts/
+          echo "BUILD_FILE=${BUILD_FILE}" >> "$GITHUB_ENV"
+          {
+            echo "### KAIROS ${VERSION} · build ${GITHUB_RUN_NUMBER} · ${SHORT_SHA}"
+            echo ""
+            echo '```'
+            sha256sum "../artifacts/${BUILD_FILE}.apk"
+            "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --print-certs "../artifacts/${BUILD_FILE}.apk" | head -4 || true
+            unzip -l "../artifacts/${BUILD_FILE}.apk" | tail -3 || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: KAIROS-v${{ env.VERSION }}-APK
-          path: kairos-app/artifacts/KAIROS-v${{ env.VERSION }}.apk
+          name: KAIROS-${{ env.VERSION }}-b${{ github.run_number }}
+          path: kairos-app/artifacts/*.apk
           if-no-files-found: error
 
       - name: Publish to GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          APK="kairos-app/artifacts/KAIROS-v${VERSION}.apk"
+          UNIQUE="kairos-app/artifacts/${BUILD_FILE}.apk"
+          STABLE="kairos-app/artifacts/KAIROS-v${VERSION}.apk"
+          NOTES="نسخه ${VERSION} — build ${GITHUB_RUN_NUMBER} (${GITHUB_SHA::7}).
+          فایل نام‌گذاری‌شده با شمارهٔ بیلد برای اطمینان از دریافت نسخهٔ جدید است؛
+          KAIROS-v${VERSION}.apk همان بیلد با نام ثابت است."
           if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release upload "$TAG" "$APK" --clobber
+            gh release upload "$TAG" "$UNIQUE" --clobber
+            gh release upload "$TAG" "$STABLE" --clobber
           else
-            gh release create "$TAG" "$APK" \
+            gh release create "$TAG" "$UNIQUE" "$STABLE" \
               --target "${{ github.sha }}" \
-              --title "KAIROS v${VERSION} — Android APK" \
-              --notes "نسخه ${VERSION} کایروس با رابط کاربری بازطراحی‌شده (ساده و حرفه‌ای)."
+              --title "KAIROS ${VERSION} — Android APK" \
+              --notes "$NOTES"
           fi
-          echo "### دانلود: https://github.com/${{ github.repository }}/releases/download/$TAG/KAIROS-v${VERSION}.apk" >> "$GITHUB_STEP_SUMMARY"
+          {
+            echo ""
+            echo "**دانلود:** https://github.com/${{ github.repository }}/releases/download/$TAG/${BUILD_FILE}.apk"
+            echo ""
+            echo "**لینک ثابت:** https://github.com/${{ github.repository }}/releases/download/$TAG/KAIROS-v${VERSION}.apk"
+          } >> "$GITHUB_STEP_SUMMARY"

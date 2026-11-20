@@ -3,8 +3,28 @@ import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { VitePWA } from 'vite-plugin-pwa';
 import path from 'node:path';
+import { readFileSync } from 'node:fs';
+
+const pkg = JSON.parse(readFileSync(path.resolve(__dirname, 'package.json'), 'utf8')) as {
+  version: string;
+};
+
+/**
+ * Build identity, injected into the bundle so the app can *show* which build it
+ * is: previously the version strings inside the UI were hard-coded, which made
+ * every new APK look identical to the previous one.
+ */
+const BUILD_SHA = (process.env.KAIROS_BUILD_SHA ?? '').slice(0, 7) || 'local';
+const BUILD_NUMBER = process.env.KAIROS_BUILD_NUMBER ?? 'dev';
+const BUILD_TIME = process.env.KAIROS_BUILD_TIME ?? new Date().toISOString();
 
 export default defineConfig({
+  define: {
+    __APP_VERSION__: JSON.stringify(pkg.version),
+    __BUILD_NUMBER__: JSON.stringify(BUILD_NUMBER),
+    __BUILD_SHA__: JSON.stringify(BUILD_SHA),
+    __BUILD_TIME__: JSON.stringify(BUILD_TIME),
+  },
   plugins: [
     react(),
     tailwindcss(),

@@ -13,6 +13,7 @@ import {
 import type { NavTab } from '@/types/domain';
 import { useApp } from '@/context/AppContext';
 import { KairosMarkTile } from '@/components/ui/KairosMark';
+import { APP_VERSION, BUILD_NUMBER } from '@/lib/buildInfo';
 import { Numeric } from '@/components/ui/Numeric';
 import { ToastHost } from '@/components/ui/ToastHost';
 import { formatTimerSeconds } from '@/lib/format';
@@ -200,7 +201,9 @@ export function AppShell({ children }: { children: ReactNode }) {
                   );
                 })}
                 <div className="mt-1 border-t border-[var(--border)] px-3 pt-2.5 pb-1 text-center">
-                  <span className="num-geo text-[10px] text-[var(--text-3)]">KAIROS 1.2.0</span>
+                  <span className="num-geo text-[10px] text-[var(--text-3)]">
+                    KAIROS {APP_VERSION} · b{BUILD_NUMBER}
+                  </span>
                 </div>
               </div>
             </div>

@@ -34,6 +34,7 @@ import { NumericInput } from '@/components/ui/NumericInput';
 import { KairosLogoMark } from '@/components/ui/KairosMark';
 import { SafeAreaDiagnostics } from '@/components/ui/SafeAreaDiagnostics';
 import { exportBackupFile, readBackupFile } from '@/lib/backup';
+import { APP_VERSION, BUILD_NUMBER, BUILD_SHA } from '@/lib/buildInfo';
 
 export function SettingsPage() {
   const { settings, pushToast } = useApp();
@@ -436,7 +437,10 @@ export function SettingsPage() {
         <div className="flex items-center gap-3">
           <KairosLogoMark size={34} />
           <div>
-            <p className="font-brand text-xs font-bold text-[#ECECEF]">KAIROS v1.2.0 • MRSAD</p>
+            <p className="font-brand text-xs font-bold text-[#ECECEF]">KAIROS {APP_VERSION} • MRSAD</p>
+            <p className="num-geo mt-0.5 text-[10px] text-[var(--text-3)]">
+              build {BUILD_NUMBER} · {BUILD_SHA}
+            </p>
             <p className="mt-0.5 flex items-center gap-1 text-[10.5px] text-[#9C9CA6]">
               <ShieldCheck className="h-3.5 w-3.5 text-[#6E56CF]" />
               <span>

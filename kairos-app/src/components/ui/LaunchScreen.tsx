@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { KairosLogoMark } from './KairosMark';
 import { LinearProgress } from './Progress';
+import { APP_VERSION, BUILD_NUMBER } from '@/lib/buildInfo';
 
 interface LaunchScreenProps {
   /** Fade out and hand over to the shell. */
@@ -118,6 +119,10 @@ export function LaunchScreen({ exiting, progress, onSkip }: LaunchScreenProps) {
           </span>
         </motion.div>
       </div>
+
+      <span className="num-geo absolute bottom-[calc(1rem+var(--safe-bottom))] text-[9px] tracking-widest text-[var(--text-3)]">
+        v{APP_VERSION} · b{BUILD_NUMBER}
+      </span>
 
       <span className="sr-only">
         {progress >= 1 ? 'آماده شد' : `در حال آماده‌سازی، ${Math.round(progress * 100)} درصد`}

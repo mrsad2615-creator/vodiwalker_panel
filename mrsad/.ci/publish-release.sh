@@ -110,28 +110,47 @@ EOF
 ASSETS="mrsad.apk SHA256SUMS.txt BUILD.txt"
 
 # ---- The API ----------------------------------------------------------------
+# A release is found by looking at the list, not by asking for its tag:
+# a draft has no tag yet, and asking for one of those answers with a
+# 404 that looks like a missing release.
 release_id() {
-  gh api "repos/$REPO/releases/tags/$TAG" --jq .id 2>/dev/null
+  gh api --paginate "repos/$REPO/releases" \
+    --jq ".[] | select(.tag_name == \"$TAG\") | .id" 2>/dev/null | head -1
 }
 
 release_exists() {
-  gh release view "$TAG" >/dev/null 2>&1
+  [ -n "$(release_id)" ]
 }
 
 release_is_immutable() {
-  [ "$(gh api "repos/$REPO/releases/tags/$TAG" --jq '.immutable' 2>/dev/null)" = "true" ]
+  local id
+  id="$(release_id)"
+  [ -n "$id" ] || return 1
+  [ "$(gh api "repos/$REPO/releases/$id" --jq '.immutable' 2>/dev/null)" = "true" ]
+}
+
+# The release is published by hand: the tag of a draft does not exist
+# until it is published, and the tag has to point at the commit that was
+# built.
+publish_release() {
+  local id="$1"
+  gh api -X PATCH "repos/$REPO/releases/$id" -F draft=false >/dev/null 2>&1
+}
+
+# The notes are written through the API as well: a release that is still
+# a draft cannot be found by its tag, and the notes are part of the
+# release that is being filled.
+update_notes() {
+  local id="$1"
+  gh api -X PATCH "repos/$REPO/releases/$id" -F "body=@$NOTES" >/dev/null 2>&1
 }
 
 # The two steps of the documented upload: create the asset, then PUT the
 # file to the URL that comes back. HTTP/1.1 on purpose: the upload host
 # drops HTTP/2 streams often enough to end the transfer with an EOF.
 upload_asset() {
-  local file="$1" name="$2" id="${3:-}"
+  local file="$1" name="$2" id="$3"
   local upload_url attempt
-
-  if [ -z "$id" ]; then
-    id="$(release_id)" || return 1
-  fi
 
   local old
   old="$(gh api "repos/$REPO/releases/$id/assets" \
@@ -169,10 +188,11 @@ if release_exists; then
     # The release is published and cannot change. What is asked for is
     # therefore checked, not written.
     log "$TAG is an immutable release; its files are checked instead"
+    ID="$(release_id)"
     FAILED=0
     for name in $ASSETS; do
-      if ! gh api "repos/$REPO/releases/tags/$TAG" \
-             --jq ".assets[] | select(.name == \"$name\") | .name" 2>/dev/null | grep -qx "$name"; then
+      if ! gh api "repos/$REPO/releases/$ID/assets" \
+             --jq ".[] | select(.name == \"$name\") | .name" 2>/dev/null | grep -qx "$name"; then
         fail "$TAG is immutable and has no $name"
         FAILED=1
       fi
@@ -196,8 +216,8 @@ if release_exists; then
 
     # The build record of the release, when it has one, says the same
     # thing in a form a person can read.
-    BUILD_ID="$(gh api "repos/$REPO/releases/tags/$TAG" \
-                  --jq ".assets[] | select(.name == \"BUILD.txt\") | .id" 2>/dev/null | head -1)"
+    BUILD_ID="$(gh api "repos/$REPO/releases/$ID/assets" \
+                  --jq ".[] | select(.name == \"BUILD.txt\") | .id" 2>/dev/null | head -1)"
     if [ -n "$BUILD_ID" ]; then
       gh api -H "Accept: application/octet-stream" \
         "repos/$REPO/releases/assets/$BUILD_ID" > "$WORK/published-build.txt" 2>/dev/null || true
@@ -209,8 +229,8 @@ if release_exists; then
       fi
       log "$TAG carries the same source as this build"
     else
-      SUMS_ID="$(gh api "repos/$REPO/releases/tags/$TAG" \
-                   --jq ".assets[] | select(.name == \"SHA256SUMS.txt\") | .id" 2>/dev/null | head -1)"
+      SUMS_ID="$(gh api "repos/$REPO/releases/$ID/assets" \
+                   --jq ".[] | select(.name == \"SHA256SUMS.txt\") | .id" 2>/dev/null | head -1)"
       if [ -n "$SUMS_ID" ]; then
         gh api -H "Accept: application/octet-stream" \
           "repos/$REPO/releases/assets/$SUMS_ID" > "$WORK/published-sums.txt" 2>/dev/null || true
@@ -227,14 +247,15 @@ if release_exists; then
   fi
 
   log "$TAG exists and can still be changed"
+  ID="$(release_id)"
   FAILED=0
   for name in $ASSETS; do
-    if ! upload_asset "$WORK/$name" "$name"; then
+    if ! upload_asset "$WORK/$name" "$name" "$ID"; then
       fail "the upload of $name failed five times"
       FAILED=1
     fi
   done
-  if ! gh release edit "$TAG" --notes-file "$NOTES"; then
+  if ! update_notes "$ID"; then
     fail "the notes of $TAG could not be written"
     FAILED=1
   fi
@@ -252,9 +273,15 @@ if ! gh release create "$TAG" --draft --target "$COMMIT" \
   exit 1
 fi
 
+ID="$(release_id)"
+if [ -z "$ID" ]; then
+  fail "the draft $TAG cannot be found"
+  exit 1
+fi
+
 FAILED=0
 for name in $ASSETS; do
-  if ! upload_asset "$WORK/$name" "$name"; then
+  if ! upload_asset "$WORK/$name" "$name" "$ID"; then
     fail "the upload of $name failed five times"
     FAILED=1
   fi
@@ -265,7 +292,7 @@ if [ "$FAILED" -ne 0 ]; then
   exit 1
 fi
 
-if ! gh release edit "$TAG" --draft=false; then
+if ! publish_release "$ID"; then
   fail "the release $TAG could not be published"
   exit 1
 fi

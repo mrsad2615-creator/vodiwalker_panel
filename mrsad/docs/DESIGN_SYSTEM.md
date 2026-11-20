@@ -283,13 +283,27 @@ Three rules make the number mean something:
    `1000 / refreshRate` of the display the application is drawn on, and
    the refresh rate is written into the report. A fixed 16.67 ms would
    have called every frame of a 30 Hz panel a jank that never happened.
-2. **One run is not a measurement.** An emulator shares its cores with
+2. **Both revisions are measured on the same emulator, in the same job,
+   and the order of the two is swapped after every round.** This is the
+   rule that was learned the hard way: while the two sides were measured
+   in two jobs of a matrix, they ran on two machines of the cloud, and a
+   machine is not the same machine twice. Two campaigns disagreed about
+   the same code — one said the redesign was 66 % slower on p95, the
+   next said it was 2 % slower — because the second campaign happened to
+   run the redesign on a busier machine. One machine, both sides, and
+   the order swapped, takes that variable away.
+3. **One run is not a measurement.** An emulator shares its cores with
    everything else that runs on it; two runs of the *same* build have
    differed by twenty points of CPU on this machine. Every build is
    therefore measured five times, and the comparison reports the middle
    of the runs together with the spread of the runs.
-3. **A difference inside the spread is not a difference.** The verdict of
+4. **A difference inside the spread is not a difference.** The verdict of
    the comparison says so in words rather than in a colour.
+5. **A session that failed is not a session.** A session whose
+   instrumentation failed, or that produced no report, is not counted
+   and not used: a session that did not finish cannot describe the
+   interface. The report of the session before it is taken away from the
+   device before the session starts, so it can never be used twice.
 
 The result is written to `PERF-COMPARISON.md` and published with the
 screenshots of both revisions in `benchmarks/screenshots/`.

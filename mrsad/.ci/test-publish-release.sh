@@ -52,7 +52,7 @@ done
 if [ "${1:-}" = "release" ]; then
   case "${2:-}" in
     view)   [ "${STUB_EXISTS:-0}" = "1" ] || exit 1 ;;
-    create) echo "created $*" >> "$STUB_LOG"; exit 0 ;;
+    create) echo "created $*" >> "$STUB_LOG"; touch "$STUB_LOG.created"; exit 0 ;;
     edit)   echo "edited $*" >> "$STUB_LOG"; exit 0 ;;
     *)      exit 1 ;;
   esac
@@ -62,6 +62,7 @@ fi
 if [ "${1:-}" = "api" ]; then
   case "$method" in
     DELETE) exit 0 ;;
+    PATCH)  echo "patched $*" >> "$STUB_LOG"; exit 0 ;;
     POST)
       case "$path" in
         *"/assets?name="*) echo "https://uploads.github.com/stub{?name,label}" ;;
@@ -83,8 +84,18 @@ if [ "${1:-}" = "api" ]; then
     *)              number=0 ;;
   esac
 
+  # The list of the releases: a draft is in it as well, so this is the
+  # only way to find one.
+  if [ "$path" = "repos/$GITHUB_REPOSITORY/releases" ]; then
+    if [ "${STUB_EXISTS:-0}" = "1" ] || [ -f "$STUB_LOG.created" ]; then
+      echo "${STUB_RELEASE_ID:-1}"
+    fi
+    exit 0
+  fi
+
   case "$path" in
     *"/releases/assets/"*)
+      # The download of a file of a release.
       id="${path##*/}"
       if [ "$id" = "77" ]; then
         printf '%s\n' "$STUB_PUBLISHED_BUILD"
@@ -92,21 +103,29 @@ if [ "${1:-}" = "api" ]; then
         printf '%s\n' "$STUB_PUBLISHED_SUMS"
       fi
       exit 0 ;;
-    *"/releases/tags/"*)
-      case "$jq" in
-        .id)         echo "${STUB_RELEASE_ID:-1}" ;;
-        *immutable*) echo "${STUB_IMMUTABLE:-false}" ;;
-        *.name)      for asset in ${STUB_ASSETS:-}; do
-                       if [ "$asset" = "$selected" ]; then echo "$asset"; fi
-                     done ;;
-        *.id)        for asset in ${STUB_ASSETS:-}; do
-                       if [ "$asset" = "$selected" ]; then echo "$number"; fi
-                     done ;;
-        *)           exit 1 ;;
-      esac
-      exit 0 ;;
     *"/releases/"*"/assets")
-      if [ "$number" -ne 0 ]; then echo "$number"; fi
+      # The files of one release.
+      for asset in ${STUB_ASSETS:-}; do
+        if [ "$asset" = "$selected" ]; then
+          case "$jq" in
+            *.name) echo "$asset" ;;
+            *.id)
+              case "$asset" in
+                BUILD.txt)      echo 77 ;;
+                SHA256SUMS.txt) echo 78 ;;
+                mrsad.apk)      echo 79 ;;
+              esac
+              ;;
+          esac
+        fi
+      done
+      exit 0 ;;
+    *"/releases/"*)
+      # One release.
+      case "$jq" in
+        *immutable*) echo "${STUB_IMMUTABLE:-false}" ;;
+        .id)         echo "${STUB_RELEASE_ID:-1}" ;;
+      esac
       exit 0 ;;
   esac
 fi
@@ -221,7 +240,7 @@ run_case new v9.9.9 STUB_EXISTS=0
 [ "$STATUS" -eq 0 ] && ok "the publish succeeded" || bad "the publish failed with $STATUS"
 grep -q "release create v9.9.9 --draft" "$LOG" && ok "the release was created as a draft" \
   || bad "the release was not created as a draft"
-grep -q -- "--draft=false" "$LOG" && ok "the draft was published afterwards" \
+grep -q "patched" "$LOG" && ok "the draft was published afterwards" \
   || bad "the draft was never published"
 grep -q "sent .* from mrsad.apk" "$LOG" && ok "the APK was uploaded" || bad "the APK was not uploaded"
 grep -q "sent .* from SHA256SUMS.txt" "$LOG" && ok "the checksum was uploaded" || bad "the checksum was not uploaded"
@@ -233,7 +252,7 @@ echo "== a release that exists and can still be changed =="
 run_case mutable v9.9.9 STUB_EXISTS=1 STUB_IMMUTABLE=false
 [ "$STATUS" -eq 0 ] && ok "the publish succeeded" || bad "the publish failed with $STATUS"
 grep -q "sent .* from mrsad.apk" "$LOG" && ok "the APK was uploaded" || bad "the APK was not uploaded"
-grep -q -- "--notes-file" "$LOG" && ok "the notes were written" || bad "the notes were not written"
+grep -q "patched" "$LOG" && ok "the notes were written" || bad "the notes were not written"
 
 echo "== an immutable release that carries the same build =="
 run_case immutable_same v9.9.9 \

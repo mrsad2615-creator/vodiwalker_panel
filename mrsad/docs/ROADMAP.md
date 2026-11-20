@@ -201,6 +201,15 @@ vocabulary of the app and measures the result.
   `PERF-COMPARISON.md`. Each side is measured five times: one run of a
   shared machine is not a measurement, and the comparison reports the
   middle of the runs next to the spread of the runs.
+* The two sides are measured **in the same job, on one emulator, and the
+  order of the two is swapped after every round**. While the two sides
+  were measured in two jobs of a matrix, they ran on two machines of the
+  cloud — and a machine is not the same machine twice. Two campaigns
+  disagreed about the same code because of it. The single job removes
+  that variable, and the swapped order removes the one that is left.
+* A session whose instrumentation failed is not counted and not used,
+  and the report of the session before it is taken away from the device
+  before the session starts, so a number can never be counted twice.
 * The frame budget is the refresh rate of the display the application is
   drawn on, not a constant, and the refresh rate is part of the report.
 

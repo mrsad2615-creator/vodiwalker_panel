@@ -19,42 +19,42 @@ application.
 
 | metric | baseline | redesign | change |
 | --- | --- | --- | --- |
-| frames | 522 | 509 | -2.5% worse |
-| mean frame (ms) | 28 | 31 | +10.7% inside the spread |
-| p50 frame (ms) | 20 | 20 | +0.0% inside the spread |
-| p90 frame (ms) | 36 | 38 | +5.6% inside the spread |
-| p95 frame (ms) | 37 | 50 | +35.1% worse |
-| p99 frame (ms) | 132 | 151 | +14.4% worse |
-| worst frame (ms) | 150 | 230 | +53.3% worse |
+| frames | 519 | 512 | -1.3% inside the spread |
+| mean frame (ms) | 38 | 37 | -2.6% inside the spread |
+| p50 frame (ms) | 36 | 35 | -2.8% inside the spread |
+| p90 frame (ms) | 50 | 50 | +0.0% inside the spread |
+| p95 frame (ms) | 51 | 52 | +2.0% inside the spread |
+| p99 frame (ms) | 151 | 127 | -15.9% better |
+| worst frame (ms) | 184 | 201 | +9.2% inside the spread |
 | jank (%) | 100 | 100 | +0.0% inside the spread |
 
 ## Frames, per phase
 
 | phase | metric | baseline | redesign | change |
 | --- | --- | --- | --- | --- |
-| idle | idle (the object turns on its own) · p50 (ms) | 19 | 20 | +5.3% inside the spread |
-| idle | idle (the object turns on its own) · p95 (ms) | 22 | 33 | +50.0% inside the spread |
+| idle | idle (the object turns on its own) · p50 (ms) | 37 | 36 | -2.7% inside the spread |
+| idle | idle (the object turns on its own) · p95 (ms) | 51 | 51 | +0.0% inside the spread |
 | idle | idle (the object turns on its own) · jank (%) | 100 | 100 | +0.0% inside the spread |
-| scroll | scroll · p50 (ms) | 36 | 36 | +0.0% inside the spread |
-| scroll | scroll · p95 (ms) | 50 | 53 | +6.0% inside the spread |
+| scroll | scroll · p50 (ms) | 37 | 37 | +0.0% inside the spread |
+| scroll | scroll · p95 (ms) | 67 | 52 | -22.4% inside the spread |
 | scroll | scroll · jank (%) | 100 | 100 | +0.0% inside the spread |
 | touch | touch (the object under the finger) · p50 (ms) | 36 | 36 | +0.0% inside the spread |
-| touch | touch (the object under the finger) · p95 (ms) | 37 | 150 | +305.4% worse |
+| touch | touch (the object under the finger) · p95 (ms) | 48 | 100 | +108.3% worse |
 | touch | touch (the object under the finger) · jank (%) | 100 | 100 | +0.0% inside the spread |
-| navigate | navigate · p50 (ms) | 19 | 20 | +5.3% inside the spread |
-| navigate | navigate · p95 (ms) | 34 | 36 | +5.9% inside the spread |
+| navigate | navigate · p50 (ms) | 21 | 32 | +52.4% inside the spread |
+| navigate | navigate · p95 (ms) | 50 | 50 | +0.0% inside the spread |
 | navigate | navigate · jank (%) | 100 | 100 | +0.0% inside the spread |
 
 ## The process
 
 | metric | baseline | redesign | change |
 | --- | --- | --- | --- |
-| CPU time (ms) | 6027 | 7715 | +28.0% worse |
-| CPU load (%) | 66 | 83 | +25.8% worse |
-| PSS at the end (kB) | 169269 | 167821 | -0.9% inside the spread |
-| PSS growth (kB) | -939 | 108 | -111.5% inside the spread |
-| Java heap in use (kB) | 8743 | 7694 | -12.0% inside the spread |
-| native heap (kB) | 19019 | 18817 | -1.1% inside the spread |
+| CPU time (ms) | 7750 | 8194 | +5.7% worse |
+| CPU load (%) | 85 | 89 | +4.7% worse |
+| PSS at the end (kB) | 169497 | 171209 | +1.0% inside the spread |
+| PSS growth (kB) | -6990 | -3283 | -53.0% inside the spread |
+| Java heap in use (kB) | 8937 | 9973 | +11.6% inside the spread |
+| native heap (kB) | 19098 | 20386 | +6.7% inside the spread |
 
 ## The spread of the runs
 
@@ -63,11 +63,11 @@ difference that is smaller than this is not a difference.
 
 | metric | baseline | redesign |
 | --- | --- | --- |
-| p50 frame (ms) | 20–35 | 20–36 |
-| p95 frame (ms) | 36–37 | 50–67 |
-| worst frame (ms) | 136–180 | 201–367 |
-| CPU load (%) | 64–69 | 77–86 |
-| PSS at the end (kB) | 166430–172374 | 167140–168921 |
+| p50 frame (ms) | 22–36 | 35–46 |
+| p95 frame (ms) | 50–55 | 51–67 |
+| worst frame (ms) | 167–200 | 167–267 |
+| CPU load (%) | 79–87 | 88–91 |
+| PSS at the end (kB) | 167873–172995 | 168356–172853 |
 
 ## The frame budget
 

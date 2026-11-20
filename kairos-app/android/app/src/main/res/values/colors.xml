@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="colorPrimary">#8052D6</color>
+    <color name="colorPrimaryDark">#09090D</color>
+    <color name="colorAccent">#B69AEF</color>
+    <color name="kairosBackground">#09090D</color>
+    <color name="kairosSurface">#15141B</color>
+</resources>

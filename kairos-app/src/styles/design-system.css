@@ -1,0 +1,365 @@
+@import "tailwindcss";
+
+/* =============================================================================
+   KAIROS Design System v2 — Calm, minimal, professional
+   Single neutral surface ladder + one accent. No gradients, no glows,
+   no glassmorphism noise. Every token is defined once here.
+   ============================================================================= */
+
+:root {
+  /* Surfaces (neutral, near-black) */
+  --bg: #0a0a0c;
+  --surface-1: #111114;
+  --surface-2: #16161a;
+  --surface-3: #1c1c21;
+  --surface-input: #0e0e11;
+
+  /* Lines */
+  --border: rgba(255, 255, 255, 0.07);
+  --border-strong: rgba(255, 255, 255, 0.12);
+
+  /* Type */
+  --text: #ececef;
+  --text-2: #9c9ca6;
+  --text-3: #6b6b75;
+
+  /* Single accent (violet) + semantic colors */
+  --accent: #6e56cf;
+  --accent-hover: #7b63db;
+  --accent-fg: #a99bf0;
+  --accent-soft: rgba(110, 86, 207, 0.14);
+  --danger: #e5484d;
+  --danger-soft: rgba(229, 72, 77, 0.12);
+  --warn: #c9975c;
+  --success: #46a06b;
+
+  /* Geometry */
+  --r-card: 16px;
+  --r-hero: 18px;
+  --r-field: 12px;
+  --r-pill: 999px;
+  --nav-height: 64px;
+
+  /* Type stacks — two families only */
+  --font-persian: 'Vazirmatn', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-numeric: 'Space Grotesk', 'Vazirmatn', ui-monospace, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: var(--font-persian);
+  min-height: 100dvh;
+  overflow-x: hidden;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  overscroll-behavior-y: none;
+}
+
+/* ---------------------------------------------------------------------------
+   Typography helpers
+   --------------------------------------------------------------------------- */
+
+/* Numbers: tabular, LTR-isolated so Persian RTL context never reorders digits */
+.num-geo,
+.num-display {
+  font-family: var(--font-numeric);
+  font-variant-numeric: tabular-nums lining-nums;
+  font-feature-settings: "tnum" 1, "lnum" 1;
+  letter-spacing: -0.01em;
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+.num-display {
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+.font-brand {
+  font-family: var(--font-numeric);
+  letter-spacing: 0.18em;
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+/* ---------------------------------------------------------------------------
+   Layout
+   --------------------------------------------------------------------------- */
+
+.kairos-ambient-bg {
+  background-color: var(--bg);
+}
+
+.hairline {
+  height: 1px;
+  width: 100%;
+  background: var(--border);
+}
+
+/* ---------------------------------------------------------------------------
+   Surfaces — flat, one border, one radius
+   --------------------------------------------------------------------------- */
+
+.luxury-card {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+}
+
+.luxury-card-hero {
+  background: var(--surface-2);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-hero);
+}
+
+.luxury-card-subtle {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--r-card);
+}
+
+.luxury-glass-dock {
+  background: rgba(17, 17, 20, 0.94);
+  backdrop-filter: blur(14px) saturate(120%);
+  -webkit-backdrop-filter: blur(14px) saturate(120%);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-card);
+  box-shadow: 0 8px 24px -16px rgba(0, 0, 0, 0.9);
+}
+
+.luxury-glass-sheet {
+  background: var(--surface-2);
+  border-top: 1px solid var(--border-strong);
+  border-radius: 20px 20px 0 0;
+}
+
+/* ---------------------------------------------------------------------------
+   Controls
+   --------------------------------------------------------------------------- */
+
+.btn-royal {
+  background: var(--accent);
+  color: #ffffff;
+  border: 1px solid transparent;
+  border-radius: var(--r-field);
+  font-weight: 600;
+  transition: background-color 0.14s ease, transform 0.12s ease;
+}
+
+.btn-royal:hover {
+  background: var(--accent-hover);
+}
+
+.btn-royal:active {
+  transform: scale(0.985);
+}
+
+.btn-royal:focus-visible,
+.btn-ghost-luxury:focus-visible,
+.luxury-input:focus-visible {
+  outline: 2px solid var(--accent-fg);
+  outline-offset: 2px;
+}
+
+.btn-royal:disabled {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.btn-ghost-luxury {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-field);
+  transition: background-color 0.14s ease, border-color 0.14s ease, transform 0.12s ease;
+}
+
+.btn-ghost-luxury:hover {
+  background: var(--surface-3);
+  border-color: var(--border-strong);
+}
+
+.btn-ghost-luxury:active {
+  transform: scale(0.985);
+}
+
+.btn-danger-soft {
+  background: var(--danger-soft);
+  color: var(--danger);
+  border: 1px solid rgba(229, 72, 77, 0.28);
+  border-radius: var(--r-field);
+}
+
+.luxury-input {
+  width: 100%;
+  background: var(--surface-input);
+  color: var(--text);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-field);
+  padding: 0.7rem 0.875rem;
+  font-size: 0.875rem;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.14s ease, box-shadow 0.14s ease;
+}
+
+.luxury-input::placeholder {
+  color: var(--text-3);
+}
+
+.luxury-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+/* Native-feeling segmented control, used for view filters */
+.segmented {
+  display: inline-flex;
+  padding: 3px;
+  gap: 2px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-field);
+}
+
+.segmented > button {
+  border-radius: 9px;
+  padding: 0.35rem 0.7rem;
+  font-size: 0.6875rem;
+  color: var(--text-2);
+  transition: background-color 0.14s ease, color 0.14s ease;
+}
+
+.segmented > button[data-active='true'] {
+  background: var(--surface-3);
+  color: var(--text);
+}
+
+/* ---------------------------------------------------------------------------
+   Scrollbars
+   --------------------------------------------------------------------------- */
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: var(--r-pill);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* ---------------------------------------------------------------------------
+   Launch screen — one fade, one rise, one progress line. Nothing else.
+   --------------------------------------------------------------------------- */
+
+@keyframes kairos-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes kairos-rise {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 8px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes kairos-progress {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+.mrsad-splash-root {
+  contain: layout style paint;
+  will-change: opacity;
+  transition: opacity 240ms ease;
+}
+
+.mrsad-splash-root.is-exiting {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.mrsad-mark {
+  opacity: 0;
+  animation: kairos-fade-in 320ms ease-out forwards;
+}
+
+.mrsad-wordmark {
+  opacity: 0;
+  animation: kairos-rise 380ms cubic-bezier(0.22, 1, 0.36, 1) 120ms forwards;
+}
+
+.mrsad-subtitle {
+  opacity: 0;
+  animation: kairos-rise 380ms cubic-bezier(0.22, 1, 0.36, 1) 220ms forwards;
+}
+
+.mrsad-progress {
+  transform-origin: left center;
+  animation: kairos-progress 1100ms cubic-bezier(0.22, 1, 0.36, 1) 80ms forwards;
+}
+
+/* ---------------------------------------------------------------------------
+   Focus — static, calm halo (no breathing loop)
+   --------------------------------------------------------------------------- */
+
+.focus-cinema-halo {
+  background: radial-gradient(circle at 50% 45%, var(--accent-soft) 0%, transparent 68%);
+}
+
+.focus-live-dot {
+  animation: kairos-fade-in 1.6s ease-in-out infinite alternate;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

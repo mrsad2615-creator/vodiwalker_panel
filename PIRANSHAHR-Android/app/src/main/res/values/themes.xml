@@ -1,0 +1,8 @@
+<resources>
+    <style name="Theme.Piranshahr" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:statusBarColor">#070b13</item>
+        <item name="android:navigationBarColor">#070b13</item>
+        <item name="android:windowBackground">#070b13</item>
+        <item name="android:windowFullscreen">true</item>
+    </style>
+</resources>

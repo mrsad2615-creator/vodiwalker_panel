@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">پیرانشهر</string>
+    <string name="subtitle">شبیه‌ساز رانندگی — پیرانشهر، آذربایجان غربی</string>
+    <string name="loading">در حال بارگذاری شهر…</string>
+</resources>

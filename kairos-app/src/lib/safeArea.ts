@@ -39,6 +39,40 @@ export interface SafeAreaReport {
 
 const ZERO: SafeAreaInsets = { top: 0, right: 0, bottom: 0, left: 0 };
 
+/**
+ * Manual calibration, for the rare device/ROM where neither the native padding
+ * nor the web insets land correctly. Values are extra pixels the user can dial
+ * in from Settings; they are applied as a minimum, never as a replacement, so
+ * auto-detection still wins when it reports something larger.
+ */
+const MANUAL_KEY = 'kairos:safe-area-manual';
+
+export function getManualInsets(): Pick<SafeAreaInsets, 'top' | 'bottom'> {
+  if (typeof window === 'undefined') return { top: 0, bottom: 0 };
+  try {
+    const raw = window.localStorage.getItem(MANUAL_KEY);
+    if (!raw) return { top: 0, bottom: 0 };
+    const parsed = JSON.parse(raw) as { top?: number; bottom?: number };
+    return {
+      top: Math.min(96, Math.max(0, Number(parsed.top) || 0)),
+      bottom: Math.min(96, Math.max(0, Number(parsed.bottom) || 0)),
+    };
+  } catch {
+    return { top: 0, bottom: 0 };
+  }
+}
+
+export function setManualInsets(pair: { top: number; bottom: number }): SafeAreaInsets {
+  if (typeof window !== 'undefined') {
+    try {
+      window.localStorage.setItem(MANUAL_KEY, JSON.stringify(pair));
+    } catch {
+      // storage full / private mode — the session still applies the value
+    }
+  }
+  return syncSafeArea();
+}
+
 /** Timed re-measures: insets arrive at page-commit and again after layout. */
 const RETRY_MS = [0, 80, 240, 600, 1200, 2400];
 
@@ -119,7 +153,14 @@ export function syncSafeArea(): SafeAreaInsets {
   if (typeof document === 'undefined') return ZERO;
   lastEnv = readEnvInsets();
   lastCapacitor = readCapacitorInsets();
-  lastApplied = maxInsets(lastEnv, lastCapacitor);
+  const detected = maxInsets(lastEnv, lastCapacitor);
+  const manual = getManualInsets();
+  lastApplied = {
+    top: Math.max(detected.top, manual.top),
+    right: detected.right,
+    bottom: Math.max(detected.bottom, manual.bottom),
+    left: detected.left,
+  };
   publish(lastApplied);
   return lastApplied;
 }

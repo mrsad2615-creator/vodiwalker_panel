@@ -77,6 +77,18 @@ body {
   overscroll-behavior-y: none;
 }
 
+/* The document must always be the scroll container: the shell grows with its
+   content and the fixed dock floats above it. (A fixed-height shell was what
+   made long pages feel "stuck" on some devices.) */
+html {
+  overflow-y: auto;
+}
+
+#root {
+  min-height: 100dvh;
+  isolation: isolate;
+}
+
 /* ---------------------------------------------------------------------------
    Typography helpers
    --------------------------------------------------------------------------- */

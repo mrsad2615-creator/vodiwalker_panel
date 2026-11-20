@@ -14,12 +14,12 @@ const config: CapacitorConfig = {
     webContentsDebuggingEnabled: false,
   },
   plugins: {
-    // Capacitor 8 / Android 15+ edge-to-edge. Because index.html does NOT ask
-    // for viewport-fit=cover, Capacitor pads the WebView itself with the real
-    // status-bar, notch and gesture-bar insets on every WebView version — the
-    // one behaviour that cannot be broken by a WebView update.
+    // Insets are owned by MainActivity.java (decor-view padding + consumed
+    // system-bar insets). SystemBars must NOT touch them as well, otherwise the
+    // two mechanisms cancel each other out — which is what kept breaking the
+    // layout on Android 15/16. It still controls the bar icon style.
     SystemBars: {
-      insetsHandling: 'native',
+      insetsHandling: 'disable',
       style: 'DARK',
     },
     SplashScreen: {

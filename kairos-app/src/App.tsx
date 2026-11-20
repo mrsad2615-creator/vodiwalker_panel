@@ -18,10 +18,12 @@ type SplashPhase = 'playing' | 'exiting' | 'done';
 
 /** Single source of truth for the launch choreography (mirrors design-system.css). */
 const LAUNCH = {
-  /** Minimum on-screen time so the logo motion can finish (ms). */
-  splashHoldMs: 900,
-  /** Cross-fade into the shell (ms). */
-  exitFadeMs: 260,
+  /** Minimum on-screen time = the length of the logo motion itself (ms).
+   *  It is not padding: the sweep lands at ~960 ms, so exiting earlier would
+   *  cut the shot. As soon as data + fonts are in, we hand over immediately. */
+  splashHoldMs: 1000,
+  /** Cross-fade into the shell (ms) — mirrors .kairos-launch in the CSS. */
+  exitFadeMs: 240,
   /** Above this the app shows the recovery screen instead of an endless splash. */
   bootFailsafeMs: 4000,
 } as const;

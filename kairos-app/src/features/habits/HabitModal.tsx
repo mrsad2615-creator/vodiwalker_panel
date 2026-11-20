@@ -192,8 +192,8 @@ export function HabitModal({ open, habit, onClose, onDeleted }: HabitModalProps)
                 onClick={() => setIcon(opt.name)}
                 className={`flex h-9 items-center justify-center rounded-xl border transition ${
                   icon === opt.name
-                    ? 'border-[#A99BF0] bg-[#1C1C21]'
-                    : 'border-[#A99BF0]/10 bg-[#0E0E11] hover:border-[#A99BF0]/28'
+                    ? 'border-[#B9A8FF] bg-[#1C1C21]'
+                    : 'border-[#B9A8FF]/10 bg-[#0E0E11] hover:border-[#B9A8FF]/28'
                 }`}
               >
                 <HabitIcon name={opt.name} color={icon === opt.name ? accentColor : '#9C9CA6'} />
@@ -238,8 +238,8 @@ export function HabitModal({ open, habit, onClose, onDeleted }: HabitModalProps)
                 onClick={() => setScheduleType(sc.id)}
                 className={`rounded-xl border py-2 text-xs font-medium transition ${
                   scheduleType === sc.id
-                    ? 'border-[#6E56CF] bg-[#1C1C21] text-[#ECECEF]'
-                    : 'border-[#A99BF0]/10 bg-[#0E0E11] text-[#9C9CA6]'
+                    ? 'border-[#6D4AFF] bg-[#1C1C21] text-[#ECECEF]'
+                    : 'border-[#B9A8FF]/10 bg-[#0E0E11] text-[#9C9CA6]'
                 }`}
               >
                 {sc.label}
@@ -258,8 +258,8 @@ export function HabitModal({ open, habit, onClose, onDeleted }: HabitModalProps)
                     onClick={() => toggleDay(idx)}
                     className={`h-9 rounded-xl border text-xs font-semibold transition ${
                       active
-                        ? 'border-[#A99BF0]/50 bg-[#6E56CF] text-[#ECECEF]'
-                        : 'border-[#A99BF0]/12 bg-[#0E0E11] text-[#6B6B75]'
+                        ? 'border-[#B9A8FF]/50 bg-[#6D4AFF] text-[#ECECEF]'
+                        : 'border-[#B9A8FF]/12 bg-[#0E0E11] text-[#6B6B75]'
                     }`}
                   >
                     {w}
@@ -270,7 +270,7 @@ export function HabitModal({ open, habit, onClose, onDeleted }: HabitModalProps)
           )}
 
           {scheduleType === 'weekly_target' && (
-            <div className="mt-2.5 flex items-center justify-between rounded-xl border border-[#A99BF0]/12 bg-[#0E0E11] px-3.5 py-2.5 text-xs">
+            <div className="mt-2.5 flex items-center justify-between rounded-xl border border-[#B9A8FF]/12 bg-[#0E0E11] px-3.5 py-2.5 text-xs">
               <span className="text-[#9C9CA6]">تعداد روز هدف در هفته:</span>
               <NumericInput
                 min={1}
@@ -278,7 +278,7 @@ export function HabitModal({ open, habit, onClose, onDeleted }: HabitModalProps)
                 fallback={5}
                 value={weeklyTarget}
                 onChange={setWeeklyTarget}
-                className="num-geo w-14 rounded-lg border border-[#A99BF0]/20 bg-[#16161A] py-1 text-center text-[#ECECEF] outline-none"
+                className="num-geo w-14 rounded-lg border border-[#B9A8FF]/20 bg-[#16161A] py-1 text-center text-[#ECECEF] outline-none"
               />
             </div>
           )}
@@ -293,8 +293,8 @@ export function HabitModal({ open, habit, onClose, onDeleted }: HabitModalProps)
               onClick={() => setTrackingMode('boolean')}
               className={`rounded-xl border py-2 text-xs font-medium transition ${
                 trackingMode === 'boolean'
-                  ? 'border-[#6E56CF] bg-[#1C1C21] text-[#ECECEF]'
-                  : 'border-[#A99BF0]/10 bg-[#0E0E11] text-[#9C9CA6]'
+                  ? 'border-[#6D4AFF] bg-[#1C1C21] text-[#ECECEF]'
+                  : 'border-[#B9A8FF]/10 bg-[#0E0E11] text-[#9C9CA6]'
               }`}
             >
               تکمیلی (انجام شد / نشد)
@@ -304,8 +304,8 @@ export function HabitModal({ open, habit, onClose, onDeleted }: HabitModalProps)
               onClick={() => setTrackingMode('quantitative')}
               className={`rounded-xl border py-2 text-xs font-medium transition ${
                 trackingMode === 'quantitative'
-                  ? 'border-[#6E56CF] bg-[#1C1C21] text-[#ECECEF]'
-                  : 'border-[#A99BF0]/10 bg-[#0E0E11] text-[#9C9CA6]'
+                  ? 'border-[#6D4AFF] bg-[#1C1C21] text-[#ECECEF]'
+                  : 'border-[#B9A8FF]/10 bg-[#0E0E11] text-[#9C9CA6]'
               }`}
             >
               مقداری (دقیقه / صفحه / لیوان)

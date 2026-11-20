@@ -22,14 +22,19 @@ const config: CapacitorConfig = {
       insetsHandling: 'disable',
       style: 'DARK',
     },
+    // The native launch window is pure black + the vector mark (see
+    // res/values*/styles.xml). The cinematic reveal itself is the in-app
+    // LaunchScreen, so the plugin never shows a second splash: duration 0 means
+    // it stays out of the way and the system splash hands over as soon as the
+    // WebView has its first frame.
     SplashScreen: {
       launchAutoHide: true,
       launchShowDuration: 0,
-      backgroundColor: '#0A0A0C',
+      backgroundColor: '#000000',
       showSpinner: false,
     },
     LocalNotifications: {
-      iconColor: '#6E56CF',
+      iconColor: '#6D4AFF',
       sound: 'default',
     },
   },

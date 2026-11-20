@@ -169,7 +169,7 @@ export function DashboardPage() {
           </p>
           <h1 className="mt-1 flex items-baseline gap-1.5 text-[1.28rem] font-bold tracking-tight text-[#ECECEF]">
             <span>{dateInfo.weekday}،</span>
-            <Numeric value={dateInfo.day} variant="geo" className="text-[1.32rem] text-[#A99BF0]" />
+            <Numeric value={dateInfo.day} variant="geo" className="text-[1.32rem] text-[#B9A8FF]" />
             <span>{dateInfo.month}</span>
             <Numeric value={dateInfo.year} variant="geo" className="text-sm font-medium text-[#9C9CA6]" />
           </h1>
@@ -187,7 +187,7 @@ export function DashboardPage() {
 
       {/* Optional First-Visit Starter Dataset Banner (1-tap clear to empty personal slate) */}
       {settings.hasSampleData && !settings.sampleBannerDismissed && (
-        <div className="flex items-center justify-between gap-3 rounded-2xl border border-[#6E56CF]/28 bg-[#1C1C21]/55 px-3.5 py-2.5">
+        <div className="flex items-center justify-between gap-3 rounded-2xl border border-[#6D4AFF]/28 bg-[#1C1C21]/55 px-3.5 py-2.5">
           <div className="min-w-0">
             <p className="text-[11.5px] font-semibold text-[#ECECEF]">
               داده‌های نمونه اولیه بارگذاری شده‌اند
@@ -207,7 +207,7 @@ export function DashboardPage() {
                   tone: 'success',
                 });
               }}
-              className="rounded-lg border border-[#A99BF0]/25 bg-[#16161A] px-2.5 py-1.5 text-[10.5px] font-medium text-[#ECECEF] hover:border-[#A99BF0]/50"
+              className="rounded-lg border border-[#B9A8FF]/25 bg-[#16161A] px-2.5 py-1.5 text-[10.5px] font-medium text-[#ECECEF] hover:border-[#B9A8FF]/50"
             >
               شروع خالی
             </button>
@@ -326,7 +326,7 @@ export function DashboardPage() {
           <button
             type="button"
             onClick={() => setActiveTab('focus')}
-            className="btn-ghost-luxury flex items-center justify-center gap-1.5 rounded-2xl px-4 py-3 text-xs font-medium text-[#A99BF0]"
+            className="btn-ghost-luxury flex items-center justify-center gap-1.5 rounded-2xl px-4 py-3 text-xs font-medium text-[#B9A8FF]"
           >
             <Timer className="h-4 w-4" />
             <span>تمرکز</span>
@@ -359,7 +359,7 @@ export function DashboardPage() {
           <button
             type="button"
             onClick={() => setActiveTab('tasks')}
-            className="flex items-center gap-1 text-[11.5px] font-medium text-[#A99BF0] hover:text-[#ECECEF]"
+            className="flex items-center gap-1 text-[11.5px] font-medium text-[#B9A8FF] hover:text-[#ECECEF]"
           >
             <span>مدیریت همه</span>
             <ArrowUpLeft className="h-3.5 w-3.5" />
@@ -390,7 +390,7 @@ export function DashboardPage() {
                 <LuxuryCard
                   key={task.id}
                   className={`flex items-center gap-3 px-3.5 py-3 transition ${
-                    isDone ? 'opacity-65' : 'hover:border-[#A99BF0]/22'
+                    isDone ? 'opacity-65' : 'hover:border-[#B9A8FF]/22'
                   }`}
                 >
                   <button
@@ -399,8 +399,8 @@ export function DashboardPage() {
                     aria-label={isDone ? 'لغو تکمیل' : 'تکمیل وظیفه'}
                     className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border transition ${
                       isDone
-                        ? 'border-[#6E56CF] bg-[#6E56CF] text-[#ECECEF] shadow-[0_0_12px_rgba(128,82,214,0.45)]'
-                        : 'border-[#A99BF0]/28 bg-[#0E0E11] hover:border-[#A99BF0]'
+                        ? 'border-[#6D4AFF] bg-[#6D4AFF] text-[#ECECEF] shadow-[0_0_12px_rgba(109,74,255,0.45)]'
+                        : 'border-[#B9A8FF]/28 bg-[#0E0E11] hover:border-[#B9A8FF]'
                     }`}
                   >
                     {isDone && <Check className="h-3.5 w-3.5" strokeWidth={2.6} />}
@@ -433,7 +433,7 @@ export function DashboardPage() {
                         </span>
                       )}
                       {task.subtasks.length > 0 && (
-                        <span className="text-[#A99BF0]">
+                        <span className="text-[#B9A8FF]">
                           زیرکار{' '}
                           <Numeric
                             value={`${doneSubs}/${task.subtasks.length}`}
@@ -458,7 +458,7 @@ export function DashboardPage() {
           <button
             type="button"
             onClick={() => setActiveTab('habits')}
-            className="flex items-center gap-1 text-[11.5px] font-medium text-[#A99BF0] hover:text-[#ECECEF]"
+            className="flex items-center gap-1 text-[11.5px] font-medium text-[#B9A8FF] hover:text-[#ECECEF]"
           >
             <span>تقویم حرارتی</span>
             <ArrowUpLeft className="h-3.5 w-3.5" />
@@ -474,7 +474,7 @@ export function DashboardPage() {
               <button
                 type="button"
                 onClick={() => setActiveTab('habits')}
-                className="btn-ghost-luxury rounded-xl px-4 py-2 text-xs font-medium text-[#A99BF0]"
+                className="btn-ghost-luxury rounded-xl px-4 py-2 text-xs font-medium text-[#B9A8FF]"
               >
                 ایجاد عادت جدید
               </button>
@@ -503,11 +503,11 @@ export function DashboardPage() {
                       className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border"
                       style={{
                         backgroundColor: isCompleted
-                          ? 'rgba(128, 82, 214, 0.24)'
-                          : 'rgba(36, 25, 54, 0.5)',
+                          ? 'rgba(109, 74, 255, 0.24)'
+                          : 'rgba(30, 22, 60, 0.5)',
                         borderColor: isCompleted
-                          ? 'rgba(182, 154, 239, 0.4)'
-                          : 'rgba(182, 154, 239, 0.1)',
+                          ? 'rgba(163, 140, 255, 0.4)'
+                          : 'rgba(163, 140, 255, 0.1)',
                       }}
                     >
                       <HabitIcon name={habit.icon} color={habit.accentColor} className="h-[18px] w-[18px]" />
@@ -522,7 +522,7 @@ export function DashboardPage() {
                             <Numeric
                               value={`${currentVal}/${habit.targetValue}`}
                               variant="geo"
-                              className="font-semibold text-[#A99BF0]"
+                              className="font-semibold text-[#B9A8FF]"
                             />{' '}
                             {habit.unit}
                           </span>
@@ -530,7 +530,7 @@ export function DashboardPage() {
                           <span>{isCompleted ? 'تکمیل شد' : 'در انتظار ثبت'}</span>
                         )}
                         <span className="inline-flex items-center gap-0.5 text-[#9C9CA6]">
-                          <Flame className="h-3 w-3 text-[#6E56CF]" />
+                          <Flame className="h-3 w-3 text-[#6D4AFF]" />
                           <Numeric value={stats.currentStreak} variant="geo" className="text-[10.5px]" />
                           <span>d</span>
                         </span>
@@ -543,10 +543,10 @@ export function DashboardPage() {
                     onClick={() => handleQuickHabitAction(habit, currentVal, isCompleted)}
                     className={`flex h-9 min-w-[68px] items-center justify-center rounded-xl px-3 text-xs font-semibold transition ${
                       isCompleted
-                        ? 'bg-[#6E56CF] text-[#ECECEF] shadow-[0_0_16px_rgba(128,82,214,0.45)]'
+                        ? 'bg-[#6D4AFF] text-[#ECECEF] shadow-[0_0_16px_rgba(109,74,255,0.45)]'
                         : isPartial
-                        ? 'border border-[#6E56CF]/50 bg-[#1C1C21] text-[#A99BF0]'
-                        : 'border border-[#A99BF0]/16 bg-[#0E0E11] text-[#9C9CA6] hover:border-[#A99BF0]/40 hover:text-[#ECECEF]'
+                        ? 'border border-[#6D4AFF]/50 bg-[#1C1C21] text-[#B9A8FF]'
+                        : 'border border-[#B9A8FF]/16 bg-[#0E0E11] text-[#9C9CA6] hover:border-[#B9A8FF]/40 hover:text-[#ECECEF]'
                     }`}
                   >
                     {isCompleted ? (
@@ -571,7 +571,7 @@ export function DashboardPage() {
           <button
             type="button"
             onClick={() => setGoalModalState({ open: true, goal: null })}
-            className="flex items-center gap-1 text-[11.5px] font-medium text-[#A99BF0] hover:text-[#ECECEF]"
+            className="flex items-center gap-1 text-[11.5px] font-medium text-[#B9A8FF] hover:text-[#ECECEF]"
           >
             <Plus className="h-3.5 w-3.5" />
             <span>هدف جدید</span>
@@ -587,7 +587,7 @@ export function DashboardPage() {
               <button
                 type="button"
                 onClick={() => setGoalModalState({ open: true, goal: null })}
-                className="btn-ghost-luxury rounded-xl px-4 py-2 text-xs font-medium text-[#A99BF0]"
+                className="btn-ghost-luxury rounded-xl px-4 py-2 text-xs font-medium text-[#B9A8FF]"
               >
                 تعریف هدف جدید
               </button>
@@ -626,13 +626,13 @@ export function DashboardPage() {
                         value={pct}
                         suffix="%"
                         variant="display"
-                        className="text-xl font-bold text-[#A99BF0]"
+                        className="text-xl font-bold text-[#B9A8FF]"
                       />
                       <button
                         type="button"
                         onClick={() => handleIncrementGoal(goal)}
                         aria-label="افزایش پیشرفت هدف"
-                        className="flex h-7 w-7 items-center justify-center rounded-lg border border-[#A99BF0]/20 bg-[#1C1C21] text-[#ECECEF] transition hover:bg-[#6E56CF]"
+                        className="flex h-7 w-7 items-center justify-center rounded-lg border border-[#B9A8FF]/20 bg-[#1C1C21] text-[#ECECEF] transition hover:bg-[#6D4AFF]"
                       >
                         <Plus className="h-3.5 w-3.5" />
                       </button>
@@ -667,7 +667,7 @@ export function DashboardPage() {
             <Numeric
               value={`${summary.todayFocusMinutes}/${summary.focusGoalMinutes}`}
               variant="geo"
-              className="text-[#A99BF0]"
+              className="text-[#B9A8FF]"
             />{' '}
             دقیقه • مشاهده تحلیل واقعی عملکرد
           </p>
@@ -675,7 +675,7 @@ export function DashboardPage() {
         <button
           type="button"
           onClick={() => setActiveTab('analytics')}
-          className="btn-ghost-luxury shrink-0 rounded-xl px-3.5 py-2 text-xs font-medium text-[#A99BF0]"
+          className="btn-ghost-luxury shrink-0 rounded-xl px-3.5 py-2 text-xs font-medium text-[#B9A8FF]"
         >
           گزارش ماه
         </button>

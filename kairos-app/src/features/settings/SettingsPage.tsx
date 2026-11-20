@@ -163,7 +163,7 @@ export function SettingsPage() {
       {/* PROFILE & DAILY GOALS */}
       <LuxuryCard className="space-y-3.5 p-4">
         <div className="flex items-center gap-2 text-xs font-bold text-[#ECECEF]">
-          <User className="h-4 w-4 text-[#A99BF0]" />
+          <User className="h-4 w-4 text-[#B9A8FF]" />
           <span>پروفایل و اهداف روزانه</span>
         </div>
 
@@ -216,10 +216,10 @@ export function SettingsPage() {
       <LuxuryCard className="space-y-3.5 p-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-xs font-bold text-[#ECECEF]">
-            <Bell className="h-4 w-4 text-[#A99BF0]" />
+            <Bell className="h-4 w-4 text-[#B9A8FF]" />
             <span>اعلان‌ها و یادآوری‌ها</span>
           </div>
-          <span className="rounded-lg bg-[#1C1C21] px-2 py-0.5 text-[10px] font-medium text-[#A99BF0]">
+          <span className="rounded-lg bg-[#1C1C21] px-2 py-0.5 text-[10px] font-medium text-[#B9A8FF]">
             {permState === 'granted'
               ? 'مجوز فعال'
               : permState === 'denied'
@@ -240,7 +240,7 @@ export function SettingsPage() {
                 updateSettings({ notificationsEnabled: !settings.notificationsEnabled })
               }
               className={`relative h-6 w-11 rounded-full transition-colors ${
-                settings.notificationsEnabled ? 'bg-[#6E56CF]' : 'bg-[#1C1C21]'
+                settings.notificationsEnabled ? 'bg-[#6D4AFF]' : 'bg-[#1C1C21]'
               }`}
             >
               <span
@@ -262,7 +262,7 @@ export function SettingsPage() {
               aria-checked={settings.soundEnabled}
               onClick={() => updateSettings({ soundEnabled: !settings.soundEnabled })}
               className={`relative h-6 w-11 rounded-full transition-colors ${
-                settings.soundEnabled ? 'bg-[#6E56CF]' : 'bg-[#1C1C21]'
+                settings.soundEnabled ? 'bg-[#6D4AFF]' : 'bg-[#1C1C21]'
               }`}
             >
               <span
@@ -284,7 +284,7 @@ export function SettingsPage() {
               aria-checked={settings.hapticsEnabled}
               onClick={() => updateSettings({ hapticsEnabled: !settings.hapticsEnabled })}
               className={`relative h-6 w-11 rounded-full transition-colors ${
-                settings.hapticsEnabled ? 'bg-[#6E56CF]' : 'bg-[#1C1C21]'
+                settings.hapticsEnabled ? 'bg-[#6D4AFF]' : 'bg-[#1C1C21]'
               }`}
             >
               <span
@@ -301,7 +301,7 @@ export function SettingsPage() {
             <button
               type="button"
               onClick={handleRequestNotifications}
-              className="btn-ghost-luxury rounded-xl py-2 text-[11px] font-medium text-[#A99BF0]"
+              className="btn-ghost-luxury rounded-xl py-2 text-[11px] font-medium text-[#B9A8FF]"
             >
               درخواست مجوز سیستم
             </button>
@@ -321,17 +321,17 @@ export function SettingsPage() {
       {/* LOCAL DATA & PRIVACY */}
       <LuxuryCard className="space-y-3.5 p-4">
         <div className="flex items-center gap-2 text-xs font-bold text-[#ECECEF]">
-          <Database className="h-4 w-4 text-[#A99BF0]" />
+          <Database className="h-4 w-4 text-[#B9A8FF]" />
           <span>ذخیره‌سازی آفلاین و پشتیبان‌گیری</span>
         </div>
 
-        <div className="grid grid-cols-5 gap-1.5 rounded-2xl border border-[#A99BF0]/10 bg-[#0D0D10] p-2.5 text-center">
+        <div className="grid grid-cols-5 gap-1.5 rounded-2xl border border-[#B9A8FF]/10 bg-[#0D0D10] p-2.5 text-center">
           <div>
             <Numeric value={dbCounts.tasks} variant="display" className="text-xl font-bold text-[#ECECEF]" />
             <span className="mt-0.5 block text-[9px] text-[#9C9CA6]">وظیفه</span>
           </div>
           <div>
-            <Numeric value={dbCounts.habits} variant="display" className="text-xl font-bold text-[#A99BF0]" />
+            <Numeric value={dbCounts.habits} variant="display" className="text-xl font-bold text-[#B9A8FF]" />
             <span className="mt-0.5 block text-[9px] text-[#9C9CA6]">عادت</span>
           </div>
           <div>
@@ -339,7 +339,7 @@ export function SettingsPage() {
             <span className="mt-0.5 block text-[9px] text-[#9C9CA6]">ثبت عادت</span>
           </div>
           <div>
-            <Numeric value={dbCounts.sessions} variant="display" className="text-xl font-bold text-[#A99BF0]" />
+            <Numeric value={dbCounts.sessions} variant="display" className="text-xl font-bold text-[#B9A8FF]" />
             <span className="mt-0.5 block text-[9px] text-[#9C9CA6]">تمرکز</span>
           </div>
           <div>
@@ -354,7 +354,7 @@ export function SettingsPage() {
             onClick={handleExport}
             className="btn-ghost-luxury flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-xs font-medium text-[#ECECEF]"
           >
-            <Download className="h-3.5 w-3.5 text-[#A99BF0]" />
+            <Download className="h-3.5 w-3.5 text-[#B9A8FF]" />
             <span>خروجی پشتیبان</span>
           </button>
           <button
@@ -362,7 +362,7 @@ export function SettingsPage() {
             onClick={() => fileInputRef.current?.click()}
             className="btn-ghost-luxury flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-xs font-medium text-[#ECECEF]"
           >
-            <Upload className="h-3.5 w-3.5 text-[#A99BF0]" />
+            <Upload className="h-3.5 w-3.5 text-[#B9A8FF]" />
             <span>بازیابی پشتیبان</span>
           </button>
           <input
@@ -378,7 +378,7 @@ export function SettingsPage() {
           />
         </div>
 
-        <div className="space-y-2 border-t border-[#A99BF0]/10 pt-3">
+        <div className="space-y-2 border-t border-[#B9A8FF]/10 pt-3">
           <button
             type="button"
             onClick={async () => {
@@ -442,7 +442,7 @@ export function SettingsPage() {
               build {BUILD_NUMBER} · {BUILD_SHA}
             </p>
             <p className="mt-0.5 flex items-center gap-1 text-[10.5px] text-[#9C9CA6]">
-              <ShieldCheck className="h-3.5 w-3.5 text-[#6E56CF]" />
+              <ShieldCheck className="h-3.5 w-3.5 text-[#6D4AFF]" />
               <span>
                 100% آفلاین •{' '}
                 {isNativeAndroid() ? 'اجرای بومی اندروید' : 'آماده نصب PWA و اندروید'}

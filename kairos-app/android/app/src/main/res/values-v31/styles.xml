@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!--
+        API 31+ variant: the platform draws the splash from
+        windowSplashScreenBackground / windowSplashScreenAnimatedIcon, so the
+        window background must stay a flat colour. The layer-list used on older
+        versions would otherwise repaint under the system splash.
+        This style fully replaces the base definition for v31+.
+    -->
+    <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/kairosSplashBackground</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_mark</item>
+        <item name="postSplashScreenTheme">@style/AppTheme.NoActionBar</item>
+        <item name="android:windowBackground">@color/kairosSplashBackground</item>
+        <item name="android:statusBarColor">@color/kairosSplashBackground</item>
+        <item name="android:navigationBarColor">@color/kairosSplashBackground</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+</resources>

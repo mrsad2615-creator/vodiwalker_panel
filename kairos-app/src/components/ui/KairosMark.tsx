@@ -23,7 +23,7 @@ import type { HabitIconName } from '@/types/domain';
  * (assets/kairos-mark.png → 4 contours, 172 path characters, IoU 0.93).
  * Filled with `currentColor`, so colour is decided by the caller.
  */
-const MARK_PATHS = [
+export const KAIROS_MARK_PATHS = [
   'M0,0 21,0 21,194 1,214Z',
   'M256,0 389,2 21,371 21,432 0,432 1,255Z',
   'M264,19 21,263 21,343 343,20Z',
@@ -57,7 +57,7 @@ export function KairosLogoMark({ size = 28, className = '', title }: KairosLogoM
       focusable="false"
     >
       {title ? <title>{title}</title> : null}
-      {MARK_PATHS.map((d) => (
+      {KAIROS_MARK_PATHS.map((d) => (
         <path key={d} d={d} />
       ))}
     </svg>
@@ -110,9 +110,9 @@ export const HABIT_ICON_OPTIONS: { name: HabitIconName; label: string }[] = [
 ];
 
 export const HABIT_ACCENT_SWATCHES = [
-  '#6E56CF', // Royal Purple
-  '#A99BF0', // Lavender
-  '#7B63DB', // Amethyst
+  '#6D4AFF', // Royal Purple
+  '#B9A8FF', // Lavender
+  '#7C5CFF', // Amethyst
   '#6E45BC', // Deep Violet
   '#C9975C', // Warm Bronze Gold (subtle luxury contrast)
   '#C26D96', // Muted Velvet Rose-Plum

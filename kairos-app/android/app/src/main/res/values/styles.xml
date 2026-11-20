@@ -19,12 +19,21 @@
         <item name="android:navigationBarColor">@color/kairosBackground</item>
     </style>
 
-    <!-- Crisp Vector Splash Screen -> Instant handoff into 60fps mrsad Motion-Graphic Intro -->
+    <!--
+        Launch theme.
+          API 31+  system SplashScreen API: pure black window + the white mark,
+                   no icon background circle, so nothing is masked or cropped.
+          API 24-30 the window background (kairos_launch_background) is the
+                   splash: black + centred mark.
+        Either way the hand-off is black → in-app cinematic logo motion.
+    -->
     <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
-        <item name="windowSplashScreenBackground">@color/kairosBackground</item>
+        <item name="windowSplashScreenBackground">@color/kairosSplashBackground</item>
         <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_mark</item>
         <item name="postSplashScreenTheme">@style/AppTheme.NoActionBar</item>
-        <item name="android:statusBarColor">@color/kairosBackground</item>
-        <item name="android:navigationBarColor">@color/kairosBackground</item>
+        <item name="android:windowBackground">@drawable/kairos_launch_background</item>
+        <item name="android:statusBarColor">@color/kairosSplashBackground</item>
+        <item name="android:navigationBarColor">@color/kairosSplashBackground</item>
+        <item name="android:windowLightStatusBar">false</item>
     </style>
 </resources>

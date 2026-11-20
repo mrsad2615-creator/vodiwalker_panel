@@ -1,7 +1,5 @@
-import { useEffect, useRef } from 'react';
-import { motion, useReducedMotion } from 'framer-motion';
-import { KairosLogoMark } from './KairosMark';
-import { LinearProgress } from './Progress';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
+import { KAIROS_MARK_PATHS, KAIROS_MARK_VIEWBOX } from './KairosMark';
 import { APP_VERSION, BUILD_NUMBER } from '@/lib/buildInfo';
 
 interface LaunchScreenProps {
@@ -12,179 +10,209 @@ interface LaunchScreenProps {
   onSkip: () => void;
 }
 
-const EASE_OUT = [0.22, 1, 0.36, 1] as const;
-const WORDMARK = ['K', 'A', 'I', 'R', 'O', 'S'] as const;
+/* ---------------------------------------------------------------------------
+   Geometry
+   The mark is authored in a 389 × 432 box (traced from the approved app icon).
+   It is centred in a square 140-unit stage at 104 units tall, so the artwork
+   keeps its exact proportions on every screen size.
+   --------------------------------------------------------------------------- */
+
+const STAGE = 140;
+const MARK_HEIGHT = 104;
+const SCALE = MARK_HEIGHT / KAIROS_MARK_VIEWBOX.height;
+const MARK_WIDTH = KAIROS_MARK_VIEWBOX.width * SCALE;
+const MARK_TRANSFORM = `translate(${((STAGE - MARK_WIDTH) / 2).toFixed(2)} ${(
+  (STAGE - MARK_HEIGHT) /
+  2
+).toFixed(2)}) scale(${SCALE.toFixed(4)})`;
+
+/** 2πr for the spinner ring (r = 16.5 in a 38-unit viewBox). */
+const RING_CIRCUMFERENCE = 2 * Math.PI * 16.5;
+const RING_DASH = `${(RING_CIRCUMFERENCE * 0.27).toFixed(2)} ${(RING_CIRCUMFERENCE * 0.73).toFixed(2)}`;
 
 /**
- * Launch screen — logo motion.
+ * KAIROS launch screen — cinematic dark emergence.
  *
- * A real entrance rather than a fade: the mark springs up from below with a
- * slight rotation and a wipe, an accent arc orbits it, the glow breathes, the
- * wordmark letters rise one by one and the hairline fills with the actual boot
- * progress. Everything is transform/opacity/clip-path on the compositor, runs
- * ~1.1s and collapses to a static frame under `prefers-reduced-motion`.
+ * Choreography (total ≈ 1.0 s, then a 240 ms fade into the shell):
+ *   000–660 ms  the mark emerges from pure black under a spotlight that opens
+ *   340–960 ms  a strong diagonal light sweep travels across the metal (masked
+ *               to the mark, so the light is only ever *on* the logo)
+ *   420–1000 ms thin white ring spinner + KAIROS wordmark fade up
+ *   900 ms →    real boot progress is exposed to assistive tech only
+ *
+ * Why it stays cheap on mid-range Android:
+ *   - no WebGL, no canvas, no per-frame JavaScript — three CSS keyframes;
+ *   - no `filter: blur()` anywhere: the spotlight is a pre-painted radial
+ *     gradient, the silver is a static gradient, the sweep is a translated
+ *     rect inside a static SVG mask;
+ *   - only opacity/transform animate, so the whole thing is composited;
+ *   - the component unmounts after the fade — nothing keeps running;
+ *   - reduced-motion users get the finished frame with a still ring;
+ *   - when the app goes to the background the timeline is settled immediately
+ *     (no wasted frames while it is not visible) and resumes as a static frame.
  */
 export function LaunchScreen({ exiting, progress, onSkip }: LaunchScreenProps) {
-  const reducedMotion = useReducedMotion();
+  const uid = useId().replace(/[^a-zA-Z0-9]/g, '');
+  const [settled, setSettled] = useState(false);
   const skippedRef = useRef(false);
-  const animated = !reducedMotion;
   const pct = Math.round(Math.min(1, Math.max(0, progress)) * 100);
 
-  const skip = () => {
+  const skip = useCallback(() => {
     if (skippedRef.current) return;
     skippedRef.current = true;
     onSkip();
-  };
+  }, [onSkip]);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape' || event.key === ' ' || event.key === 'Enter') skip();
     };
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') setSettled(true);
+    };
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  });
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, [skip]);
+
+  const metalId = `kairos-metal-${uid}`;
+  const sweepId = `kairos-sweep-${uid}`;
+  const maskId = `kairos-mask-${uid}`;
 
   return (
-    <motion.div
+    <div
       role="status"
       aria-label="در حال آماده‌سازی KAIROS"
       aria-live="polite"
       onClick={skip}
-      initial={false}
-      animate={exiting ? { opacity: 0, scale: animated ? 1.02 : 1 } : { opacity: 1, scale: 1 }}
-      transition={{ duration: 0.26, ease: 'easeOut' }}
-      className="app-safe-frame fixed inset-0 z-[100] flex select-none flex-col items-center justify-center overflow-hidden bg-[var(--bg)]"
-      style={{ contain: 'layout paint' }}
+      className={[
+        'kairos-launch app-safe-frame fixed inset-0 z-[100] flex select-none flex-col items-center justify-center overflow-hidden',
+        exiting ? 'is-exiting' : '',
+        settled ? 'is-settled' : '',
+      ].join(' ')}
+      style={{ contain: 'layout paint style' }}
     >
-      {/* Breathing brand glow */}
-      <motion.div
-        aria-hidden="true"
-        className="kairos-launch-glow pointer-events-none absolute inset-0"
-        initial={animated ? { opacity: 0, scale: 0.85 } : false}
-        animate={
-          animated
-            ? { opacity: [0, 0.75, 0.5, 0.75], scale: [0.85, 1.04, 0.98, 1.04] }
-            : { opacity: 0.7, scale: 1 }
-        }
-        transition={animated ? { duration: 4.2, repeat: Infinity, ease: 'easeInOut' } : { duration: 0.3 }}
-      />
+      {/* Focused spotlight — a pre-painted radial gradient, opened once. */}
+      <div className="kairos-launch__spot pointer-events-none absolute inset-0" aria-hidden="true" />
 
       <div className="relative flex flex-col items-center">
-        {/* Mark + orbiting arc */}
-        <div className="relative flex h-[132px] w-[132px] items-center justify-center">
-          {animated && (
-            <motion.svg
-              aria-hidden="true"
-              viewBox="0 0 132 132"
-              className="absolute inset-0"
-              initial={{ opacity: 0, rotate: -90 }}
-              animate={{ opacity: 1, rotate: 270 }}
-              transition={{
-                opacity: { duration: 0.5, delay: 0.15 },
-                rotate: { duration: 6.5, repeat: Infinity, ease: 'linear' },
-              }}
-            >
-              <circle
-                cx="66"
-                cy="66"
-                r="60"
-                fill="none"
-                stroke="var(--accent)"
-                strokeOpacity="0.55"
-                strokeWidth="1.4"
-                strokeLinecap="round"
-                strokeDasharray="52 325"
-              />
-              <circle cx="66" cy="6" r="2.6" fill="var(--accent-fg)" />
-            </motion.svg>
-          )}
-
-          <motion.div
-            className="relative"
-            initial={
-              animated
-                ? { opacity: 0, scale: 0.62, y: 26, rotate: -8, clipPath: 'inset(0% 0% 100% 0%)' }
-                : false
-            }
-            animate={{ opacity: 1, scale: 1, y: 0, rotate: 0, clipPath: 'inset(0% 0% 0% 0%)' }}
-            transition={
-              animated
-                ? {
-                    type: 'spring',
-                    stiffness: 190,
-                    damping: 17,
-                    mass: 0.9,
-                    clipPath: { duration: 0.5, ease: EASE_OUT },
-                  }
-                : { duration: 0.2 }
-            }
-          >
-            <KairosLogoMark size={92} className="text-[var(--accent-fg)]" />
-
-            {animated && (
-              <motion.span
-                aria-hidden="true"
-                className="kairos-launch-sweep pointer-events-none absolute inset-0"
-                initial={{ x: '-140%' }}
-                animate={{ x: '140%' }}
-                transition={{ duration: 1.15, ease: 'easeInOut', delay: 0.42 }}
-              />
-            )}
-          </motion.div>
-        </div>
-
-        {/* Wordmark, letter by letter */}
-        <div className="font-brand mt-6 flex items-baseline text-[22px] font-semibold tracking-[0.28em] text-[var(--text)]" aria-hidden="true">
-          {WORDMARK.map((letter, index) => (
-            <motion.span
-              key={`${letter}-${index}`}
-              initial={animated ? { opacity: 0, y: 12, filter: 'blur(4px)' } : false}
-              animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-              transition={{ duration: 0.45, ease: EASE_OUT, delay: 0.22 + index * 0.055 }}
-              className="inline-block"
-            >
-              {letter}
-            </motion.span>
-          ))}
-        </div>
-
-        <motion.span
-          className="mt-2.5 text-[11.5px] tracking-wide text-[var(--text-3)]"
-          initial={animated ? { opacity: 0, y: 6 } : false}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, ease: EASE_OUT, delay: 0.6 }}
+        <svg
+          viewBox={`0 0 ${STAGE} ${STAGE}`}
+          width={STAGE}
+          height={STAGE}
+          className="kairos-launch__art block"
+          aria-hidden="true"
+          focusable="false"
         >
-          نظم، عادت، تمرکز
-        </motion.span>
+          <defs>
+            {/* Silver: one user-space gradient, so all four contours share the
+                same illumination (a per-shape gradient would break the metal). */}
+            <linearGradient
+              id={metalId}
+              gradientUnits="userSpaceOnUse"
+              x1="0"
+              y1="0"
+              x2={KAIROS_MARK_VIEWBOX.width}
+              y2={KAIROS_MARK_VIEWBOX.height}
+            >
+              <stop offset="0%" stopColor="#FFFFFF" />
+              <stop offset="22%" stopColor="#EDEDF2" />
+              <stop offset="41%" stopColor="#ADADB9" />
+              <stop offset="55%" stopColor="#F6F6F9" />
+              <stop offset="73%" stopColor="#BEBEC9" />
+              <stop offset="88%" stopColor="#EFEFF4" />
+              <stop offset="100%" stopColor="#FFFFFF" />
+            </linearGradient>
 
-        <motion.div
-          className="mt-9 flex w-[132px] flex-col items-center gap-2.5"
-          initial={animated ? { opacity: 0, scaleX: 0.6 } : false}
-          animate={{ opacity: 1, scaleX: 1 }}
-          transition={{ duration: 0.4, ease: EASE_OUT, delay: 0.66 }}
+            {/* The travelling highlight band. */}
+            <linearGradient id={sweepId} x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0" />
+              <stop offset="34%" stopColor="#FFFFFF" stopOpacity="0.55" />
+              <stop offset="50%" stopColor="#FFFFFF" stopOpacity="1" />
+              <stop offset="66%" stopColor="#FFFFFF" stopOpacity="0.55" />
+              <stop offset="100%" stopColor="#FFFFFF" stopOpacity="0" />
+            </linearGradient>
+
+            {/* The sweep may only light the logo itself. */}
+            <mask id={maskId} maskUnits="userSpaceOnUse" x="0" y="0" width={STAGE} height={STAGE}>
+              <g transform={MARK_TRANSFORM} fill="#FFFFFF" fillRule="evenodd">
+                {KAIROS_MARK_PATHS.map((d) => (
+                  <path key={d} d={d} />
+                ))}
+              </g>
+            </mask>
+          </defs>
+
+          {/* Static silver body — the logo never moves or rotates. */}
+          <g transform={MARK_TRANSFORM} fill={`url(#${metalId})`} fillRule="evenodd">
+            {KAIROS_MARK_PATHS.map((d) => (
+              <path key={d} d={d} />
+            ))}
+          </g>
+
+          {/* Cinematic sweep: a rotated band translated through the mask. */}
+          <g mask={`url(#${maskId})`}>
+            <g className="kairos-launch__sweep-track">
+              <g transform={`rotate(20 ${STAGE / 2} ${STAGE / 2})`}>
+                <rect
+                  x={STAGE / 2 - 44}
+                  y="-10"
+                  width="88"
+                  height="170"
+                  fill={`url(#${sweepId})`}
+                  opacity="0.22"
+                />
+                <rect
+                  x={STAGE / 2 - 15}
+                  y="-10"
+                  width="30"
+                  height="170"
+                  fill={`url(#${sweepId})`}
+                />
+              </g>
+            </g>
+          </g>
+        </svg>
+
+        {/* Minimal circular loader, directly below the logo. */}
+        <div
+          role="progressbar"
+          aria-label="آماده‌سازی KAIROS"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={pct}
+          aria-busy={pct < 100}
+          className="kairos-launch__loader mt-9 flex items-center justify-center"
         >
-          <div className="relative w-full overflow-hidden rounded-full">
-            <LinearProgress
-              value={progress}
-              thickness={2.5}
-              label="آماده‌سازی KAIROS"
-              className="bg-[var(--surface-3)]"
+          <svg viewBox="0 0 38 38" width={38} height={38} aria-hidden="true" focusable="false">
+            <circle className="kairos-ring__track" cx="19" cy="19" r="16.5" />
+            <circle
+              className="kairos-ring__arc"
+              cx="19"
+              cy="19"
+              r="16.5"
+              strokeDasharray={RING_DASH}
             />
-            {animated && (
-              <span className="kairos-progress-sheen pointer-events-none absolute inset-y-0 start-0 w-1/3" />
-            )}
-          </div>
-          <span className="num-geo text-[9.5px] tabular-nums text-[var(--text-3)]" aria-hidden="true">
-            {pct}%
-          </span>
-        </motion.div>
+          </svg>
+        </div>
+
+        {/* Brand wordmark */}
+        <div
+          className="font-brand kairos-launch__word mt-6 text-[15px] font-semibold text-white"
+          aria-hidden="true"
+        >
+          KAIROS
+        </div>
       </div>
 
-      <span className="num-geo absolute bottom-[calc(1rem+var(--safe-bottom))] text-[9px] tracking-widest text-[var(--text-3)]">
+      <span className="num-geo kairos-launch__build absolute bottom-[calc(1rem+var(--safe-bottom))] text-[9px] tracking-widest">
         v{APP_VERSION} · b{BUILD_NUMBER}
       </span>
 
       <span className="sr-only">{pct >= 100 ? 'آماده شد' : `در حال آماده‌سازی، ${pct} درصد`}</span>
-    </motion.div>
+    </div>
   );
 }

@@ -121,7 +121,7 @@ export function CinematicFocusTimer({
         style={{
           background: isBreak
             ? 'radial-gradient(circle, rgba(169, 155, 240, 0.10) 0%, rgba(10, 10, 12, 0) 70%)'
-            : 'radial-gradient(circle, rgba(110, 86, 207, 0.16) 0%, rgba(10, 10, 12, 0) 70%)',
+            : 'radial-gradient(circle, rgba(109, 74, 255, 0.16) 0%, rgba(10, 10, 12, 0) 70%)',
         }}
       />
 
@@ -142,13 +142,13 @@ export function CinematicFocusTimer({
 
           <linearGradient id="chronoArcGrad" x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stopColor="#ECECEF" />
-            <stop offset="32%" stopColor="#A99BF0" />
-            <stop offset="100%" stopColor="#6E56CF" />
+            <stop offset="32%" stopColor="#B9A8FF" />
+            <stop offset="100%" stopColor="#6D4AFF" />
           </linearGradient>
 
           <linearGradient id="chronoBreakGrad" x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stopColor="#ECECEF" />
-            <stop offset="60%" stopColor="#A99BF0" />
+            <stop offset="60%" stopColor="#B9A8FF" />
             <stop offset="100%" stopColor="#6D44BA" />
           </linearGradient>
         </defs>
@@ -159,7 +159,7 @@ export function CinematicFocusTimer({
           cy={center}
           r={144}
           fill="none"
-          stroke="rgba(182, 154, 239, 0.10)"
+          stroke="rgba(163, 140, 255, 0.10)"
           strokeWidth="1"
         />
 
@@ -168,11 +168,11 @@ export function CinematicFocusTimer({
           const lit = t.index < activeTicks;
           const stroke = lit
             ? t.isMajor
-              ? '#A99BF0'
-              : '#6E56CF'
+              ? '#B9A8FF'
+              : '#6D4AFF'
             : t.isMajor
-            ? 'rgba(182, 154, 239, 0.28)'
-            : 'rgba(182, 154, 239, 0.11)';
+            ? 'rgba(163, 140, 255, 0.28)'
+            : 'rgba(163, 140, 255, 0.11)';
 
           return (
             <line
@@ -194,7 +194,7 @@ export function CinematicFocusTimer({
           cy={center}
           r={104}
           fill="url(#chronoFaceGrad)"
-          stroke="rgba(182, 154, 239, 0.15)"
+          stroke="rgba(163, 140, 255, 0.15)"
           strokeWidth="1"
         />
 
@@ -215,7 +215,7 @@ export function CinematicFocusTimer({
           cy={center}
           r={arcRadius}
           fill="none"
-          stroke="rgba(182, 154, 239, 0.09)"
+          stroke="rgba(163, 140, 255, 0.09)"
           strokeWidth="5.5"
         />
 
@@ -226,7 +226,7 @@ export function CinematicFocusTimer({
             cy={center}
             r={arcRadius}
             fill="none"
-            stroke="rgba(128, 82, 214, 0.24)"
+            stroke="rgba(109, 74, 255, 0.24)"
             strokeWidth="12"
             strokeLinecap="round"
             strokeDasharray={circumference}
@@ -254,7 +254,7 @@ export function CinematicFocusTimer({
         {/* Orbiting Luminous Pearl Tip */}
         {clamped > 0.3 && (
           <g>
-            <circle cx={tipX} cy={tipY} r={10} fill="rgba(182, 154, 239, 0.22)" />
+            <circle cx={tipX} cy={tipY} r={10} fill="rgba(163, 140, 255, 0.22)" />
             <circle cx={tipX} cy={tipY} r={4.5} fill="#ECECEF" />
           </g>
         )}
@@ -263,15 +263,15 @@ export function CinematicFocusTimer({
       {/* Centerpiece Editorial Telemetry Overlay */}
       <div className="pointer-events-none absolute inset-0 z-20 flex flex-col items-center justify-center px-8 text-center">
         {/* Phase Status Micro-Badge */}
-        <div className="mb-2 inline-flex items-center gap-1.5 rounded-full border border-[#A99BF0]/22 bg-[#1B152A]/90 px-2.5 py-0.5">
+        <div className="mb-2 inline-flex items-center gap-1.5 rounded-full border border-[#B9A8FF]/22 bg-[#1B152A]/90 px-2.5 py-0.5">
           <span
             className={`h-1.5 w-1.5 rounded-full ${
               isRunning
-                ? 'focus-live-dot bg-[#A99BF0]'
+                ? 'focus-live-dot bg-[#B9A8FF]'
                 : 'bg-[#6B6B75]'
             }`}
           />
-          <span className="text-[10px] font-semibold text-[#CFC6F0]">{phaseLabel}</span>
+          <span className="text-[10px] font-semibold text-[#D3C9FF]">{phaseLabel}</span>
         </div>
 
         {/* Monumental Condensed Tabular Clock */}
@@ -290,7 +290,7 @@ export function CinematicFocusTimer({
               >
                 {timeParts.hours}
               </span>
-              <span className="mx-0.5 text-[2.6rem] font-bold text-[#6E56CF]">:</span>
+              <span className="mx-0.5 text-[2.6rem] font-bold text-[#6D4AFF]">:</span>
             </>
           )}
           <span
@@ -303,7 +303,7 @@ export function CinematicFocusTimer({
             {timeParts.main}
           </span>
           <span
-            className={`mx-1 font-bold text-[#A99BF0]/85 ${
+            className={`mx-1 font-bold text-[#B9A8FF]/85 ${
               cinemaMode ? 'text-[3.6rem]' : 'text-[3.1rem]'
             }`}
           >
@@ -325,11 +325,11 @@ export function CinematicFocusTimer({
           {etaText ? (
             <>
               <span>پایان</span>
-              <Numeric value={etaText} className="font-semibold text-[#A99BF0]" />
+              <Numeric value={etaText} className="font-semibold text-[#B9A8FF]" />
             </>
           ) : (
             <span className="inline-flex items-center gap-1 text-[#9C9CA6]">
-              <Sparkles className="h-3 w-3 text-[#6E56CF]" />
+              <Sparkles className="h-3 w-3 text-[#6D4AFF]" />
               جریان تمرکز آزاد
             </span>
           )}
@@ -346,10 +346,10 @@ export function CinematicFocusTimer({
                   key={idx}
                   className={`h-1.5 rounded-full transition-all ${
                     done
-                      ? 'w-3.5 bg-[#A99BF0]'
+                      ? 'w-3.5 bg-[#B9A8FF]'
                       : current
-                      ? 'w-2.5 bg-[#6E56CF]'
-                      : 'w-1.5 bg-[#A99BF0]/20'
+                      ? 'w-2.5 bg-[#6D4AFF]'
+                      : 'w-1.5 bg-[#B9A8FF]/20'
                   }`}
                 />
               );
@@ -359,7 +359,7 @@ export function CinematicFocusTimer({
 
         {/* Linked Task Ribbon Inside Dial */}
         {linkedTaskTitle && (
-          <p className="mt-2 max-w-[162px] truncate rounded-lg bg-[#0A0A0C]/70 px-2.5 py-0.5 text-[10px] font-medium text-[#CFC6F0]">
+          <p className="mt-2 max-w-[162px] truncate rounded-lg bg-[#0A0A0C]/70 px-2.5 py-0.5 text-[10px] font-medium text-[#D3C9FF]">
             {linkedTaskTitle}
           </p>
         )}

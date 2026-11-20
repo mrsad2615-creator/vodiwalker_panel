@@ -57,7 +57,7 @@ describe('IndexedDB Persistence, Duplicate Prevention & Backup/Restore', () => {
       name: 'نوشیدن آب',
       description: '',
       icon: 'droplets',
-      accentColor: '#6E56CF',
+      accentColor: '#6D4AFF',
       scheduleType: 'daily',
       scheduledDays: [0, 1, 2, 3, 4, 5, 6],
       weeklyTarget: 7,

@@ -24,8 +24,8 @@ export function ToastHost({ toasts, onDismiss }: ToastHostProps) {
             toast.tone === 'warning'
               ? 'text-[#EF9095]'
               : toast.tone === 'reminder'
-              ? 'text-[#A99BF0]'
-              : 'text-[#A99BF0]';
+              ? 'text-[#B9A8FF]'
+              : 'text-[#B9A8FF]';
 
           return (
             <motion.div

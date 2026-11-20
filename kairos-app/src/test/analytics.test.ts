@@ -15,7 +15,7 @@ const SAMPLE_HABIT: Habit = {
   name: 'مطالعه روزانه',
   description: '25 صفحه',
   icon: 'book',
-  accentColor: '#6E56CF',
+  accentColor: '#6D4AFF',
   scheduleType: 'daily',
   scheduledDays: [0, 1, 2, 3, 4, 5, 6],
   weeklyTarget: 7,

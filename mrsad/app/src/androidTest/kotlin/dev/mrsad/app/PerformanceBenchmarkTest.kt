@@ -190,7 +190,9 @@ class PerformanceBenchmarkTest {
      * produced them.
      */
     private fun capture(context: android.content.Context, name: String) {
-        val directory = context.getExternalFilesDir(null) ?: return
+        // The application's own storage: it always exists, and the
+        // pictures are pulled from it with `run-as`.
+        val directory = context.filesDir
         try {
             val bitmap = InstrumentationRegistry.getInstrumentation()
                 .uiAutomation
@@ -345,7 +347,9 @@ class PerformanceBenchmarkTest {
                     return FrameStats(0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0)
                 }
                 val sorted = values.sorted()
-                val mean = sorted.sum().toDouble() / sorted.size
+                // The platform reports nanoseconds; every number that
+                // leaves this file is a millisecond.
+                val mean = sorted.sum().toDouble() / sorted.size / 1_000_000.0
                 return FrameStats(
                     frames = sorted.size,
                     meanMillis = mean,
@@ -353,7 +357,7 @@ class PerformanceBenchmarkTest {
                     p90 = percentile(sorted, 0.90),
                     p95 = percentile(sorted, 0.95),
                     p99 = percentile(sorted, 0.99),
-                    max = sorted.last().toDouble(),
+                    max = sorted.last() / 1_000_000.0,
                     jankyFrames = sorted.count { it > budgetMillis * 1_000_000L },
                 )
             }

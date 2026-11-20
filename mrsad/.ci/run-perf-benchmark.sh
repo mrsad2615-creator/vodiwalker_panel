@@ -48,6 +48,27 @@ for directory in app/build/outputs/androidTest-results app/build/reports/android
   fi
 done
 
+# The application writes its report into its own storage as well. If the
+# test XML was lost, that file is the second way to the same number.
+pull_report() {
+  for package in dev.mrsad.app.debug dev.mrsad.app; do
+    if adb shell "run-as $package cat files/mrsad-perf.json" > "$GRADLE_DIR/device-report.json" 2>/dev/null; then
+      if [ -s "$GRADLE_DIR/device-report.json" ]; then
+        return 0
+      fi
+    fi
+  done
+  rm -f "$GRADLE_DIR/device-report.json"
+  return 1
+}
+
+if [ -z "$REPORT" ]; then
+  echo "the report was not found in the test results, looking on the device"
+  if pull_report; then
+    REPORT=$(cat "$GRADLE_DIR/device-report.json")
+  fi
+fi
+
 if [ -z "$REPORT" ]; then
   echo "no performance report was produced by the benchmark" >&2
   exit 1
@@ -66,24 +87,30 @@ if [ -n "$SCREENSHOT_DIR" ]; then
   DEVICE_LISTING="$GRADLE_DIR/device-screenshots.txt"
   : > "$DEVICE_LISTING"
   for package in dev.mrsad.app.debug dev.mrsad.app; do
-    if adb shell "ls /sdcard/Android/data/$package/files/" >/dev/null 2>&1; then
-      echo "== /sdcard/Android/data/$package/files/ ==" >> "$DEVICE_LISTING"
-      adb shell "ls -la /sdcard/Android/data/$package/files/" >> "$DEVICE_LISTING" 2>&1
-      # The whole directory at once, and then every picture by name: some
-      # versions of adb refuse a path that ends in "/.".
-      adb pull "/sdcard/Android/data/$package/files/." "$SCREENSHOT_DIR" || true
-      adb shell "ls /sdcard/Android/data/$package/files/" 2>/dev/null \
+    # The pictures live in the application's own storage. `run-as` is the
+    # way in: the emulator's shell user cannot read the private data
+    # directory of an application directly.
+    if adb shell "run-as $package ls files" >/dev/null 2>&1; then
+      echo "== run-as $package ls files ==" >> "$DEVICE_LISTING"
+      adb shell "run-as $package ls -la files" >> "$DEVICE_LISTING" 2>&1
+      adb shell "run-as $package ls files" 2>/dev/null \
         | tr -d '\r' \
         | while read -r name; do
             case "$name" in
               *.png)
-                adb pull "/sdcard/Android/data/$package/files/$name" "$SCREENSHOT_DIR" || true
+                adb exec-out "run-as $package cat files/$name" > "$SCREENSHOT_DIR/$name" || true
                 ;;
             esac
           done
       break
     else
-      echo "== /sdcard/Android/data/$package/files/ is not there ==" >> "$DEVICE_LISTING"
+      echo "== run-as $package ls files failed ==" >> "$DEVICE_LISTING"
+    fi
+    # The external storage of the application is the second way in.
+    if adb shell "ls /sdcard/Android/data/$package/files/" >/dev/null 2>&1; then
+      echo "== /sdcard/Android/data/$package/files/ ==" >> "$DEVICE_LISTING"
+      adb shell "ls -la /sdcard/Android/data/$package/files/" >> "$DEVICE_LISTING" 2>&1
+      adb pull "/sdcard/Android/data/$package/files/." "$SCREENSHOT_DIR" || true
     fi
   done
 

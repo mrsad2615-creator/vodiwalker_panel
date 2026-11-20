@@ -20,7 +20,7 @@ import {
   Plus,
   Trash2,
   X,
-} from 'lucide-react';
+} from '@/components/ui/icons';
 import type { Habit, HabitLog } from '@/types/domain';
 import { clearHabitLog, deleteHabit, updateHabit, upsertHabitLog } from '@/lib/db';
 import { useFocusSessions, useHabitLogs, useHabits, useTasks } from '@/lib/queries';

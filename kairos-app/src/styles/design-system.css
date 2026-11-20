@@ -51,8 +51,8 @@
   --safe-max: max(var(--safe-top), var(--safe-bottom));
 
   /* Type stacks — two families only */
-  --font-persian: 'Vazirmatn', system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --font-numeric: 'Space Grotesk', 'Vazirmatn', ui-monospace, sans-serif;
+  --font-persian: 'Vazirmatn Variable', 'Vazirmatn', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-numeric: 'Space Grotesk Variable', 'Space Grotesk', 'Vazirmatn Variable', ui-monospace, sans-serif;
 }
 
 * {

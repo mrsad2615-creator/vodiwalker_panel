@@ -16,6 +16,7 @@ import type {
   ToastMessage,
   UserSettings,
 } from '@/types/domain';
+import { Capacitor } from '@capacitor/core';
 import { ensureSettings, recordFocusSession } from '@/lib/db';
 import { useSettings, useTasks } from '@/lib/queries';
 import { getTodayKey } from '@/lib/date';
@@ -23,11 +24,14 @@ import { createId } from '@/lib/format';
 import { initNativeShell, triggerHaptic } from '@/lib/native';
 import {
   fireInstantNotification,
+  getNotificationPermission,
   getTaskReminderDate,
   playLuxuryChime,
+  requestNotificationPermission,
   syncTaskRemindersNative,
 } from '@/lib/notifications';
 import { seedStarterWorkspaceIfEmpty } from '@/lib/seed';
+import { advanceFocusClock, focusSecondsAtCompletion } from '@/lib/focusTimer';
 
 export type PomodoroPhase = 'focus' | 'short_break' | 'long_break';
 
@@ -218,85 +222,120 @@ export function AppProvider({ children }: { children: ReactNode }) {
     []
   );
 
-  // Focus Timer Tick Loop
+  // First-run permission ask. Reminders default to ON, so the app has to hold
+  // the actual system permission — one prompt, once per install, never nagging.
   useEffect(() => {
-    if (!focus.isRunning) return;
-    const interval = window.setInterval(() => {
-      setFocus((prev) => {
-        if (!prev.isRunning) return prev;
-        if (prev.mode === 'free') {
-          return { ...prev, elapsedSeconds: prev.elapsedSeconds + 1 };
-        }
-
-        // Pomodoro countdown
-        if (prev.remainingSeconds > 1) {
-          return {
-            ...prev,
-            remainingSeconds: prev.remainingSeconds - 1,
-            elapsedSeconds: prev.phase === 'focus' ? prev.elapsedSeconds + 1 : prev.elapsedSeconds,
-          };
-        }
-
-        // Phase completed naturally!
-        const s = settingsRef.current;
-        playLuxuryChime(s.soundEnabled);
-        void triggerHaptic('success', s.hapticsEnabled);
-
-        if (prev.phase === 'focus') {
-          const totalFocused = prev.elapsedSeconds + 1;
-          void commitFocusRecord(
-            'pomodoro',
-            totalFocused,
-            prev.linkedTaskId,
-            prev.sessionStartedAt,
-            true
-          );
-          void fireInstantNotification(
-            'جلسه تمرکز با موفقیت پایان یافت',
-            `${Math.max(1, Math.round(totalFocused / 60))} دقیقه تمرکز در آمار شما ثبت شد.`,
-            { soundEnabled: false }
-          );
+    if (!ready || !settings.notificationsEnabled) return;
+    if (!Capacitor.isNativePlatform()) return;
+    const askedKey = 'kairos:notif-permission-asked';
+    try {
+      if (window.localStorage.getItem(askedKey)) return;
+    } catch {
+      return;
+    }
+    void (async () => {
+      const state = await getNotificationPermission();
+      if (state === 'prompt') {
+        const granted = await requestNotificationPermission();
+        if (granted === 'granted') {
           pushToast({
-            title: 'جلسه تمرکز ثبت شد',
-            description: `${Math.max(1, Math.round(totalFocused / 60))} دقیقه به آمار امروز اضافه شد. زمان استراحت کوتاه است.`,
+            title: 'یادآوری‌ها فعال شد',
+            description: 'کایروس می‌تواند سر ساعت برای وظایف شما اعلان بفرستد.',
             tone: 'success',
           });
-
-          const nextCycles = prev.completedCycles + 1;
-          const isLong = nextCycles % s.pomodoroCyclesBeforeLong === 0;
-          const nextPhase: PomodoroPhase = isLong ? 'long_break' : 'short_break';
-          const nextDuration = (isLong ? prev.longBreakMinutes : prev.shortBreakMinutes) * 60;
-
-          return {
-            ...prev,
-            isRunning: false,
-            phase: nextPhase,
-            completedCycles: nextCycles,
-            remainingSeconds: nextDuration,
-            elapsedSeconds: 0,
-            sessionStartedAt: null,
-          };
         }
+      }
+      try {
+        window.localStorage.setItem(askedKey, new Date().toISOString());
+      } catch {
+        // Private mode — the prompt simply appears again next launch.
+      }
+    })();
+  }, [ready, settings.notificationsEnabled, pushToast]);
 
-        // Break finished -> back to focus
+  // Focus Timer — wall-clock driven.
+  // The previous implementation added exactly one second per interval tick, so a
+  // locked screen, a throttled WebView or a dropped frame silently stretched or
+  // shrank the session. We now measure the real elapsed time between ticks and
+  // advance by that, which also catches up instantly after the app resumes.
+  const focusRef = useRef(focus);
+  focusRef.current = focus;
+  const lastFocusTickRef = useRef<number>(Date.now());
+
+  const advanceFocus = useCallback(
+    (deltaSeconds: number) => {
+      const prev = focusRef.current;
+      if (!prev.isRunning || deltaSeconds <= 0) return;
+
+      const { state: next, completedPhase } = advanceFocusClock(
+        prev,
+        deltaSeconds,
+        settingsRef.current.pomodoroCyclesBeforeLong
+      );
+      if (next === prev) return;
+
+      focusRef.current = next;
+      setFocus(next);
+      if (!completedPhase) return;
+
+      const s = settingsRef.current;
+      playLuxuryChime(s.soundEnabled);
+      void triggerHaptic('success', s.hapticsEnabled);
+
+      if (completedPhase === 'focus') {
+        const totalFocused = focusSecondsAtCompletion(prev, deltaSeconds);
+        void commitFocusRecord(
+          'pomodoro',
+          totalFocused,
+          prev.linkedTaskId,
+          prev.sessionStartedAt,
+          true
+        );
+        void fireInstantNotification(
+          'جلسه تمرکز با موفقیت پایان یافت',
+          `${Math.max(1, Math.round(totalFocused / 60))} دقیقه تمرکز در آمار شما ثبت شد.`,
+          { soundEnabled: false }
+        );
         pushToast({
-          title: 'زمان استراحت به پایان رسید',
-          description: 'آماده شروع چرخه جدید تمرکز هستید.',
-          tone: 'default',
+          title: 'جلسه تمرکز ثبت شد',
+          description: `${Math.max(1, Math.round(totalFocused / 60))} دقیقه به آمار امروز اضافه شد. اکنون زمان استراحت است.`,
+          tone: 'success',
         });
-        return {
-          ...prev,
-          isRunning: false,
-          phase: 'focus',
-          remainingSeconds: prev.focusMinutes * 60,
-          elapsedSeconds: 0,
-          sessionStartedAt: null,
-        };
-      });
-    }, 1000);
+        return;
+      }
 
-    return () => window.clearInterval(interval);
-  }, [focus.isRunning, commitFocusRecord, pushToast]);
+      pushToast({
+        title: 'زمان استراحت به پایان رسید',
+        description: 'آماده شروع چرخه جدید تمرکز هستید.',
+        tone: 'default',
+      });
+    },
+    [commitFocusRecord, pushToast]
+  );
+
+  const syncFocusClock = useCallback(() => {
+    const now = Date.now();
+    const deltaMs = now - lastFocusTickRef.current;
+    lastFocusTickRef.current = now;
+    if (deltaMs < 220) return; // ignore jitter, keep at least ~1s resolution
+    advanceFocus(Math.max(1, Math.round(deltaMs / 1000)));
+  }, [advanceFocus]);
+
+  useEffect(() => {
+    if (!focus.isRunning) return;
+    lastFocusTickRef.current = Date.now();
+    const interval = window.setInterval(syncFocusClock, 250);
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') syncFocusClock();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', syncFocusClock);
+    return () => {
+      window.clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', syncFocusClock);
+    };
+  }, [focus.isRunning, syncFocusClock]);
 
   const setFocusMode = useCallback((mode: FocusModeType) => {
     setFocus((prev) => ({

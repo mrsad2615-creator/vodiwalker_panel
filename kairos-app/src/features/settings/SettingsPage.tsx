@@ -11,7 +11,7 @@ import {
   Upload,
   User,
   Volume2,
-} from 'lucide-react';
+} from '@/components/ui/icons';
 import {
   clearAllUserData,
   db,
@@ -33,7 +33,7 @@ import { Numeric } from '@/components/ui/Numeric';
 import { NumericInput } from '@/components/ui/NumericInput';
 import { KairosLogoMark } from '@/components/ui/KairosMark';
 import { SafeAreaDiagnostics } from '@/components/ui/SafeAreaDiagnostics';
-import type { KairosBackupPayload } from '@/types/domain';
+import { exportBackupFile, readBackupFile } from '@/lib/backup';
 
 export function SettingsPage() {
   const { settings, pushToast } = useApp();
@@ -113,20 +113,28 @@ export function SettingsPage() {
 
   const handleExport = async () => {
     const data = await exportBackup();
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `kairos-backup-${new Date().toISOString().slice(0, 10)}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-    pushToast({ title: 'فایل پشتیبان ذخیره شد', tone: 'success' });
+    const result = await exportBackupFile(data);
+    if (!result.ok) {
+      pushToast({
+        title: 'ذخیرهٔ پشتیبان انجام نشد',
+        description: 'دسترسی به فایل‌ها ممکن نبود؛ دوباره تلاش کنید.',
+        tone: 'warning',
+      });
+      return;
+    }
+    pushToast({
+      title: result.via === 'share' ? 'پشتیبان آمادهٔ اشتراک‌گذاری است' : 'فایل پشتیبان ذخیره شد',
+      description:
+        result.via === 'share'
+          ? 'فایل JSON ساخته شد؛ از پنجرهٔ باز‌شده در درایو، تلگرام یا فایل‌ها ذخیره‌اش کنید.'
+          : 'فایل JSON در پوشهٔ دانلود ذخیره شد.',
+      tone: 'success',
+    });
   };
 
   const handleImportFile = async (file: File) => {
     try {
-      const raw = await file.text();
-      const parsed = JSON.parse(raw) as KairosBackupPayload;
+      const parsed = await readBackupFile(file);
       await importBackup(parsed);
       pushToast({
         title: 'بازیابی پشتیبان با موفقیت انجام شد',

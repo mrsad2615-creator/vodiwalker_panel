@@ -2,10 +2,12 @@
 <html lang="fa" dir="rtl" class="dark">
   <head>
     <meta charset="UTF-8" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
-    />
+    <!-- Deliberately NO viewport-fit=cover.
+         Android 15+ forces edge-to-edge, and Capacitor only lets the WebView
+         handle the insets itself when the page asks for `cover`. Without it
+         Capacitor pads the WebView by the real status-bar / gesture-bar insets
+         on every WebView version, which is the deterministic behaviour we want. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-max-scale=5" />
     <meta name="theme-color" content="#0A0A0C" />
     <meta name="background-color" content="#0A0A0C" />
     <meta name="mobile-web-app-capable" content="yes" />
@@ -21,7 +23,7 @@
     <link rel="apple-touch-icon" href="/kairos-icon-192.png" />
     <title>KAIROS | کایروس — استودیوی نظم و تمرکز</title>
   </head>
-  <body class="bg-[#09090D] text-[#F4F1F8] antialiased selection:bg-[#8052D6]/35 selection:text-[#F4F1F8]">
+  <body class="bg-[#0A0A0C] text-[#ECECEF] antialiased selection:bg-[#6E56CF]/35 selection:text-[#ECECEF]">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

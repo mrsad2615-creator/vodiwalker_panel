@@ -9,7 +9,7 @@ import {
   Flame,
   Plus,
   Timer,
-} from 'lucide-react';
+} from '@/components/ui/icons';
 import type { Task } from '@/types/domain';
 import {
   addDays,

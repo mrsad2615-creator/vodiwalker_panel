@@ -7,7 +7,7 @@ import {
   Minus,
   Trophy,
   X,
-} from 'lucide-react';
+} from '@/components/ui/icons';
 import type { FocusSession, Habit, HabitLog, Task } from '@/types/domain';
 import { computeAnnualHeatmap, computeHabitStats, type HeatmapDayCell } from '@/lib/analytics';
 import {

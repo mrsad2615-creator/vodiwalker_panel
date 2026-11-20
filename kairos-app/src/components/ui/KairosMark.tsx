@@ -15,7 +15,7 @@ import {
   Sparkles,
   Sun,
   Target,
-} from 'lucide-react';
+} from '@/components/ui/icons';
 import type { HabitIconName } from '@/types/domain';
 
 /**

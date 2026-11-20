@@ -39,6 +39,10 @@ export function SafeAreaDiagnostics() {
         <dd className="num-geo text-end text-[var(--text-3)]">
           {capacitor.top} · {capacitor.bottom}
         </dd>
+        <dt>حالت چیدمان</dt>
+        <dd className="text-end text-[var(--text-3)]">
+          {applied.top + applied.bottom > 0 ? 'CSS (edge-to-edge)' : 'بومی (پدینگ WebView)'}
+        </dd>
         <dt>پلتفرم</dt>
         <dd className="num-geo text-end text-[var(--text-3)]">
           {platform}

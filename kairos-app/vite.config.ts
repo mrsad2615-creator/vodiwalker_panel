@@ -81,7 +81,7 @@ export default defineConfig({
         manualChunks: {
           vendor: ['react', 'react-dom', 'framer-motion'],
           db: ['dexie', 'dexie-react-hooks', 'jalaali-js'],
-          icons: ['lucide-react'],
+          icons: ['@phosphor-icons/react'],
         },
       },
     },

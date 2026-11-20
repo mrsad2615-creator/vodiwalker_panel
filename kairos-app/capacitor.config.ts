@@ -14,11 +14,12 @@ const config: CapacitorConfig = {
     webContentsDebuggingEnabled: false,
   },
   plugins: {
-    // Capacitor 8 edge-to-edge: inject --safe-area-inset-* so the sticky header
-    // and the tab bar can stay clear of the status bar, notch and gesture bar.
+    // Capacitor 8 / Android 15+ edge-to-edge. Because index.html does NOT ask
+    // for viewport-fit=cover, Capacitor pads the WebView itself with the real
+    // status-bar, notch and gesture-bar insets on every WebView version — the
+    // one behaviour that cannot be broken by a WebView update.
     SystemBars: {
-      insetsHandling: 'css',
-      initialViewportFitValueHint: 'cover',
+      insetsHandling: 'native',
       style: 'DARK',
     },
     SplashScreen: {

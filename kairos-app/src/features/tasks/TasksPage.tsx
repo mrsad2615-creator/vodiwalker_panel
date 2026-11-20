@@ -14,7 +14,7 @@ import {
   Search,
   SlidersHorizontal,
   Trash2,
-} from 'lucide-react';
+} from '@/components/ui/icons';
 import type {
   EisenhowerQuadrant,
   Task,

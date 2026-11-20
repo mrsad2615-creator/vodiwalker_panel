@@ -9,7 +9,7 @@ import {
   Target,
   Timer,
   AlertCircle,
-} from 'lucide-react';
+} from '@/components/ui/icons';
 import type { Goal, Habit, Task } from '@/types/domain';
 import {
   clearAllUserData,

@@ -9,7 +9,7 @@ import {
   MoreHorizontal,
   Settings,
   Timer,
-} from 'lucide-react';
+} from '@/components/ui/icons';
 import type { NavTab } from '@/types/domain';
 import { useApp } from '@/context/AppContext';
 import { KairosMarkTile } from '@/components/ui/KairosMark';
@@ -121,8 +121,10 @@ export function AppShell({ children }: { children: ReactNode }) {
                   }`}
                 >
                   <Icon
-                    className={`h-[18px] w-[18px] ${isActive ? 'text-[var(--accent-fg)]' : ''}`}
-                    strokeWidth={isActive ? 2 : 1.7}
+                    size={18}
+                    weight={isActive ? 'fill' : 'regular'}
+                    className={isActive ? 'text-[var(--accent-fg)]' : ''}
+                    aria-hidden="true"
                   />
                   <span className="text-[10px] leading-none">{item.label}</span>
                 </button>
@@ -142,8 +144,10 @@ export function AppShell({ children }: { children: ReactNode }) {
               }`}
             >
               <MoreHorizontal
-                className={`h-[18px] w-[18px] ${isSecondaryActive ? 'text-[var(--accent-fg)]' : ''}`}
-                strokeWidth={isSecondaryActive ? 2 : 1.7}
+                size={18}
+                weight={isSecondaryActive ? 'fill' : 'regular'}
+                className={isSecondaryActive ? 'text-[var(--accent-fg)]' : ''}
+                aria-hidden="true"
               />
               <span className="text-[10px] leading-none">بیشتر</span>
             </button>
@@ -181,7 +185,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                           isActive ? 'text-[var(--accent-fg)]' : 'text-[var(--text-2)]'
                         }`}
                       >
-                        <Icon className="h-4 w-4" strokeWidth={1.8} />
+                        <Icon size={16} weight={isActive ? 'fill' : 'regular'} aria-hidden="true" />
                       </span>
                       <span className="min-w-0 flex-1">
                         <span className="block text-[13px] font-medium text-[var(--text)]">

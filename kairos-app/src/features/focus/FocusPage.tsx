@@ -17,7 +17,7 @@ import {
   Volume2,
   VolumeX,
   Waves,
-} from 'lucide-react';
+} from '@/components/ui/icons';
 import { deleteFocusSession, setTaskStatus, updateSettings } from '@/lib/db';
 import { useFocusSessions, useTasks } from '@/lib/queries';
 import { formatJalaaliShort, getTodayKey } from '@/lib/date';

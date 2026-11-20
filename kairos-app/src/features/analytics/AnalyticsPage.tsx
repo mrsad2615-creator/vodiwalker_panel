@@ -10,7 +10,7 @@ import {
   Flame,
   Sparkles,
   TrendingUp,
-} from 'lucide-react';
+} from '@/components/ui/icons';
 import { useFocusSessions, useHabitLogs, useHabits, useTasks } from '@/lib/queries';
 import {
   computeAnnualHeatmap,

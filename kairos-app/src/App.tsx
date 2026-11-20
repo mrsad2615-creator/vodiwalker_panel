@@ -4,6 +4,7 @@ import { AppProvider, useApp } from '@/context/AppContext';
 import { AppShell } from '@/components/layout/AppShell';
 import { LaunchScreen } from '@/components/ui/LaunchScreen';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
+import { IconContext } from '@/components/ui/icons';
 import { DashboardPage } from '@/features/dashboard/DashboardPage';
 import { TasksPage } from '@/features/tasks/TasksPage';
 import { TaskModal } from '@/features/tasks/TaskModal';
@@ -66,8 +67,8 @@ function KairosRouter() {
     }
     const weights: Array<Promise<unknown>> = [];
     try {
-      weights.push(fonts.load('600 16px Vazirmatn'));
-      weights.push(fonts.load('600 16px "Space Grotesk"'));
+      weights.push(fonts.load('600 16px "Vazirmatn Variable"'));
+      weights.push(fonts.load('600 16px "Space Grotesk Variable"'));
     } catch {
       // Font loading API quirks — the readiness promise below still gates us.
     }
@@ -145,12 +146,18 @@ function KairosRouter() {
   );
 }
 
+/** Hoisted so icons never re-render from a fresh context object. */
+const ICON_CONTEXT = { weight: 'regular', size: 18, mirrored: false } as const;
+
 export default function App() {
   return (
     <ErrorBoundary>
-      <AppProvider>
-        <KairosRouter />
-      </AppProvider>
+      {/* One optical weight for every icon in the app (Phosphor `regular`). */}
+      <IconContext.Provider value={ICON_CONTEXT}>
+        <AppProvider>
+          <KairosRouter />
+        </AppProvider>
+      </IconContext.Provider>
     </ErrorBoundary>
   );
 }

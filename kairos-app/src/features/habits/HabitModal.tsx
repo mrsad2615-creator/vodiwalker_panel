@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Trash2 } from 'lucide-react';
+import { Trash2 } from '@/components/ui/icons';
 import type {
   Habit,
   HabitIconName,

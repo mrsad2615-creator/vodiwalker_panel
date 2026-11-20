@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Bell, Calendar, Check, Clock, Plus, Repeat, Tag, Trash2, X } from 'lucide-react';
+import { Bell, Calendar, Check, Clock, Plus, Repeat, Tag, Trash2, X } from '@/components/ui/icons';
 import type {
   EisenhowerQuadrant,
   RecurrenceRule,

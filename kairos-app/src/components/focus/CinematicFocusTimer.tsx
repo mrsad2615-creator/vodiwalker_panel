@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Sparkles } from 'lucide-react';
+import { Sparkles } from '@/components/ui/icons';
 import type { FocusModeType } from '@/types/domain';
 import type { PomodoroPhase } from '@/context/AppContext';
 import { Numeric } from '@/components/ui/Numeric';

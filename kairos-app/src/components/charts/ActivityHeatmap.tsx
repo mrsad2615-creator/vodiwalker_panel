@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Columns3, Rows3 } from 'lucide-react';
+import { Columns3, Rows3 } from '@/components/ui/icons';
 import type { HeatmapCellState, HeatmapDayCell } from '@/lib/analytics';
 import { getJalaaliMonthName, PERSIAN_WEEKDAYS_SHORT } from '@/lib/date';
 import { Numeric } from '@/components/ui/Numeric';

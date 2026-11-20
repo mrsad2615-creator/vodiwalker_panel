@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion';
-import { Bell, CheckCircle2, Info, AlertTriangle, X } from 'lucide-react';
+import { Bell, CheckCircle2, Info, AlertTriangle, X } from '@/components/ui/icons';
 import type { ToastMessage } from '@/types/domain';
 
 interface ToastHostProps {

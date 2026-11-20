@@ -1,57 +1,74 @@
 # MRSAD — performance comparison
 
-Both rows were measured by the same benchmark, on the same emulator,
-driven by the same script. The frame numbers come from the platform's
-own `FrameMetrics`, and the CPU and memory numbers from the process
-itself.
+Both sides were measured by the same benchmark, on the same emulator,
+driven by the same script, several times each. The frame numbers come
+from the platform's own `FrameMetrics`, and the CPU and memory numbers
+from the process itself.
 
-- baseline: `1.1.0-debug` · cpu 79% · pss 171304 kB
-- redesign: `1.1.0-debug` · cpu 72% · pss 170283 kB
+- baseline: 5 runs
+- redesign: 5 runs
+
+The number of each column is the middle of the runs. The verdict says
+whether the difference is larger than the spread of the runs; a
+difference *inside the spread* is the machine talking, not the
+application.
+
+- versions: 1.1.0-debug
 
 ## Frames, whole session
 
 | metric | baseline | redesign | change |
 | --- | --- | --- | --- |
-| frames | 521 | 512 | -1.7% worse |
-| mean frame (ms) | 27 | 25 | -7.4% better |
-| p50 frame (ms) | 20 | 20 | +0.0% same |
-| p90 frame (ms) | 36 | 36 | +0.0% same |
-| p95 frame (ms) | 39 | 36 | -7.7% better |
-| p99 frame (ms) | 133 | 100 | -24.8% better |
-| worst frame (ms) | 150 | 284 | +89.3% worse |
-| jank (%) | 100 | 100 | +0.0% same |
+| frames | 522 | 509 | -2.5% worse |
+| mean frame (ms) | 28 | 31 | +10.7% inside the spread |
+| p50 frame (ms) | 20 | 20 | +0.0% inside the spread |
+| p90 frame (ms) | 36 | 38 | +5.6% inside the spread |
+| p95 frame (ms) | 37 | 50 | +35.1% worse |
+| p99 frame (ms) | 132 | 151 | +14.4% worse |
+| worst frame (ms) | 150 | 230 | +53.3% worse |
+| jank (%) | 100 | 100 | +0.0% inside the spread |
 
 ## Frames, per phase
 
 | phase | metric | baseline | redesign | change |
 | --- | --- | --- | --- | --- |
-| idle | idle (the object turns on its own) · p50 (ms) | 20 | 19 | -5.0% better |
-| idle | idle (the object turns on its own) · p95 (ms) | 39 | 26 | -33.3% better |
-| idle | idle (the object turns on its own) · jank (%) | 100 | 100 | +0.0% same |
-| scroll | scroll · p50 (ms) | 22 | 35 | +59.1% worse |
-| scroll | scroll · p95 (ms) | 45 | 38 | -15.6% better |
-| scroll | scroll · jank (%) | 100 | 100 | +0.0% same |
-| touch | touch (the object under the finger) · p50 (ms) | 20 | 19 | -5.0% better |
-| touch | touch (the object under the finger) · p95 (ms) | 38 | 97 | +155.3% worse |
-| touch | touch (the object under the finger) · jank (%) | 100 | 100 | +0.0% same |
-| navigate | navigate · p50 (ms) | 20 | 19 | -5.0% better |
-| navigate | navigate · p95 (ms) | 37 | 21 | -43.2% better |
-| navigate | navigate · jank (%) | 100 | 100 | +0.0% same |
-
-> Every frame of **both** revisions is late against the frame
-> budget of the emulator. A software-rendered x86_64 emulator does
-> not draw in 16.67 ms, so the jank column sits at its ceiling for
-> both and cannot separate them: the percentile columns carry the
-> comparison, and the screenshot rows show what was on the screen.
+| idle | idle (the object turns on its own) · p50 (ms) | 19 | 20 | +5.3% inside the spread |
+| idle | idle (the object turns on its own) · p95 (ms) | 22 | 33 | +50.0% inside the spread |
+| idle | idle (the object turns on its own) · jank (%) | 100 | 100 | +0.0% inside the spread |
+| scroll | scroll · p50 (ms) | 36 | 36 | +0.0% inside the spread |
+| scroll | scroll · p95 (ms) | 50 | 53 | +6.0% inside the spread |
+| scroll | scroll · jank (%) | 100 | 100 | +0.0% inside the spread |
+| touch | touch (the object under the finger) · p50 (ms) | 36 | 36 | +0.0% inside the spread |
+| touch | touch (the object under the finger) · p95 (ms) | 37 | 150 | +305.4% worse |
+| touch | touch (the object under the finger) · jank (%) | 100 | 100 | +0.0% inside the spread |
+| navigate | navigate · p50 (ms) | 19 | 20 | +5.3% inside the spread |
+| navigate | navigate · p95 (ms) | 34 | 36 | +5.9% inside the spread |
+| navigate | navigate · jank (%) | 100 | 100 | +0.0% inside the spread |
 
 ## The process
 
 | metric | baseline | redesign | change |
 | --- | --- | --- | --- |
-| CPU time (ms) | 7235 | 6533 | -9.7% better |
-| CPU load (%) | 79 | 72 | -8.9% better |
-| PSS at the end (kB) | 171304 | 170283 | -0.6% same |
-| Java heap in use (kB) | 9092 | 8961 | -1.4% better |
-| native heap (kB) | 19555 | 19424 | -0.7% same |
+| CPU time (ms) | 6027 | 7715 | +28.0% worse |
+| CPU load (%) | 66 | 83 | +25.8% worse |
+| PSS at the end (kB) | 169269 | 167821 | -0.9% inside the spread |
+| PSS growth (kB) | -939 | 108 | -111.5% inside the spread |
+| Java heap in use (kB) | 8743 | 7694 | -12.0% inside the spread |
+| native heap (kB) | 19019 | 18817 | -1.1% inside the spread |
+
+## The spread of the runs
+
+The lowest and the highest value of every run of each side. A
+difference that is smaller than this is not a difference.
+
+| metric | baseline | redesign |
+| --- | --- | --- |
+| p50 frame (ms) | 20–35 | 20–36 |
+| p95 frame (ms) | 36–37 | 50–67 |
+| worst frame (ms) | 136–180 | 201–367 |
+| CPU load (%) | 64–69 | 77–86 |
+| PSS at the end (kB) | 166430–172374 | 167140–168921 |
+
+## The frame budget
 
 A frame longer than 17 ms missed its deadline on the 59 Hz display of the emulator and is counted as jank.

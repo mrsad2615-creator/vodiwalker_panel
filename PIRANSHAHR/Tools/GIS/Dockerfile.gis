@@ -1,0 +1,11 @@
+FROM qgis/qgis:latest
+# GIS pipeline for real OSM PBF processing (run locally or CI)
+RUN apt-get update && apt-get install -y osmium-tool gdal-bin python3-pip
+RUN pip install pyosmium gdal rasterio pyproj
+WORKDIR /gis
+COPY osm_to_geojson.py ue_coord_transform.py ./
+ENTRYPOINT ["python3", "osm_to_geojson.py"]
+# Usage:
+# docker build -f Dockerfile.gis -t piranshahr-gis Tools/GIS/
+# docker run -v $(pwd)/PIRANSHAHR:/gis/piranshahr piranshahr-gis --pbf /gis/piranshahr/piranshahr.osm.pbf --output /gis/piranshahr/Content/GIS/Piranshahr_Center.geojson
+# Download PBF: https://download.geofabrik.de/asia/iran.html → clip with osmium extract -b 45.10,36.65,45.20,36.75

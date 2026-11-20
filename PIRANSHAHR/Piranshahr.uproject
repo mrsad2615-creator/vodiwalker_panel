@@ -1,0 +1,28 @@
+{
+	"FileVersion": 3,
+	"EngineAssociation": "5.4",
+	"Category": "",
+	"Description": "PIRANSHAHR — Photorealistic open-world driving simulator (Piranshahr, Iran). Android Vulkan, World Partition, Chaos Vehicles, Persian RTL.",
+	"Modules": [
+		{
+			"Name": "Piranshahr",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		}
+	],
+	"Plugins": [
+		{ "Name": "WorldPartitionHLODUtilities", "Enabled": true },
+		{ "Name": "ChaosVehiclesPlugin", "Enabled": true },
+		{ "Name": "MassAI", "Enabled": true },
+		{ "Name": "MassGameplay", "Enabled": true },
+		{ "Name": "StateTree", "Enabled": true },
+		{ "Name": "ModelingToolsEditorMode", "Enabled": true },
+		{ "Name": "AndroidFileServer", "Enabled": true },
+		{ "Name": "AndroidPermission", "Enabled": true },
+		{ "Name": "OnlineSubsystemNull", "Enabled": true },
+		{ "Name": "Metasound", "Enabled": true },
+		{ "Name": "CommonUI", "Enabled": true },
+		{ "Name": "EnhancedInput", "Enabled": true }
+	],
+	"TargetPlatforms": [ "Android" ]
+}

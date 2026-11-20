@@ -1,0 +1,24 @@
+# PIRANSHAHR — UE5
+Binaries/
+DerivedDataCache/
+Intermediate/
+Saved/
+*.o
+*.obj
+
+# Web prototype — we want dist but not node_modules (heavy)
+web-prototype/node_modules/
+web-prototype/.vite/
+PIRANSHAHR/Binaries/
+PIRANSHAHR/Intermediate/
+PIRANSHAHR/Saved/
+PIRANSHAHR/DerivedDataCache/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# OS
+.DS_Store
+Thumbs.db

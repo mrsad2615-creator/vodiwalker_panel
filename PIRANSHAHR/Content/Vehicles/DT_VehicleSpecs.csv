@@ -1,0 +1,6 @@
+RowName,DisplayNameFa,Manufacturer,MassKg,EngineMaxTorque,EngineMaxRPM,DifferentialRatio,MaxSteerAngleDeg,FuelCapacityL,FuelConsumptionPer100km,TopSpeedKmh,DriveType,Notes
+Peykan,پیکان,ایران‌خودرو,1100,105,5000,4.1,38,45,10.5,160,RWD,Hero car — most common in Piranshahr
+Samand,سمند,ایران‌خودرو,1220,155,6000,3.9,35,60,8.2,185,FWD,National car
+Pride,پراید,سایپا,860,103,5500,4.3,40,37,7.0,170,FWD,Lightweight city car
+Corolla,تویوتا کرولا,Toyota,1310,142,6200,4.0,34,50,6.5,190,FWD,International reference
+Logan,رنو لوگان,Renault,1106,148,5750,4.2,36,50,7.8,175,FWD,Common import

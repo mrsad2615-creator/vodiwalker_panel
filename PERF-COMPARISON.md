@@ -5,37 +5,37 @@ driven by the same script. The frame numbers come from the platform's
 own `FrameMetrics`, and the CPU and memory numbers from the process
 itself.
 
-- baseline: `1.1.0-debug` · cpu 58% · pss 167890 kB
-- redesign: `1.1.0-debug` · cpu 78% · pss 170762 kB
+- baseline: `1.1.0-debug` · cpu 79% · pss 171304 kB
+- redesign: `1.1.0-debug` · cpu 72% · pss 170283 kB
 
 ## Frames, whole session
 
 | metric | baseline | redesign | change |
 | --- | --- | --- | --- |
-| frames | 520 | 519 | -0.2% same |
-| mean frame (ms) | 25 | 31 | +24.0% worse |
-| p50 frame (ms) | 20 | 21 | +5.0% worse |
-| p90 frame (ms) | 36 | 50 | +38.9% worse |
-| p95 frame (ms) | 36 | 51 | +41.7% worse |
-| p99 frame (ms) | 111 | 148 | +33.3% worse |
-| worst frame (ms) | 136 | 300 | +120.6% worse |
+| frames | 521 | 512 | -1.7% worse |
+| mean frame (ms) | 27 | 25 | -7.4% better |
+| p50 frame (ms) | 20 | 20 | +0.0% same |
+| p90 frame (ms) | 36 | 36 | +0.0% same |
+| p95 frame (ms) | 39 | 36 | -7.7% better |
+| p99 frame (ms) | 133 | 100 | -24.8% better |
+| worst frame (ms) | 150 | 284 | +89.3% worse |
 | jank (%) | 100 | 100 | +0.0% same |
 
 ## Frames, per phase
 
 | phase | metric | baseline | redesign | change |
 | --- | --- | --- | --- | --- |
-| idle | idle (the object turns on its own) · p50 (ms) | 19 | 20 | +5.3% worse |
-| idle | idle (the object turns on its own) · p95 (ms) | 20 | 40 | +100.0% worse |
+| idle | idle (the object turns on its own) · p50 (ms) | 20 | 19 | -5.0% better |
+| idle | idle (the object turns on its own) · p95 (ms) | 39 | 26 | -33.3% better |
 | idle | idle (the object turns on its own) · jank (%) | 100 | 100 | +0.0% same |
-| scroll | scroll · p50 (ms) | 35 | 37 | +5.7% worse |
-| scroll | scroll · p95 (ms) | 37 | 58 | +56.8% worse |
+| scroll | scroll · p50 (ms) | 22 | 35 | +59.1% worse |
+| scroll | scroll · p95 (ms) | 45 | 38 | -15.6% better |
 | scroll | scroll · jank (%) | 100 | 100 | +0.0% same |
-| touch | touch (the object under the finger) · p50 (ms) | 36 | 21 | -41.7% better |
-| touch | touch (the object under the finger) · p95 (ms) | 37 | 145 | +291.9% worse |
+| touch | touch (the object under the finger) · p50 (ms) | 20 | 19 | -5.0% better |
+| touch | touch (the object under the finger) · p95 (ms) | 38 | 97 | +155.3% worse |
 | touch | touch (the object under the finger) · jank (%) | 100 | 100 | +0.0% same |
-| navigate | navigate · p50 (ms) | 19 | 20 | +5.3% worse |
-| navigate | navigate · p95 (ms) | 35 | 50 | +42.9% worse |
+| navigate | navigate · p50 (ms) | 20 | 19 | -5.0% better |
+| navigate | navigate · p95 (ms) | 37 | 21 | -43.2% better |
 | navigate | navigate · jank (%) | 100 | 100 | +0.0% same |
 
 > Every frame of **both** revisions is late against the frame
@@ -48,10 +48,10 @@ itself.
 
 | metric | baseline | redesign | change |
 | --- | --- | --- | --- |
-| CPU time (ms) | 5184 | 7231 | +39.5% worse |
-| CPU load (%) | 58 | 78 | +34.5% worse |
-| PSS at the end (kB) | 167890 | 170762 | +1.7% worse |
-| Java heap in use (kB) | 6373 | 9703 | +52.3% worse |
-| native heap (kB) | 17848 | 19012 | +6.5% worse |
+| CPU time (ms) | 7235 | 6533 | -9.7% better |
+| CPU load (%) | 79 | 72 | -8.9% better |
+| PSS at the end (kB) | 171304 | 170283 | -0.6% same |
+| Java heap in use (kB) | 9092 | 8961 | -1.4% better |
+| native heap (kB) | 19555 | 19424 | -0.7% same |
 
 A frame longer than 17 ms missed its deadline on the 59 Hz display of the emulator and is counted as jank.

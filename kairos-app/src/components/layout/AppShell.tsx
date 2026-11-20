@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   BarChart3,
   CalendarDays,
@@ -43,7 +43,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     if (tab === activeTab) return;
     void triggerHaptic('light', settings.hapticsEnabled);
     setActiveTab(tab);
-    window.scrollTo({ top: 0 });
+    // Scroll reset happens in the effect below — the document no longer scrolls.
   };
 
   // Android hardware back: close sheet → go home → leave app (never kill mid-flow)
@@ -72,12 +72,23 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   const isSecondaryActive = SECONDARY_TABS.some((t) => t.id === activeTab);
 
+  // The shell scrolls its <main>, not the document, so a tab change has to reset
+  // the scroll position explicitly (otherwise you land mid-page on a new screen).
+  const scrollRef = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    const node = scrollRef.current;
+    if (!node) return;
+    if (typeof node.scrollTo === 'function') node.scrollTo({ top: 0, behavior: 'auto' });
+    else node.scrollTop = 0;
+  }, [activeTab]);
+
   return (
-    <div className="kairos-ambient-bg min-h-[100dvh] w-full">
+    <div className="kairos-ambient-bg h-full w-full">
       <ToastHost toasts={toasts} onDismiss={dismissToast} />
 
-      <div className="app-safe-frame relative mx-auto flex min-h-[100dvh] w-full max-w-[480px] flex-col">
-        <header className="app-safe-header sticky top-0 z-30 flex items-center justify-between border-b border-[var(--border)] bg-[var(--bg)] px-4 pb-3 backdrop-blur-md">
+      {/* Shell owns the viewport; only `.app-scroll` moves. */}
+      <div className="app-shell app-safe-frame relative mx-auto w-full max-w-[480px]">
+        <header className="app-safe-header relative z-30 flex shrink-0 items-center justify-between border-b border-[var(--border)] bg-[var(--bg)] px-4 pb-3">
           <button
             type="button"
             onClick={() => handleNav('dashboard')}
@@ -101,7 +112,9 @@ export function AppShell({ children }: { children: ReactNode }) {
           )}
         </header>
 
-        <main className="app-safe-content flex-1 px-4 pt-4">{children}</main>
+        <main ref={scrollRef} className="app-scroll app-safe-content px-4 pt-4">
+          {children}
+        </main>
 
         <nav
           aria-label="ناوبری اصلی"

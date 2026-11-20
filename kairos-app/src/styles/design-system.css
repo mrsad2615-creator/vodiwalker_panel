@@ -67,26 +67,51 @@ body {
   background-color: var(--bg);
   color: var(--text);
   font-family: var(--font-persian);
-  min-height: 100dvh;
-  overflow-x: hidden;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
 }
 
-body {
-  overscroll-behavior-y: none;
-}
+/* ---------------------------------------------------------------------------
+   App shell scrolling — one explicit scroller, no document quirks.
+   The document itself never scrolls (it is exactly the viewport), the shell is
+   a flex column, and only <main> scrolls. This is what makes dragging the page
+   work on every WebView version instead of relying on document overflow, which
+   silently stops working on some Android builds.
+   --------------------------------------------------------------------------- */
 
-/* The document must always be the scroll container: the shell grows with its
-   content and the fixed dock floats above it. (A fixed-height shell was what
-   made long pages feel "stuck" on some devices.) */
-html {
-  overflow-y: auto;
+html,
+body,
+#root {
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
 }
 
 #root {
-  min-height: 100dvh;
   isolation: isolate;
+}
+
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  max-height: 100%;
+  /* Fallback for browsers without dvh support (older Android WebView). */
+  height: 100vh;
+  height: 100dvh;
+  max-height: 100dvh;
+}
+
+.app-scroll {
+  flex: 1 1 auto;
+  /* Without this a flex child refuses to shrink and the inner scroller never
+     scrolls — the classic "page is frozen" bug. */
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+  scrollbar-width: thin;
 }
 
 /* ---------------------------------------------------------------------------

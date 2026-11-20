@@ -51,7 +51,7 @@ export function ModalSheet({
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 36, opacity: 0 }}
             transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
-            className="luxury-glass-sheet app-safe-bottom-sheet relative z-10 flex max-h-[90dvh] w-full max-w-[480px] flex-col rounded-t-[26px] sm:rounded-[26px] sm:border sm:border-[#A99BF0]/18"
+            className="luxury-glass-sheet app-safe-bottom-sheet relative z-10 flex max-h-[88dvh] w-full max-w-[480px] flex-col rounded-t-[26px] sm:rounded-[26px] sm:border sm:border-[#A99BF0]/18"
           >
             {/* Mobile grab bar */}
             <div className="flex justify-center pt-2.5 pb-1 sm:hidden">

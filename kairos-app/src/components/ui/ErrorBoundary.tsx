@@ -37,7 +37,7 @@ export class ErrorBoundary extends Component<Props, State> {
     if (!this.state.error) return this.props.children;
 
     return (
-      <div className="flex min-h-[100dvh] flex-col items-center justify-center gap-4 bg-[var(--bg)] px-8 text-center">
+      <div className="flex h-full min-h-[100dvh] flex-col items-center justify-center gap-4 overflow-y-auto bg-[var(--bg)] px-8 py-10 text-center">
         <span className="text-[13px] font-semibold text-[var(--text)]">مشکلی پیش آمد</span>
         <p className="text-[12px] leading-6 text-[var(--text-2)]">
           اطلاعات شما روی دستگاه محفوظ است. برنامه را دوباره باز کنید.

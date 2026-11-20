@@ -7,14 +7,36 @@
 
 ---
 
-## ۱) ناچ بالا و پایین — این بار قطعی، نه حدسی
+## ۱) ناچ بالا و پایین — حالا در کد نیتیو و فقط با یک مالک
+
+**روش نهایی (نسخهٔ `versionCode 7`):** insets دیگر به Capacitor سپرده نشده‌اند. در `MainActivity.java` مثل هر اپ نیتیو اندروید:
+
+```java
+WindowCompat.setDecorFitsSystemWindows(window, false);
+ViewCompat.setOnApplyWindowInsetsListener(decorView, (view, insets) -> {
+    Insets bars = insets.getInsets(systemBars() | displayCutout());
+    view.setPadding(bars.left, bars.top, bars.right, bars.bottom);
+    return new WindowInsetsCompat.Builder(insets)
+        .setInsets(systemBars() | displayCutout(), Insets.NONE)   // CSS دوباره اضافه نکند
+        .build();
+});
+```
+
+- فاصلهٔ بالا/پایین از خودِ سیستم‌عامل گرفته و به decor view داده می‌شود؛ مستقل از نسخهٔ WebView، اندروید ۷ تا ۱۶.
+- `SystemBars.insetsHandling = 'disable'` شد تا هیچ مکانیزم دومی با آن رقابت نکند (دقیقاً همان تضادی که کار را خراب می‌کرد).
+- insets کیبورد دست‌نخورده رد می‌شود تا `adjustResize` سالم بماند.
+- `androidx.core` صریحاً به وابستگی‌ها اضافه شد و کامپایل در CI با موفقیت انجام شد (پس این کد واقعاً روی دستگاه اجرا می‌شود).
+
+**راه‌حل تضمینی برای هر دستگاه:** تنظیمات → «نوار سیستم و ناچ» → دو اسلایدر «حاشیهٔ بالا» و «حاشیهٔ پایین» (۰ تا ۶۴ پیکسل). هر عددی که لازم باشد همان لحظه روی `--safe-top/--safe-bottom` اعمال می‌شود و چیدمان را دقیق می‌کند؛ دکمهٔ «بازگشت به حالت خودکار» هم هست. یعنی حتی اگر ROM خاصی رفتار عجیبی داشت، دیگر لازم نیست منتظر بیلد بمانی.
+
+### تاریخچه (چرا سه بار طول کشید)
 
 بار قبل مقدار CSS را درست کرده بودم ولی منبع دادهٔ insets قابل‌اعتماد نبود. این دفعه مسیر بر پایهٔ رفتار خودِ Capacitor انتخاب شد و دیگر «به شانسِ نسخهٔ WebView» وابسته نیست:
 
 | مرحله | تصمیم | دلیل |
 |---|---|---|
 | `index.html` | حذف `viewport-fit=cover` | Capacitor فقط وقتی صفحه `cover` بخواهد، مسئولیت insets را به WebView می‌دهد؛ بدون آن همیشه خودش لایهٔ نیتیو را پدینگ می‌کند |
-| `capacitor.config.ts` | `SystemBars.insetsHandling: 'native'` | همان مسیر پدینگ بومی decorView با مقادیر واقعی status bar / cutout / gesture bar |
+| `capacitor.config.ts` | `SystemBars.insetsHandling: 'native'` → سپس `'disable'` | مسیر Capacitor به نسخهٔ WebView و `viewport-fit` وابسته بود؛ حالا مدیریت کامل در `MainActivity` است |
 | نتیجه | روی هر نسخهٔ WebView یکسان | WebView ≥ ۱۴۰ و < ۱۴۰ هر دو به یک رفتار می‌رسند |
 | لایهٔ CSS/JS | نگه داشته شد ولی خنثی (۰px) | اگر روزی `cover` برگردد، همان‌جا کار می‌کند؛ الان هیچ padding دوبلی ایجاد نمی‌کند |
 | پلاگین قدیمی | `@capacitor/status-bar` حذف شد | فلگ‌های fullscreen منسوخش همان چیزی بود که insets را صفر می‌کرد |

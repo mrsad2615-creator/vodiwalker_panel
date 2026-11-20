@@ -17,8 +17,8 @@ interface LaunchScreenProps {
    keeps its exact proportions on every screen size.
    --------------------------------------------------------------------------- */
 
-const STAGE = 140;
-const MARK_HEIGHT = 104;
+const STAGE = 156;
+const MARK_HEIGHT = 120;
 const SCALE = MARK_HEIGHT / KAIROS_MARK_VIEWBOX.height;
 const MARK_WIDTH = KAIROS_MARK_VIEWBOX.width * SCALE;
 const MARK_TRANSFORM = `translate(${((STAGE - MARK_WIDTH) / 2).toFixed(2)} ${(
@@ -159,17 +159,17 @@ export function LaunchScreen({ exiting, progress, onSkip }: LaunchScreenProps) {
               <g transform={`rotate(20 ${STAGE / 2} ${STAGE / 2})`}>
                 <rect
                   x={STAGE / 2 - 44}
-                  y="-10"
+                  y={STAGE / 2 - 95}
                   width="88"
-                  height="170"
+                  height="190"
                   fill={`url(#${sweepId})`}
                   opacity="0.22"
                 />
                 <rect
                   x={STAGE / 2 - 15}
-                  y="-10"
+                  y={STAGE / 2 - 95}
                   width="30"
-                  height="170"
+                  height="190"
                   fill={`url(#${sweepId})`}
                 />
               </g>

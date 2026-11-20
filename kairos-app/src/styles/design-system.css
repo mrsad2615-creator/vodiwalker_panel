@@ -447,10 +447,10 @@ body,
 
 @keyframes kairos-mark-sweep {
   from {
-    transform: translateX(-96px);
+    transform: translateX(-110px);
   }
   to {
-    transform: translateX(96px);
+    transform: translateX(110px);
   }
 }
 

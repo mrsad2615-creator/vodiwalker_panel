@@ -43,6 +43,16 @@ jobs:
           yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.0.0" > /dev/null
 
+      # Debug builds are signed with ~/.android/debug.keystore, which Gradle
+      # creates fresh on every runner. Caching it keeps ONE signing identity
+      # across builds, so a newer APK can be installed over the previous one
+      # instead of forcing an uninstall.
+      - name: Cache Android debug keystore
+        uses: actions/cache@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: kairos-debug-keystore-v1
+
       - name: Quality gates (typecheck, lint, tests)
         working-directory: kairos-app
         run: |
@@ -65,6 +75,8 @@ jobs:
           mkdir -p ../artifacts
           cp app/build/outputs/apk/debug/app-debug.apk "../artifacts/KAIROS-v${VERSION}.apk"
           ls -lh "../artifacts/KAIROS-v${VERSION}.apk"
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --print-certs \
+            "../artifacts/KAIROS-v${VERSION}.apk" | head -3 || true
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4

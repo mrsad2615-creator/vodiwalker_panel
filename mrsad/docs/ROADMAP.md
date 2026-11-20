@@ -20,8 +20,11 @@ Legend: ✅ done & verified · 🟡 implemented, awaiting verification · 🟠 p
 ## Phase 2 — Brand & visual system ✅
 
 * 4 original logo concepts (AI-rendered, `docs/branding/concept-*.png`).
-* Production vector mark (Fusion-M with orbital ring): adaptive icon,
-  monochrome layer, splash drawable.
+* Production vector mark — the **Geometric M** (six parallel metal plates):
+  adaptive icon, monochrome layer, splash drawable, and the in-app mark, all
+  generated from one geometry in `docs/branding/build_icon.py` and mirrored by
+  the pure-Kotlin `dev.mrsad.core.brand.MrsadMark` so the app and the icon
+  cannot drift apart.
 * Semantic colour system for 6 themes (Obsidian, Quantum, Crystal, Arctic,
   Phantom, Spectrum) with light/dark aware system bars.
 * Typography: Vazirmatn (UI) + Estedad (display/reading), both SIL OFL 1.1,

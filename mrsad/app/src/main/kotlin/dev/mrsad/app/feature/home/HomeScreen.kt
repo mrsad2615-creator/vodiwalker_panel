@@ -1,5 +1,6 @@
 package dev.mrsad.app.feature.home
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -47,6 +48,7 @@ import dev.mrsad.app.testing.MrsadTestTags
 import dev.mrsad.app.ui.components.LocalBottomBarClearance
 import dev.mrsad.app.ui.components.MetricValue
 import dev.mrsad.app.ui.components.MrsadCore
+import dev.mrsad.app.ui.components.MrsadMarkView
 import dev.mrsad.app.ui.components.MrsadSurface
 import dev.mrsad.app.ui.components.MrsadTokens
 import dev.mrsad.app.ui.components.SectionHeader
@@ -294,13 +296,20 @@ private fun HomeHeader() {
             )
             Text("زیست‌بوم رشد شناختی", style = type.caption, color = colors.textSecondary)
         }
+        // The real brand mark, drawn from the same geometry as the launcher
+        // icon, so the first screen and the home screen are one identity.
         Box(
             Modifier
-                .size(40.dp)
-                .clip(RoundedCornerShape(MrsadTokens.Radius.md)),
+                .size(46.dp)
+                .clip(RoundedCornerShape(MrsadTokens.Radius.md))
+                .background(colors.surfaceHigh),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(Icons.Outlined.AutoAwesome, contentDescription = "MRSAD", tint = colors.metalMid, modifier = Modifier.size(22.dp))
+            MrsadMarkView(
+                size = 30.dp,
+                modifier = Modifier.testTag(MrsadTestTags.HOME_BRAND_MARK),
+                contentDescription = "MRSAD",
+            )
         }
     }
 }

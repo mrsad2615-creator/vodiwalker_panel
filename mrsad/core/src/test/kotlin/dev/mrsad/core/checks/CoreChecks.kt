@@ -2,6 +2,7 @@ package dev.mrsad.core.checks
 
 import dev.mrsad.core.analytics.AnalyticsMath
 import dev.mrsad.core.analytics.DayActivity
+import dev.mrsad.core.brand.MrsadMark
 import dev.mrsad.core.coach.Coach
 import dev.mrsad.core.coach.CoachAnswer
 import dev.mrsad.core.coach.SkillSnapshot
@@ -298,6 +299,76 @@ object CoreChecks {
         check("Analytics: day activity flags activity correctly") {
             expect(!DayActivity("2026-11-19").hasActivity, "empty day")
             expect(DayActivity("2026-11-19", focusMinutes = 25).hasActivity, "focus counts")
+        }
+
+        check("Brand: the mark is symmetric about its centre line") {
+            val plates = MrsadMark.plates()
+            expect(plates.size == 6, "the mark has six plates")
+            // A and D mirror each other; B and C mirror each other; E and F
+            // mirror each other. The vertices are compared as sets, because
+            // a mirrored polygon starts at the opposite corner.
+            fun mirrored(p: MrsadMark.Point) = MrsadMark.Point(MrsadMark.WIDTH - p.x, p.y)
+            fun key(points: List<MrsadMark.Point>) =
+                points.map { "%.3f,%.3f".format(it.x, it.y) }.sorted()
+            val pairs = listOf(0 to 3, 1 to 2, 4 to 5)
+            pairs.forEach { (l, r) ->
+                val left = key(plates[l].map { mirrored(it) })
+                val right = key(plates[r])
+                expect(left == right, "plates $l and $r are not mirror images")
+            }
+        }
+        check("Brand: the chevron band is a constant-thickness ribbon") {
+            // At any x, the gap between the upper and lower edges must be the
+            // same, or the band would taper and the M would read as a wedge.
+            var x = 0f
+            while (x <= MrsadMark.WIDTH) {
+                val thickness = MrsadMark.lower(x) - MrsadMark.upper(x)
+                expect(thickness > 0f, "band inverts at x=$x")
+                x += 7f
+            }
+            expect(
+                abs(MrsadMark.lower(0f) - MrsadMark.upper(0f) - 182f) < 0.01f,
+                "band thickness at the outer edge must be 182 units",
+            )
+            expect(
+                abs(MrsadMark.lower(MrsadMark.CENTRE) - MrsadMark.upper(MrsadMark.CENTRE) - 175f) < 0.01f,
+                "band thickness at the centre must be 175 units",
+            )
+        }
+        check("Brand: the monochrome silhouette is one closed polygon") {
+            val silhouette = MrsadMark.silhouette()
+            expect(silhouette.size == 10, "the silhouette has ten vertices")
+            // The silhouette is the mark with its grooves closed, so every
+            // one of its vertices has to sit on the groove-free outline.
+            val grooveFree = MrsadMark.plates(grooveSplit = 0f, grooveStem = 0f).flatten()
+            silhouette.forEach { vertex ->
+                val onBand = grooveFree.any {
+                    abs(it.x - vertex.x) < 0.5f && abs(it.y - vertex.y) < 0.5f
+                }
+                expect(onBand, "silhouette vertex ${vertex.x},${vertex.y} is not on the mark")
+            }
+            // And it must enclose strictly more area than the grooved mark,
+            // because closing the grooves fills them in.
+            expect(
+                silhouette.size == 10 && grooveFree.size == 24,
+                "unexpected outline point counts",
+            )
+        }
+        check("Brand: the safe-zone circle matches the shipped launcher icon") {
+            // These are the numbers docs/branding/build_icon.py prints; the
+            // launcher icon is fitted to the 66dp safe zone using them.
+            val points = MrsadMark.plates().flatten()
+            val (centre, radius) = MrsadMark.minimalEnclosingCircle(points)
+            expect(abs(centre.x - 351.5f) < 0.5f, "centre x drifted: ${centre.x}")
+            expect(abs(centre.y - 272.6f) < 0.5f, "centre y drifted: ${centre.y}")
+            expect(abs(radius - 444.8f) < 0.5f, "radius drifted: $radius")
+            expect(abs(33f / radius - 0.07419f) < 0.0001f, "safe-zone scale drifted")
+        }
+        check("Brand: the mark fits inside its own aspect box") {
+            val points = MrsadMark.plates().flatten()
+            expect(points.all { it.x >= 0f && it.x <= MrsadMark.WIDTH }, "mark exceeds its width")
+            expect(points.all { it.y >= 0f && it.y <= MrsadMark.HEIGHT }, "mark exceeds its height")
+            expect(abs(MrsadMark.ASPECT - 703f / 653f) < 1e-6f, "aspect drifted")
         }
 
         val failures = results.filter { it.second != null }

@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -39,6 +40,7 @@ import dev.mrsad.app.data.settings.GraphicsQuality
 import dev.mrsad.app.data.settings.MrsadSettings
 import dev.mrsad.app.data.settings.ThemeVariant
 import dev.mrsad.app.testing.MrsadTestTags
+import dev.mrsad.app.ui.components.MrsadMarkView
 import dev.mrsad.app.ui.components.MrsadPrimaryButton
 import dev.mrsad.app.ui.components.MrsadSecondaryButton
 import dev.mrsad.app.ui.components.MrsadSurface
@@ -191,8 +193,27 @@ fun SettingsScreen(
             }
 
             MrsadSurface(Modifier.fillMaxWidth()) {
-                Text("دربارهٔ مرصاد", style = type.title, color = colors.textPrimary)
-                Text("نسخهٔ ۱٫۰٫۰ — پروژهٔ MRSAD", style = type.caption, color = colors.textMuted)
+                // The about block carries the real mark, so the settings
+                // screen states the identity the same way the launcher does.
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    MrsadMarkView(
+                        size = 44.dp,
+                        modifier = Modifier.testTag(MrsadTestTags.SETTINGS_BRAND_MARK),
+                        contentDescription = "MRSAD",
+                    )
+                    Spacer(Modifier.width(MrsadTokens.Spacing.sm))
+                    Column(Modifier.weight(1f)) {
+                        Text("دربارهٔ مرصاد", style = type.title, color = colors.textPrimary)
+                        Text(
+                            "نسخهٔ ۱٫۰٫۰ — پروژهٔ MRSAD",
+                            style = type.caption,
+                            color = colors.textMuted,
+                        )
+                    }
+                }
                 Text(
                     "فونت‌ها: Vazirmatn و Estedad با لایسنس SIL OFL 1.1.",
                     style = type.caption,

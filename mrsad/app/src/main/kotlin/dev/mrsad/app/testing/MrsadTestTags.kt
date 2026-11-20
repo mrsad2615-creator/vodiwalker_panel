@@ -19,6 +19,7 @@ object MrsadTestTags {
 
     // ---- HOME ---------------------------------------------------------------
     const val HOME_BRAND = "home_brand"
+    const val HOME_BRAND_MARK = "home_brand_mark"
     const val HOME_CORE = "home_core"
     const val HOME_MODULES = "home_modules"
     const val HOME_PRIMARY_CTA = "home_primary_cta"
@@ -37,6 +38,7 @@ object MrsadTestTags {
 
     // ---- SETTINGS -----------------------------------------------------------
     const val SETTINGS_ROOT = "settings_root"
+    const val SETTINGS_BRAND_MARK = "settings_brand_mark"
     const val SETTINGS_THEME_SECTION = "settings_theme_section"
     const val SETTINGS_QUALITY_SECTION = "settings_quality_section"
     const val SETTINGS_TOGGLES = "settings_toggles"

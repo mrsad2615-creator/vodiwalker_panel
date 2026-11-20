@@ -28,8 +28,11 @@ MRSAD is a single premium Android application that combines:
 ## Visual identity
 
 * **4 original concepts** in `docs/branding/` (Metallic M, Geometric M, Orbital M, Fusion M).
-* Production mark: a vector **Fusion-M** (extruded metal + orbital ring) used for the
-  adaptive icon, monochrome icon, splash and in-app brand.
+* Production mark: the **Geometric M** — six parallel 45° metal plates forming a
+  chevron with two outer stems. Generated deterministically by
+  `docs/branding/build_icon.py` from the selected concept, and used for the
+  adaptive icon, the monochrome (themed) layer, the splash and the in-app brand
+  mark, so all four are the same construction.
 * **6 themes**: Obsidian, Quantum, Crystal, Arctic, Phantom, Spectrum — semantic
   colour tokens, not hard-coded colours.
 * Typography: **Vazirmatn** (UI) + **Estedad** (display/reading) — both SIL OFL 1.1,
@@ -44,7 +47,7 @@ MRSAD is a single premium Android application that combines:
 ```
 core/   pure Kotlin — typing engine, Persian text normalization, reading engine,
         analytics math, coach rules, exercise generators, focus state machine.
-        Fully unit-tested (38 executable checks), zero dependencies.
+        Fully unit-tested (43 executable checks), zero dependencies.
 
 app/    Android — Compose UI, Room (typing_sessions + activity_events),
         DataStore settings, manual DI container, single NavHost.

@@ -76,7 +76,7 @@ fun MrsadBottomBar(
             .padding(horizontal = MrsadTokens.Spacing.md, vertical = MrsadTokens.Spacing.sm)
             .fillMaxWidth()
             .testTag(MrsadTestTags.NAV_BAR)
-            .shadow(elevation = 16.dp, shape = shape, clip = false)
+            .shadow(elevation = 12.dp, shape = shape, clip = false)
             .clip(shape)
             .background(
                 Brush.verticalGradient(
@@ -88,10 +88,11 @@ fun MrsadBottomBar(
             )
             .drawBehindTopSheen()
             .border(
-                Brush.verticalGradient(
+                width = 1.dp,
+                brush = Brush.verticalGradient(
                     listOf(colors.borderStrong.copy(alpha = 0.40f), colors.borderStrong.copy(alpha = 0.08f))
                 ),
-                shape,
+                shape = shape,
             )
             .padding(horizontal = MrsadTokens.Spacing.xs, vertical = 7.dp),
         horizontalArrangement = Arrangement.SpaceEvenly,
@@ -160,12 +161,12 @@ fun MrsadBottomBar(
                     enter = fadeIn(animationSpec = motion.effectsDefault()) +
                         expandHorizontally(
                             animationSpec = motion.spatialDefault(),
-                            expandFrom = Alignment.Horizontal.Start,
+                            expandFrom = Alignment.Start,
                         ),
                     exit = fadeOut(animationSpec = motion.effectsFast()) +
                         shrinkHorizontally(
                             animationSpec = motion.spatialFast(),
-                            shrinkTowards = Alignment.Horizontal.Start,
+                            shrinkTowards = Alignment.Start,
                         ),
                 ) {
                     Text(

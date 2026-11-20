@@ -81,7 +81,7 @@ object CoreGeometry {
         val a = edge[0]
         val b = edge[1]
         faces.indices
-            .filter { face -> face.contains(a) && face.contains(b) }
+            .filter { index -> faces[index].contains(a) && faces[index].contains(b) }
             .take(2)
             .toIntArray()
     }

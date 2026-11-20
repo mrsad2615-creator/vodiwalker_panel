@@ -251,7 +251,11 @@ def main() -> int:
         argv = sys.argv[1:]
         build_log = pathlib.Path(argv[0]) if argv else pathlib.Path("build.log")
         requested_lint = argv[1] if len(argv) > 1 else None
-        is_instrumented_log = build_log.name == "ui-test.log"
+        # The performance benchmark writes the same kind of log: the
+        # output of the instrumented run and the result of the test.
+        is_instrumented_log = (
+            build_log.name == "ui-test.log" or build_log.name.startswith("perf-")
+        )
 
         report_build_log(build_log)
 

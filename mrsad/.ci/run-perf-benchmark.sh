@@ -18,12 +18,17 @@ SCREENSHOT_DIR="${3:-}"
 
 cd "$GRADLE_DIR"
 
+# Everything the run prints is kept in a log next to the project, so a
+# failing run can be reported without downloading anything.
+LOG="$GRADLE_DIR/perf-benchmark.log"
+
 STATUS=0
 ./gradlew --console=plain --no-daemon :app:connectedDebugAndroidTest \
   -Pandroid.testInstrumentationRunnerArguments.class=dev.mrsad.app.PerformanceBenchmarkTest \
-  || STATUS=$?
+  2>&1 | tee "$LOG"
+STATUS=${PIPESTATUS[0]}
 
-echo "the benchmark run finished with status $STATUS"
+echo "the benchmark run finished with status $STATUS" | tee -a "$LOG"
 
 REPORT=""
 for directory in app/build/outputs/androidTest-results app/build/reports/androidTests; do
@@ -40,6 +45,7 @@ if [ -z "$REPORT" ]; then
   exit 1
 fi
 
+printf '%s\n' "$REPORT" >> "$LOG"
 printf '%s\n' "$REPORT" > "$OUTPUT"
 echo "the performance report was written to $OUTPUT"
 cat "$OUTPUT"

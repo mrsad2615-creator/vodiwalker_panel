@@ -93,6 +93,13 @@ jobs:
           # platform animations are left alone.
           disable-animations: false
           script: cd $GITHUB_WORKSPACE/${{ matrix.checkout }}/mrsad && sh .ci/run-perf-benchmark.sh . "$GITHUB_WORKSPACE/perf-${{ matrix.label }}.json" "$GITHUB_WORKSPACE/screenshots-${{ matrix.label }}"
+      - name: Report what happened
+        if: failure() || cancelled()
+        shell: bash
+        run: |
+          set -uo pipefail
+          python3 "$GITHUB_WORKSPACE/instrument/mrsad/.ci/report_failure.py" \
+            "$GITHUB_WORKSPACE/${{ matrix.checkout }}/mrsad/perf-benchmark.log" || true
       - name: Collect the report
         if: always()
         shell: bash

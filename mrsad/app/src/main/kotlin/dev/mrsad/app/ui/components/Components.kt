@@ -1,6 +1,7 @@
 package dev.mrsad.app.ui.components
 
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Canvas
@@ -51,7 +52,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import dev.mrsad.app.testing.MrsadTestHooks
-import kotlinx.coroutines.delay
 import dev.mrsad.app.ui.theme.MrsadTheme
 
 /**
@@ -140,7 +140,9 @@ fun MrsadSurface(
         modifier = modifier
             .graphicsLayer { scaleX = scale; scaleY = scale }
             .shadow(
-                elevation = 12.dp,
+                // Material's elevation level 3: enough to lift the card
+                // off the page, cheap enough to draw on every card.
+                elevation = 6.dp,
                 shape = shape,
                 clip = false,
             )
@@ -176,13 +178,14 @@ fun MrsadSurface(
                 )
             }
             .border(
-                Brush.verticalGradient(
+                width = 1.dp,
+                brush = Brush.verticalGradient(
                     listOf(
                         (accent ?: colors.borderStrong).copy(alpha = if (accent != null) 0.5f else 0.42f),
                         (accent ?: colors.borderStrong).copy(alpha = 0.10f),
                     )
                 ),
-                shape,
+                shape = shape,
             )
             .then(
                 if (onClick != null) {
@@ -201,22 +204,18 @@ fun MrsadSurface(
 }
 
 /**
- * The entrance of a piece of content.
+ * The entrance of a screen.
  *
- * Content that simply appears reads as a glitch; it arrives instead. It
- * fades in while it moves a short distance upwards, and the pieces of a
- * screen arrive one after the other instead of all at the same instant.
+ * Content that simply appears reads as a glitch; it arrives instead. One
+ * animation drives the whole screen and the pieces of it arrive one after
+ * the other, so the screen assembles itself instead of blinking into
+ * existence.
  *
- * The movement is spatial, so it uses a spatial spring; the fade is an
- * effect, so it uses an effects spring. Under reduced motion — and inside
- * instrumentation — the content is simply there.
+ * The progress belongs to the *screen*, not to the pieces: scrolling a
+ * piece out of the viewport and back does not replay its entrance.
  */
 @Composable
-fun MrsadReveal(
-    modifier: Modifier = Modifier,
-    index: Int = 0,
-    content: @Composable () -> Unit,
-) {
+fun rememberRevealProgress(): Animatable<Float, AnimationVector1D> {
     val motion = MrsadTheme.motion
     val progress = remember { Animatable(0f) }
     LaunchedEffect(Unit) {
@@ -224,24 +223,42 @@ fun MrsadReveal(
             progress.snapTo(1f)
             return@LaunchedEffect
         }
-        // The stagger is short on purpose: a screen that takes a second to
-        // assemble feels slow, a screen that assembles in a fifth of a
-        // second feels alive.
-        delay(index * REVEAL_STAGGER_MILLIS)
         progress.animateTo(1f, motion.spatialDefault())
     }
+    return progress
+}
+
+/**
+ * A piece of content that arrives with the screen.
+ *
+ * The movement is spatial, so it uses a spatial spring; the fade is an
+ * effect. Under reduced motion — and inside instrumentation — the content
+ * is simply there.
+ *
+ * @param progress the entrance of the screen, from [rememberRevealProgress]
+ * @param index the place of the piece in the order of the arrival
+ */
+@Composable
+fun MrsadReveal(
+    progress: Animatable<Float, AnimationVector1D>,
+    modifier: Modifier = Modifier,
+    index: Int = 0,
+    content: @Composable () -> Unit,
+) {
     Box(
         modifier.graphicsLayer {
-            alpha = progress.value
-            translationY = (1f - progress.value) * REVEAL_TRAVEL.toPx()
+            val total = 1f + index * REVEAL_STAGGER
+            val local = ((progress.value * total) - index * REVEAL_STAGGER).coerceIn(0f, 1f)
+            alpha = local
+            translationY = (1f - local) * REVEAL_TRAVEL.toPx()
         }
     ) {
         content()
     }
 }
 
-/** The delay between two pieces of content that arrive one after another. */
-private const val REVEAL_STAGGER_MILLIS = 55L
+/** How much later each piece of a screen arrives than the one before it. */
+private const val REVEAL_STAGGER = 0.16f
 
 /** How far a piece of content travels while it arrives. */
 private val REVEAL_TRAVEL = 16.dp

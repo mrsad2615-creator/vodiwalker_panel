@@ -49,6 +49,7 @@ import dev.mrsad.app.ui.components.LocalBottomBarClearance
 import dev.mrsad.app.ui.components.MetricValue
 import dev.mrsad.app.ui.components.MrsadCore
 import dev.mrsad.app.ui.components.MrsadReveal
+import dev.mrsad.app.ui.components.rememberRevealProgress
 import dev.mrsad.app.ui.components.MrsadMarkView
 import dev.mrsad.app.ui.components.MrsadSurface
 import dev.mrsad.app.ui.components.MrsadTokens
@@ -81,6 +82,9 @@ fun HomeScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val colors = MrsadTheme.colors
     val type = MrsadTheme.type
+    // One entrance for the whole screen: the pieces of it arrive one
+    // after the other.
+    val reveal = rememberRevealProgress()
 
     AmbientBackground(PageEnvironment.HOME) {
         LazyColumn(
@@ -92,11 +96,11 @@ fun HomeScreen(
             contentPadding = PaddingValues(top = MrsadTokens.Spacing.lg, bottom = MrsadTokens.Spacing.lg),
         ) {
             item {
-                MrsadReveal(modifier = Modifier.fillMaxWidth(), index = 0) { HomeHeader() }
+                MrsadReveal(reveal, modifier = Modifier.fillMaxWidth(), index = 0) { HomeHeader() }
             }
 
             item {
-                MrsadReveal(modifier = Modifier.fillMaxWidth(), index = 1) {
+                MrsadReveal(reveal, modifier = Modifier.fillMaxWidth(), index = 1) {
                     Box(
                         Modifier
                             .testTag(MrsadTestTags.HOME_CORE)
@@ -133,7 +137,7 @@ fun HomeScreen(
             }
 
             item {
-                MrsadReveal(modifier = Modifier.fillMaxWidth(), index = 2) {
+                MrsadReveal(reveal, modifier = Modifier.fillMaxWidth(), index = 2) {
                     Row(horizontalArrangement = Arrangement.spacedBy(MrsadTokens.Spacing.xs)) {
                         StatCell(
                             modifier = Modifier.weight(1f),
@@ -158,12 +162,12 @@ fun HomeScreen(
             }
 
             item {
-                MrsadReveal(modifier = Modifier.fillMaxWidth(), index = 3) {
+                MrsadReveal(reveal, modifier = Modifier.fillMaxWidth(), index = 3) {
                     SectionHeader(title = "ماژول‌ها")
                 }
             }
             item {
-                MrsadReveal(modifier = Modifier.fillMaxWidth(), index = 4) {
+                MrsadReveal(reveal, modifier = Modifier.fillMaxWidth(), index = 4) {
                     LazyRow(
                         modifier = Modifier.testTag(MrsadTestTags.HOME_MODULES),
                         horizontalArrangement = Arrangement.spacedBy(MrsadTokens.Spacing.xs),

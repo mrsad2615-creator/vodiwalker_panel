@@ -56,9 +56,9 @@ Light theme (Crystal) flips system-bar icon appearance automatically.
 | `title` | 18 / 26 | card titles |
 | `bodyLarge` | 17 / 30 | reading short-form |
 | `body` | 15 / 26 | default text |
-| `label` | 13 / 20 | buttons, chips, tabs |
-| `caption` | 11.5 / 18 | meta, hints |
-| `metric` | 30 / 34, tabular figures | live metrics (no jitter) |
+| `label` | 13 / 22 | buttons, chips, tabs |
+| `caption` | 12 / 19 | meta, hints |
+| `metric` | 30 / 40, tabular figures | live metrics (no jitter); the tall line keeps Persian descenders clear |
 | `reading` | 21 / 38 | RSVP + reading surface |
 
 Rules:

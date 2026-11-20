@@ -107,7 +107,10 @@ fun MrsadBottomBar(
             ) {
                 Icon(
                     imageVector = item.icon,
-                    contentDescription = item.label,
+                    // The selected item shows its label as text, so the
+                    // icon must stay silent; the collapsed items have no
+                    // text and have to name themselves.
+                    contentDescription = if (selected) null else item.label,
                     tint = if (colors.isLight && selected) colors.textPrimary else contentColor,
                     modifier = Modifier.size(22.dp),
                 )

@@ -22,7 +22,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.ArrowForward
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.material.icons.outlined.Extension
 import androidx.compose.material.icons.outlined.Lightbulb
@@ -217,7 +217,7 @@ private fun MindPlayer(state: MindUiState, viewModel: MindViewModel, settings: M
                 Modifier.size(MrsadTokens.TouchTarget).clip(RoundedCornerShape(MrsadTokens.Radius.sm)).clickable { viewModel.abort() },
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(Icons.Outlined.ArrowForward, "بازگشت", tint = colors.textPrimary)
+                Icon(Icons.AutoMirrored.Outlined.ArrowBack, "بازگشت", tint = colors.textPrimary)
             }
             Spacer(Modifier.width(MrsadTokens.Spacing.xs))
             Column(Modifier.weight(1f)) {

@@ -28,7 +28,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.ArrowForward
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Pause
 import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material.icons.outlined.SelfImprovement
@@ -110,7 +110,11 @@ fun FocusScreen(
                         .clickable(onClick = onBack),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Icon(Icons.Outlined.ArrowForward, contentDescription = "بازگشت", tint = colors.textPrimary)
+                    Icon(
+                        Icons.AutoMirrored.Outlined.ArrowBack,
+                        contentDescription = "بازگشت",
+                        tint = colors.textPrimary,
+                    )
                 }
                 Spacer(Modifier.size(MrsadTokens.Spacing.xs))
                 Column(Modifier.weight(1f)) {

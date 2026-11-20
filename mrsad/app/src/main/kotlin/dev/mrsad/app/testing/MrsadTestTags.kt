@@ -34,6 +34,7 @@ object MrsadTestTags {
     const val TYPE_FINISH = "type_finish"
     const val TYPE_RESULTS = "type_results"
     const val TYPE_RETRY = "type_retry"
+    const val TYPE_RESTART = "type_restart"
     const val TYPE_BACK_TO_SETUP = "type_back_to_setup"
 
     // ---- SETTINGS -----------------------------------------------------------

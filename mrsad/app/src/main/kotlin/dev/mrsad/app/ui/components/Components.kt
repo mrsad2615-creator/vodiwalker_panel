@@ -223,12 +223,17 @@ fun MrsadPrimaryButton(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     icon: ImageVector? = null,
+    iconContentDescription: String? = null,
 ) {
     val colors = MrsadTheme.colors
     val type = MrsadTheme.type
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
     val scale by animateFloatAsState(if (pressed) 0.97f else 1f, tween(MrsadTokens.Motion.fast), label = "btn")
+    // A button whose only content is an icon has to name itself, or a
+    // screen reader announces an unlabelled control. When there is a
+    // visible label the icon is decoration and must stay silent.
+    val spokenLabel = if (text.isBlank()) iconContentDescription else null
 
     Row(
         modifier = modifier
@@ -256,17 +261,21 @@ fun MrsadPrimaryButton(
         if (icon != null) {
             Icon(
                 imageVector = icon,
-                contentDescription = null,
+                // A clickable merges its descendants' semantics, so an
+                // icon-only button names itself through the icon.
+                contentDescription = spokenLabel,
                 tint = if (colors.isLight) Color.White else colors.background,
                 modifier = Modifier.size(18.dp),
             )
-            Spacer(Modifier.width(MrsadTokens.Spacing.xs))
+            if (text.isNotBlank()) Spacer(Modifier.width(MrsadTokens.Spacing.xs))
         }
-        Text(
-            text = text,
-            style = type.label.copy(fontWeight = FontWeight.SemiBold, fontSize = type.body.fontSize),
-            color = if (enabled) (if (colors.isLight) Color.White else colors.background) else colors.textMuted,
-        )
+        if (text.isNotBlank()) {
+            Text(
+                text = text,
+                style = type.label.copy(fontWeight = FontWeight.SemiBold, fontSize = type.body.fontSize),
+                color = if (enabled) (if (colors.isLight) Color.White else colors.background) else colors.textMuted,
+            )
+        }
     }
 }
 
@@ -278,9 +287,14 @@ fun MrsadSecondaryButton(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     icon: ImageVector? = null,
+    iconContentDescription: String? = null,
 ) {
     val colors = MrsadTheme.colors
     val type = MrsadTheme.type
+    // A button whose only content is an icon has to name itself, or a
+    // screen reader announces an unlabelled control. When there is a
+    // visible label the icon is decoration and must stay silent.
+    val spokenLabel = if (text.isBlank()) iconContentDescription else null
     Row(
         modifier = modifier
             .clip(RoundedCornerShape(MrsadTokens.Radius.pill))
@@ -292,14 +306,23 @@ fun MrsadSecondaryButton(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (icon != null) {
-            Icon(icon, null, tint = if (enabled) colors.textPrimary else colors.textMuted, modifier = Modifier.size(18.dp))
-            Spacer(Modifier.width(MrsadTokens.Spacing.xs))
+            // A clickable merges its descendants' semantics, so an
+            // icon-only button names itself through the icon.
+            Icon(
+                icon,
+                spokenLabel,
+                tint = if (enabled) colors.textPrimary else colors.textMuted,
+                modifier = Modifier.size(18.dp),
+            )
+            if (text.isNotBlank()) Spacer(Modifier.width(MrsadTokens.Spacing.xs))
         }
-        Text(
-            text,
-            style = type.label.copy(fontWeight = FontWeight.SemiBold, fontSize = type.body.fontSize),
-            color = if (enabled) colors.textPrimary else colors.textMuted,
-        )
+        if (text.isNotBlank()) {
+            Text(
+                text,
+                style = type.label.copy(fontWeight = FontWeight.SemiBold, fontSize = type.body.fontSize),
+                color = if (enabled) colors.textPrimary else colors.textMuted,
+            )
+        }
     }
 }
 

@@ -1,5 +1,8 @@
 package dev.mrsad.app
 
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.SemanticsMatcher
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.ComposeTimeoutException
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotSelected
@@ -121,6 +124,21 @@ class MrsadSmokeTest {
     }
 
     @Test
+    fun theBrandMarkIsDrawnWhereTheProductIntroducesItself() {
+        // The mark is drawn in code, from the same geometry the launcher
+        // icon is generated from, so a broken draw would leave an empty
+        // box on screen. Both placements are checked on a real device.
+        awaitTag(MrsadTestTags.HOME_BRAND_MARK)
+        composeRule.onNodeWithTag(MrsadTestTags.HOME_BRAND_MARK).assertIsDisplayed()
+
+        composeRule.onNodeWithTag(MrsadTestTags.NAV_SETTINGS).performClick()
+        awaitTag(MrsadTestTags.SETTINGS_BRAND_MARK)
+        composeRule.onNodeWithTag(MrsadTestTags.SETTINGS_BRAND_MARK)
+            .performScrollTo()
+            .assertIsDisplayed()
+    }
+
+    @Test
     fun bottomNavigationReachesTypeSetup() {
         openBottomDestination(Routes.TYPE)
 
@@ -153,6 +171,34 @@ class MrsadSmokeTest {
                 .fetchSemanticsNodes()
                 .isEmpty(),
         ) { "A session without keystrokes must not produce a result panel." }
+    }
+
+    @Test
+    fun everyInteractiveControlIsNamed() {
+        // An icon-only control without a name is invisible to a screen
+        // reader, and it looks perfectly fine on screen — so the guarantee
+        // has to be checked against the real semantics tree on a device.
+        awaitTag(MrsadTestTags.NAV_BAR)
+        awaitTag(MrsadTestTags.HOME_CORE)
+
+        // A clickable merges its descendants' semantics, so a control that
+        // carries a visible label or a description is named — and a control
+        // that carries neither shows up here with nothing to announce.
+        val tappable = SemanticsMatcher.keyIsDefined(SemanticsActions.OnClick)
+        val unnamed = composeRule.onAllNodes(
+            tappable and
+                SemanticsMatcher.keyNotDefined(SemanticsProperties.ContentDescription) and
+                SemanticsMatcher.keyNotDefined(SemanticsProperties.Text),
+        ).fetchSemanticsNodes()
+
+        check(unnamed.isEmpty()) {
+            "every tappable control must be reachable by name, but " +
+                "${unnamed.size} of them are not: " +
+                unnamed.joinToString(", ") { it.id.toString() }
+        }
+        check(composeRule.onAllNodes(tappable).fetchSemanticsNodes().isNotEmpty()) {
+            "the audit found no tappable control at all"
+        }
     }
 
     @Test

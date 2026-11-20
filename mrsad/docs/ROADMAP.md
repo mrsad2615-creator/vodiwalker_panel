@@ -56,7 +56,9 @@ Legend: ✅ done & verified · 🟡 implemented, awaiting verification · 🟠 p
 * Results: word-WPM, CPM, accuracy, errors, hardest letters — persisted to Room.
 
 ### MRSAD READ ✅ (implemented + unit-tested engine)
-* RSVP with 1–3 words/display, 120–900 wpm, pivot guides, 3 original texts.
+* RSVP with 1–3 words/display, 120–900 wpm, pivot guides.
+* 9 original texts: three subjects (concentration, cognition, growth) at three
+  difficulty tiers, each with four questions answered by the text itself.
 * Measured speed from monotonic elapsed time with pauses removed.
 * Mandatory comprehension quiz; **effective WPM = raw × comprehension** so speed
   alone is never rewarded. Persisted as a READ activity.
@@ -65,16 +67,19 @@ Legend: ✅ done & verified · 🟡 implemented, awaiting verification · 🟠 p
 * 6 exercises: digit span, pattern memory, selective attention, Stroop,
   timed arithmetic, number-sequence logic — all procedurally generated with
   provable single correct answers.
-* Real scoring, reaction times, adaptive level (≥85 % up, <50 % down), history,
-  persistence to the activity log.
+* Real scoring, reaction times and history, persistence to the activity log.
+* **Per-exercise difficulty ladder**: each exercise moves on its own evidence
+  (two consecutive rounds ≥85 % up, two <50 % down, capped at 8), and the level
+  is a pure function of the recorded scores, so it survives a restart.
 
 ## Phase 5 — Intelligence & analytics
 
 * Assistant ✅ — offline intent routing + rule/statistical coaching over real
   data; refuses to analyse with <3 sessions (says so explicitly).
-* Analytics 🟡 — 7-day real aggregates, trends, module distribution, daily
-  table, previous-week comparison. (One aggregate path still needs CI/runtime
-  verification after the current fix cycle.)
+* Analytics ✅ — 7-day real aggregates, trends, module distribution, daily
+  table, previous-week comparison. Every chart keeps one slot per day of the
+  window, and a day without a measurement breaks the line instead of drawing
+  a dip, so the chart never shows a session that never happened.
 * Daily plan engine ✅ — deterministic per date, weakness-first.
 
 ## Phase 6 — Additional features ⬜
@@ -90,11 +95,25 @@ Legend: ✅ done & verified · 🟡 implemented, awaiting verification · 🟠 p
 * Everything already writes through one activity log, so integration is
   architectural rather than a later migration. Two features remain stubbed.
 
-## Phase 8 — QA & release 🟡
+## Phase 8 — QA & release ✅
 
 * CI pipeline: core JUnit gate → debug build + lint + unit tests → APK artifact
-  → emulator smoke tests (Home renders, nav to Type, Settings opens).
-* Release APK: `assembleRelease` (unsigned) is planned once debug is green.
+  → emulator smoke tests (Home renders, brand mark drawn, nav to Type, typing
+  session, Settings applies a persisted theme).
+* Release APK: signed with a key held in the Actions cache (never in git),
+  published as `mrsad.apk` + `SHA256SUMS.txt`.
+* The accessibility floor is enforced by tests, not by eye: the colour system
+  is checked against the WCAG contrast ratios, the corpora are checked for
+  answer ranges and tier coverage, and every control reserves a 48dp touch
+  target.
+* Screen-reader semantics are enforced the same way. A source audit fails the
+  build when an icon-only button loses its name, and an emulator test walks
+  the real semantics tree and fails when a tappable control cannot be
+  reached by name. The back arrow uses the auto-mirrored icon so it points
+  the right way in a right-to-left layout, and the selected bottom-bar
+  destination does not announce its label twice.
+* The version shown on the Settings screen is read from the build, so it can
+  never drift away from the released artifact.
 
 ---
 
@@ -104,12 +123,15 @@ Legend: ✅ done & verified · 🟡 implemented, awaiting verification · 🟠 p
    Gradle; results come from the GitHub Actions pipeline in this repository.
 2. `assembleRelease` currently has minification disabled; R8 rules must be
    validated on-device before enabling.
-3. Analytics module distribution aggregates only the visible 7-day window.
+3. Analytics module distribution aggregates only the visible 7-day window (the
+   streak and the personal records deliberately look further back).
 4. Assistant intent routing is keyword-based; ambiguous questions fall back to
    the general analysis (by design, documented in the answer copy).
 5. Persian text justification relies on platform shaping; long-word lines may
    stretch on very narrow screens.
 6. Sound effects are disabled in the UI until a real audio engine is added
    (the setting exists but is greyed out — no fake toggle).
-7. The Arena/Focus/Planner/Library screens are explicit placeholders.
-8. Release signing must be configured with the owner's keystore.
+7. The Arena/Planner/Library screens are explicit placeholders.
+8. The release key lives in the GitHub Actions cache, not in a repository
+   secret: if that cache is evicted the signing identity changes and a new
+   APK can no longer be installed over an older one.

@@ -107,7 +107,9 @@ private val CrystalColors = MrsadColors(
     borderStrong = Color(0x44202A38),
     textPrimary = Color(0xFF12151B),
     textSecondary = Color(0xFF4C5260),
-    textMuted = Color(0xFF8A909C),
+    // Darkened from #8A909C: the muted tone has to clear 3:1 against the
+    // lightest surface in the palette as well as the background.
+    textMuted = Color(0xFF848A96),
     metalLight = Color(0xFF2A2F3A),
     metalMid = Color(0xFF4A5060),
     metalDark = Color(0xFF6E7484),

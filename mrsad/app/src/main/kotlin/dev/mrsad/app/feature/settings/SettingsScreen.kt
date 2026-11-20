@@ -19,7 +19,7 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.ArrowForward
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -35,6 +35,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import dev.mrsad.app.BuildConfig
 import dev.mrsad.app.data.AppContainer
 import dev.mrsad.app.data.settings.GraphicsQuality
 import dev.mrsad.app.data.settings.MrsadSettings
@@ -85,7 +86,11 @@ fun SettingsScreen(
                     contentAlignment = Alignment.Center,
                 ) {
                     // RTL: back points to the right.
-                    Icon(Icons.Outlined.ArrowForward, contentDescription = "بازگشت", tint = colors.textPrimary)
+                    Icon(
+                        Icons.AutoMirrored.Outlined.ArrowBack,
+                        contentDescription = "بازگشت",
+                        tint = colors.textPrimary,
+                    )
                 }
                 Spacer(Modifier.size(MrsadTokens.Spacing.xs))
                 Text("تنظیمات", style = type.headline, color = colors.textPrimary)
@@ -208,7 +213,7 @@ fun SettingsScreen(
                     Column(Modifier.weight(1f)) {
                         Text("دربارهٔ مرصاد", style = type.title, color = colors.textPrimary)
                         Text(
-                            "نسخهٔ ۱٫۰٫۰ — پروژهٔ MRSAD",
+                            "نسخهٔ ${BuildConfig.VERSION_NAME} — پروژهٔ MRSAD",
                             style = type.caption,
                             color = colors.textMuted,
                         )

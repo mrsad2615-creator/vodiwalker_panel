@@ -20,19 +20,81 @@ import androidx.compose.ui.unit.dp
 import dev.mrsad.app.ui.theme.MrsadTheme
 
 /**
+ * A point of a spark line: its slot in the window and its height, measured
+ * from the bottom of the plot as a fraction between 0 and 1.
+ */
+data class SparkPoint(val index: Int, val height: Float)
+
+/**
+ * The geometry of a spark line, kept away from the drawing code so it can
+ * be tested without a device.
+ */
+object SparkGeometry {
+
+    /**
+     * The normalised height of one measurement, from 0 (floor) to 1 (top).
+     *
+     * The plot keeps a small margin above and below the curve, and a flat
+     * series sits in the middle: on the floor it would read as "almost
+     * nothing happened".
+     */
+    fun height(value: Double, values: List<Double?>): Float {
+        val present = values.filterNotNull()
+        if (present.isEmpty()) return 0.5f
+        val max = present.max()
+        val min = present.min()
+        val flat = max - min <= 0.0001
+        val range = if (flat) 1.0 else max - min
+        val fraction = if (flat) 0.5 else (value - min) / range
+        return (fraction * 0.86 + 0.07).toFloat()
+    }
+
+    /**
+     * Splits a window series into the runs of consecutive measured days.
+     *
+     * A `null` slot is a day without a measurement, not a zero: the line
+     * breaks there instead of dipping to the floor, so the chart never
+     * invents a session the user did not have. A run needs at least two
+     * points to be a line, so a lone measurement produces no run at all.
+     */
+    fun runs(values: List<Double?>): List<List<SparkPoint>> {
+        val present = values.filterNotNull()
+        if (present.size < 2) return emptyList()
+
+        val out = ArrayList<List<SparkPoint>>()
+        var run = ArrayList<SparkPoint>()
+        values.forEachIndexed { index, value ->
+            if (value == null) {
+                if (run.size >= 2) out += run
+                run = ArrayList()
+            } else {
+                run += SparkPoint(index, height(value, values))
+            }
+        }
+        if (run.size >= 2) out += run
+        return out
+    }
+}
+
+/**
  * Real-data charts. Every chart renders exactly the list it is given — no
  * synthetic filler points, no decorative randomness. Empty input shows an
  * empty state instead of a fake curve.
+ *
+ * A `null` slot is a day without a measurement, not a zero: the line breaks
+ * there instead of dipping to the floor, so the chart never invents a
+ * session the user did not have.
  */
 @Composable
 fun SparkLine(
-    values: List<Double>,
+    values: List<Double?>,
     modifier: Modifier = Modifier,
     tint: Color? = null,
     label: String? = null,
 ) {
     val colors = MrsadTheme.colors
     val lineColor = tint ?: colors.metalMid
+    val present = values.filterNotNull()
 
     Column(modifier) {
         if (label != null) {
@@ -43,7 +105,7 @@ fun SparkLine(
                 modifier = Modifier.padding(bottom = 6.dp),
             )
         }
-        if (values.size < 2) {
+        if (present.size < 2) {
             Text(
                 text = "برای نمودار به دادهٔ بیشتری نیاز است",
                 style = MrsadTheme.type.caption,
@@ -56,35 +118,42 @@ fun SparkLine(
                 .fillMaxWidth()
                 .height(64.dp)
         ) {
-            val maxV = values.max()
-            val minV = values.min()
-            val range = (maxV - minV).takeIf { it > 0.0001 } ?: 1.0
-            val stepX = size.width / (values.size - 1)
-            val points = values.mapIndexed { index, value ->
-                Offset(
-                    x = index * stepX,
-                    y = (size.height - ((value - minV) / range * size.height * 0.86).toFloat() - size.height * 0.07f),
+            val stepX = size.width / (values.size - 1).coerceAtLeast(1)
+            fun xOf(index: Int): Float = index * stepX
+            fun yOf(height: Float): Float = size.height - height * size.height
+
+            // Each run of consecutive measured days is drawn as its own
+            // curve, so a gap breaks the line instead of bridging it.
+            SparkGeometry.runs(values).forEach { run ->
+                val path = Path().apply {
+                    moveTo(xOf(run.first().index), yOf(run.first().height))
+                    run.drop(1).forEach { lineTo(xOf(it.index), yOf(it.height)) }
+                }
+                val fill = Path().apply {
+                    addPath(path)
+                    lineTo(xOf(run.last().index), size.height)
+                    lineTo(xOf(run.first().index), size.height)
+                    close()
+                }
+                drawPath(
+                    fill,
+                    Brush.verticalGradient(
+                        listOf(lineColor.copy(alpha = 0.22f), Color.Transparent),
+                    )
+                )
+                drawPath(path, lineColor, style = Stroke(width = 1.8.dp.toPx(), cap = StrokeCap.Round))
+            }
+
+            // The most recent measurement is the one worth pointing at.
+            val lastIndex = values.indexOfLast { it != null }
+            if (lastIndex >= 0) {
+                val value = values[lastIndex] ?: 0.0
+                drawCircle(
+                    lineColor,
+                    radius = 2.6.dp.toPx(),
+                    center = Offset(xOf(lastIndex), yOf(SparkGeometry.height(value, values))),
                 )
             }
-            val path = Path().apply {
-                moveTo(points.first().x, points.first().y)
-                points.drop(1).forEach { lineTo(it.x, it.y) }
-            }
-            // soft wash under the curve
-            val fill = Path().apply {
-                addPath(path)
-                lineTo(points.last().x, size.height)
-                lineTo(points.first().x, size.height)
-                close()
-            }
-            drawPath(
-                fill,
-                Brush.verticalGradient(
-                    listOf(lineColor.copy(alpha = 0.22f), Color.Transparent),
-                )
-            )
-            drawPath(path, lineColor, style = Stroke(width = 1.8.dp.toPx(), cap = StrokeCap.Round))
-            drawCircle(lineColor, radius = 2.6.dp.toPx(), center = points.last())
         }
     }
 }

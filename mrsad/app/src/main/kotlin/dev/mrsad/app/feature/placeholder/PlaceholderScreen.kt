@@ -5,7 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.ArrowForward
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -50,7 +50,7 @@ fun PlaceholderScreen(
             Text(description, style = type.body, color = colors.textMuted, textAlign = TextAlign.Center)
             MrsadSecondaryButton(
                 text = "بازگشت",
-                icon = Icons.Outlined.ArrowForward,
+                icon = Icons.AutoMirrored.Outlined.ArrowBack,
                 onClick = onBack,
             )
         }

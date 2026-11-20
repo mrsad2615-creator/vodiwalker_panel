@@ -33,7 +33,13 @@ data class AnalyticsState(
     val activeDays: Int = 0,
     val currentStreak: Int = 0,
     val minuteSeries: List<Double> = emptyList(),
-    val typingSeries: List<Double> = emptyList(),
+    /**
+     * The typing speed per day of the window.
+     *
+     * A day without a typing session is `null`, not zero: a missing
+     * measurement must not be drawn as a session that never happened.
+     */
+    val typingSeries: List<Double?> = emptyList(),
     val averageWpm: Double = 0.0,
     val averageAccuracy: Double = 0.0,
     val bestWpm: Int? = null,
@@ -42,7 +48,10 @@ data class AnalyticsState(
     val daily: List<DailyRow> = emptyList(),
     val wpmChange: Double = 0.0,
     val hasTrendChange: Boolean = false,
-)
+) {
+    /** The number of days in the window that actually had a typing session. */
+    val typingDays: Int get() = typingSeries.count { it != null }
+}
 
 private val moduleLabels = mapOf(
     "TYPE" to "تایپ",
@@ -124,7 +133,13 @@ class AnalyticsViewModel(container: AppContainer) : ViewModel() {
             activeDays = daily.count { it.minutes > 0 || it.sessions > 0 },
             currentStreak = AnalyticsMath.currentStreak(activeDates.toSet(), MrsadClock.todayIso()),
             minuteSeries = daily.map { it.minutes.toDouble() },
-            typingSeries = typingByDay.map { it.metric },
+            // Aligned to the same window as the day table, so the trend
+            // line sits over the days it belongs to instead of being
+            // stretched across the chart.
+            typingSeries = AnalyticsMath.alignToWindow(
+                days,
+                typingByDay.associate { it.dateIso to it.metric },
+            ),
             averageWpm = avgWpm,
             averageAccuracy = avgAccuracy,
             bestWpm = bestWpm?.toInt(),

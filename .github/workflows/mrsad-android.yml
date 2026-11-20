@@ -220,6 +220,16 @@ jobs:
           MRSAD — Persian command centre for focus, typing and reading.
 
           * Offline by design: no INTERNET permission, everything stays on the device.
+          * New brand mark: the "Geometric M" is now generated from one geometry and
+            shared by the launcher icon, the splash and the in-app brand mark.
+          * Difficulty that actually progresses: every cognitive exercise carries its
+            own ladder, moved only after two consecutive strong or weak rounds.
+          * More content: the reading corpus grew to nine passages across three
+            subjects and three difficulty tiers; the typing corpus gained a third
+            passage per tier in both languages.
+          * Accessibility: every control now reserves the 48dp minimum touch target,
+            the metric type scale stops clipping Persian digits, and the colour
+            system is checked against the WCAG contrast floor by a unit test.
           * Build: commit \`${COMMIT:0:7}\`
           * CI run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}
 

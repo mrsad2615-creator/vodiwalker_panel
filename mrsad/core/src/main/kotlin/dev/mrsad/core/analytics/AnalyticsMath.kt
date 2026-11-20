@@ -153,6 +153,18 @@ object AnalyticsMath {
         return out.asReversed()
     }
 
+    /**
+     * Aligns a per-day metric to a fixed window of days.
+     *
+     * Days without a measurement become `null`, never zero: a missing rate
+     * is not a rate of zero, and drawing it as zero would put a dip in the
+     * chart for a session the user never had. The result always has one
+     * entry per day of the window, so a chart built from it lines up with
+     * the days it is labelled with.
+     */
+    fun alignToWindow(days: List<String>, byDate: Map<String, Double>): List<Double?> =
+        days.map { byDate[it] }
+
     private fun parseIso(date: String): Triple<Int, Int, Int> {
         val parts = date.split('-')
         require(parts.size == 3) { "expected yyyy-MM-dd, got $date" }

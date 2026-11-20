@@ -301,6 +301,20 @@ object CoreChecks {
             expect(!DayActivity("2026-11-19").hasActivity, "empty day")
             expect(DayActivity("2026-11-19", focusMinutes = 25).hasActivity, "focus counts")
         }
+        check("Analytics: a window series keeps one slot per day") {
+            val days = AnalyticsMath.lastDays("2026-11-19", 7)
+            val byDate = mapOf("2026-11-19" to 40.0, "2026-11-17" to 25.0)
+            val series = AnalyticsMath.alignToWindow(days, byDate)
+            expect(series.size == days.size, "the series must have one slot per day")
+            expect(series[6] == 40.0, "the last day must carry its value")
+            expect(series[4] == 25.0, "the middle day must carry its value")
+            expect(series[0] == null, "a day without data must stay empty, not become zero")
+            expect(series.count { it != null } == 2, "only the measured days may carry a value")
+            expect(
+                AnalyticsMath.alignToWindow(days, emptyMap()).all { it == null },
+                "an empty window must stay empty",
+            )
+        }
 
         check("Brand: the mark is symmetric about its centre line") {
             val plates = MrsadMark.plates()
@@ -370,6 +384,71 @@ object CoreChecks {
             expect(points.all { it.x >= 0f && it.x <= MrsadMark.WIDTH }, "mark exceeds its width")
             expect(points.all { it.y >= 0f && it.y <= MrsadMark.HEIGHT }, "mark exceeds its height")
             expect(abs(MrsadMark.ASPECT - 703f / 653f) < 1e-6f, "aspect drifted")
+        }
+        check("Brand: the generated plates reproduce the approved Concept-2 shape") {
+            // The six polygons sampled from docs/branding/concept-2-geometric.png.
+            // They are the visual authority; the generated plates have to
+            // reproduce them, otherwise the shipped icon is a different mark.
+            val concept = listOf(
+                listOf(0f to 0f, 198f to 205f, 198f to 386f, 0f to 182f),
+                listOf(198f to 205f, 351.5f to 365f, 351.5f to 540f, 198f to 386f),
+                listOf(351.5f to 365f, 505f to 205f, 505f to 386f, 351.5f to 540f),
+                listOf(505f to 205f, 703f to 0f, 703f to 182f, 505f to 386f),
+                listOf(0f to 195f, 121f to 318f, 121f to 653f, 0f to 480f),
+                listOf(582f to 318f, 703f to 195f, 703f to 480f, 582f to 653f),
+            )
+            // The plates are generated with the split groove closed, so the
+            // only difference from the sampled concept is the stem groove.
+            val generated = MrsadMark.plates(grooveSplit = 0f, grooveStem = 13f)
+            expect(generated.size == concept.size, "plate count drifted")
+            concept.forEachIndexed { index, sampled ->
+                val remaining = generated[index].toMutableList()
+                sampled.forEach { (sx, sy) ->
+                    val match = remaining.minByOrNull {
+                        (it.x - sx) * (it.x - sx) + (it.y - sy) * (it.y - sy)
+                    } ?: throw AssertionError("plate $index has no vertex near ($sx,$sy)")
+                    val distance = kotlin.math.hypot(match.x - sx, match.y - sy)
+                    expect(
+                        distance < 3f,
+                        "plate $index vertex ($sx,$sy) is $distance units from the generated mark",
+                    )
+                    remaining.remove(match)
+                }
+            }
+        }
+        check("Brand: Concept-2 and the generated mark share one enclosing circle") {
+            // Two coordinate systems that describe the same shape have to
+            // agree on the circle that contains it. If they ever disagree,
+            // one of the two is measuring something else.
+            val conceptPoints = listOf(
+                0f to 0f, 198f to 205f, 198f to 386f, 0f to 182f,
+                351.5f to 365f, 351.5f to 540f, 505f to 205f, 505f to 386f,
+                703f to 0f, 703f to 182f, 0f to 195f, 121f to 318f,
+                121f to 653f, 0f to 480f, 582f to 318f, 703f to 195f,
+                703f to 480f, 582f to 653f,
+            ).map { MrsadMark.Point(it.first, it.second) }
+            val (conceptCentre, conceptRadius) = MrsadMark.minimalEnclosingCircle(conceptPoints)
+            val (markCentre, markRadius) =
+                MrsadMark.minimalEnclosingCircle(MrsadMark.plates().flatten())
+            expect(
+                abs(conceptCentre.x - markCentre.x) < 0.5f,
+                "Concept-2 centre x ${conceptCentre.x} != mark centre x ${markCentre.x}",
+            )
+            expect(
+                abs(conceptCentre.y - markCentre.y) < 0.5f,
+                "Concept-2 centre y ${conceptCentre.y} != mark centre y ${markCentre.y}",
+            )
+            expect(
+                abs(conceptRadius - markRadius) < 0.5f,
+                "Concept-2 radius $conceptRadius != mark radius $markRadius",
+            )
+            // And the circle really is tight: some point has to touch it.
+            val touching = MrsadMark.plates().flatten().any { point ->
+                abs(
+                    kotlin.math.hypot(point.x - markCentre.x, point.y - markCentre.y) - markRadius,
+                ) < 0.5f
+            }
+            expect(touching, "the safe-zone circle is not tight around the mark")
         }
 
         check("Mind: the level only moves after two rounds in the same direction") {

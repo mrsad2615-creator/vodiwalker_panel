@@ -115,7 +115,7 @@ fun AnalyticsScreen(
                 SparkLine(
                     values = state.typingSeries,
                     tint = colors.metalLight,
-                    label = if (state.typingSeries.size >= 2)
+                    label = if (state.typingDays >= 2)
                         "میانگین ${formatNumber(state.averageWpm.toInt().toString(), settings.persianNumerals)} کلمه در دقیقه"
                     else "حداقل دو روز تمرین تایپ برای روند لازم است",
                 )

@@ -94,19 +94,22 @@ data class MrsadTypography(
                     fontFamily = Vazirmatn,
                     fontWeight = FontWeight.Medium,
                     fontSize = s(13f),
-                    lineHeight = s(20f),
+                    lineHeight = s(22f),
                 ),
                 caption = TextStyle(
                     fontFamily = Vazirmatn,
                     fontWeight = FontWeight.Normal,
-                    fontSize = s(11.5f),
-                    lineHeight = s(18f),
+                    fontSize = s(12f),
+                    lineHeight = s(19f),
                 ),
+                // Persian digits carry descenders (۴, ۶, ۷) and dots that sit
+                // below the baseline, so the metric line needs room: a 34dp
+                // line for a 30dp face clips them.
                 metric = TextStyle(
                     fontFamily = Estedad,
                     fontWeight = FontWeight.Bold,
                     fontSize = s(30f),
-                    lineHeight = s(34f),
+                    lineHeight = s(40f),
                     textAlign = TextAlign.Center,
                     // Tabular figures keep live metrics from jittering.
                     fontFeatureSettings = "tnum",

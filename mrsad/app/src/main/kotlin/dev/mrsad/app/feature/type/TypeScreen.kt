@@ -440,7 +440,11 @@ private fun RunningPanel(
             MrsadSecondaryButton(
                 text = "",
                 icon = Icons.Outlined.Refresh,
+                // The button shows only a glyph, so it has to carry its own
+                // name for screen readers.
+                iconContentDescription = "شروع دوباره",
                 onClick = onRestart,
+                modifier = Modifier.testTag(MrsadTestTags.TYPE_RESTART),
             )
         }
         if (state.phase == TypePhase.PAUSED) {

@@ -135,3 +135,51 @@
 **لینک دانلود:** `https://github.com/mrsad2615-creator/vodiwalker_panel/releases/download/kairos-v1.2.0/KAIROS-v1.2.0.apk` (۵.۶۶ MB، دیباگ‌امضا، `versionCode 4`)
 
 > نکته: یک اجرای CI در میانه کار به‌دلیل خطای موقت شبکه در دانلود وابستگی Gradle شکست خورد و با re-run موفق شد؛ تغییرات کد مشکلی نداشتند.
+
+---
+
+# ضمیمهٔ ۲ — رفع واقعی ناچ (بالا/پایین) + لوگوموشن لود
+
+## ۱۰) چرا تلاش قبلی جواب نداد
+
+دفعهٔ قبل فقط CSS را عوض کردم و فرض گرفتم Capacitor مقدار درست را تزریق می‌کند. ریشهٔ واقعی این بود:
+
+1. پلاگین قدیمی **`@capacitor/status-bar`** در `initNativeShell()` صدا زده می‌شد. مقدار پیش‌فرض `overlaysWebView: true` آن با فلگ‌های منسوخ `SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN` پنجره را fullscreen می‌کند. نتیجه: پنجره insets سیستم را مصرف می‌کند، SystemBars مقدار `0` گزارش می‌دهد و WebView با `env(safe-area-inset-*) = 0` بالا/پایین می‌رود زیر نوارها. یعنی هیچ‌کدام از دو منبعِ استاندارد داده نمی‌داد.
+2. تنها منبع باقی‌مانده `--safe-area-inset-*` بود که فقط در حالت `insetsHandling: 'css'` و بعد از `onPageCommitVisible` تزریق می‌شود؛ اگر بار اول از دست می‌رفت، دیگر بازتولید نمی‌شد.
+
+## ۱۱) مسیر استانداردِ جدید
+
+| لایه | کار |
+|---|---|
+| نیتیو | پلاگین status-bar **حذف شد** (از `package.json` و کد). مالک نوارها فقط `SystemBars` هست: `insetsHandling: 'css'`، `initialViewportFitValueHint: 'cover'`، `style: 'DARK'` — و همین در `capacitor.config.json` داخل APK تأیید شد. |
+| استاندارد وب | `viewport-fit=cover` در متا؛ CSS پیش‌فرض `--safe-top: env(safe-area-inset-top, 0px)` |
+| لایهٔ JS | `src/lib/safeArea.ts` هر دو منبع (`env()` با پروب نامرئی + `--safe-area-inset-*` کپاسیتر) را می‌خواند، **بیشترین مقدار هر ضلع**، می‌نویسد روی `<html>`، و روی `resize`/`orientationchange`/`visualViewport`/بازگشت از بک‌گراند + ۶ اندازه‌گیری زمان‌بندی‌شده (۰ تا ۲۴۰۰ms) تازه می‌کند |
+| WebView قدیمی (<140) | Capacitor خودش WebView را padding می‌دهد و مقدارها `0` می‌مانند → **هیچ padding دوبل** |
+| چیدمان | `padding-inline` منطقی (RTL/افقی‌safe)، هدر پشت نوار وضعیت کشیده می‌شود ولی محتوایش پایین ناچ، داک و شیت با `--safe-bottom`، و `app-safe-x` برای سطوح `position:fixed` |
+
+**تشخیص روی گوشی:** تنظیمات → پایین صفحه → «اطلاعات فنی نوار سیستم» (بازشو). چهار عدد ناچ + گزارش جداگانهٔ `env()` و `Capacitor` + نسخهٔ WebView را نشان می‌دهد. اگر عدد بالا `0` بود و گوشی ناچ دارد، همان‌جا معلوم می‌شود کدام منبع ساکت است.
+
+## ۱۲) لوگوموشن لود
+
+`src/components/ui/LaunchScreen.tsx` — فقط `transform / opacity / clip-path` (روی کامپوزیتور، بدون فیلتر و بدون حلقهٔ JS):
+
+| زمان | اتفاق |
+|---|---|
+| ۰–۵۵۰ms | مارک با clip-path از پایین به بالا باز می‌شود + مقیاس ۰.۹۴→۱ و درخشش برند در پس‌زمینه |
+| ۳۴۰–۱۳۹۰ms | یک قلم‌موی نور (sweep) از روی مارک عبور می‌کند |
+| ۲۴۰–۷۴۰ms | وردمارک «KAIROS» با letter-spacing از ۰.۴۲em به ۰.۳em |
+| ۳۸۰ms | زیرنویس «نظم، عادت، تمرکز» |
+| ۴۶۰ms+ | نوار پیشرفت واقعی: آمادگی فونت‌ها + هیدریت استور + حداقل ۹۰۰ms اقامت، سپس کراس‌فید ۲۶۰ms |
+| — | با `prefers-reduced-motion` همهٔ این‌ها به یک فریم ساکن تبدیل می‌شود؛ با کلیک/کلید هم رد می‌شود |
+
+## ۱۳) آیکون‌ها و فونت «پیشرفت»
+
+- کیت `src/components/ui/Progress.tsx`: `LinearProgress` (معین/نامعین)، `ProgressRing`، `Spinner`، `SkeletonBlock` — با `role="progressbar"` و `aria-*` درست.
+- «آماده‌بودن فونت» به‌عنوان گام واقعی بوت: `document.fonts.load('600 16px Vazirmatn')` در `main.tsx` و گیت `document.fonts.ready` در لانچ، تا رابط با فونت جایگزین ظاهر نشود.
+- مارک KAIROS از آیکون بیلدشده به **وکتور** تبدیل شد: ۴ کانتور، ۱۷۲ کاراکتر مسیر، IoU ۰.۹۳ با تصویر اصلی (رندر تأییدشده در `assets/kairos-mark-preview.png`) و حالا در هدر، تنظیمات و لانچ استفاده می‌شود (قبلاً یک گلیف بی‌ربط بود).
+
+## ۱۴) وضعیت بیلد
+
+`typecheck` ✅ · `lint` ✅ · `test` ۱۳/۱۳ ✅ · `build` ✅ ۵.۶۲s · CI run `44808378321` ✅ → APK منتشر شد (`versionCode 5`).
+
+**دانلود:** `https://github.com/mrsad2615-creator/vodiwalker_panel/releases/download/kairos-v1.2.0/KAIROS-v1.2.0.apk`

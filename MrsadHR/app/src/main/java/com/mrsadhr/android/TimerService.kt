@@ -59,13 +59,15 @@ class TimerService : Service() {
             return
         }
         val notification = notifications!!.running(durationMs, remainingMs)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        if (Build.VERSION.SDK_INT >= 34) {
+            // Android 14+ requires an explicit type; it matches the manifest declaration.
             startForeground(
                 Notifications.ID_RUNNING,
                 notification,
                 ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE,
             )
         } else {
+            // Android 8-13 take the type from the manifest, and reject unknown type bits.
             startForeground(Notifications.ID_RUNNING, notification)
         }
         // One precise wake-up at zero: no polling, no drift, no battery cost in between.

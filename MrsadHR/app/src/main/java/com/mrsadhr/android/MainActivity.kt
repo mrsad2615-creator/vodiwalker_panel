@@ -24,7 +24,20 @@ class MainActivity : android.app.Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        CrashGuard.install(applicationContext)
 
+        try {
+            startUi()
+        } catch (error: Throwable) {
+            // A sideloaded app has no crash console: show the reason instead of closing.
+            CrashGuard.showFatal(this, error)
+            return
+        }
+        // If the previous run died, let the user read and copy the trace.
+        CrashGuard.showLastIfAny(this)
+    }
+
+    private fun startUi() {
         graph = AppGraph.get(this)
         stage = Stage(graph.controller, Typefaces(AndroidFontLoader(assets)))
 
@@ -64,6 +77,9 @@ class MainActivity : android.app.Activity() {
 
         requestNotificationPermissionIfNeeded()
         applySystemBarIcons(stage.state.settings.theme == com.mrsadhr.themes.ThemeId.Pure)
+
+        // Reaching a drawn frame means startup is healthy, so drop any older trace.
+        view.post { if (view.isAttachedToWindow) CrashGuard.clear(this) }
     }
 
     override fun onResume() {

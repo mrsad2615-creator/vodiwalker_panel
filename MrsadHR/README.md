@@ -29,8 +29,8 @@ through the second `Painter` implementation (see *Architecture*).
 
 ## Install
 
-The signed debug build is committed at **`dist/mrsadhr-debug.apk`** (3.3 MB, `minSdk 26`,
-`targetSdk 35`, package `com.mrsadhr`).
+The signed debug build is committed at **`dist/mrsadhr-debug.apk`** (3.3 MB, `versionCode 2`,
+`versionName 1.0.1`, `minSdk 23` — Android 6.0 and newer — `targetSdk 35`, package `com.mrsadhr`).
 
 ```bash
 adb install -r dist/mrsadhr-debug.apk
@@ -38,6 +38,27 @@ adb install -r dist/mrsadhr-debug.apk
 
 It is signed with the standard Android debug key, so it installs on any device with
 "install unknown apps" enabled. Release builds use your own key — see *Building*.
+
+### When a sideloaded copy refuses to install or closes at once
+
+There is no store console for a self-installed APK, so the app reports its own failures:
+
+* **It will not install.** Android hides the reason behind "App not installed". Run
+  `adb logcat -s PackageManager PackageInstaller` while retrying, or on a phone open
+  *Settings → Apps → Special access → Install unknown apps* and allow the browser or file
+  manager that holds the download. A "package appears to be invalid" error means the download was
+  truncated — compare the SHA-256 below.
+* **It closes immediately.** `1.0.1` wraps startup and the draw loop in `CrashGuard`
+  (`app/src/main/java/com/mrsadhr/android/CrashGuard.kt`): a startup failure becomes a selectable
+  text screen, and a failure after the first frame is written to `filesDir/last_crash.txt` and shown
+  as a copyable dialog on the next launch. Copy that text to report a problem. For a hard failure
+  before any UI exists, `adb logcat -s AndroidRuntime` still prints the stack trace.
+
+SHA-256 of the shipped file:
+
+```
+4ad9c68572dd3875b0d1e84fe00d1207876ee98bcf36306e36d55df64f2ab2c3
+```
 
 ## Build
 
@@ -221,9 +242,12 @@ a 4 dp rhythm; radii 12/16/24/28 dp; shadows are soft, tinted and never outline-
 
 * `tools/apk/build_apk.sh` completes: `aapt2` link, `kotlinc` compile, `d8`, zipalign, signing.
 * `apksigner verify --print-certs dist/mrsadhr-debug.apk` — v1/v2/v3 signatures valid.
-* `aapt2 dump badging` — `com.mrsadhr`, versionCode 1, versionName 1.0.0, minSdk 26, targetSdk 35.
-* APK contents inspected: `classes.dex`, six font files, twelve WAV assets, resources, no missing
-  references.
+* `aapt2 dump badging` — `com.mrsadhr`, versionCode 2, versionName 1.0.1, minSdk 23, targetSdk 35.
+* APK contents inspected: `classes.dex`, six font files, twelve WAV assets, resources, five raster
+  launcher icons (`mipmap-mdpi` 48 px … `mipmap-xxxhdpi` 192 px) plus the API 26+ adaptive icon, no
+  missing references.
+* `apksigner verify --min-sdk-version 23` — v1 (JAR), v2 and v3 signatures all valid, so the same
+  file installs on Android 6 through 15.
 * 55/55 tests pass on the JVM.
 * Eleven preview frames rendered from the production `Stage` at 1080×2280 @ 2.75x.
 

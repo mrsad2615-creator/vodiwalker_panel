@@ -162,8 +162,9 @@ class AndroidPainter(canvas: Canvas, w: Float, h: Float) : Painter {
         textPaint.xfermode = null
         textPaint.color = p.color
         textPaint.alpha = (Color.alpha(p.color) * p.alpha).toInt().coerceIn(0, 255)
-        textPaint.textSize = p.textSize
-        textPaint.letterSpacing = p.letterSpacingEm
+        textPaint.textSize = p.textSize.coerceAtLeast(1f)
+        // The framework rejects tracking outside this window on some versions.
+        textPaint.letterSpacing = p.letterSpacingEm.coerceIn(-0.25f, 0.25f)
         textPaint.typeface = (p.typeface as? AndroidTypeface)?.face
         textPaint.textAlign = when (p.textAlign) {
             TextAlign.LEFT -> APaint.Align.LEFT
@@ -192,11 +193,14 @@ class AndroidPainter(canvas: Canvas, w: Float, h: Float) : Painter {
     }
 
     override fun drawCircle(cx: Float, cy: Float, radius: Float, paint: Paint) {
-        if (radius <= 0f) return
+        if (radius <= 0f || !radius.isFinite() || !cx.isFinite() || !cy.isFinite()) return
         canvas.drawCircle(cx, cy, radius, apply(paint))
     }
 
     override fun drawArc(rect: Rect, startDeg: Float, sweepDeg: Float, useCenter: Boolean, paint: Paint) {
+        // Degenerate or non-finite geometry would throw on Android; skip it instead.
+        if (rect.width <= 0f || rect.height <= 0f) return
+        if (!startDeg.isFinite() || !sweepDeg.isFinite()) return
         rectF.set(rect.left, rect.top, rect.right, rect.bottom)
         canvas.drawArc(rectF, startDeg, sweepDeg, useCenter, apply(paint))
     }

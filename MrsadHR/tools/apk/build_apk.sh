@@ -52,10 +52,10 @@ echo "==> 2/7 link resources"
   -o "$BUILD/base.apk" \
   -I "$ANDROID_JAR" \
   --manifest "$BUILD/AndroidManifest.xml" \
-  --min-sdk-version 26 \
+  --min-sdk-version 23 \
   --target-sdk-version 35 \
-  --version-code 1 \
-  --version-name "1.0.0" \
+  --version-code 2 \
+  --version-name "1.0.1" \
   --java "$BUILD/gen" \
   "$BUILD/resources.zip"
 
@@ -72,7 +72,7 @@ echo "==> 4/7 compile kotlin"
 
 echo "==> 5/7 dex"
 java -cp "$MINAPK/d8.jar" com.android.tools.r8.D8 \
-  --min-api 26 --release \
+  --min-api 23 --release \
   --lib "$ANDROID_JAR" \
   --output "$BUILD/dex" \
   "$BUILD/classes.jar" "$KOTLIN_STDLIB"
@@ -99,7 +99,7 @@ echo "==> 7/7 sign"
 java -jar "$MINAPK/apksigner.jar" sign \
   --ks "$MINAPK/debug.keystore" \
   --ks-pass pass:android --key-pass pass:android --ks-key-alias androiddebugkey \
-  --min-sdk-version 26 \
+  --min-sdk-version 23 \
   --v1-signing-enabled true --v2-signing-enabled true --v3-signing-enabled true \
   --out "$OUT" "$BUILD/aligned.apk"
 

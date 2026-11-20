@@ -143,7 +143,36 @@ class TimerAppView @JvmOverloads constructor(
         if (!::stage.isInitialized) return
         val p = painter ?: AndroidPainter(canvas, width.toFloat(), height.toFloat()).also { painter = it }
         p.bind(canvas, width.toFloat(), height.toFloat())
-        stage.draw(p)
+        try {
+            stage.draw(p)
+        } catch (error: Throwable) {
+            // Never let a drawing fault kill the app: paint the reason so it can be reported.
+            if (!drawFatal) {
+                drawFatal = true
+                CrashGuard.write(context, error, "onDraw")
+            }
+            drawFatalMessage(canvas, error)
+        }
+    }
+
+    private var drawFatal = false
+
+    private fun drawFatalMessage(canvas: Canvas, error: Throwable) {
+        val text = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+            color = android.graphics.Color.WHITE
+            textSize = 26f
+            typeface = android.graphics.Typeface.MONOSPACE
+        }
+        canvas.drawColor(android.graphics.Color.rgb(12, 13, 17))
+        var y = 120f
+        canvas.drawText("MrsadHR drawing error", 32f, y, text)
+        y += 40f
+        val lines = (error.toString() + "\n" + (error.stackTrace.take(8).joinToString("\n") { "  at $it" }))
+            .split("\n")
+        for (line in lines) {
+            canvas.drawText(line.take(58), 32f, y, text)
+            y += 34f
+        }
     }
 
     @Suppress("ClickableViewAccessibility")

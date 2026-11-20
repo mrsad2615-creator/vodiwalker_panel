@@ -36,8 +36,9 @@ class Haptics(context: Context) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 v.vibrate(VibrationEffect.createWaveform(timings, amplitudes, -1))
             } else {
+                // API 23-25 has no waveform amplitudes: a single short pulse keeps the intent.
                 @Suppress("DEPRECATION")
-                v.vibrate(timings, -1)
+                v.vibrate(timings[1].coerceAtLeast(10L))
             }
         } catch (_: Exception) {
             // A device that rejects the pattern must never break interaction.

@@ -30,6 +30,7 @@ import dev.mrsad.app.data.AppContainer
 import dev.mrsad.app.data.settings.MrsadSettings
 import dev.mrsad.app.ui.components.BarRow
 import dev.mrsad.app.ui.components.EmptyState
+import dev.mrsad.app.ui.components.LocalBottomBarClearance
 import dev.mrsad.app.ui.components.MrsadChip
 import dev.mrsad.app.ui.components.MrsadSecondaryButton
 import dev.mrsad.app.ui.components.MrsadSurface
@@ -65,6 +66,7 @@ fun AnalyticsScreen(
         Column(
             Modifier
                 .fillMaxSize()
+                .padding(bottom = LocalBottomBarClearance.current)
                 .verticalScroll(rememberScrollState())
                 .padding(MrsadTokens.Spacing.md),
             verticalArrangement = Arrangement.spacedBy(MrsadTokens.Spacing.md),

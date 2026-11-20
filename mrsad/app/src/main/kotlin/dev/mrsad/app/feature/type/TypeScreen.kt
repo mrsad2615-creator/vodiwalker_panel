@@ -55,6 +55,7 @@ import dev.mrsad.app.data.AppContainer
 import dev.mrsad.app.data.settings.MrsadSettings
 import dev.mrsad.app.testing.MrsadTestHooks
 import dev.mrsad.app.testing.MrsadTestTags
+import dev.mrsad.app.ui.components.LocalBottomBarClearance
 import dev.mrsad.app.ui.components.MrsadChip
 import dev.mrsad.app.ui.components.MrsadPrimaryButton
 import dev.mrsad.app.ui.components.MrsadProgressBar
@@ -110,10 +111,15 @@ fun TypeScreen(
     }
 
     AmbientBackground(PageEnvironment.TYPE) {
+        // The floating navigation bar is drawn over this screen, so the scroll
+        // viewport stops above it: otherwise the "start" button can come to
+        // rest underneath the bar and the tap would start a different screen.
+        val bottomClearance = LocalBottomBarClearance.current
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(horizontal = MrsadTokens.Spacing.md)
+                .padding(bottom = bottomClearance)
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(MrsadTokens.Spacing.md),
         ) {
@@ -148,7 +154,8 @@ fun TypeScreen(
                     onRetry = viewModel::restart,
                 )
             }
-            Spacer(Modifier.height(120.dp))
+            // The scroll viewport already stops above the floating bar.
+            Spacer(Modifier.height(MrsadTokens.Spacing.lg))
         }
     }
 }

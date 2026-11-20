@@ -18,16 +18,22 @@ import androidx.compose.material.icons.outlined.Insights
 import androidx.compose.material.icons.outlined.Psychology
 import androidx.compose.material.icons.outlined.Keyboard
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 import dev.mrsad.app.data.AppContainer
@@ -42,6 +48,7 @@ import dev.mrsad.app.feature.read.ReadScreen
 import dev.mrsad.app.feature.settings.SettingsScreen
 import dev.mrsad.app.feature.studio.StudioScreen
 import dev.mrsad.app.feature.type.TypeScreen
+import dev.mrsad.app.ui.components.LocalBottomBarClearance
 import dev.mrsad.app.ui.components.MrsadBottomBar
 import dev.mrsad.app.ui.components.MrsadBottomBarItem
 import dev.mrsad.app.ui.theme.MrsadTheme
@@ -99,83 +106,90 @@ fun MrsadRoot(
     }
 
     Box(Modifier.fillMaxSize()) {
-        NavHost(
-            navController = navController,
-            startDestination = Routes.HOME,
-            modifier = Modifier
-                .fillMaxSize()
-                .then(if (showBottomBar) Modifier.consumeWindowInsets(WindowInsets.navigationBars) else Modifier),
-            enterTransition = {
-                fadeIn(tween(260)) + slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Start, tween(320))
-            },
-            exitTransition = { fadeOut(tween(180)) },
-            popEnterTransition = {
-                fadeIn(tween(240)) + slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.End, tween(320))
-            },
-            popExitTransition = { fadeOut(tween(180)) },
-        ) {
-            composable(Routes.HOME) {
-                HomeScreen(
-                    container = container,
-                    settings = settings,
-                    onNavigate = navController::navigateToModule,
-                )
-            }
-            composable(Routes.TYPE) {
-                TypeScreen(container = container, settings = settings)
-            }
-            composable(Routes.MIND) {
-                MindScreen(container = container, settings = settings)
-            }
-            composable(Routes.ANALYTICS) {
-                AnalyticsScreen(container = container, settings = settings)
-            }
-            composable(Routes.AI) {
-                AssistantScreen(container = container, settings = settings)
-            }
-            composable(Routes.READ) {
-                ReadScreen(container = container, settings = settings)
-            }
-            composable(Routes.STUDIO) {
-                StudioScreen(container = container, settings = settings)
-            }
-            composable(Routes.SETTINGS) {
-                SettingsScreen(
-                    container = container,
-                    settings = settings,
-                    onBack = { navController.popBackStack() },
-                )
-            }
-            composable(Routes.ARENA) {
-                PlaceholderScreen(
-                    title = "MRSAD ARENA",
-                    environment = dev.mrsad.app.ui.theme.PageEnvironment.ARENA,
-                    description = "چالش‌ها، مأموریت‌های روزانه، دستاوردها و رکوردهای شخصی — در فاز ۶ پیاده‌سازی می‌شود.",
-                    onBack = { navController.popBackStack() },
-                )
-            }
-            composable(Routes.FOCUS) {
-                FocusScreen(
-                    container = container,
-                    settings = settings,
-                    onBack = { navController.popBackStack() },
-                )
-            }
-            composable(Routes.PLANNER) {
-                PlaceholderScreen(
-                    title = "برنامهٔ روزانه",
-                    environment = dev.mrsad.app.ui.theme.PageEnvironment.PLANNER,
-                    description = "برنامه‌ریزی فعالیت‌ها و ردیابی عادت‌ها — در فاز ۶ پیاده‌سازی می‌شود.",
-                    onBack = { navController.popBackStack() },
-                )
-            }
-            composable(Routes.LIBRARY) {
-                PlaceholderScreen(
-                    title = "کتابخانهٔ شخصی",
-                    environment = dev.mrsad.app.ui.theme.PageEnvironment.LIBRARY,
-                    description = "افزودن و مدیریت متن‌های خواندنی شخصی — در فاز ۶ پیاده‌سازی می‌شود.",
-                    onBack = { navController.popBackStack() },
-                )
+        // The floating bar is measured so that the screens behind it can
+        // reserve exactly the right amount of clearance at the bottom of
+        // their scroll viewport.
+        var bottomBarHeight by remember { mutableStateOf(0.dp) }
+
+        CompositionLocalProvider(LocalBottomBarClearance provides bottomBarHeight) {
+            NavHost(
+                navController = navController,
+                startDestination = Routes.HOME,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .then(if (showBottomBar) Modifier.consumeWindowInsets(WindowInsets.navigationBars) else Modifier),
+                enterTransition = {
+                    fadeIn(tween(260)) + slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Start, tween(320))
+                },
+                exitTransition = { fadeOut(tween(180)) },
+                popEnterTransition = {
+                    fadeIn(tween(240)) + slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.End, tween(320))
+                },
+                popExitTransition = { fadeOut(tween(180)) },
+            ) {
+                composable(Routes.HOME) {
+                    HomeScreen(
+                        container = container,
+                        settings = settings,
+                        onNavigate = navController::navigateToModule,
+                    )
+                }
+                composable(Routes.TYPE) {
+                    TypeScreen(container = container, settings = settings)
+                }
+                composable(Routes.MIND) {
+                    MindScreen(container = container, settings = settings)
+                }
+                composable(Routes.ANALYTICS) {
+                    AnalyticsScreen(container = container, settings = settings)
+                }
+                composable(Routes.AI) {
+                    AssistantScreen(container = container, settings = settings)
+                }
+                composable(Routes.READ) {
+                    ReadScreen(container = container, settings = settings)
+                }
+                composable(Routes.STUDIO) {
+                    StudioScreen(container = container, settings = settings)
+                }
+                composable(Routes.SETTINGS) {
+                    SettingsScreen(
+                        container = container,
+                        settings = settings,
+                        onBack = { navController.popBackStack() },
+                    )
+                }
+                composable(Routes.ARENA) {
+                    PlaceholderScreen(
+                        title = "MRSAD ARENA",
+                        environment = dev.mrsad.app.ui.theme.PageEnvironment.ARENA,
+                        description = "چالش‌ها، مأموریت‌های روزانه، دستاوردها و رکوردهای شخصی — در فاز ۶ پیاده‌سازی می‌شود.",
+                        onBack = { navController.popBackStack() },
+                    )
+                }
+                composable(Routes.FOCUS) {
+                    FocusScreen(
+                        container = container,
+                        settings = settings,
+                        onBack = { navController.popBackStack() },
+                    )
+                }
+                composable(Routes.PLANNER) {
+                    PlaceholderScreen(
+                        title = "برنامهٔ روزانه",
+                        environment = dev.mrsad.app.ui.theme.PageEnvironment.PLANNER,
+                        description = "برنامه‌ریزی فعالیت‌ها و ردیابی عادت‌ها — در فاز ۶ پیاده‌سازی می‌شود.",
+                        onBack = { navController.popBackStack() },
+                    )
+                }
+                composable(Routes.LIBRARY) {
+                    PlaceholderScreen(
+                        title = "کتابخانهٔ شخصی",
+                        environment = dev.mrsad.app.ui.theme.PageEnvironment.LIBRARY,
+                        description = "افزودن و مدیریت متن‌های خواندنی شخصی — در فاز ۶ پیاده‌سازی می‌شود.",
+                        onBack = { navController.popBackStack() },
+                    )
+                }
             }
         }
 
@@ -195,7 +209,8 @@ fun MrsadRoot(
                 },
                 modifier = Modifier
                     .align(androidx.compose.ui.Alignment.BottomCenter)
-                    .windowInsetsPadding(WindowInsets.navigationBars),
+                    .windowInsetsPadding(WindowInsets.navigationBars)
+                    .onSizeChanged { bottomBarHeight = it.height },
             )
         }
     }

@@ -43,6 +43,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import dev.mrsad.app.data.AppContainer
 import dev.mrsad.app.data.settings.MrsadSettings
+import dev.mrsad.app.ui.components.LocalBottomBarClearance
 import dev.mrsad.app.ui.components.MrsadChip
 import dev.mrsad.app.ui.components.MrsadPrimaryButton
 import dev.mrsad.app.ui.components.MrsadSurface
@@ -94,7 +95,10 @@ fun AssistantScreen(
             Spacer(Modifier.height(MrsadTokens.Spacing.md))
 
             LazyColumn(
-                modifier = Modifier.weight(1f).fillMaxWidth(),
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .padding(bottom = LocalBottomBarClearance.current),
                 verticalArrangement = Arrangement.spacedBy(MrsadTokens.Spacing.sm),
             ) {
                 item { IntroBubble(state) }

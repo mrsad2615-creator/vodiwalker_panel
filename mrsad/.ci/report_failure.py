@@ -123,6 +123,7 @@ def report_instrumented_tests(base: pathlib.Path | None = None) -> None:
 
     summary: list[str] = []
     failures: list[str] = []
+    traces: list[str] = []
     for path in files:
         try:
             root = ET.parse(path).getroot()
@@ -141,6 +142,18 @@ def report_instrumented_tests(base: pathlib.Path | None = None) -> None:
                     message = (child.get("message") or child.text or "").strip()
                     detail = message.splitlines()[0] if message else tag
                     failures.append(f"{short}: {detail}")
+                    # The element text holds the stack trace, which names the
+                    # exact test line that failed — the most useful part.
+                    body = (child.text or "").strip()
+                    if body:
+                        frames = [
+                            line.strip()
+                            for line in body.splitlines()
+                            if line.strip().startswith("at ")
+                        ]
+                        head = body.splitlines()[0].strip()
+                        keep = [head] + frames[:12]
+                        traces.append(f"{short}:\n" + "\n".join(keep))
                 elif tag == "skipped":
                     status = "SKIP"
             summary.append(f"{status:4} {short}  ({classname})")
@@ -149,6 +162,8 @@ def report_instrumented_tests(base: pathlib.Path | None = None) -> None:
         annotate("MRSAD instrumented test results", "\n".join(summary[:40]))
     if failures:
         annotate("MRSAD instrumented test failures", "\n".join(failures[:20]))
+    if traces:
+        annotate("MRSAD instrumented test stack traces", "\n\n".join(traces[:6]), limit=6000)
 
 
 def _thread_blocks(text: str) -> list[tuple[str, list[str]]]:

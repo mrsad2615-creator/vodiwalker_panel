@@ -44,6 +44,7 @@ import dev.mrsad.app.data.AppContainer
 import dev.mrsad.app.data.settings.MrsadSettings
 import dev.mrsad.app.navigation.Routes
 import dev.mrsad.app.testing.MrsadTestTags
+import dev.mrsad.app.ui.components.LocalBottomBarClearance
 import dev.mrsad.app.ui.components.MetricValue
 import dev.mrsad.app.ui.components.MrsadCore
 import dev.mrsad.app.ui.components.MrsadSurface
@@ -82,9 +83,10 @@ fun HomeScreen(
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = MrsadTokens.Spacing.md),
+                .padding(horizontal = MrsadTokens.Spacing.md)
+                .padding(bottom = LocalBottomBarClearance.current),
             verticalArrangement = Arrangement.spacedBy(MrsadTokens.Spacing.md),
-            contentPadding = PaddingValues(top = MrsadTokens.Spacing.lg, bottom = 128.dp),
+            contentPadding = PaddingValues(top = MrsadTokens.Spacing.lg, bottom = MrsadTokens.Spacing.lg),
         ) {
             item { HomeHeader() }
 

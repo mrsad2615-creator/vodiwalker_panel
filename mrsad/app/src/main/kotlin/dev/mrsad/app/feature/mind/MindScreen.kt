@@ -50,6 +50,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import dev.mrsad.app.data.AppContainer
 import dev.mrsad.app.data.settings.MrsadSettings
+import dev.mrsad.app.ui.components.LocalBottomBarClearance
 import dev.mrsad.app.ui.components.MrsadChip
 import dev.mrsad.app.ui.components.MrsadPrimaryButton
 import dev.mrsad.app.ui.components.MrsadProgressBar
@@ -97,6 +98,7 @@ private fun MindLobby(state: MindUiState, viewModel: MindViewModel, settings: Mr
     Column(
         Modifier
             .fillMaxSize()
+            .padding(bottom = LocalBottomBarClearance.current)
             .verticalScroll(rememberScrollState())
             .padding(MrsadTokens.Spacing.md),
         verticalArrangement = Arrangement.spacedBy(MrsadTokens.Spacing.md),
@@ -159,7 +161,7 @@ private fun MindLobby(state: MindUiState, viewModel: MindViewModel, settings: Mr
                 color = colors.textSecondary,
             )
         }
-        Spacer(Modifier.height(110.dp))
+        Spacer(Modifier.height(MrsadTokens.Spacing.lg))
     }
 }
 
@@ -215,7 +217,7 @@ private fun MindPlayer(state: MindUiState, viewModel: MindViewModel, settings: M
             MindExercise.LOGIC -> LogicStage(state, viewModel, settings)
             null -> Unit
         }
-        Spacer(Modifier.height(120.dp))
+        Spacer(Modifier.height(MrsadTokens.Spacing.lg))
     }
 }
 
@@ -582,7 +584,7 @@ private fun MindResult(state: MindUiState, viewModel: MindViewModel, settings: M
                 modifier = Modifier.weight(1f),
             )
         }
-        Spacer(Modifier.height(120.dp))
+        Spacer(Modifier.height(MrsadTokens.Spacing.lg))
     }
 }
 

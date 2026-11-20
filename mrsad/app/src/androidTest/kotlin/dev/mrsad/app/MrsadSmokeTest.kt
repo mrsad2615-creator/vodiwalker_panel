@@ -1,5 +1,6 @@
 package dev.mrsad.app
 
+import androidx.compose.ui.test.ComposeTimeoutException
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
@@ -70,19 +71,33 @@ class MrsadSmokeTest {
 
     // ---- helpers ------------------------------------------------------------
 
-    /** Waits until a tagged node exists in the semantics tree. */
+    /**
+     * Waits until a tagged node exists in the semantics tree.
+     *
+     * A plain timeout only says "condition still not satisfied", which does
+     * not tell which element never showed up — so the wait is wrapped and
+     * re-thrown with the tag it was waiting for.
+     */
     private fun awaitTag(tag: String, timeoutMillis: Long = 20_000) {
-        composeRule.waitUntil(timeoutMillis) {
-            composeRule.onAllNodesWithTag(tag).fetchSemanticsNodes().isNotEmpty()
+        try {
+            composeRule.waitUntil(timeoutMillis) {
+                composeRule.onAllNodesWithTag(tag).fetchSemanticsNodes().isNotEmpty()
+            }
+        } catch (timeout: ComposeTimeoutException) {
+            throw AssertionError("Timed out waiting for the node tagged '$tag'", timeout)
         }
     }
 
     /** Waits until a tagged node reports itself as selected. */
     private fun awaitSelected(tag: String, timeoutMillis: Long = 20_000) {
-        composeRule.waitUntil(timeoutMillis) {
-            composeRule.onAllNodes(hasTestTag(tag) and isSelected())
-                .fetchSemanticsNodes()
-                .isNotEmpty()
+        try {
+            composeRule.waitUntil(timeoutMillis) {
+                composeRule.onAllNodes(hasTestTag(tag) and isSelected())
+                    .fetchSemanticsNodes()
+                    .isNotEmpty()
+            }
+        } catch (timeout: ComposeTimeoutException) {
+            throw AssertionError("Timed out waiting for '$tag' to be selected", timeout)
         }
     }
 

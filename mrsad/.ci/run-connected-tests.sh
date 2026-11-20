@@ -121,6 +121,27 @@ run_one() {
 
 FAILED=0
 PASSED=0
+
+# Build the app and the test APK once, up front.
+#
+# The first connected-test invocation has to compile the app, run KSP for
+# Room and build the test APK. That easily takes longer than the per-test
+# timeout, so without this warm-up the *first* test would be killed by the
+# timeout while it was still compiling — which looks exactly like a hang.
+echo "===== WARM-UP BUILD =====" >> "$LOG"
+date -u +"begin %Y-%m-%dT%H:%M:%SZ" >> "$LOG"
+timeout --signal=TERM --kill-after=30 "${MRSAD_BUILD_TIMEOUT_SECONDS:-900}" \
+    ./gradlew --console=plain --no-daemon :app:assembleDebugAndroidTest >> "$LOG" 2>&1
+build_rc=$?
+echo "===== END WARM-UP BUILD exit=$build_rc =====" >> "$LOG"
+date -u +"end %Y-%m-%dT%H:%M:%SZ" >> "$LOG"
+
+if [ "$build_rc" -ne 0 ]; then
+    echo "===== BUILD FAILED ====="
+    tail -n 120 "$LOG"
+    exit 1
+fi
+
 for m in $METHODS; do
     if run_one "$m"; then
         PASSED=$((PASSED + 1))

@@ -152,6 +152,16 @@ jobs:
     defaults:
       run:
         working-directory: mrsad
+    env:
+      # The signing key lives in a repository *secret*, never in the
+      # repository itself. A secret survives a cache eviction; a cached key
+      # does not. The cache below stays as a fallback for as long as the
+      # secret has not been created yet.
+      #
+      # `secrets` is not available in a step-level `if`, which is why the
+      # secret is exposed through the job-level environment instead.
+      MRSAD_KEYSTORE_BASE64: ${{ secrets.MRSAD_KEYSTORE_BASE64 }}
+      MRSAD_KEYSTORE_PASSWORD: ${{ secrets.MRSAD_KEYSTORE_PASSWORD }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v5
@@ -173,8 +183,21 @@ jobs:
           path: mrsad/.keystore
           key: mrsad-release-keystore-v1
 
+      # The stored key wins over the cached one. Writing it after the cache
+      # restore keeps the transition safe: the cache is still there when the
+      # secret is missing, and the secret is used as soon as it exists.
+      - name: Write the stored signing key
+        if: env.MRSAD_KEYSTORE_BASE64 != ''
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .keystore
+          printf '%s' "$MRSAD_KEYSTORE_BASE64" | base64 -d > .keystore/mrsad-release.jks
+          printf '%s' "$MRSAD_KEYSTORE_PASSWORD" > .keystore/password.txt
+          echo "using the signing key from the repository secret"
+
       - name: Create the release keystore
-        if: steps.keystore.outputs.cache-hit != 'true'
+        if: steps.keystore.outputs.cache-hit != 'true' && env.MRSAD_KEYSTORE_BASE64 == ''
         shell: bash
         run: |
           set -euo pipefail
@@ -200,6 +223,23 @@ jobs:
           export ORG_GRADLE_PROJECT_MRSAD_KEY_ALIAS="mrsad"
           export ORG_GRADLE_PROJECT_MRSAD_KEY_PASSWORD="$PASS"
           ./gradlew --console=plain --no-daemon :app:assembleRelease
+
+      # The fingerprint of the signing certificate is published with the
+      # release, so a rotated key can be recognised from outside the
+      # repository — and so anybody can tell whether two releases carry the
+      # same signature.
+      - name: Read the signing certificate fingerprint
+        id: fingerprint
+        shell: bash
+        run: |
+          set -euo pipefail
+          PASS=$(cat .keystore/password.txt)
+          FP=$(keytool -list -v \
+                 -keystore .keystore/mrsad-release.jks \
+                 -alias mrsad -storepass "$PASS" \
+                 | grep -iE 'SHA256:' | head -1 | sed 's/.*SHA256: *//' || true)
+          echo "value=${FP:-unknown}" >> "$GITHUB_OUTPUT"
+          echo "signing certificate SHA-256: ${FP:-unknown}"
 
       - name: Publish the release
         shell: bash
@@ -240,9 +280,16 @@ jobs:
             right to left whatever the system locale happens to be.
           * Build: commit \`${COMMIT:0:7}\`
           * CI run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}
+          * Signing certificate (SHA-256): ${{ steps.fingerprint.outputs.value }}
 
           Install \`mrsad.apk\` on Android 8.0+ (it may ask to allow installs from
           unknown sources). Verify the download with \`SHA256SUMS.txt\`.
+
+          The signing key must not change between releases: Android refuses to
+          install a build over an older one when the signature differs, and the
+          training history stored on the device becomes unreachable. The
+          fingerprint above is what proves two releases carry the same
+          signature.
           EOF
 
           if gh release view "$TAG" >/dev/null 2>&1; then

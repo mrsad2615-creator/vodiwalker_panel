@@ -105,7 +105,11 @@ Legend: ✅ done & verified · 🟡 implemented, awaiting verification · 🟠 p
   budget; a unit test compares that method list with the test class, so a
   method that is never executed fails the build instead of passing silently.
 * Release APK: signed with a key held in the Actions cache (never in git),
-  published as `mrsad.apk` + `SHA256SUMS.txt`.
+  published as `mrsad.apk` + `SHA256SUMS.txt`. The workflow reads the key
+  from the `MRSAD_KEYSTORE_BASE64` repository secret whenever that secret
+  exists and falls back to the cache otherwise, so the signing identity can
+  survive a cache eviction. Every release publishes the SHA-256 fingerprint
+  of its signing certificate.
 * The accessibility floor is enforced by tests, not by eye: the colour system
   is checked against the WCAG contrast ratios, the corpora are checked for
   answer ranges and tier coverage, and every control reserves a 48dp touch
@@ -143,4 +147,12 @@ Legend: ✅ done & verified · 🟡 implemented, awaiting verification · 🟠 p
 7. The Arena/Planner/Library screens are explicit placeholders.
 8. The release key lives in the GitHub Actions cache, not in a repository
    secret: if that cache is evicted the signing identity changes and a new
-   APK can no longer be installed over an older one.
+   APK can no longer be installed over an older one. The workflow now reads
+   the key from the `MRSAD_KEYSTORE_BASE64` secret whenever it exists and
+   falls back to the cache otherwise, but the secret still has to be
+   created by a session with repository-admin access — see the open issue
+   about moving the signing key out of the cache.
+9. Every release now publishes the SHA-256 fingerprint of its signing
+   certificate, so two releases can be compared without downloading
+   anything. The fingerprint only helps if the key is not rotated: a
+   rotation still breaks the upgrade path of every existing install.

@@ -91,3 +91,47 @@
 2. **ریلیز امضاشده**: افزودن keystore به Secrets + `assembleRelease` + `minifyEnabled true`؛ بعد از آن APK حرفه‌ای (نه دیباگ) منتشر می‌شود.
 
 باقی موارد P0/P1 ریویو (تایمر تمرکز مبتنی بر زمان واقعی، اعلان‌ها، بکاپ با Filesystem/Share) دست‌نخورده مانده‌اند و آماده‌ی کار در گام بعد هستند.
+
+---
+
+# ضمیمه — ۱.۲.۰ (پس از نصب APK توسط کاربر)
+
+## ۷) باگ «بال صفحه / ناچ» که گزارش شد
+
+**ریشه مشکل:** اپ با `targetSdk 36` بیلد می‌شود؛ از اندروید ۱۵ به بالا سیستم edge-to-edge را **اجباری** می‌کند و تنظیم قدیمی `overlaysWebView: false` نادیده گرفته می‌شود. نتیجه: هدر بالای صفحه زیر نوار وضعیت/ناچ می‌رفت و لمس‌ها به نوار سیستم می‌خورد (احساس «بال کار نمی‌کند»).
+
+**اصلاح:**
+- Capacitor 8 خودش `--safe-area-inset-top/right/bottom/left` را به CSS تزریق می‌کند؛ پالیسی صریح شد: `SystemBars: { insetsHandling: 'css', initialViewportFitValueHint: 'cover' }` و `overlaysWebView` حذف شد.
+- توکن‌های `--safe-top/--safe-bottom/--safe-left/--safe-right` در `design-system.css` (با fallback به `env()` روی وب و مقدار `0px` در حالت native → هیچ فاصلهٔ دوبل ایجاد نمی‌شود).
+- هدر: `.app-safe-header` → پس‌زمینه‌اش پشت نوار وضعیت کشیده می‌شود ولی متن/آیکون‌ها زیر ناچ نمی‌روند (sticky، بدون پرش هنگام اسکرول).
+- داک پایین و شیت «بیشتر»: `padding-bottom: calc(var(--safe-bottom) + 0.75rem)`؛ محتوای صفحه هم به همان اندازه فضای امن گرفت (`.app-safe-content`).
+- اسپلش هم `app-safe-frame` شد تا در حالت افقی زیر ناچ نرود.
+- رنگ‌های نیتیو هم به پالت جدید رسیدند: `colors.xml` (`#0D041A`/`#0A0A0C`/`#6E56CF`/`#A99BF0`) و `capacitor.config.ts`.
+
+## ۸) آیکون جدید (انتخاب کاربر از دو گزینهٔ هوش مصنوعی)
+
+| مورد | مقدار |
+|---|---|
+| منبع | آیکون تولیدشده با AI، ذخیره در `assets/kairos-icon-pro.png` |
+| مارک | استخراج‌شده با حذف پس‌زمینهٔ تیره → `assets/kairos-mark.png` (شفاف، ۳۸۹×۴۳۲) |
+| رنگ پس‌زمینه | `#0D041A` (هم‌رنگ آیکون انتخابی) |
+| آیکون تطبیقی | `mipmap-*/ic_launcher_foreground.png` — مارک در ۴۷٪ کانواس، داخل ناحیهٔ امن ۶۶dp |
+| آیکون قدیمی/گرد | `mipmap-*/ic_launcher.png` (squircle، شعاع ۲۲.۵٪) + `ic_launcher_round.png` (دایره) |
+| اسپلش اندروید ۱۲ | `drawable-*/ic_splash_mark.png` (کانواس ۲۸۸dp) — جای `ic_splash_vector` قبلی |
+| وب/PWA | `kairos-icon-192/512` (any) + `kairos-icon-maskable-192/512` (maskable) + `favicon-32` |
+| حذف‌شده | آیکون تیل (teal) قالب Capacitor و `kairos-icon.svg` قدیمی با گرادیان |
+| پیش‌نمایش | `assets/kairos-icon-preview.png` |
+
+## ۹) وضعیت بیلد و APK
+
+| گام | نتیجه |
+|---|---|
+| `npm run typecheck` | ✅ |
+| `npm run lint` | ✅ |
+| `npm test` | ✅ ۱۳/۱۳ |
+| `npm run build` | ✅ ۴.۶۴s — precache ۷۱ فایل |
+| CI `Build KAIROS Android APK` | ✅ (run `44805031767`) — APK بازسازی و روی ریلیز منتشر شد |
+
+**لینک دانلود:** `https://github.com/mrsad2615-creator/vodiwalker_panel/releases/download/kairos-v1.2.0/KAIROS-v1.2.0.apk` (۵.۶۶ MB، دیباگ‌امضا، `versionCode 4`)
+
+> نکته: یک اجرای CI در میانه کار به‌دلیل خطای موقت شبکه در دانلود وابستگی Gradle شکست خورد و با re-run موفق شد؛ تغییرات کد مشکلی نداشتند.

@@ -37,16 +37,37 @@ jobs:
       - name: Run unit tests
         run: gradle testDebugUnitTest --no-daemon
 
-      - name: Build Debug APK
-        run: gradle assembleDebug --no-daemon
-
-      - name: Build Release APK (unsigned)
+      - name: Build Release APK
         run: gradle assembleRelease --no-daemon
 
-      - name: Upload APKs
+      - name: Sign & Verify Release APK
+        run: |
+          BUILD_TOOLS_DIR=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -n 1)
+          KEYSTORE_PATH="$RUNNER_TEMP/mrsad-release.jks"
+          keytool -genkeypair -v \
+            -keystore "$KEYSTORE_PATH" \
+            -alias mrsad_ambient \
+            -keyalg RSA -keysize 2048 -validity 10000 \
+            -storepass mrsad_ambient_2026 -keypass mrsad_ambient_2026 \
+            -dname "CN=MRSAD Ambient, OU=Mobile, O=MRSAD, L=Tehran, S=Tehran, C=IR"
+
+          UNSIGNED_APK="app/build/outputs/apk/release/app-release-unsigned.apk"
+          ALIGNED_APK="app/build/outputs/apk/release/app-release-aligned.apk"
+          SIGNED_APK="app/build/outputs/apk/release/mrsad-ambient-v1.0.0-release-signed.apk"
+
+          "$BUILD_TOOLS_DIR/zipalign" -v -p 4 "$UNSIGNED_APK" "$ALIGNED_APK"
+          "$BUILD_TOOLS_DIR/apksigner" sign \
+            --ks "$KEYSTORE_PATH" \
+            --ks-key-alias mrsad_ambient \
+            --ks-pass pass:mrsad_ambient_2026 \
+            --key-pass pass:mrsad_ambient_2026 \
+            --out "$SIGNED_APK" \
+            "$ALIGNED_APK"
+
+          "$BUILD_TOOLS_DIR/apksigner" verify --verbose "$SIGNED_APK"
+
+      - name: Upload Signed Release APK
         uses: actions/upload-artifact@v4
         with:
-          name: mrsad-ambient-apks
-          path: |
-            mrsad-ambient/app/build/outputs/apk/debug/*.apk
-            mrsad-ambient/app/build/outputs/apk/release/*.apk
+          name: mrsad-ambient-release-signed-apk
+          path: mrsad-ambient/app/build/outputs/apk/release/mrsad-ambient-v1.0.0-release-signed.apk

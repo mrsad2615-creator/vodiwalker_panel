@@ -12,19 +12,23 @@ interface LaunchScreenProps {
   onSkip: () => void;
 }
 
-const EASE = [0.22, 1, 0.36, 1] as const;
+const EASE_OUT = [0.22, 1, 0.36, 1] as const;
+const WORDMARK = ['K', 'A', 'I', 'R', 'O', 'S'] as const;
 
 /**
- * Launch screen — one mark, one wordmark, one hairline.
+ * Launch screen — logo motion.
  *
- * Motion is choreographed on the compositor only (transform / opacity /
- * clip-path), runs ~900ms end-to-end and collapses to a static frame when the
- * user asked for reduced motion. Progress is real: it follows font readiness and
- * store hydration, so the bar never lies about what the app is doing.
+ * A real entrance rather than a fade: the mark springs up from below with a
+ * slight rotation and a wipe, an accent arc orbits it, the glow breathes, the
+ * wordmark letters rise one by one and the hairline fills with the actual boot
+ * progress. Everything is transform/opacity/clip-path on the compositor, runs
+ * ~1.1s and collapses to a static frame under `prefers-reduced-motion`.
  */
 export function LaunchScreen({ exiting, progress, onSkip }: LaunchScreenProps) {
   const reducedMotion = useReducedMotion();
   const skippedRef = useRef(false);
+  const animated = !reducedMotion;
+  const pct = Math.round(Math.min(1, Math.max(0, progress)) * 100);
 
   const skip = () => {
     if (skippedRef.current) return;
@@ -40,8 +44,6 @@ export function LaunchScreen({ exiting, progress, onSkip }: LaunchScreenProps) {
     return () => window.removeEventListener('keydown', onKey);
   });
 
-  const animated = !reducedMotion;
-
   return (
     <motion.div
       role="status"
@@ -49,73 +51,131 @@ export function LaunchScreen({ exiting, progress, onSkip }: LaunchScreenProps) {
       aria-live="polite"
       onClick={skip}
       initial={false}
-      animate={exiting ? { opacity: 0, scale: animated ? 1.012 : 1 } : { opacity: 1, scale: 1 }}
-      transition={{ duration: 0.24, ease: 'easeOut' }}
+      animate={exiting ? { opacity: 0, scale: animated ? 1.02 : 1 } : { opacity: 1, scale: 1 }}
+      transition={{ duration: 0.26, ease: 'easeOut' }}
       className="app-safe-frame fixed inset-0 z-[100] flex select-none flex-col items-center justify-center overflow-hidden bg-[var(--bg)]"
-      style={{ contain: 'layout style paint' }}
+      style={{ contain: 'layout paint' }}
     >
-      {/* Soft brand glow — 6% of the screen, fades in once. */}
+      {/* Breathing brand glow */}
       <motion.div
         aria-hidden="true"
         className="kairos-launch-glow pointer-events-none absolute inset-0"
-        initial={animated ? { opacity: 0 } : false}
-        animate={{ opacity: 0.55 }}
-        transition={{ duration: 1.1, ease: 'easeOut' }}
+        initial={animated ? { opacity: 0, scale: 0.85 } : false}
+        animate={
+          animated
+            ? { opacity: [0, 0.75, 0.5, 0.75], scale: [0.85, 1.04, 0.98, 1.04] }
+            : { opacity: 0.7, scale: 1 }
+        }
+        transition={animated ? { duration: 4.2, repeat: Infinity, ease: 'easeInOut' } : { duration: 0.3 }}
       />
 
       <div className="relative flex flex-col items-center">
-        <motion.div
-          className="relative"
-          initial={animated ? { opacity: 0, scale: 0.94, clipPath: 'inset(0% 0% 100% 0%)' } : false}
-          animate={{ opacity: 1, scale: 1, clipPath: 'inset(0% 0% 0% 0%)' }}
-          transition={{ duration: 0.55, ease: EASE, delay: 0.05 }}
-        >
-          {/* The screen itself is labelled, so the mark stays decorative. */}
-          <KairosLogoMark size={58} className="text-[var(--accent-fg)]" />
-
+        {/* Mark + orbiting arc */}
+        <div className="relative flex h-[132px] w-[132px] items-center justify-center">
           {animated && (
-            <motion.span
+            <motion.svg
               aria-hidden="true"
-              className="kairos-launch-sweep pointer-events-none absolute inset-0"
-              initial={{ x: '-130%' }}
-              animate={{ x: '130%' }}
-              transition={{ duration: 1.05, ease: 'easeInOut', delay: 0.34 }}
-            />
+              viewBox="0 0 132 132"
+              className="absolute inset-0"
+              initial={{ opacity: 0, rotate: -90 }}
+              animate={{ opacity: 1, rotate: 270 }}
+              transition={{
+                opacity: { duration: 0.5, delay: 0.15 },
+                rotate: { duration: 6.5, repeat: Infinity, ease: 'linear' },
+              }}
+            >
+              <circle
+                cx="66"
+                cy="66"
+                r="60"
+                fill="none"
+                stroke="var(--accent)"
+                strokeOpacity="0.55"
+                strokeWidth="1.4"
+                strokeLinecap="round"
+                strokeDasharray="52 325"
+              />
+              <circle cx="66" cy="6" r="2.6" fill="var(--accent-fg)" />
+            </motion.svg>
           )}
-        </motion.div>
+
+          <motion.div
+            className="relative"
+            initial={
+              animated
+                ? { opacity: 0, scale: 0.62, y: 26, rotate: -8, clipPath: 'inset(0% 0% 100% 0%)' }
+                : false
+            }
+            animate={{ opacity: 1, scale: 1, y: 0, rotate: 0, clipPath: 'inset(0% 0% 0% 0%)' }}
+            transition={
+              animated
+                ? {
+                    type: 'spring',
+                    stiffness: 190,
+                    damping: 17,
+                    mass: 0.9,
+                    clipPath: { duration: 0.5, ease: EASE_OUT },
+                  }
+                : { duration: 0.2 }
+            }
+          >
+            <KairosLogoMark size={92} className="text-[var(--accent-fg)]" />
+
+            {animated && (
+              <motion.span
+                aria-hidden="true"
+                className="kairos-launch-sweep pointer-events-none absolute inset-0"
+                initial={{ x: '-140%' }}
+                animate={{ x: '140%' }}
+                transition={{ duration: 1.15, ease: 'easeInOut', delay: 0.42 }}
+              />
+            )}
+          </motion.div>
+        </div>
+
+        {/* Wordmark, letter by letter */}
+        <div className="font-brand mt-6 flex items-baseline text-[22px] font-semibold tracking-[0.28em] text-[var(--text)]" aria-hidden="true">
+          {WORDMARK.map((letter, index) => (
+            <motion.span
+              key={`${letter}-${index}`}
+              initial={animated ? { opacity: 0, y: 12, filter: 'blur(4px)' } : false}
+              animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+              transition={{ duration: 0.45, ease: EASE_OUT, delay: 0.22 + index * 0.055 }}
+              className="inline-block"
+            >
+              {letter}
+            </motion.span>
+          ))}
+        </div>
 
         <motion.span
-          className="font-brand mt-7 text-[15px] font-semibold text-[var(--text)]"
-          initial={animated ? { opacity: 0, y: 6, letterSpacing: '0.42em' } : false}
-          animate={{ opacity: 1, y: 0, letterSpacing: '0.3em' }}
-          transition={{ duration: 0.5, ease: EASE, delay: 0.24 }}
-        >
-          KAIROS
-        </motion.span>
-
-        <motion.span
-          className="mt-2 text-[11px] tracking-wide text-[var(--text-3)]"
-          initial={animated ? { opacity: 0 } : false}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.4, ease: 'easeOut', delay: 0.38 }}
+          className="mt-2.5 text-[11.5px] tracking-wide text-[var(--text-3)]"
+          initial={animated ? { opacity: 0, y: 6 } : false}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: EASE_OUT, delay: 0.6 }}
         >
           نظم، عادت، تمرکز
         </motion.span>
 
         <motion.div
-          className="mt-8 flex w-[104px] flex-col items-center gap-2"
-          initial={animated ? { opacity: 0 } : false}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.35, ease: 'easeOut', delay: 0.46 }}
+          className="mt-9 flex w-[132px] flex-col items-center gap-2.5"
+          initial={animated ? { opacity: 0, scaleX: 0.6 } : false}
+          animate={{ opacity: 1, scaleX: 1 }}
+          transition={{ duration: 0.4, ease: EASE_OUT, delay: 0.66 }}
         >
-          <LinearProgress
-            value={progress}
-            thickness={2}
-            label="آماده‌سازی KAIROS"
-            className="bg-[var(--surface-3)]"
-          />
-          <span className="text-[9px] tabular-nums text-[var(--text-3)]" aria-hidden="true">
-            {Math.round(Math.min(1, Math.max(0, progress)) * 100)}%
+          <div className="relative w-full overflow-hidden rounded-full">
+            <LinearProgress
+              value={progress}
+              thickness={2.5}
+              label="آماده‌سازی KAIROS"
+              className="bg-[var(--surface-3)]"
+            />
+            {animated && (
+              <span className="kairos-progress-sheen pointer-events-none absolute inset-y-0 start-0 w-1/3" />
+            )}
+          </div>
+          <span className="num-geo text-[9.5px] tabular-nums text-[var(--text-3)]" aria-hidden="true">
+            {pct}%
           </span>
         </motion.div>
       </div>
@@ -124,9 +184,7 @@ export function LaunchScreen({ exiting, progress, onSkip }: LaunchScreenProps) {
         v{APP_VERSION} · b{BUILD_NUMBER}
       </span>
 
-      <span className="sr-only">
-        {progress >= 1 ? 'آماده شد' : `در حال آماده‌سازی، ${Math.round(progress * 100)} درصد`}
-      </span>
+      <span className="sr-only">{pct >= 100 ? 'آماده شد' : `در حال آماده‌سازی، ${pct} درصد`}</span>
     </motion.div>
   );
 }

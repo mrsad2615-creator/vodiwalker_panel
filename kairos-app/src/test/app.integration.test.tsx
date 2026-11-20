@@ -36,7 +36,10 @@ describe('KAIROS Full Application End-to-End Flow', () => {
     // Minimal launch screen renders immediately and is skippable
     const splash = screen.getByRole('status', { name: /kairos/i });
     expect(splash).toBeInTheDocument();
-    expect(screen.getByText('KAIROS')).toBeInTheDocument();
+    // The wordmark is animated letter by letter, so match the accessible name
+    // and the live progress element instead of one text node.
+    expect(splash).toHaveAttribute('aria-label', expect.stringContaining('KAIROS'));
+    expect(screen.getByRole('progressbar', { name: /آماده‌سازی KAIROS/i })).toBeInTheDocument();
 
     // Tap splash to skip directly into Dashboard
     fireEvent.click(splash);

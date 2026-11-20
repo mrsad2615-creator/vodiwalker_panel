@@ -136,7 +136,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 >
                   <Icon
                     size={18}
-                    weight={isActive ? 'fill' : 'regular'}
+                    weight={isActive ? 'fill' : 'duotone'}
                     className={isActive ? 'text-[var(--accent-fg)]' : ''}
                     aria-hidden="true"
                   />
@@ -159,7 +159,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             >
               <MoreHorizontal
                 size={18}
-                weight={isSecondaryActive ? 'fill' : 'regular'}
+                weight={isSecondaryActive ? 'fill' : 'duotone'}
                 className={isSecondaryActive ? 'text-[var(--accent-fg)]' : ''}
                 aria-hidden="true"
               />
@@ -199,7 +199,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                           isActive ? 'text-[var(--accent-fg)]' : 'text-[var(--text-2)]'
                         }`}
                       >
-                        <Icon size={16} weight={isActive ? 'fill' : 'regular'} aria-hidden="true" />
+                        <Icon size={16} weight={isActive ? 'fill' : 'duotone'} aria-hidden="true" />
                       </span>
                       <span className="min-w-0 flex-1">
                         <span className="block text-[13px] font-medium text-[var(--text)]">

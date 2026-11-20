@@ -147,12 +147,12 @@ function KairosRouter() {
 }
 
 /** Hoisted so icons never re-render from a fresh context object. */
-const ICON_CONTEXT = { weight: 'regular', size: 18, mirrored: false } as const;
+const ICON_CONTEXT = { weight: 'duotone', size: 18, mirrored: false } as const;
 
 export default function App() {
   return (
     <ErrorBoundary>
-      {/* One optical weight for every icon in the app (Phosphor `regular`). */}
+      {/* Duotone icons: two-tone, solid shapes — reads as real objects, not wireframes. */}
       <IconContext.Provider value={ICON_CONTEXT}>
         <AppProvider>
           <KairosRouter />

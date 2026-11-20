@@ -76,7 +76,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <ToastHost toasts={toasts} onDismiss={dismissToast} />
 
       <div className="relative mx-auto flex min-h-[100dvh] w-full max-w-[480px] flex-col">
-        <header className="sticky top-0 z-30 flex items-center justify-between border-b border-[var(--border)] bg-[var(--bg)]/92 px-4 py-3 backdrop-blur-md">
+        <header className="sticky top-0 z-30 flex items-center justify-between border-b border-[var(--border)] bg-[var(--bg)] px-4 py-3 backdrop-blur-md">
           <button
             type="button"
             onClick={() => handleNav('dashboard')}

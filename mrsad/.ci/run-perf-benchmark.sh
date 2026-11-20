@@ -10,13 +10,21 @@
 #
 # Usage: run-perf-benchmark.sh <gradle-project-dir> <output-file> [screenshot-dir]
 
+# The emulator action runs its script with a POSIX shell, so the script
+# starts itself again under bash, which is what the rest of it expects.
+if [ -z "${BASH_VERSION:-}" ]; then
+  exec bash "$0" "$@"
+fi
+
 set -uo pipefail
 
 GRADLE_DIR="${1:?usage: run-perf-benchmark.sh <gradle-project-dir> <output-file> [screenshot-dir]}"
 OUTPUT="${2:?usage: run-perf-benchmark.sh <gradle-project-dir> <output-file> [screenshot-dir]}"
 SCREENSHOT_DIR="${3:-}"
 
-cd "$GRADLE_DIR"
+cd "$GRADLE_DIR" || exit 1
+# The absolute path, so the log can be found from anywhere.
+GRADLE_DIR="$(pwd)"
 
 # Everything the run prints is kept in a log next to the project, so a
 # failing run can be reported without downloading anything.

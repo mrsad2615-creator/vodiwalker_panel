@@ -92,7 +92,7 @@ jobs:
           # The measurement has to see the animated application, so the
           # platform animations are left alone.
           disable-animations: false
-          script: cd $GITHUB_WORKSPACE/${{ matrix.checkout }}/mrsad && sh .ci/run-perf-benchmark.sh . "$GITHUB_WORKSPACE/perf-${{ matrix.label }}.json" "$GITHUB_WORKSPACE/screenshots-${{ matrix.label }}"
+          script: cd $GITHUB_WORKSPACE/${{ matrix.checkout }}/mrsad && bash .ci/run-perf-benchmark.sh . "$GITHUB_WORKSPACE/perf-${{ matrix.label }}.json" "$GITHUB_WORKSPACE/screenshots-${{ matrix.label }}"
       - name: Report what happened
         if: failure() || cancelled()
         shell: bash

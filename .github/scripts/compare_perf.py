@@ -36,6 +36,29 @@ def cell(report, phase: str, key: str):
     return str(value)
 
 
+def budget_line(baseline, redesign) -> str:
+    """Describes the frame budget the two runs were measured against."""
+    budgets = []
+    for report in (baseline, redesign):
+        if not report:
+            continue
+        section = report.get("overall") or {}
+        budget = section.get("budgetMs")
+        if budget is not None:
+            budgets.append(int(budget))
+    if not budgets:
+        return ("The frame budget was not recorded, so the jank numbers cannot be",
+                "compared.")
+    budget = budgets[0]
+    if len(set(budgets)) > 1:
+        return (f"The two runs were measured against different frame budgets "
+                f"({', '.join(str(b) for b in budgets)} ms); the jank numbers are "
+                f"not comparable.")
+    return (f"A frame longer than {budget} ms missed its deadline on the "
+            f"{round(1000.0 / budget)} Hz display of the emulator and is counted "
+            f"as jank.")
+
+
 def row(label: str, baseline, redesign, better: str = "lower") -> str:
     if baseline == "—" or redesign == "—":
         return f"| {label} | {baseline} | {redesign} | — |"
@@ -125,11 +148,12 @@ def main() -> int:
             str(redesign.get("cpuPercent", "—")) if redesign else "—"),
         row("PSS at the end (kB)", str(baseline.get("pssEndKb", "—")) if baseline else "—",
             str(redesign.get("pssEndKb", "—")) if redesign else "—"),
-        row("native heap (kB)", str(baseline.get("javaHeapUsedKb", "—")) if baseline else "—",
+        row("Java heap in use (kB)", str(baseline.get("javaHeapUsedKb", "—")) if baseline else "—",
             str(redesign.get("javaHeapUsedKb", "—")) if redesign else "—"),
+        row("native heap (kB)", str(baseline.get("nativeHeapKb", "—")) if baseline else "—",
+            str(redesign.get("nativeHeapKb", "—")) if redesign else "—"),
         "",
-        "A frame longer than 16.67 ms missed its deadline on a 60 Hz display and",
-        "is counted as jank.",
+        budget_line(baseline, redesign),
         "",
     ]
 

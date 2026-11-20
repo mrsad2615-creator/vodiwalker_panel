@@ -126,29 +126,33 @@ class PerformanceBenchmarkTest {
 
         window.removeOnFrameMetricsAvailableListener(collector)
 
-        val overall = collector.snapshot()
-        val idle = collector.snapshot("idle")
-        val scroll = collector.snapshot("scroll")
-        val touch = collector.snapshot("touch")
-        val navigate = collector.snapshot("navigate")
-
         val wallMillis = (wallEnd - wallStart).toDouble()
         val cpuMillis = (cpuEnd - cpuStart).toDouble()
-        val refreshMillis = 1000.0 / max(1.0, metrics.refreshRate.toDouble())
+        // The refresh rate of the display the app is drawn on. It is the
+        // frame budget every frame is measured against.
+        val refreshHz = window.decorView.display?.refreshRate ?: 60f
+        val refreshMillis = 1000.0 / max(1.0, refreshHz.toDouble())
+
+        val overall = collector.snapshot(budgetMillis = refreshMillis)
+        val idle = collector.snapshot("idle", refreshMillis)
+        val scroll = collector.snapshot("scroll", refreshMillis)
+        val touch = collector.snapshot("touch", refreshMillis)
+        val navigate = collector.snapshot("navigate", refreshMillis)
 
         val report = buildString {
             append("{")
             append("\"package\":\"${context.packageName}\",")
             append("\"build\":\"${BuildConfig.BUILD_TYPE}\",")
             append("\"version\":\"${BuildConfig.VERSION_NAME}\",")
-            append("\"displayRefreshHz\":${metrics.refreshRate},")
+            append("\"displayRefreshHz\":$refreshHz,")
             append("\"wallMillis\":${wallMillis.roundToLong()},")
             append("\"cpuMillis\":${cpuMillis.roundToLong()},")
             append("\"cpuPercent\":${if (wallMillis > 0) (cpuMillis / wallMillis * 100.0).roundToLong() else 0},")
             append("\"pssStartKb\":$pssStart,")
             append("\"pssEndKb\":$pssEnd,")
             append("\"pssDeltaKb\":${pssEnd - pssStart},")
-            append("\"javaHeapUsedKb\":${Debug.getNativeHeapAllocatedSize() / 1024},")
+            append("\"javaHeapUsedKb\":${javaHeapUsedKb()},")
+            append("\"nativeHeapKb\":${Debug.getNativeHeapAllocatedSize() / 1024},")
             append("\"overall\":${overall.toJson(refreshMillis)},")
             append("\"idle\":${idle.toJson(refreshMillis)},")
             append("\"scroll\":${scroll.toJson(refreshMillis)},")
@@ -171,6 +175,12 @@ class PerformanceBenchmarkTest {
     }
 
     // ---- helpers ------------------------------------------------------------
+
+    /** The Java heap the process currently holds, in kilobytes. */
+    private fun javaHeapUsedKb(): Long {
+        val runtime = Runtime.getRuntime()
+        return (runtime.totalMemory() - runtime.freeMemory()) / 1024
+    }
 
     /**
      * Writes a screenshot of the device to the application's own storage.
@@ -230,7 +240,7 @@ class PerformanceBenchmarkTest {
         )
         for (step in 1..steps) {
             val fraction = step.toFloat() / steps
-            val at = down + durationMillis * fraction
+            val at = down + (durationMillis * fraction).toLong()
             instrumentation.uiAutomation.injectInputEvent(
                 MotionEvent.obtain(
                     down,
@@ -263,26 +273,31 @@ class PerformanceBenchmarkTest {
 
         private val all = ArrayList<Long>()
         private val byPhase = HashMap<String, ArrayList<Long>>()
-        private var current = "warmup"
+        private var current = PHASE_WARMUP
 
         @Synchronized
         fun reset() {
             all.clear()
             byPhase.clear()
+            current = PHASE_WARMUP
         }
 
-        /** Starts a new phase and forgets the frames of the previous one. */
+        /**
+         * Starts a new phase.
+         *
+         * The frames of the previous phase are *kept*: the phases are
+         * reported side by side, and the whole session is reported as
+         * well. Only [reset] throws measurements away.
+         */
         @Synchronized
         fun startPhase(name: String) {
-            all.clear()
-            byPhase.clear()
             current = name
         }
 
         @Synchronized
-        fun snapshot(phase: String? = null): FrameStats {
+        fun snapshot(phase: String? = null, budgetMillis: Double = FRAME_BUDGET_MILLIS): FrameStats {
             val values = if (phase == null) all else (byPhase[phase] ?: ArrayList())
-            return FrameStats.of(values)
+            return FrameStats.of(values, budgetMillis)
         }
 
         @Synchronized
@@ -311,6 +326,7 @@ class PerformanceBenchmarkTest {
         fun toJson(refreshMillis: Double): String {
             val jankPercent = if (frames == 0) 0.0 else jankyFrames * 100.0 / frames
             return "{" +
+                "\"budgetMs\":${refreshMillis.roundToLong()}," +
                 "\"frames\":$frames," +
                 "\"meanMs\":${meanMillis.roundToLong()}," +
                 "\"p50Ms\":${p50.roundToLong()}," +
@@ -324,7 +340,7 @@ class PerformanceBenchmarkTest {
         }
 
         companion object {
-            fun of(values: List<Long>): FrameStats {
+            fun of(values: List<Long>, budgetMillis: Double = FRAME_BUDGET_MILLIS): FrameStats {
                 if (values.isEmpty()) {
                     return FrameStats(0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0)
                 }
@@ -338,7 +354,7 @@ class PerformanceBenchmarkTest {
                     p95 = percentile(sorted, 0.95),
                     p99 = percentile(sorted, 0.99),
                     max = sorted.last().toDouble(),
-                    jankyFrames = sorted.count { it > FRAME_BUDGET_MILLIS * 1_000_000L },
+                    jankyFrames = sorted.count { it > budgetMillis * 1_000_000L },
                 )
             }
 
@@ -361,7 +377,7 @@ class PerformanceBenchmarkTest {
         const val TOUCH_TAPS = 4
         const val TAP_PAUSE_MILLIS = 260L
         const val NAVIGATE_MILLIS = 1_200L
-
+        const val PHASE_WARMUP = "warmup"
     }
 }
 

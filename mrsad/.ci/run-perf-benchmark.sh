@@ -38,6 +38,12 @@ STATUS=${PIPESTATUS[0]}
 
 echo "the benchmark run finished with status $STATUS" | tee -a "$LOG"
 
+# The emulator is a userdebug image, so the shell can become root: that
+# is the way into the private storage of the application, where the
+# benchmark wrote its report and its pictures.
+adb root >/dev/null 2>&1 || true
+adb wait-for-device >/dev/null 2>&1 || true
+
 REPORT=""
 for directory in app/build/outputs/androidTest-results app/build/reports/androidTests; do
   if [ -d "$directory" ]; then
@@ -52,6 +58,13 @@ done
 # test XML was lost, that file is the second way to the same number.
 pull_report() {
   for package in dev.mrsad.app.debug dev.mrsad.app; do
+    for directory in "/data/user/0/$package/files" "/data/data/$package/files"; do
+      if adb shell "cat $directory/mrsad-perf.json" > "$GRADLE_DIR/device-report.json" 2>/dev/null; then
+        if [ -s "$GRADLE_DIR/device-report.json" ]; then
+          return 0
+        fi
+      fi
+    done
     if adb shell "run-as $package cat files/mrsad-perf.json" > "$GRADLE_DIR/device-report.json" 2>/dev/null; then
       if [ -s "$GRADLE_DIR/device-report.json" ]; then
         return 0
@@ -86,10 +99,33 @@ if [ -n "$SCREENSHOT_DIR" ]; then
   # a screenshot that was never taken.
   DEVICE_LISTING="$GRADLE_DIR/device-screenshots.txt"
   : > "$DEVICE_LISTING"
+  echo "== who am I ==" >> "$DEVICE_LISTING"
+  adb shell id >> "$DEVICE_LISTING" 2>&1
+
   for package in dev.mrsad.app.debug dev.mrsad.app; do
-    # The pictures live in the application's own storage. `run-as` is the
-    # way in: the emulator's shell user cannot read the private data
-    # directory of an application directly.
+    for directory in "/data/user/0/$package/files" "/data/data/$package/files"; do
+      if adb shell "ls $directory" >/dev/null 2>&1; then
+        echo "== $directory ==" >> "$DEVICE_LISTING"
+        adb shell "ls -la $directory" >> "$DEVICE_LISTING" 2>&1
+        # The whole directory at once, and then every picture by name:
+        # some versions of adb refuse a path that ends in "/.".
+        adb pull "$directory/." "$SCREENSHOT_DIR" >/dev/null 2>&1 || true
+        adb shell "ls $directory" 2>/dev/null \
+          | tr -d '\r' \
+          | while read -r name; do
+              case "$name" in
+                *.png)
+                  adb pull "$directory/$name" "$SCREENSHOT_DIR" >/dev/null 2>&1 || true
+                  ;;
+              esac
+            done
+        break
+      else
+        echo "== $directory is not there ==" >> "$DEVICE_LISTING"
+      fi
+    done
+    # `run-as` is the second way in, for a device where the shell cannot
+    # become root.
     if adb shell "run-as $package ls files" >/dev/null 2>&1; then
       echo "== run-as $package ls files ==" >> "$DEVICE_LISTING"
       adb shell "run-as $package ls -la files" >> "$DEVICE_LISTING" 2>&1
@@ -102,15 +138,9 @@ if [ -n "$SCREENSHOT_DIR" ]; then
                 ;;
             esac
           done
-      break
     else
       echo "== run-as $package ls files failed ==" >> "$DEVICE_LISTING"
-    fi
-    # The external storage of the application is the second way in.
-    if adb shell "ls /sdcard/Android/data/$package/files/" >/dev/null 2>&1; then
-      echo "== /sdcard/Android/data/$package/files/ ==" >> "$DEVICE_LISTING"
-      adb shell "ls -la /sdcard/Android/data/$package/files/" >> "$DEVICE_LISTING" 2>&1
-      adb pull "/sdcard/Android/data/$package/files/." "$SCREENSHOT_DIR" || true
+      adb shell "run-as $package ls files" >> "$DEVICE_LISTING" 2>&1
     fi
   done
 

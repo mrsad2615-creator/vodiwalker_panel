@@ -36,6 +36,26 @@ def cell(report, phase: str, key: str):
     return str(value)
 
 
+def jank_note(baseline, redesign) -> list[str]:
+    """Says plainly when the jank column cannot carry the comparison."""
+    values = []
+    for report in (baseline, redesign):
+        section = (report or {}).get("overall") or {}
+        values.append(section.get("jankPercent"))
+    if len(values) != 2 or any(value is None for value in values):
+        return []
+    if all(float(value) >= 95.0 for value in values):
+        return [
+            "> Every frame of **both** revisions is late against the frame",
+            "> budget of the emulator. A software-rendered x86_64 emulator does",
+            "> not draw in 16.67 ms, so the jank column sits at its ceiling for",
+            "> both and cannot separate them: the percentile columns carry the",
+            "> comparison, and the screenshot rows show what was on the screen.",
+            "",
+        ]
+    return []
+
+
 def budget_line(baseline, redesign) -> str:
     """Describes the frame budget the two runs were measured against."""
     budgets = []
@@ -156,6 +176,12 @@ def main() -> int:
         budget_line(baseline, redesign),
         "",
     ]
+
+    # The note about a saturated jank column belongs right after the
+    # frames table, where the reader meets the number first.
+    marker = "## The process"
+    index = lines.index(marker)
+    lines[index:index] = jank_note(baseline, redesign)
 
     with open(output, "w", encoding="utf-8") as handle:
         handle.write("\n".join(lines))

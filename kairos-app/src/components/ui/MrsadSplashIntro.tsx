@@ -32,7 +32,7 @@ export function MrsadSplashIntro({ exiting, onSkip }: MrsadSplashIntroProps) {
       role="status"
       aria-label="در حال آماده‌سازی KAIROS"
       onClick={skip}
-      className={`mrsad-splash-root fixed inset-0 z-[100] flex select-none flex-col items-center justify-center bg-[var(--bg)] ${
+      className={`mrsad-splash-root app-safe-frame fixed inset-0 z-[100] flex select-none flex-col items-center justify-center bg-[var(--bg)] ${
         exiting ? 'is-exiting' : ''
       }`}
     >
@@ -45,7 +45,7 @@ export function MrsadSplashIntro({ exiting, onSkip }: MrsadSplashIntroProps) {
         <span className="text-[12px] text-[var(--text-2)]">نظم، عادت و تمرکز</span>
       </div>
 
-      <div className="absolute bottom-12 h-px w-24 overflow-hidden rounded-full bg-[var(--border)]">
+      <div className="absolute bottom-[calc(3rem+var(--safe-bottom))] h-px w-24 overflow-hidden rounded-full bg-[var(--border)]">
         <div className="mrsad-progress h-full w-full bg-[var(--accent)]" />
       </div>
     </div>

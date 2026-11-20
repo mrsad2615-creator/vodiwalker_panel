@@ -6,7 +6,7 @@
     <!-- Pure crisp vector emblem centered inside Android 12+ Splash safe circle (160dp) -->
     <path
         android:pathData="M190,114 A54,54 0 1,0 190,174"
-        android:strokeColor="#8052D6"
+        android:strokeColor="#6E56CF"
         android:strokeWidth="5"
         android:strokeLineCap="round"
         android:fillColor="#00000000" />
@@ -19,5 +19,5 @@
         android:fillColor="#00000000" />
     <path
         android:pathData="M144,111m-4.5,0a4.5,4.5 0,1 1,9 0a4.5,4.5 0,1 1,-9 0"
-        android:fillColor="#B69AEF" />
+        android:fillColor="#A99BF0" />
 </vector>

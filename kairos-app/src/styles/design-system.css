@@ -40,6 +40,14 @@
   --r-pill: 999px;
   --nav-height: 64px;
 
+  /* System-bar / notch insets.
+     Capacitor 8 injects --safe-area-inset-* (edge-to-edge); env() is the fallback
+     for the browser and for native mode where the values are 0px. */
+  --safe-top: var(--safe-area-inset-top, env(safe-area-inset-top, 0px));
+  --safe-bottom: var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px));
+  --safe-left: var(--safe-area-inset-left, env(safe-area-inset-left, 0px));
+  --safe-right: var(--safe-area-inset-right, env(safe-area-inset-right, 0px));
+
   /* Type stacks — two families only */
   --font-persian: 'Vazirmatn', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-numeric: 'Space Grotesk', 'Vazirmatn', ui-monospace, sans-serif;
@@ -104,6 +112,26 @@ body {
 
 .kairos-ambient-bg {
   background-color: var(--bg);
+}
+
+/* Edge-to-edge frame: keeps content clear of the notch, status bar and
+   gesture bar. Values are 0 on desktop/web, so nothing shifts there. */
+.app-safe-frame {
+  padding-left: var(--safe-left);
+  padding-right: var(--safe-right);
+}
+
+/* Sticky header paints behind the status bar and keeps its content below it. */
+.app-safe-header {
+  padding-top: calc(var(--safe-top) + 0.75rem);
+}
+
+.app-safe-tabbar {
+  padding-bottom: calc(var(--safe-bottom) + 0.75rem);
+}
+
+.app-safe-content {
+  padding-bottom: calc(var(--safe-bottom) + 6.5rem);
 }
 
 .hairline {

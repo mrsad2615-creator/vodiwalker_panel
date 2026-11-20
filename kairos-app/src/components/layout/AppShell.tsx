@@ -75,8 +75,8 @@ export function AppShell({ children }: { children: ReactNode }) {
     <div className="kairos-ambient-bg min-h-[100dvh] w-full">
       <ToastHost toasts={toasts} onDismiss={dismissToast} />
 
-      <div className="relative mx-auto flex min-h-[100dvh] w-full max-w-[480px] flex-col">
-        <header className="sticky top-0 z-30 flex items-center justify-between border-b border-[var(--border)] bg-[var(--bg)] px-4 py-3 backdrop-blur-md">
+      <div className="app-safe-frame relative mx-auto flex min-h-[100dvh] w-full max-w-[480px] flex-col">
+        <header className="app-safe-header sticky top-0 z-30 flex items-center justify-between border-b border-[var(--border)] bg-[var(--bg)] px-4 pb-3 backdrop-blur-md">
           <button
             type="button"
             onClick={() => handleNav('dashboard')}
@@ -100,11 +100,11 @@ export function AppShell({ children }: { children: ReactNode }) {
           )}
         </header>
 
-        <main className="flex-1 px-4 pt-4 pb-28">{children}</main>
+        <main className="app-safe-content flex-1 px-4 pt-4">{children}</main>
 
         <nav
           aria-label="ناوبری اصلی"
-          className="pointer-events-none fixed inset-x-0 bottom-0 z-40 mx-auto w-full max-w-[480px] px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]"
+          className="pointer-events-none fixed inset-x-0 bottom-0 z-40 mx-auto w-full max-w-[480px] px-3 app-safe-tabbar"
         >
           <div className="luxury-glass-dock pointer-events-auto grid grid-cols-5 items-center gap-0.5 p-1">
             {PRIMARY_TABS.map((item) => {
@@ -162,7 +162,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               role="dialog"
               aria-modal="true"
               aria-label="بخش‌های دیگر"
-              className="relative w-full max-w-[480px] px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]"
+              className="app-safe-tabbar relative w-full max-w-[480px] px-3"
             >
               <div className="luxury-glass-sheet overflow-hidden p-2">
                 {SECONDARY_TABS.map((item) => {

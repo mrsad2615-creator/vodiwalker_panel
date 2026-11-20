@@ -3,10 +3,14 @@
 # Runs the performance benchmark on a connected device and collects what it
 # produced: the report the benchmark printed and the screenshots it took.
 #
-# The benchmark prints a single line that starts with `MRSAD_PERF_JSON:`;
-# the instrumentation runner captures it in the JUnit XML, so the report
-# can be recovered without any device tooling. The screenshots are written
-# to the application's own external storage and are pulled with `adb`.
+# The application is installed and driven by hand instead of through the
+# Gradle task for connected tests: that task removes the application when
+# it is done, and with it the pictures the benchmark took. Here the
+# application stays on the device, so the evidence can be read afterwards.
+#
+# The benchmark writes its report into the application's own storage and
+# prints it with a marker, so the report can be recovered without any
+# device tooling; the pictures are pulled from the same place.
 #
 # Usage: run-perf-benchmark.sh <gradle-project-dir> <output-file> [screenshot-dir]
 
@@ -30,20 +34,38 @@ GRADLE_DIR="$(pwd)"
 # failing run can be reported without downloading anything.
 LOG="$GRADLE_DIR/perf-benchmark.log"
 
-STATUS=0
-./gradlew --console=plain --no-daemon :app:connectedDebugAndroidTest \
-  -Pandroid.testInstrumentationRunnerArguments.class=dev.mrsad.app.PerformanceBenchmarkTest \
-  2>&1 | tee "$LOG"
+APP_ID="dev.mrsad.app.debug"
+TEST_ID="dev.mrsad.app.debug.test"
+INSTRUMENTATION="androidx.test.runner.AndroidJUnitRunner"
+
+# ---- 1. Build ---------------------------------------------------------------
+: > "$LOG"
+./gradlew --console=plain --no-daemon \
+  :app:assembleDebug :app:assembleDebugAndroidTest 2>&1 | tee -a "$LOG"
 STATUS=${PIPESTATUS[0]}
+echo "the build finished with status $STATUS" | tee -a "$LOG"
+if [ "$STATUS" -ne 0 ]; then
+  exit "$STATUS"
+fi
 
-echo "the benchmark run finished with status $STATUS" | tee -a "$LOG"
-
-# The emulator is a userdebug image, so the shell can become root: that
-# is the way into the private storage of the application, where the
-# benchmark wrote its report and its pictures.
+# ---- 2. The shell becomes root ----------------------------------------------
+# The emulator is a userdebug image, so the shell can become root: that is
+# the way into the private storage of the application, where the benchmark
+# wrote its report and its pictures.
 adb root >/dev/null 2>&1 || true
 adb wait-for-device >/dev/null 2>&1 || true
 
+# ---- 3. Install and run -----------------------------------------------------
+adb install -r -t app/build/outputs/apk/debug/app-debug.apk 2>&1 | tee -a "$LOG"
+adb install -r -t app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk 2>&1 | tee -a "$LOG"
+
+adb shell am instrument -w \
+  -e class dev.mrsad.app.PerformanceBenchmarkTest \
+  "$TEST_ID/$INSTRUMENTATION" 2>&1 | tee -a "$LOG"
+STATUS=${PIPESTATUS[0]}
+echo "the benchmark run finished with status $STATUS" | tee -a "$LOG"
+
+# ---- 4. The report ----------------------------------------------------------
 REPORT=""
 for directory in app/build/outputs/androidTest-results app/build/reports/androidTests; do
   if [ -d "$directory" ]; then
@@ -54,37 +76,29 @@ for directory in app/build/outputs/androidTest-results app/build/reports/android
   fi
 done
 
+if [ -z "$REPORT" ]; then
+  # The report is printed on a line of its own, so the rest of the line
+  # is the report.
+  REPORT=$(grep -o 'MRSAD_PERF_JSON:.*' "$LOG" 2>/dev/null | tail -1 | sed 's/^MRSAD_PERF_JSON://')
+fi
+
 # The application writes its report into its own storage as well. If the
-# test XML was lost, that file is the second way to the same number.
-pull_report() {
-  for package in dev.mrsad.app.debug dev.mrsad.app; do
-    for directory in "/data/user/0/$package/files" "/data/data/$package/files"; do
-      if adb shell "cat $directory/mrsad-perf.json" > "$GRADLE_DIR/device-report.json" 2>/dev/null; then
-        if [ -s "$GRADLE_DIR/device-report.json" ]; then
-          return 0
-        fi
-      fi
-    done
-    if adb shell "run-as $package cat files/mrsad-perf.json" > "$GRADLE_DIR/device-report.json" 2>/dev/null; then
+# output of the run was lost, that file is the second way to the number.
+if [ -z "$REPORT" ]; then
+  echo "the report was not found in the output, looking on the device"
+  for directory in "/data/user/0/$APP_ID/files" "/data/data/$APP_ID/files"; do
+    if adb shell "cat $directory/mrsad-perf.json" > "$GRADLE_DIR/device-report.json" 2>/dev/null; then
       if [ -s "$GRADLE_DIR/device-report.json" ]; then
-        return 0
+        REPORT=$(cat "$GRADLE_DIR/device-report.json")
+        break
       fi
     fi
   done
-  rm -f "$GRADLE_DIR/device-report.json"
-  return 1
-}
-
-if [ -z "$REPORT" ]; then
-  echo "the report was not found in the test results, looking on the device"
-  if pull_report; then
-    REPORT=$(cat "$GRADLE_DIR/device-report.json")
+  if [ -z "$REPORT" ]; then
+    rm -f "$GRADLE_DIR/device-report.json"
+    echo "no performance report was produced by the benchmark" >&2
+    exit 1
   fi
-fi
-
-if [ -z "$REPORT" ]; then
-  echo "no performance report was produced by the benchmark" >&2
-  exit 1
 fi
 
 printf '%s\n' "$REPORT" >> "$LOG"
@@ -92,17 +106,16 @@ printf '%s\n' "$REPORT" > "$OUTPUT"
 echo "the performance report was written to $OUTPUT"
 cat "$OUTPUT"
 
-# The screenshots are the visual evidence of the measurement.
+# ---- 5. The screenshots -----------------------------------------------------
+# The pictures are the visual evidence of the measurement.
 if [ -n "$SCREENSHOT_DIR" ]; then
   mkdir -p "$SCREENSHOT_DIR"
-  # What the device holds, so a missing screenshot can be told apart from
-  # a screenshot that was never taken.
   DEVICE_LISTING="$GRADLE_DIR/device-screenshots.txt"
   : > "$DEVICE_LISTING"
   echo "== who am I ==" >> "$DEVICE_LISTING"
   adb shell id >> "$DEVICE_LISTING" 2>&1
 
-  for package in dev.mrsad.app.debug dev.mrsad.app; do
+  for package in "$APP_ID" dev.mrsad.app; do
     for directory in "/data/user/0/$package/files" "/data/data/$package/files"; do
       if adb shell "ls $directory" >/dev/null 2>&1; then
         echo "== $directory ==" >> "$DEVICE_LISTING"
@@ -124,24 +137,6 @@ if [ -n "$SCREENSHOT_DIR" ]; then
         echo "== $directory is not there ==" >> "$DEVICE_LISTING"
       fi
     done
-    # `run-as` is the second way in, for a device where the shell cannot
-    # become root.
-    if adb shell "run-as $package ls files" >/dev/null 2>&1; then
-      echo "== run-as $package ls files ==" >> "$DEVICE_LISTING"
-      adb shell "run-as $package ls -la files" >> "$DEVICE_LISTING" 2>&1
-      adb shell "run-as $package ls files" 2>/dev/null \
-        | tr -d '\r' \
-        | while read -r name; do
-            case "$name" in
-              *.png)
-                adb exec-out "run-as $package cat files/$name" > "$SCREENSHOT_DIR/$name" || true
-                ;;
-            esac
-          done
-    else
-      echo "== run-as $package ls files failed ==" >> "$DEVICE_LISTING"
-      adb shell "run-as $package ls files" >> "$DEVICE_LISTING" 2>&1
-    fi
   done
 
   {

@@ -63,12 +63,6 @@ if [ "${1:-}" = "api" ]; then
   case "$method" in
     DELETE) exit 0 ;;
     PATCH)  echo "patched $*" >> "$STUB_LOG"; exit 0 ;;
-    POST)
-      case "$path" in
-        *"/assets?name="*) echo "https://uploads.github.com/stub{?name,label}" ;;
-        *) exit 1 ;;
-      esac
-      exit 0 ;;
   esac
 
   # The name the query asks about, and the number that belongs to it.
@@ -124,6 +118,7 @@ if [ "${1:-}" = "api" ]; then
       # One release.
       case "$jq" in
         *immutable*) echo "${STUB_IMMUTABLE:-false}" ;;
+        *upload_url*) echo "https://uploads.github.com/stub-release-assets{?name,label}" ;;
         .id)         echo "${STUB_RELEASE_ID:-1}" ;;
       esac
       exit 0 ;;
@@ -136,8 +131,13 @@ STUB
   cat > "$bin/curl" <<'STUB'
 #!/usr/bin/env bash
 # A stub of curl: it remembers the call and writes down the file that
-# was sent, so the test can look at what was uploaded.
+# was sent, so the test can look at what was uploaded. When the upload
+# host is told to be down, it fails, so that the failure path can be
+# exercised.
 echo "curl $*" >> "$STUB_LOG"
+if [ "${STUB_UPLOAD_DOWN:-0}" = "1" ]; then
+  exit 22
+fi
 for arg in "$@"; do
   case "$arg" in
     @*)
@@ -151,7 +151,14 @@ done
 exit 0
 STUB
 
-  chmod +x "$bin/gh" "$bin/curl"
+  # A stub of sleep: the test does not have to wait for the real
+  # backoff of a failing upload to know what happens.
+  cat > "$bin/sleep" <<'STUB'
+#!/usr/bin/env bash
+exit 0
+STUB
+
+  chmod +x "$bin/gh" "$bin/curl" "$bin/sleep"
 }
 
 # ---- The fixture -------------------------------------------------------------
@@ -284,6 +291,14 @@ source digest: $EXPECTED_DIGEST
 apk sha256: something"
 [ "$STATUS" -ne 0 ] && ok "the publish failed, as it should" || bad "the publish succeeded over an older source"
 grep -q "raise the version number" "$LOG" && ok "the reason was said" || bad "the reason was not said"
+
+echo "== a new release, with the upload host down =="
+run_case upload_down v9.9.9 STUB_EXISTS=0 STUB_UPLOAD_DOWN=1
+[ "$STATUS" -ne 0 ] && ok "the publish failed, as it should" || bad "the publish succeeded with the upload host down"
+grep -q "stays a draft" "$LOG" && ok "the release was left as a draft, ready to be tried again" \
+  || bad "the release was published without its files"
+grep -q "patched" "$LOG" && bad "the draft was published without its files" \
+  || ok "the draft was not published"
 
 echo "== an immutable release without the files =="
 run_case immutable_missing v9.9.9 \

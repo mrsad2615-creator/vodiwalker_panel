@@ -145,9 +145,10 @@ update_notes() {
   gh api -X PATCH "repos/$REPO/releases/$id" -F "body=@$NOTES" >/dev/null 2>&1
 }
 
-# The two steps of the documented upload: create the asset, then PUT the
-# file to the URL that comes back. HTTP/1.1 on purpose: the upload host
-# drops HTTP/2 streams often enough to end the transfer with an EOF.
+# The documented upload: the address of the upload is a property of the
+# release, and the file is sent straight to it. HTTP/1.1 on purpose:
+# the upload host drops HTTP/2 streams often enough to end the
+# transfer with an EOF.
 upload_asset() {
   local file="$1" name="$2" id="$3"
   local upload_url attempt
@@ -159,24 +160,24 @@ upload_asset() {
     gh api -X DELETE "repos/$REPO/releases/assets/$old" >/dev/null 2>&1 || true
   fi
 
+  upload_url="$(gh api "repos/$REPO/releases/$id" --jq .upload_url 2>/dev/null)" || upload_url=""
+  upload_url="${upload_url%%\{*}"
+  if [ -z "$upload_url" ]; then
+    fail "the address of the upload of $TAG could not be read"
+    return 1
+  fi
+
   for attempt in 1 2 3 4 5; do
-    upload_url="$(gh api -X POST "repos/$REPO/releases/$id/assets?name=$name" \
-                    --jq .upload_url 2>/dev/null)" || upload_url=""
-    if [ -n "$upload_url" ]; then
-      upload_url="${upload_url%%\{*}"
-      if curl --http1.1 --silent --show-error --fail \
-           --retry 5 --retry-all-errors --retry-delay 5 \
-           -H "Authorization: Bearer ${GH_TOKEN:-}" \
-           -H "Content-Type: application/octet-stream" \
-           --data-binary "@$file" \
-           "${upload_url}?name=$name" >/dev/null; then
-        log "uploaded $name"
-        return 0
-      fi
-      log "the upload of $name failed (attempt $attempt), trying again"
-    else
-      log "the asset $name could not be created (attempt $attempt), trying again"
+    if curl --http1.1 --silent --show-error --fail \
+         --retry 5 --retry-all-errors --retry-delay 5 \
+         -H "Authorization: Bearer ${GH_TOKEN:-}" \
+         -H "Content-Type: application/octet-stream" \
+         --data-binary "@$file" \
+         "${upload_url}?name=$name" >/dev/null; then
+      log "uploaded $name"
+      return 0
     fi
+    log "the upload of $name failed (attempt $attempt), trying again"
     sleep $((attempt * 5))
   done
   return 1

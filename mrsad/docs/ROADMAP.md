@@ -185,10 +185,14 @@ vocabulary of the app and measures the result.
   device, drives it through a scripted session and records the platform's
   own `FrameMetrics`, the CPU time of the process and its memory. It also
   takes the screenshots of the session.
-* The `MRSAD Performance` workflow runs that benchmark twice — on the
-  revision before this phase and on the revision after it — on the same
-  emulator, in the same job, with the same instrument, and writes the
-  comparison into `PERF-COMPARISON.md`.
+* The `MRSAD Performance` workflow measures the revision before this
+  phase and the revision after it on the same emulator, in the same job,
+  with the same instrument, and writes the comparison into
+  `PERF-COMPARISON.md`. Each side is measured five times: one run of a
+  shared machine is not a measurement, and the comparison reports the
+  middle of the runs next to the spread of the runs.
+* The frame budget is the refresh rate of the display the application is
+  drawn on, not a constant, and the refresh rate is part of the report.
 
 ---
 
@@ -223,3 +227,10 @@ vocabulary of the app and measures the result.
     real device with a different GPU will behave differently. The
     benchmark is reproducible and re-runnable, not a claim about every
     device.
+11. The emulator is too slow to draw in 16.67 ms: *every* frame of
+    *both* revisions is late against the budget of its display, so the
+    jank column sits at its ceiling and cannot separate the two. The
+    comparison is therefore about the middle and the spread of several
+    runs, not about a pass or a fail — and it says so when a difference
+    lies inside the spread. A verdict about smoothness needs a physical
+    device, which this sandbox does not have.

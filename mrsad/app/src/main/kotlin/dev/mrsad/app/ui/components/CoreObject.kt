@@ -512,6 +512,21 @@ private fun DrawScope.drawRingHalf(
     front: Boolean,
 ) {
     val segments = engine.ringSegments
+
+    // The band is drawn as one path, not as one line per segment: forty
+    // lines a ring meant forty colours, forty widths and eighty points
+    // to throw away on every frame, and the frame budget is not a place
+    // to waste that. The path itself is exactly the same line the
+    // segments made.
+    val path = Path()
+    var started = false
+    var lowest = Float.MAX_VALUE
+    var highest = -Float.MAX_VALUE
+    var farX = 0f
+    var farY = 0f
+    var nearX = 0f
+    var nearY = 0f
+
     for (i in 0 until segments) {
         val j = i + 1
         val depth = (engine.ringZ[offset + i] + engine.ringZ[offset + j]) / 2f
@@ -523,28 +538,59 @@ private fun DrawScope.drawRingHalf(
         val x2 = engine.ringScreenX(offset, j, centerX, radiusPx)
         val y2 = engine.ringScreenY(offset, j, centerY, radiusPx)
 
-        // How near the segment is, in 0..1.
-        val closeness = ((depth + 1.8f) / 3.6f).coerceIn(0f, 1f)
-        val width = bandWidth * (0.55f + 0.55f * closeness)
-        val band = lerpColor(far, near, closeness)
-            .copy(alpha = if (front) 0.30f + 0.45f * closeness else 0.14f + 0.22f * closeness)
-
-        // The band itself.
-        drawLine(
-            color = band,
-            start = Offset(x1, y1),
-            end = Offset(x2, y2),
-            strokeWidth = width,
-        )
-        // The lit edge along the top of the band.
-        if (front) {
-            drawLine(
-                color = near.copy(alpha = 0.30f + 0.45f * closeness),
-                start = Offset(x1, y1),
-                end = Offset(x2, y2),
-                strokeWidth = max(0.7f, width * 0.22f),
-            )
+        if (!started) {
+            path.moveTo(x1, y1)
+            started = true
+        } else {
+            path.lineTo(x1, y1)
         }
+        path.lineTo(x2, y2)
+
+        // The deepest and the shallowest point of this half: they are the
+        // two ends of the depth ramp of the band.
+        if (depth < lowest) {
+            lowest = depth
+            farX = x1
+            farY = y1
+        }
+        if (depth > highest) {
+            highest = depth
+            nearX = x1
+            nearY = y1
+        }
+    }
+    if (!started) return
+
+    // How near the two ends of the half are, in 0..1. The near end is
+    // the brighter and the wider one.
+    val lowCloseness = ((lowest + 1.8f) / 3.6f).coerceIn(0f, 1f)
+    val highCloseness = ((highest + 1.8f) / 3.6f).coerceIn(0f, 1f)
+    val average = (lowCloseness + highCloseness) / 2f
+    val baseAlpha = if (front) 0.30f else 0.14f
+    val alphaRange = if (front) 0.45f else 0.22f
+    val width = bandWidth * (0.55f + 0.55f * average)
+
+    drawPath(
+        path = path,
+        brush = Brush.linearGradient(
+            colors = listOf(
+                lerpColor(far, near, lowCloseness)
+                    .copy(alpha = baseAlpha + alphaRange * lowCloseness),
+                lerpColor(far, near, highCloseness)
+                    .copy(alpha = baseAlpha + alphaRange * highCloseness),
+            ),
+            start = Offset(farX, farY),
+            end = Offset(nearX, nearY),
+        ),
+        style = Stroke(width = width),
+    )
+    // The lit edge along the top of the band.
+    if (front) {
+        drawPath(
+            path = path,
+            color = near.copy(alpha = 0.30f + 0.45f * average),
+            style = Stroke(width = max(0.7f, width * 0.22f)),
+        )
     }
 }
 

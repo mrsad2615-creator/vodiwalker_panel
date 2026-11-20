@@ -271,8 +271,25 @@ Rules:
 
 | Question | Answered by |
 |---|---|
-| does a frame miss its deadline? | `FrameMetrics.TOTAL_DURATION` per frame, jank over 16.67 ms |
+| does a frame miss its deadline? | `FrameMetrics.TOTAL_DURATION` per frame, jank over the frame budget of the display |
 | how long are the slowest frames? | p50 / p90 / p95 / p99 / max per phase |
 | what does the animation cost? | `Process.getElapsedCpuTime()` over the measured window |
 | what does it hold? | `Debug.getPss()` and the native heap |
 | what does it look like? | the screenshots the same benchmark takes |
+
+Three rules make the number mean something:
+
+1. **The budget is the display's, not a constant.** The frame budget is
+   `1000 / refreshRate` of the display the application is drawn on, and
+   the refresh rate is written into the report. A fixed 16.67 ms would
+   have called every frame of a 30 Hz panel a jank that never happened.
+2. **One run is not a measurement.** An emulator shares its cores with
+   everything else that runs on it; two runs of the *same* build have
+   differed by twenty points of CPU on this machine. Every build is
+   therefore measured five times, and the comparison reports the middle
+   of the runs together with the spread of the runs.
+3. **A difference inside the spread is not a difference.** The verdict of
+   the comparison says so in words rather than in a colour.
+
+The result is written to `PERF-COMPARISON.md` and published with the
+screenshots of both revisions in `benchmarks/screenshots/`.

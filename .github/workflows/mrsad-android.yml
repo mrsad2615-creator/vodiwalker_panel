@@ -141,3 +141,99 @@ jobs:
             mrsad/app/build/reports/androidTests/**
             mrsad/app/build/outputs/androidTest-results/**
           if-no-files-found: ignore
+
+  release:
+    name: Publish signed release APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: [core-tests, build, e2e]
+    permissions:
+      contents: write
+    defaults:
+      run:
+        working-directory: mrsad
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+
+      # The signing key lives in the Actions cache, never in the repository.
+      # Caching it (instead of generating one per run) keeps the signing
+      # identity stable, which is what allows a new APK to be installed over
+      # an older one without losing the user's local data.
+      - name: Restore the release keystore
+        id: keystore
+        uses: actions/cache@v4
+        with:
+          # `actions/cache` resolves its path against the workspace root,
+          # while the steps below run inside `mrsad/`.
+          path: mrsad/.keystore
+          key: mrsad-release-keystore-v1
+
+      - name: Create the release keystore
+        if: steps.keystore.outputs.cache-hit != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .keystore
+          # A random password, stored next to the key in the cache. It is
+          # never written to a log or to the repository.
+          PASS=$(head -c 48 /dev/urandom | base64 | tr -dc 'A-Za-z0-9' | cut -c1-40)
+          printf '%s' "$PASS" > .keystore/password.txt
+          keytool -genkeypair -v \
+            -keystore .keystore/mrsad-release.jks \
+            -alias mrsad \
+            -keyalg RSA -keysize 4096 -validity 10950 \
+            -storepass "$PASS" -keypass "$PASS" \
+            -dname "CN=MRSAD, OU=Personal, O=MRSAD, L=Tehran, C=IR"
+
+      - name: Build the signed release APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          PASS=$(cat .keystore/password.txt)
+          export ORG_GRADLE_PROJECT_MRSAD_KEYSTORE="$GITHUB_WORKSPACE/mrsad/.keystore/mrsad-release.jks"
+          export ORG_GRADLE_PROJECT_MRSAD_KEYSTORE_PASSWORD="$PASS"
+          export ORG_GRADLE_PROJECT_MRSAD_KEY_ALIAS="mrsad"
+          export ORG_GRADLE_PROJECT_MRSAD_KEY_PASSWORD="$PASS"
+          ./gradlew --console=plain --no-daemon :app:assembleRelease
+
+      - name: Publish the release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ github.run_number }}
+          COMMIT: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          set -- app/build/outputs/apk/release/*.apk
+          APK="$1"
+          cp "$APK" mrsad.apk
+          sha256sum mrsad.apk > SHA256SUMS.txt
+
+          TAG="v$(sed -n 's/.*versionName = "\(.*\)".*/\1/p' app/build.gradle.kts | head -1)"
+
+          cat > notes.md <<EOF
+          MRSAD — Persian command centre for focus, typing and reading.
+
+          * Offline by design: no INTERNET permission, everything stays on the device.
+          * Build: commit \`${COMMIT:0:7}\`
+          * CI run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}
+
+          Install \`mrsad.apk\` on Android 8.0+ (it may ask to allow installs from
+          unknown sources). Verify the download with \`SHA256SUMS.txt\`.
+          EOF
+
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" mrsad.apk SHA256SUMS.txt --clobber
+            gh release edit "$TAG" --notes-file notes.md
+          else
+            gh release create "$TAG" mrsad.apk SHA256SUMS.txt \
+              --title "MRSAD $TAG" --notes-file notes.md
+          fi
+
+          echo "released $TAG"
+          gh release view "$TAG" --json url --jq .url

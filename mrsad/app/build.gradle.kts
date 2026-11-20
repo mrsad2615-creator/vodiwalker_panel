@@ -27,6 +27,26 @@ android {
         buildConfig = true
     }
 
+    // Release signing.
+    //
+    // The keystore is *not* part of the repository. CI keeps it in the
+    // Actions cache and passes its location through the
+    // `ORG_GRADLE_PROJECT_MRSAD_*` environment variables, so the key never
+    // reaches git, a log or a build artefact. A stable key matters: it is
+    // what allows a newer APK to be installed over an older one without
+    // losing the user's local data.
+    signingConfigs {
+        val keystorePath = providers.gradleProperty("MRSAD_KEYSTORE").orNull
+        if (keystorePath != null) {
+            maybeCreate("release").apply {
+                storeFile = rootProject.file(keystorePath)
+                storePassword = providers.gradleProperty("MRSAD_KEYSTORE_PASSWORD").orNull
+                keyAlias = providers.gradleProperty("MRSAD_KEY_ALIAS").orNull
+                keyPassword = providers.gradleProperty("MRSAD_KEY_PASSWORD").orNull
+            }
+        }
+    }
+
     buildTypes {
         debug {
             applicationIdSuffix = ".debug"
@@ -38,6 +58,7 @@ android {
             // app can only be validated with device-level testing.
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            signingConfigs.findByName("release")?.let { signingConfig = it }
         }
     }
 

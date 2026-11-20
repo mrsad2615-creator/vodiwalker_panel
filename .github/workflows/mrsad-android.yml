@@ -227,9 +227,14 @@ jobs:
           * More content: the reading corpus grew to nine passages across three
             subjects and three difficulty tiers; the typing corpus gained a third
             passage per tier in both languages.
-          * Accessibility: every control now reserves the 48dp minimum touch target,
-            the metric type scale stops clipping Persian digits, and the colour
-            system is checked against the WCAG contrast floor by a unit test.
+          * Charts that tell the truth: a day without a measurement breaks the line
+            instead of dipping to the floor, a flat series sits in the middle of the
+            plot, and the newest marker points at the real latest measurement.
+          * Accessibility: every control reserves the 48dp minimum touch target, the
+            metric type scale stops clipping Persian digits, the colour system is
+            checked against the WCAG contrast floor by a unit test, every tappable
+            control has a name a screen reader can reach, and the back arrow points
+            the right way in a right-to-left layout.
           * Build: commit \`${COMMIT:0:7}\`
           * CI run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}
 

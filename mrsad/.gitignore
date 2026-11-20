@@ -13,6 +13,10 @@ __pycache__/
 ui-test.log
 ui-test-results/
 ui-test-dumps/
+# CI artefacts produced by .ci/run-perf-benchmark.sh on the runner
+perf-benchmark.log
+device-screenshots.txt
+screenshot-collection.txt
 # Release signing key. It lives in the Actions cache, never in the
 # repository — this entry makes sure it can never be committed by accident.
 .keystore/

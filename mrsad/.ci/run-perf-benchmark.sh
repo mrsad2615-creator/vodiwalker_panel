@@ -61,12 +61,40 @@ cat "$OUTPUT"
 # The screenshots are the visual evidence of the measurement.
 if [ -n "$SCREENSHOT_DIR" ]; then
   mkdir -p "$SCREENSHOT_DIR"
+  # What the device holds, so a missing screenshot can be told apart from
+  # a screenshot that was never taken.
+  DEVICE_LISTING="$GRADLE_DIR/device-screenshots.txt"
+  : > "$DEVICE_LISTING"
   for package in dev.mrsad.app.debug dev.mrsad.app; do
     if adb shell "ls /sdcard/Android/data/$package/files/" >/dev/null 2>&1; then
+      echo "== /sdcard/Android/data/$package/files/ ==" >> "$DEVICE_LISTING"
+      adb shell "ls -la /sdcard/Android/data/$package/files/" >> "$DEVICE_LISTING" 2>&1
+      # The whole directory at once, and then every picture by name: some
+      # versions of adb refuse a path that ends in "/.".
       adb pull "/sdcard/Android/data/$package/files/." "$SCREENSHOT_DIR" || true
+      adb shell "ls /sdcard/Android/data/$package/files/" 2>/dev/null \
+        | tr -d '\r' \
+        | while read -r name; do
+            case "$name" in
+              *.png)
+                adb pull "/sdcard/Android/data/$package/files/$name" "$SCREENSHOT_DIR" || true
+                ;;
+            esac
+          done
       break
+    else
+      echo "== /sdcard/Android/data/$package/files/ is not there ==" >> "$DEVICE_LISTING"
     fi
   done
+
+  {
+    echo "the device holds:"
+    cat "$DEVICE_LISTING"
+    echo
+    echo "the collected screenshots:"
+    ls -la "$SCREENSHOT_DIR" || true
+  } > "$GRADLE_DIR/screenshot-collection.txt"
+
   echo "the screenshots were collected into $SCREENSHOT_DIR"
   ls -la "$SCREENSHOT_DIR" || true
 fi

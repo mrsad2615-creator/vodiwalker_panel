@@ -32,7 +32,13 @@ import {
   syncTaskRemindersNative,
 } from '@/lib/notifications';
 import { seedStarterWorkspaceIfEmpty } from '@/lib/seed';
-import { advanceFocusClock, focusSecondsAtCompletion } from '@/lib/focusTimer';
+import {
+  focusSecondsNow,
+  pauseClock,
+  startClock,
+  tickClock,
+  type FocusClockState,
+} from '@/lib/focusTimer';
 
 export type PomodoroPhase = 'focus' | 'short_break' | 'long_break';
 
@@ -43,19 +49,7 @@ export interface TaskModalRequest {
   defaultQuadrant?: EisenhowerQuadrant;
 }
 
-export interface FocusState {
-  mode: FocusModeType;
-  phase: PomodoroPhase;
-  isRunning: boolean;
-  focusMinutes: number;
-  shortBreakMinutes: number;
-  longBreakMinutes: number;
-  remainingSeconds: number;
-  elapsedSeconds: number;
-  completedCycles: number;
-  linkedTaskId: string | null;
-  sessionStartedAt: string | null;
-}
+export type FocusState = FocusClockState;
 
 interface AppContextValue {
   ready: boolean;
@@ -108,6 +102,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     completedCycles: 0,
     linkedTaskId: null,
     sessionStartedAt: null,
+    anchorMs: null,
+    anchorRemaining: 25 * 60,
+    anchorElapsed: 0,
   });
 
   const pushToast = useCallback((toast: Omit<ToastMessage, 'id'>) => {
@@ -267,87 +264,76 @@ export function AppProvider({ children }: { children: ReactNode }) {
     })();
   }, [ready, settings.notificationsEnabled, pushToast]);
 
-  // Focus Timer — wall-clock driven.
-  // The previous implementation added exactly one second per interval tick, so a
-  // locked screen, a throttled WebView or a dropped frame silently stretched or
-  // shrank the session. We now measure the real elapsed time between ticks and
-  // advance by that, which also catches up instantly after the app resumes.
+  // ── Focus Timer ────────────────────────────────────────────────────────────
+  // Anchored to absolute time (see lib/focusTimer.ts). Every tick asks the same
+  // question — "how many whole seconds since anchorMs?" — so the countdown can
+  // never run fast, can never drift, and catches up exactly after the WebView
+  // was frozen. State is only replaced when a visible value changes, which means
+  // one render per second instead of four.
   const focusRef = useRef(focus);
   focusRef.current = focus;
-  const lastFocusTickRef = useRef<number>(Date.now());
-
-  const advanceFocus = useCallback(
-    (deltaSeconds: number) => {
-      const prev = focusRef.current;
-      if (!prev.isRunning || deltaSeconds <= 0) return;
-
-      const { state: next, completedPhase } = advanceFocusClock(
-        prev,
-        deltaSeconds,
-        settingsRef.current.pomodoroCyclesBeforeLong
-      );
-      if (next === prev) return;
-
-      focusRef.current = next;
-      setFocus(next);
-      if (!completedPhase) return;
-
-      const s = settingsRef.current;
-      playLuxuryChime(s.soundEnabled);
-      void triggerHaptic('success', s.hapticsEnabled);
-
-      if (completedPhase === 'focus') {
-        const totalFocused = focusSecondsAtCompletion(prev, deltaSeconds);
-        void commitFocusRecord(
-          'pomodoro',
-          totalFocused,
-          prev.linkedTaskId,
-          prev.sessionStartedAt,
-          true
-        );
-        void fireInstantNotification(
-          'جلسه تمرکز با موفقیت پایان یافت',
-          `${Math.max(1, Math.round(totalFocused / 60))} دقیقه تمرکز در آمار شما ثبت شد.`,
-          { soundEnabled: false }
-        );
-        pushToast({
-          title: 'جلسه تمرکز ثبت شد',
-          description: `${Math.max(1, Math.round(totalFocused / 60))} دقیقه به آمار امروز اضافه شد. اکنون زمان استراحت است.`,
-          tone: 'success',
-        });
-        return;
-      }
-
-      pushToast({
-        title: 'زمان استراحت به پایان رسید',
-        description: 'آماده شروع چرخه جدید تمرکز هستید.',
-        tone: 'default',
-      });
-    },
-    [commitFocusRecord, pushToast]
-  );
 
   const syncFocusClock = useCallback(() => {
-    const now = Date.now();
-    const deltaMs = now - lastFocusTickRef.current;
-    lastFocusTickRef.current = now;
-    if (deltaMs < 220) return; // ignore jitter, keep at least ~1s resolution
-    advanceFocus(Math.max(1, Math.round(deltaMs / 1000)));
-  }, [advanceFocus]);
+    const prev = focusRef.current;
+    if (!prev.isRunning) return;
+
+    const result = tickClock(prev, Date.now(), settingsRef.current.pomodoroCyclesBeforeLong);
+    if (result.state === prev) return;
+
+    focusRef.current = result.state;
+    setFocus(result.state);
+    if (!result.completedPhase) return;
+
+    const s = settingsRef.current;
+    playLuxuryChime(s.soundEnabled);
+    void triggerHaptic('success', s.hapticsEnabled);
+
+    if (result.completedPhase === 'focus') {
+      const totalFocused = result.completedFocusSeconds;
+      void commitFocusRecord(
+        'pomodoro',
+        totalFocused,
+        prev.linkedTaskId,
+        prev.sessionStartedAt,
+        true
+      );
+      void fireInstantNotification(
+        'جلسه تمرکز با موفقیت پایان یافت',
+        `${Math.max(1, Math.round(totalFocused / 60))} دقیقه تمرکز در آمار شما ثبت شد.`,
+        { soundEnabled: false }
+      );
+      pushToast({
+        title: 'جلسه تمرکز ثبت شد',
+        description: `${Math.max(1, Math.round(totalFocused / 60))} دقیقه به آمار امروز اضافه شد. اکنون زمان استراحت است.`,
+        tone: 'success',
+      });
+      return;
+    }
+
+    pushToast({
+      title: 'زمان استراحت به پایان رسید',
+      description: 'آماده شروع چرخه جدید تمرکز هستید.',
+      tone: 'default',
+    });
+  }, [commitFocusRecord, pushToast]);
 
   useEffect(() => {
     if (!focus.isRunning) return;
-    lastFocusTickRef.current = Date.now();
+    // 250 ms only to hit the second boundary promptly; the render cost is one
+    // update per second because tickClock returns the same state otherwise.
     const interval = window.setInterval(syncFocusClock, 250);
     const onVisible = () => {
       if (document.visibilityState === 'visible') syncFocusClock();
     };
+    const onAppState = () => syncFocusClock();
     document.addEventListener('visibilitychange', onVisible);
-    window.addEventListener('focus', syncFocusClock);
+    window.addEventListener('focus', onAppState);
+    window.addEventListener('pageshow', onAppState);
     return () => {
       window.clearInterval(interval);
       document.removeEventListener('visibilitychange', onVisible);
-      window.removeEventListener('focus', syncFocusClock);
+      window.removeEventListener('focus', onAppState);
+      window.removeEventListener('pageshow', onAppState);
     };
   }, [focus.isRunning, syncFocusClock]);
 
@@ -360,6 +346,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       remainingSeconds: prev.focusMinutes * 60,
       elapsedSeconds: 0,
       sessionStartedAt: null,
+      anchorMs: null,
+      anchorRemaining: prev.focusMinutes * 60,
+      anchorElapsed: 0,
     }));
   }, []);
 
@@ -378,6 +367,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
           shortBreakMinutes: shortMin,
           longBreakMinutes: longMin,
           remainingSeconds: prev.isRunning ? prev.remainingSeconds : nextRemaining,
+          // Re-anchor so a duration change made while paused is what the clock
+          // counts down from.
+          anchorRemaining: prev.isRunning ? prev.anchorRemaining : nextRemaining,
         };
       });
     },
@@ -390,31 +382,33 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const startOrResumeFocus = useCallback(() => {
     void triggerHaptic('light', settingsRef.current.hapticsEnabled);
-    setFocus((prev) => ({
-      ...prev,
-      isRunning: true,
-      sessionStartedAt: prev.sessionStartedAt ?? new Date().toISOString(),
-    }));
+    setFocus((prev) => startClock(prev, Date.now()));
   }, []);
 
   const pauseFocus = useCallback(() => {
     void triggerHaptic('light', settingsRef.current.hapticsEnabled);
-    setFocus((prev) => ({ ...prev, isRunning: false }));
+    setFocus((prev) => pauseClock(prev, Date.now()));
   }, []);
 
   const resetFocus = useCallback(() => {
-    setFocus((prev) => ({
-      ...prev,
-      isRunning: false,
-      remainingSeconds:
+    setFocus((prev) => {
+      const nextRemaining =
         prev.phase === 'focus'
           ? prev.focusMinutes * 60
           : prev.phase === 'short_break'
           ? prev.shortBreakMinutes * 60
-          : prev.longBreakMinutes * 60,
-      elapsedSeconds: 0,
-      sessionStartedAt: null,
-    }));
+          : prev.longBreakMinutes * 60;
+      return {
+        ...prev,
+        isRunning: false,
+        remainingSeconds: nextRemaining,
+        elapsedSeconds: 0,
+        sessionStartedAt: null,
+        anchorMs: null,
+        anchorRemaining: nextRemaining,
+        anchorElapsed: 0,
+      };
+    });
   }, []);
 
   const finishAndSaveFocus = useCallback(async () => {
@@ -423,7 +417,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       resetFocus();
       return;
     }
-    if (snap.elapsedSeconds < 60) {
+    // Read the live value: the anchor may be several seconds ahead of the last
+    // rendered state (the UI only re-renders once per second).
+    const liveElapsed = focusSecondsNow(snap, Date.now());
+    if (liveElapsed < 60) {
       pushToast({
         title: 'حداقل 1 دقیقه تمرکز نیاز است',
         description: 'جلسات کمتر از یک دقیقه در تاریخچه ثبت نمی‌شوند.',
@@ -433,7 +430,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
     const saved = await commitFocusRecord(
       snap.mode,
-      snap.elapsedSeconds,
+      liveElapsed,
       snap.linkedTaskId,
       snap.sessionStartedAt,
       false
@@ -441,7 +438,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (saved) {
       playLuxuryChime(settingsRef.current.soundEnabled);
       void triggerHaptic('success', settingsRef.current.hapticsEnabled);
-      const mins = Math.max(1, Math.round(snap.elapsedSeconds / 60));
+      const mins = Math.max(1, Math.round(liveElapsed / 60));
       pushToast({
         title: 'جلسه تمرکز ذخیره شد',
         description: `${mins} دقیقه تمرکز در گزارش‌های شما ثبت گردید.`,
@@ -455,18 +452,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
       remainingSeconds: prev.focusMinutes * 60,
       elapsedSeconds: 0,
       sessionStartedAt: null,
+      anchorMs: null,
+      anchorRemaining: prev.focusMinutes * 60,
+      anchorElapsed: 0,
     }));
   }, [focus, commitFocusRecord, pushToast, resetFocus]);
 
   const skipPomodoroPhase = useCallback(() => {
     setFocus((prev) => {
       const nextPhase: PomodoroPhase = prev.phase === 'focus' ? 'short_break' : 'focus';
+      const nextRemaining =
+        nextPhase === 'focus' ? prev.focusMinutes * 60 : prev.shortBreakMinutes * 60;
       return {
         ...prev,
         isRunning: false,
         phase: nextPhase,
-        remainingSeconds:
-          nextPhase === 'focus' ? prev.focusMinutes * 60 : prev.shortBreakMinutes * 60,
+        remainingSeconds: nextRemaining,
+        anchorMs: null,
+        anchorRemaining: nextRemaining,
+        anchorElapsed: 0,
         elapsedSeconds: 0,
         sessionStartedAt: null,
       };

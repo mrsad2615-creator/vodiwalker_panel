@@ -195,6 +195,7 @@ export function FocusPage() {
               completedCycles={focus.completedCycles}
               cyclesBeforeLong={settings.pomodoroCyclesBeforeLong}
               linkedTaskTitle={linkedTask?.title ?? null}
+              nextFocusMinutes={focus.focusMinutes}
               cinemaMode
             />
 
@@ -452,6 +453,7 @@ export function FocusPage() {
             completedCycles={focus.completedCycles}
             cyclesBeforeLong={settings.pomodoroCyclesBeforeLong}
             linkedTaskTitle={linkedTask?.title ?? null}
+            nextFocusMinutes={focus.focusMinutes}
           />
         </div>
 

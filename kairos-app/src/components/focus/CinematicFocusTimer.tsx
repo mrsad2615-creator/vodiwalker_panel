@@ -1,8 +1,6 @@
 import { useMemo } from 'react';
-import { Sparkles } from '@/components/ui/icons';
 import type { FocusModeType } from '@/types/domain';
 import type { PomodoroPhase } from '@/context/AppContext';
-import { Numeric } from '@/components/ui/Numeric';
 import { toEnDigits } from '@/lib/format';
 
 interface CinematicFocusTimerProps {
@@ -16,27 +14,62 @@ interface CinematicFocusTimerProps {
   cyclesBeforeLong: number;
   linkedTaskTitle: string | null;
   cinemaMode?: boolean;
+  /** Focus length of the next session, shown during a break. */
+  nextFocusMinutes?: number;
 }
 
+/* ---------------------------------------------------------------------------
+   Chrono Core
+   A chronograph dial, not a dashboard ornament:
+     · one bezel hairline, 60 minute ticks (every 5th major), one progress arc
+     · a recessed face with a single soft light — no mesh gradients, no pearls
+     · numerals in fixed-width cells with tabular figures, so a digit change can
+       never shift the layout (the old version re-flowed every second)
+     · information is state-driven: focus shows the countdown + finish time,
+       break switches the kicker and dims the arc instead of adding new widgets
+   --------------------------------------------------------------------------- */
+
+const VIEW = 300;
+const C = VIEW / 2;
+const BEZEL_R = 146;
+const TICK_OUTER = 141;
+const TICK_INNER_MAJOR = 129;
+const TICK_INNER_MINOR = 135;
+const ARC_R = 117;
+const FACE_R = 111;
+const ARC_CIRCUMFERENCE = 2 * Math.PI * ARC_R;
 const TICK_COUNT = 60;
 
-function formatSplitTime(totalSeconds: number): { main: string; sub: string; hours: string | null } {
+function splitParts(totalSeconds: number): { hours: string | null; minutes: string; seconds: string } {
   const safe = Math.max(0, Math.floor(totalSeconds));
-  const hrs = Math.floor(safe / 3600);
-  const mins = Math.floor((safe % 3600) / 60);
-  const secs = safe % 60;
+  const hours = Math.floor(safe / 3600);
+  const minutes = Math.floor((safe % 3600) / 60);
+  const seconds = safe % 60;
   return {
-    hours: hrs > 0 ? String(hrs).padStart(2, '0') : null,
-    main: String(mins).padStart(2, '0'),
-    sub: String(secs).padStart(2, '0'),
+    hours: hours > 0 ? String(hours).padStart(2, '0') : null,
+    minutes: String(minutes).padStart(2, '0'),
+    seconds: String(seconds).padStart(2, '0'),
   };
 }
 
-function formatFinishClock(remainingSeconds: number): string {
+function finishClock(remainingSeconds: number): string {
   const target = new Date(Date.now() + remainingSeconds * 1000);
-  const hh = String(target.getHours()).padStart(2, '0');
-  const mm = String(target.getMinutes()).padStart(2, '0');
-  return toEnDigits(`${hh}:${mm}`);
+  return toEnDigits(
+    `${String(target.getHours()).padStart(2, '0')}:${String(target.getMinutes()).padStart(2, '0')}`
+  );
+}
+
+/** Every glyph sits in its own fixed cell: no reflow, no jitter, ever. */
+function Digits({ value, className }: { value: string; className?: string }) {
+  return (
+    <span className={`inline-flex ${className ?? ''}`} dir="ltr">
+      {value.split('').map((char, index) => (
+        <span key={`${char}-${index}`} className="inline-block w-[0.56em] text-center tabular-nums">
+          {char}
+        </span>
+      ))}
+    </span>
+  );
 }
 
 export function CinematicFocusTimer({
@@ -50,318 +83,187 @@ export function CinematicFocusTimer({
   cyclesBeforeLong,
   linkedTaskTitle,
   cinemaMode = false,
+  nextFocusMinutes = 25,
 }: CinematicFocusTimerProps) {
   const clamped = Math.max(0, Math.min(100, progressPercent));
-  const size = cinemaMode ? 316 : 278;
-  const viewSize = 300;
-  const center = viewSize / 2;
-  const arcRadius = 114;
-  const circumference = 2 * Math.PI * arcRadius;
-  const dashOffset = circumference * (1 - clamped / 100);
-
-  // Exact orbital tip coordinates (starting at 12 o'clock = -90 deg)
-  const angleRad = ((clamped / 100) * 360 - 90) * (Math.PI / 180);
-  const tipX = center + arcRadius * Math.cos(angleRad);
-  const tipY = center + arcRadius * Math.sin(angleRad);
-
+  const dashOffset = ARC_CIRCUMFERENCE * (1 - clamped / 100);
   const activeTicks = Math.round((clamped / 100) * TICK_COUNT);
+  const size = cinemaMode ? 318 : 276;
 
-  const ticks = useMemo(() => {
-    return Array.from({ length: TICK_COUNT }, (_, i) => {
-      const deg = (i / TICK_COUNT) * 360 - 90;
-      const rad = (deg * Math.PI) / 180;
-      const isMajor = i % 5 === 0;
-      const innerR = isMajor ? 127 : 131;
-      const outerR = 138;
-      return {
-        index: i,
-        isMajor,
-        x1: center + innerR * Math.cos(rad),
-        y1: center + innerR * Math.sin(rad),
-        x2: center + outerR * Math.cos(rad),
-        y2: center + outerR * Math.sin(rad),
-      };
-    });
-  }, [center]);
+  const shown = mode === 'pomodoro' ? remainingSeconds : elapsedSeconds;
+  const parts = splitParts(shown);
+  const isBreak = mode === 'pomodoro' && phase !== 'focus';
 
-  const timeParts =
-    mode === 'pomodoro'
-      ? formatSplitTime(remainingSeconds)
-      : formatSplitTime(elapsedSeconds);
-
-  const phaseLabel =
+  const kicker =
     mode === 'free'
-      ? 'تایمر آزاد عمیق'
+      ? 'جریان آزاد'
       : phase === 'focus'
-      ? 'تمرکز عمیق'
+      ? 'تمرکز'
       : phase === 'short_break'
       ? 'استراحت کوتاه'
       : 'استراحت بلند';
 
-  const etaText =
-    mode === 'pomodoro' && remainingSeconds > 0
-      ? formatFinishClock(remainingSeconds)
-      : null;
+  const meta = isBreak
+    ? `تمرکز بعدی · ${toEnDigits(String(Math.max(1, Math.round(nextFocusMinutes))))} دقیقه`
+    : mode === 'pomodoro' && remainingSeconds > 0
+    ? `پایان · ${finishClock(remainingSeconds)}`
+    : 'بدون محدودیت زمان';
 
-  const isBreak = mode === 'pomodoro' && phase !== 'focus';
-  const totalDots = Math.max(2, Math.min(6, cyclesBeforeLong || 4));
-  const filledInBlock = completedCycles % totalDots;
+  const ticks = useMemo(
+    () =>
+      Array.from({ length: TICK_COUNT }, (_, index) => {
+        const angle = (index / TICK_COUNT) * Math.PI * 2 - Math.PI / 2;
+        const major = index % 5 === 0;
+        const inner = major ? TICK_INNER_MAJOR : TICK_INNER_MINOR;
+        return {
+          index,
+          major,
+          x1: C + inner * Math.cos(angle),
+          y1: C + inner * Math.sin(angle),
+          x2: C + TICK_OUTER * Math.cos(angle),
+          y2: C + TICK_OUTER * Math.sin(angle),
+        };
+      }),
+    []
+  );
+
+  const cycleCount = Math.max(2, Math.min(6, cyclesBeforeLong || 4));
+  const cyclesDone = completedCycles % cycleCount;
+  const minutesLabel = Math.max(1, Math.round((mode === 'pomodoro' ? shown : elapsedSeconds) / 60));
 
   return (
     <div
-      className="relative flex items-center justify-center select-none"
+      className="relative select-none"
       style={{ width: size, height: size }}
+      role="group"
+      aria-label={`${kicker}، ${minutesLabel} دقیقه`}
     >
-      {/* Pre-baked Radial Obsidian-Purple Stage Spotlight (Zero blur filter overhead) */}
-      <div
-        aria-hidden="true"
-        className={`pointer-events-none absolute -inset-8 rounded-full transition-opacity duration-700 ${
-          isRunning ? 'focus-cinema-halo opacity-100' : 'opacity-45'
-        }`}
-        style={{
-          background: isBreak
-            ? 'radial-gradient(circle, rgba(169, 155, 240, 0.10) 0%, rgba(10, 10, 12, 0) 70%)'
-            : 'radial-gradient(circle, color-mix(in srgb, var(--accent) 16%, transparent) 0%, rgba(10, 10, 12, 0) 70%)',
-        }}
-      />
-
-      {/* Precision Chronometer SVG Bezel */}
-      <svg
-        width={size}
-        height={size}
-        viewBox={`0 0 ${viewSize} ${viewSize}`}
-        className="relative z-10 overflow-visible"
-        aria-hidden="true"
-      >
+      <svg width={size} height={size} viewBox={`0 0 ${VIEW} ${VIEW}`} aria-hidden="true" focusable="false">
         <defs>
-          <radialGradient id="chronoFaceGrad" cx="50%" cy="28%" r="72%">
-            <stop offset="0%" stopColor="#1D1630" />
-            <stop offset="56%" stopColor="#101014" />
-            <stop offset="100%" stopColor="#0A0A0C" />
+          <radialGradient id="chrono-face" cx="50%" cy="26%" r="78%">
+            <stop offset="0%" stopColor="#15151A" />
+            <stop offset="72%" stopColor="#0D0D10" />
+            <stop offset="100%" stopColor="#09090B" />
           </radialGradient>
-
-          <linearGradient id="chronoArcGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#ECECEF" />
-            <stop offset="32%" stopColor="var(--accent-fg)" />
-            <stop offset="100%" stopColor="var(--accent)" />
-          </linearGradient>
-
-          <linearGradient id="chronoBreakGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#ECECEF" />
-            <stop offset="60%" stopColor="var(--accent-fg)" />
-            <stop offset="100%" stopColor="#6D44BA" />
-          </linearGradient>
         </defs>
 
-        {/* Outer Architectural Hairline Ring */}
-        <circle
-          cx={center}
-          cy={center}
-          r={144}
-          fill="none"
-          stroke="color-mix(in srgb, var(--accent-fg) 10%, transparent)"
-          strokeWidth="1"
-        />
+        {/* Bezel */}
+        <circle cx={C} cy={C} r={BEZEL_R} fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="1" />
 
-        {/* 60 Watchmaker Precision Ticks */}
-        {ticks.map((t) => {
-          const lit = t.index < activeTicks;
-          const stroke = lit
-            ? t.isMajor
-              ? 'var(--accent-fg)'
-              : 'var(--accent)'
-            : t.isMajor
-            ? 'color-mix(in srgb, var(--accent-fg) 28%, transparent)'
-            : 'color-mix(in srgb, var(--accent-fg) 11%, transparent)';
-
+        {/* Indices: real minute marks, lit by actual progress */}
+        {ticks.map((tick) => {
+          const lit = tick.index < activeTicks;
           return (
             <line
-              key={t.index}
-              x1={t.x1}
-              y1={t.y1}
-              x2={t.x2}
-              y2={t.y2}
-              stroke={stroke}
-              strokeWidth={t.isMajor ? 2 : 1.1}
-              strokeLinecap="round"
+              key={tick.index}
+              x1={tick.x1}
+              y1={tick.y1}
+              x2={tick.x2}
+              y2={tick.y2}
+              stroke={
+                lit
+                  ? tick.major
+                    ? 'var(--accent-fg)'
+                    : 'color-mix(in srgb, var(--accent-fg) 55%, transparent)'
+                  : tick.major
+                  ? 'rgba(255,255,255,0.20)'
+                  : 'rgba(255,255,255,0.09)'
+              }
+              strokeWidth={tick.major ? 1.6 : 0.9}
+              strokeLinecap="butt"
             />
           );
         })}
 
-        {/* Recessed Sculpted Obsidian Watch Face */}
+        {/* Recessed face */}
         <circle
-          cx={center}
-          cy={center}
-          r={104}
-          fill="url(#chronoFaceGrad)"
-          stroke="color-mix(in srgb, var(--accent-fg) 15%, transparent)"
+          cx={C}
+          cy={C}
+          r={FACE_R}
+          fill="url(#chrono-face)"
+          stroke="rgba(255,255,255,0.08)"
           strokeWidth="1"
         />
 
-        {/* Delicate Inner Decorative Rim */}
+        {/* Progress: a single arc. One update per second, linear sweep. */}
         <circle
-          cx={center}
-          cy={center}
-          r={96}
+          cx={C}
+          cy={C}
+          r={ARC_R}
           fill="none"
-          stroke="rgba(244, 241, 248, 0.04)"
-          strokeWidth="1"
-          strokeDasharray="3 6"
+          stroke="rgba(255,255,255,0.07)"
+          strokeWidth="3"
         />
-
-        {/* Progress Track Groove */}
         <circle
-          cx={center}
-          cy={center}
-          r={arcRadius}
+          cx={C}
+          cy={C}
+          r={ARC_R}
           fill="none"
-          stroke="color-mix(in srgb, var(--accent-fg) 9%, transparent)"
-          strokeWidth="5.5"
-        />
-
-        {/* Soft Wide Ambient Arc Backing (Zero filter cost!) */}
-        {clamped > 0.3 && (
-          <circle
-            cx={center}
-            cy={center}
-            r={arcRadius}
-            fill="none"
-            stroke="color-mix(in srgb, var(--accent) 24%, transparent)"
-            strokeWidth="12"
-            strokeLinecap="round"
-            strokeDasharray={circumference}
-            strokeDashoffset={dashOffset}
-            transform={`rotate(-90 ${center} ${center})`}
-            style={{ transition: 'stroke-dashoffset 0.55s cubic-bezier(0.22, 1, 0.36, 1)' }}
-          />
-        )}
-
-        {/* Primary Razor-Sharp Luminous Progress Arc */}
-        <circle
-          cx={center}
-          cy={center}
-          r={arcRadius}
-          fill="none"
-          stroke={isBreak ? 'url(#chronoBreakGrad)' : 'url(#chronoArcGrad)'}
-          strokeWidth="5.5"
+          stroke="var(--accent-fg)"
+          strokeOpacity={isBreak ? 0.5 : 1}
+          strokeWidth="3"
           strokeLinecap="round"
-          strokeDasharray={circumference}
+          strokeDasharray={ARC_CIRCUMFERENCE}
           strokeDashoffset={dashOffset}
-          transform={`rotate(-90 ${center} ${center})`}
-          style={{ transition: 'stroke-dashoffset 0.55s cubic-bezier(0.22, 1, 0.36, 1)' }}
+          transform={`rotate(-90 ${C} ${C})`}
+          style={{ transition: isRunning ? 'stroke-dashoffset 1s linear' : 'none' }}
         />
-
-        {/* Orbiting Luminous Pearl Tip */}
-        {clamped > 0.3 && (
-          <g>
-            <circle cx={tipX} cy={tipY} r={10} fill="color-mix(in srgb, var(--accent-fg) 22%, transparent)" />
-            <circle cx={tipX} cy={tipY} r={4.5} fill="#ECECEF" />
-          </g>
-        )}
       </svg>
 
-      {/* Centerpiece Editorial Telemetry Overlay */}
-      <div className="pointer-events-none absolute inset-0 z-20 flex flex-col items-center justify-center px-8 text-center">
-        {/* Phase Status Micro-Badge */}
-        <div className="mb-2 inline-flex items-center gap-1.5 rounded-full border border-[var(--accent-fg)]/22 bg-[#1B152A]/90 px-2.5 py-0.5">
-          <span
-            className={`h-1.5 w-1.5 rounded-full ${
-              isRunning
-                ? 'focus-live-dot bg-[var(--accent-fg)]'
-                : 'bg-[#6B6B75]'
-            }`}
-          />
-          <span className="text-[10px] font-semibold text-[#D3C9FF]">{phaseLabel}</span>
-        </div>
-
-        {/* Monumental Condensed Tabular Clock */}
-        <div
-          dir="ltr"
-          className="num-display flex items-baseline justify-center font-extrabold tracking-tight"
+      {/* Read-out */}
+      <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
+        <span
+          className="font-display-caps text-[9px] font-semibold text-[var(--text-3)]"
+          style={{ letterSpacing: '0.28em' }}
         >
-          {timeParts.hours && (
+          {isRunning ? kicker : `متوقف · ${kicker}`}
+        </span>
+
+        <div
+          className="mt-1 flex items-baseline justify-center text-[var(--text)]"
+          style={{ fontFamily: 'var(--font-numeric)', fontWeight: 500, lineHeight: 1 }}
+        >
+          {parts.hours && (
             <>
-              <span
-                className={
-                  cinemaMode
-                    ? 'text-[4.2rem] text-[#ECECEF]'
-                    : 'text-[3.5rem] text-[#ECECEF]'
-                }
-              >
-                {timeParts.hours}
-              </span>
-              <span className="mx-0.5 text-[2.6rem] font-bold text-[var(--accent)]">:</span>
+              <Digits value={parts.hours} className="text-[1.6rem] opacity-80" />
+              <span className="mx-[0.08em] text-[1.4rem] text-[var(--text-3)]">:</span>
             </>
           )}
-          <span
-            className={
-              cinemaMode
-                ? 'text-[5.25rem] text-[#ECECEF]'
-                : 'text-[4.45rem] text-[#ECECEF]'
-            }
-          >
-            {timeParts.main}
-          </span>
-          <span
-            className={`mx-1 font-bold text-[var(--accent-fg)]/85 ${
-              cinemaMode ? 'text-[3.6rem]' : 'text-[3.1rem]'
-            }`}
-          >
-            :
-          </span>
-          <span
-            className={
-              cinemaMode
-                ? 'text-[5.25rem] text-[#E6E6EA]'
-                : 'text-[4.45rem] text-[#E6E6EA]'
-            }
-          >
-            {timeParts.sub}
-          </span>
+          <Digits value={parts.minutes} className={cinemaMode ? 'text-[4.4rem]' : 'text-[3.9rem]'} />
+          <span className="mx-[0.06em] text-[2.6rem] text-[var(--text-3)]">:</span>
+          <Digits value={parts.seconds} className={cinemaMode ? 'text-[4.4rem]' : 'text-[3.9rem]'} />
         </div>
 
-        {/* Finish ETA or Elapsed Status */}
-        <div className="mt-1.5 flex items-center justify-center gap-1.5 text-[10.5px] text-[#9C9CA6]">
-          {etaText ? (
-            <>
-              <span>پایان</span>
-              <Numeric value={etaText} className="font-semibold text-[var(--accent-fg)]" />
-            </>
-          ) : (
-            <span className="inline-flex items-center gap-1 text-[#9C9CA6]">
-              <Sparkles className="h-3 w-3 text-[var(--accent)]" />
-              جریان تمرکز آزاد
-            </span>
-          )}
-        </div>
+        <span className="num-geo mt-1.5 text-[10px] tracking-wider text-[var(--text-2)]">{meta}</span>
 
-        {/* Pomodoro Cycle Constellation Dots */}
         {mode === 'pomodoro' && (
-          <div className="mt-2.5 flex items-center gap-1.5" aria-label="چرخه‌های پومودورو">
-            {Array.from({ length: totalDots }, (_, idx) => {
-              const done = idx < filledInBlock;
-              const current = idx === filledInBlock && phase === 'focus';
+          <div className="mt-3 flex items-center gap-[5px]" aria-hidden="true">
+            {Array.from({ length: cycleCount }, (_, index) => {
+              const done = index < cyclesDone;
+              const current = index === cyclesDone && phase === 'focus';
               return (
                 <span
-                  key={idx}
-                  className={`h-1.5 rounded-full transition-all ${
-                    done
-                      ? 'w-3.5 bg-[var(--accent-fg)]'
+                  key={index}
+                  className="block rounded-[1px] transition-colors"
+                  style={{
+                    width: 14,
+                    height: 2,
+                    background: done
+                      ? 'var(--accent-fg)'
                       : current
-                      ? 'w-2.5 bg-[var(--accent)]'
-                      : 'w-1.5 bg-[var(--accent-fg)]/20'
-                  }`}
+                      ? 'color-mix(in srgb, var(--accent-fg) 55%, transparent)'
+                      : 'rgba(255,255,255,0.12)',
+                  }}
                 />
               );
             })}
           </div>
         )}
 
-        {/* Linked Task Ribbon Inside Dial */}
         {linkedTaskTitle && (
-          <p className="mt-2 max-w-[162px] truncate rounded-lg bg-[#0A0A0C]/70 px-2.5 py-0.5 text-[10px] font-medium text-[#D3C9FF]">
+          <span className="mt-2.5 max-w-[170px] truncate text-[10px] text-[var(--text-3)]">
             {linkedTaskTitle}
-          </p>
+          </span>
         )}
       </div>
     </div>

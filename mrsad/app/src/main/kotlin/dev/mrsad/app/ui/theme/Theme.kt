@@ -175,67 +175,50 @@ fun specFor(variant: ThemeVariant): MrsadDesignSpec = when (variant) {
     ThemeVariant.NOIR -> NoirSpec
 }
 
-internal val LocalMrsadColors = staticCompositionLocalOf { ObsidianColors }
-internal val LocalMrsadSpec = staticCompositionLocalOf { ObsidianSpec }
-internal val LocalMrsadTypography = staticCompositionLocalOf { buildMrsadTypography(1.0f) }
-internal val LocalMrsadMotion = staticCompositionLocalOf {
+val LocalMrsadColors = staticCompositionLocalOf { ObsidianColors }
+val LocalMrsadSpec = staticCompositionLocalOf { ObsidianSpec }
+val LocalMrsadTypography = staticCompositionLocalOf<MrsadTypography> { MrsadTypography.default }
+val LocalMrsadMotion = staticCompositionLocalOf {
     MrsadMotion(
         animationsEnabled = true,
-        reducedMotion = false,
-        deterministic = false,
-        particleCount = 0,
-        quality = GraphicsQuality.HIGH,
+        particleCount = 40,
+        animationScale = 1f,
+        quality = GraphicsQuality.BALANCED,
     )
 }
 
 object MrsadTheme {
     val colors: MrsadColors
-        @Composable
-        @ReadOnlyComposable
-        get() = LocalMrsadColors.current
+        @Composable @ReadOnlyComposable get() = LocalMrsadColors.current
 
     val spec: MrsadDesignSpec
-        @Composable
-        @ReadOnlyComposable
-        get() = LocalMrsadSpec.current
+        @Composable @ReadOnlyComposable get() = LocalMrsadSpec.current
 
     val type: MrsadTypography
-        @Composable
-        @ReadOnlyComposable
-        get() = LocalMrsadTypography.current
+        @Composable @ReadOnlyComposable get() = LocalMrsadTypography.current
 
     val motion: MrsadMotion
-        @Composable
-        @ReadOnlyComposable
-        get() = LocalMrsadMotion.current
+        @Composable @ReadOnlyComposable get() = LocalMrsadMotion.current
 }
 
 @Composable
-fun MrsadTheme(
-    settings: MrsadSettings = MrsadSettings(),
-    content: @Composable () -> Unit,
-) {
+fun MrsadTheme(settings: MrsadSettings, content: @Composable () -> Unit) {
     val colors = colorsFor(settings.theme)
     val spec = specFor(settings.theme)
-    val typography = buildMrsadTypography(settings.fontScale)
-    val motion = MrsadMotion.of(
-        settings = settings,
-        deterministic = MrsadTestHooks.isDeterministic,
-    )
+    val typography = MrsadTypography.remember(fontScale = settings.fontScale, readingFont = false)
+    val deterministic = MrsadTestHooks.isDeterministic
+    val motion = MrsadMotion.of(settings, deterministic)
 
     val materialScheme = darkColorScheme(
         primary = colors.accent,
         onPrimary = colors.background,
-        secondary = colors.metalMid,
-        onSecondary = colors.background,
-        tertiary = colors.metalLight,
         background = colors.background,
         onBackground = colors.textPrimary,
         surface = colors.surface,
         onSurface = colors.textPrimary,
         surfaceVariant = colors.surfaceHigh,
         onSurfaceVariant = colors.textSecondary,
-        outline = colors.border,
+        outline = colors.borderStrong,
         error = colors.error,
     )
 
@@ -245,10 +228,6 @@ fun MrsadTheme(
         LocalMrsadTypography provides typography,
         LocalMrsadMotion provides motion,
     ) {
-        MaterialTheme(
-            colorScheme = materialScheme,
-            typography = typography.material,
-            content = content,
-        )
+        MaterialTheme(colorScheme = materialScheme, content = content)
     }
 }

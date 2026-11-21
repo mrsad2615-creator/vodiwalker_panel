@@ -41,11 +41,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.hgallery.app.data.AppContainer
 import dev.hgallery.app.ui.icons.HgIcons
 import dev.hgallery.app.ui.components.HgIconButton
+import dev.hgallery.app.ui.components.HgTestTags
 import dev.hgallery.core.MediaItem
 import kotlinx.coroutines.launch
 
@@ -81,6 +83,7 @@ fun ViewerScreen(
 
     Box(
         modifier = Modifier
+            .testTag(HgTestTags.VIEWER)
             .fillMaxSize()
             .background(Color.Black)
             // The viewer is fully opaque, so its own taps must not fall through

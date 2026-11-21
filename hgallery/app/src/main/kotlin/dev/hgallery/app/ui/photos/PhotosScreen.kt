@@ -27,6 +27,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -35,6 +36,7 @@ import dev.hgallery.app.data.ThumbnailStore
 import dev.hgallery.app.data.photosSubtitle
 import dev.hgallery.app.ui.components.HgScreenTitle
 import dev.hgallery.app.ui.components.HgToolbar
+import dev.hgallery.app.ui.components.HgTestTags
 import dev.hgallery.app.ui.components.MediaThumbnail
 import dev.hgallery.app.ui.theme.HgMetrics
 import dev.hgallery.app.ui.theme.hgPalette
@@ -130,6 +132,7 @@ private fun ThumbnailCell(
         store = store,
         cornerRadius = 3,
         modifier = Modifier
+            .testTag(HgTestTags.thumbnail(item.id))
             .aspectRatio(1f)
             .clip(androidx.compose.foundation.shape.RoundedCornerShape(3.dp))
             .clickable(onClick = onClick),

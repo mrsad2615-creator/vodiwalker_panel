@@ -30,11 +30,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.hgallery.app.data.AppContainer
 import dev.hgallery.app.ui.components.HgScreenTitle
+import dev.hgallery.app.ui.components.HgTestTags
 import dev.hgallery.app.ui.components.HgSectionHeader
 import dev.hgallery.app.ui.components.HgToolbar
 import dev.hgallery.app.ui.components.MediaThumbnail
@@ -125,7 +127,7 @@ private fun AlbumTile(
             .take(4)
     }
 
-    Column(modifier = Modifier.clickable(onClick = onClick)) {
+    Column(modifier = Modifier.testTag(HgTestTags.album(album.name)).clickable(onClick = onClick)) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()

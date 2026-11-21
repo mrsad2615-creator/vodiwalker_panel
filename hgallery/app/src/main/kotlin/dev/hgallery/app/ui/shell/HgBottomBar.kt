@@ -24,9 +24,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
+import dev.hgallery.app.ui.components.HgTestTags
 import dev.hgallery.app.ui.icons.HgIcons
 import dev.hgallery.app.ui.theme.HgMetrics
 import dev.hgallery.app.ui.theme.hgPalette
@@ -98,6 +100,7 @@ private fun TabItem(
 
     Column(
         modifier = modifier
+            .testTag(HgTestTags.tab(tab.name))
             .height(HgMetrics.MinTouchTarget + 8.dp)
             .selectable(
                 selected = selected,

@@ -36,6 +36,14 @@ data class MrsadColors(
     val metalLight: Color,
     val metalMid: Color,
     val metalDark: Color,
+    /** Deep Navy — the second depth of the canvas, for gradients. */
+    val navy: Color,
+    /** Ice Blue — the energy accent of the cosmic palette. */
+    val iceBlue: Color,
+    /** Electric Blue — the interactive accent of the light palette. */
+    val electricBlue: Color,
+    /** Violet — the spatial accent of the cosmic palette. */
+    val violet: Color,
     val accent: Color,
     val accentSoft: Color,
     val success: Color,
@@ -48,14 +56,20 @@ data class MrsadColors(
 }
 
 // Brand constants (semantic system is built from these).
+//
+// The COSMIC LUXURY palette: black is the foundation, chrome and titanium
+// build the structure, and the three accents appear only where they carry
+// meaning — interactive states, energy effects, data visualisation.
 private val Obsidian = Color(0xFF08090C)
-private val Graphite = Color(0xFF17191F)
-private val GraphiteHigh = Color(0xFF1E2129)
-private val Silver = Color(0xFFAEB4BE)
-private val Pearl = Color(0xFFF5F6F8)
-private val Chrome = Color(0xFFD8DDE5)
-private val Violet = Color(0xFF8A75FF)
-private val IceBlue = Color(0xFF5DC8E8)
+private val Graphite = Color(0xFF171A20)
+private val GraphiteHigh = Color(0xFF1F242E)
+private val DeepNavy = Color(0xFF101B2D)
+private val Titanium = Color(0xFF777F8A)
+private val ChromeSilver = Color(0xFFC7CDD5)
+private val Pearl = Color(0xFFF4F6FA)
+private val IceBlue = Color(0xFF8DCBFF)
+private val ElectricBlue = Color(0xFF3478F6)
+private val Violet = Color(0xFF8B70D6)
 private val Lavender = Color(0xFFC6A0FF)
 
 private val Success = Color(0xFF6FD3A8)   // semantic only — never brand
@@ -64,20 +78,24 @@ private val Danger = Color(0xFFF1788C)
 
 private val ObsidianColors = MrsadColors(
     background = Obsidian,
-    backgroundElevated = Color(0xFF0B0D11),
+    backgroundElevated = DeepNavy,
     surface = Graphite,
     surfaceHigh = GraphiteHigh,
-    glass = Color(0xCC17191F),
-    border = Color(0x33AEB4BE),
-    borderStrong = Color(0x66D8DDE5),
+    glass = Color(0xCC171A20),
+    border = Color(0x33C7CDD5),
+    borderStrong = Color(0x66C7CDD5),
     textPrimary = Pearl,
-    textSecondary = Silver,
-    textMuted = Color(0xFF6E7480),
+    textSecondary = ChromeSilver,
+    textMuted = Titanium,
     metalLight = Pearl,
-    metalMid = Chrome,
-    metalDark = Silver,
-    accent = Chrome,
-    accentSoft = Color(0x268A75FF),
+    metalMid = ChromeSilver,
+    metalDark = Titanium,
+    navy = DeepNavy,
+    iceBlue = IceBlue,
+    electricBlue = ElectricBlue,
+    violet = Violet,
+    accent = IceBlue,
+    accentSoft = Color(0x268DCBFF),
     success = Success,
     warning = Warning,
     error = Danger,
@@ -91,7 +109,7 @@ private val QuantumColors = ObsidianColors.copy(
     surface = Color(0xFF191527),
     surfaceHigh = Color(0xFF221B36),
     accent = Violet,
-    accentSoft = Color(0x338A75FF),
+    accentSoft = Color(0x338B70D6),
     metalLight = Color(0xFFEDE9FF),
     metalMid = Color(0xFFC9BEFF),
     metalDark = Lavender,
@@ -113,8 +131,12 @@ private val CrystalColors = MrsadColors(
     metalLight = Color(0xFF2A2F3A),
     metalMid = Color(0xFF4A5060),
     metalDark = Color(0xFF6E7484),
-    accent = Color(0xFF3D6BFF),
-    accentSoft = Color(0x1F3D6BFF),
+    navy = DeepNavy,
+    iceBlue = IceBlue,
+    electricBlue = ElectricBlue,
+    violet = Violet,
+    accent = ElectricBlue,
+    accentSoft = Color(0x1F3478F6),
     success = Color(0xFF1E9E6E),
     warning = Color(0xFFB07B18),
     error = Color(0xFFC4415A),
@@ -128,7 +150,7 @@ private val ArcticColors = ObsidianColors.copy(
     surface = Color(0xFF0E1822),
     surfaceHigh = Color(0xFF14212E),
     accent = IceBlue,
-    accentSoft = Color(0x265DC8E8),
+    accentSoft = Color(0x268DCBFF),
     metalLight = Color(0xFFEAF7FC),
     metalMid = Color(0xFFB9E2F0),
     metalDark = Color(0xFF6FA9BF),
@@ -139,8 +161,8 @@ private val PhantomColors = ObsidianColors.copy(
     backgroundElevated = Color(0xFF0B0910),
     surface = Color(0xFF120F19),
     surfaceHigh = Color(0xFF1A1524),
-    accent = Color(0xFFB08CFF),
-    accentSoft = Color(0x29B08CFF),
+    accent = Violet,
+    accentSoft = Color(0x298B70D6),
     metalLight = Color(0xFFE6DEF5),
     metalMid = Color(0xFFA99BC4),
     metalDark = Color(0xFF6E6288),

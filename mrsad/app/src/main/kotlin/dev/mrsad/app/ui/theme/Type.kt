@@ -17,6 +17,14 @@ import dev.mrsad.core.text.PersianText
  * - Vazirmatn (OFL): the primary UI typeface — excellent Persian shaping.
  * - Estedad (OFL): a geometric, display-friendly alternative used for
  *   headlines and the reading environment (user selectable later).
+ * - Space Grotesk (OFL): the Latin voice of the brand — the wordmark,
+ *   Latin numerals and every Latin string are set in it.
+ *
+ * The UI and the display families are *combined* families: Space Grotesk
+ * first, then the Persian face. Compose falls back per glyph, so a Latin
+ * character is drawn by Space Grotesk and a Persian one by the Persian
+ * face, inside a single style. That is what keeps the Latin and the
+ * Persian of one line looking like one design instead of two.
  */
 val Vazirmatn = FontFamily(
     Font(R.font.vazirmatn_regular, FontWeight.Normal),
@@ -26,6 +34,33 @@ val Vazirmatn = FontFamily(
 )
 
 val Estedad = FontFamily(
+    Font(R.font.estedad_medium, FontWeight.Medium),
+    Font(R.font.estedad_semibold, FontWeight.SemiBold),
+    Font(R.font.estedad_bold, FontWeight.Bold),
+)
+
+val SpaceGrotesk = FontFamily(
+    Font(R.font.space_grotesk_regular, FontWeight.Normal),
+    Font(R.font.space_grotesk_medium, FontWeight.Medium),
+    Font(R.font.space_grotesk_bold, FontWeight.Bold),
+)
+
+/** Space Grotesk for Latin, Vazirmatn for Persian — the everyday UI voice. */
+val UiFamily = FontFamily(
+    Font(R.font.space_grotesk_regular, FontWeight.Normal),
+    Font(R.font.space_grotesk_medium, FontWeight.Medium),
+    Font(R.font.space_grotesk_bold, FontWeight.Bold),
+    Font(R.font.vazirmatn_regular, FontWeight.Normal),
+    Font(R.font.vazirmatn_medium, FontWeight.Medium),
+    Font(R.font.vazirmatn_semibold, FontWeight.SemiBold),
+    Font(R.font.vazirmatn_bold, FontWeight.Bold),
+)
+
+/** Space Grotesk for Latin, Estedad for Persian — the display voice. */
+val DisplayFamily = FontFamily(
+    Font(R.font.space_grotesk_regular, FontWeight.Normal),
+    Font(R.font.space_grotesk_medium, FontWeight.Medium),
+    Font(R.font.space_grotesk_bold, FontWeight.Bold),
     Font(R.font.estedad_medium, FontWeight.Medium),
     Font(R.font.estedad_semibold, FontWeight.SemiBold),
     Font(R.font.estedad_bold, FontWeight.Bold),
@@ -57,7 +92,7 @@ data class MrsadTypography(
 
         fun build(fontScale: Float, readingFont: Boolean): MrsadTypography {
             fun s(value: Float) = (value * fontScale).sp
-            val displayFamily = if (readingFont) Estedad else Vazirmatn
+            val displayFamily = if (readingFont) DisplayFamily else UiFamily
             return MrsadTypography(
                 display = TextStyle(
                     fontFamily = displayFamily,
@@ -73,31 +108,31 @@ data class MrsadTypography(
                     lineHeight = s(34f),
                 ),
                 title = TextStyle(
-                    fontFamily = Vazirmatn,
+                    fontFamily = UiFamily,
                     fontWeight = FontWeight.SemiBold,
                     fontSize = s(18f),
                     lineHeight = s(26f),
                 ),
                 bodyLarge = TextStyle(
-                    fontFamily = Vazirmatn,
+                    fontFamily = UiFamily,
                     fontWeight = FontWeight.Normal,
                     fontSize = s(17f),
                     lineHeight = s(30f),
                 ),
                 body = TextStyle(
-                    fontFamily = Vazirmatn,
+                    fontFamily = UiFamily,
                     fontWeight = FontWeight.Normal,
                     fontSize = s(15f),
                     lineHeight = s(26f),
                 ),
                 label = TextStyle(
-                    fontFamily = Vazirmatn,
+                    fontFamily = UiFamily,
                     fontWeight = FontWeight.Medium,
                     fontSize = s(13f),
                     lineHeight = s(22f),
                 ),
                 caption = TextStyle(
-                    fontFamily = Vazirmatn,
+                    fontFamily = UiFamily,
                     fontWeight = FontWeight.Normal,
                     fontSize = s(12f),
                     lineHeight = s(19f),
@@ -106,7 +141,7 @@ data class MrsadTypography(
                 // below the baseline, so the metric line needs room: a 34dp
                 // line for a 30dp face clips them.
                 metric = TextStyle(
-                    fontFamily = Estedad,
+                    fontFamily = DisplayFamily,
                     fontWeight = FontWeight.Bold,
                     fontSize = s(30f),
                     lineHeight = s(40f),
@@ -121,7 +156,7 @@ data class MrsadTypography(
                     lineHeight = s(22f),
                 ),
                 reading = TextStyle(
-                    fontFamily = if (readingFont) Estedad else Vazirmatn,
+                    fontFamily = displayFamily,
                     fontWeight = FontWeight.Normal,
                     fontSize = s(21f),
                     lineHeight = s(38f),

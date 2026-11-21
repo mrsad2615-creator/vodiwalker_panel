@@ -1,7 +1,8 @@
 # MRSAD Design System
 
-> One visual language: **Eclipse** (luxury metal) + **Quantum** (spatial depth) +
-> **Nexus** (futuristic tech) + **Pure** (minimal clarity).
+> One visual language: **COSMIC LUXURY** — cinematic technology. Black is the
+> foundation, chrome and titanium build the structure, and carefully selected
+> accent colours create energy and distinction.
 > Identity rule: *black & silver first; accent colour only where it means something.*
 
 ---
@@ -13,18 +14,23 @@ Defined once in `ui/theme/Theme.kt` (`MrsadColors`), consumed everywhere through
 
 | Token | Obsidian (brand) | Meaning |
 |---|---|---|
-| `background` | `#08090C` Obsidian | app canvas |
-| `backgroundElevated` | `#0B0D11` | atmosphere gradient stop |
-| `surface` / `surfaceHigh` | `#17191F` / `#1E2129` Graphite | cards, panels |
+| `background` | `#08090C` Obsidian Black | app canvas |
+| `backgroundElevated` | `#101B2D` Deep Navy | atmosphere gradient stop |
+| `surface` / `surfaceHigh` | `#171A20` / `#1F242E` Graphite | cards, panels |
 | `glass` | graphite @ 80 % | translucent panels |
-| `border` / `borderStrong` | silver @ 20 % / 40 % | hairlines |
-| `textPrimary` | `#F5F6F8` Pearl | headings, values |
-| `textSecondary` | `#AEB4BE` Silver | labels, body |
-| `textMuted` | `#6E7480` | captions, disabled text |
-| `metalLight` / `metalMid` / `metalDark` | `#F5F6F8` / `#D8DDE5` / `#AEB4BE` Chrome | gradient metal, primary fills |
-| `accent` | Chrome (Obsidian) · Violet `#8A75FF` (Quantum) · Ice `#5DC8E8` (Arctic) … | interactive highlight |
+| `border` / `borderStrong` | chrome silver @ 20 % / 40 % | hairlines |
+| `textPrimary` | `#F4F6FA` White | headings, values |
+| `textSecondary` | `#C7CDD5` Chrome Silver | labels, body |
+| `textMuted` | `#777F8A` Titanium | captions, disabled text |
+| `metalLight` / `metalMid` / `metalDark` | `#F4F6FA` / `#C7CDD5` / `#777F8A` | gradient metal, primary fills |
+| `navy` / `iceBlue` / `electricBlue` / `violet` | `#101B2D` / `#8DCBFF` / `#3478F6` / `#8B70D6` | the cosmic accents, by name |
+| `accent` | Ice Blue (Obsidian) · Violet (Quantum/Phantom) · Electric Blue (Crystal) · Ice Blue (Arctic) … | interactive highlight |
 | `success` / `warning` / `error` | `#6FD3A8` / `#E8C06A` / `#F1788C` | states — **never brand** |
 | `disabled` | `#3A3A47` | inactive |
+
+Distribution guideline: ~70 % dark surfaces, ~25 % silver / titanium / white,
+~5 % accent. Accents appear only for interactive states, energy effects, data
+visualisation and important highlights — never as decoration.
 
 Green is a semantic success colour only; it is never a brand colour.
 
@@ -47,7 +53,11 @@ Light theme (Crystal) flips system-bar icon appearance automatically.
 
 * **Vazirmatn** — UI: excellent Persian shaping, 4 weights (400/500/600/700).
 * **Estedad** — display + reading: geometric, high legibility at large sizes.
-* Both OFL 1.1; licences shipped with the app.
+* **Space Grotesk** — the Latin voice: the wordmark, Latin numerals and every
+  Latin string. The UI and display families are *combined* families (Space
+  Grotesk first, then the Persian face), so Compose falls back per glyph and
+  a mixed line reads as one design.
+* All OFL 1.1; licences shipped with the app.
 
 | Style | Size (× font scale) | Use |
 |---|---|---|
@@ -149,7 +159,9 @@ so that the tests can reach idle.
 | `SectionHeader` | title + optional trailing action |
 | `EmptyState / LoadingState / ErrorState` | every screen must handle all three |
 | `SparkLine`, `BarRow` | real-data charts; empty input → "needs more data" |
-| `MrsadCore` | the 3D centrepiece: a faceted shell around a lit nucleus, two orbital rings, a drag and a fling, a shockwave on a tap |
+| `MrsadCore` (ORRERY PRIME) | the 3D centrepiece: a faceted shell around a luminous energy core, three orbital rings, orbiting metallic bodies, a drag and a fling, a shockwave on a tap |
+| `MetalIcon` / `MrsadIcons` | the custom icon family: hybrid 3D geometry, machined facets shaded with the metal ramp |
+| `chamferedShape` | the hybrid geometric corner: rounded, with the tip cut at 45° |
 | `MrsadReveal` | the entrance of a piece of content: a short travel and a fade, staggered |
 | `MrsadBottomBar` | 5 destinations, selected pill + label |
 | `AmbientBackground` | per-page atmosphere with quality budget |
@@ -176,11 +188,13 @@ top edge of its own because it hovers over the content.
 
 ---
 
-## 5. The MRSAD Core
+## 5. ORRERY PRIME
 
 The centrepiece of the home screen is a real three-dimensional object,
 rendered by hand. There is no bitmap, no 3D library and no fake data in
-the pipeline.
+the pipeline. It is a mechanical cosmic universe: a faceted icosahedral
+shell around a luminous energy core, three orbital rings at different
+angles, and small metallic bodies riding them at their own speeds.
 
 ### The pipeline
 
@@ -196,7 +210,8 @@ The facets are translucent, so the light of the nucleus shines through the
 shell instead of being hidden behind it. The orbital rings are split at the
 depth of the body: the half behind it is drawn first and the half in front
 of it last, so a ring passes *through* the object instead of floating over
-it.
+it. A breathing energy halo rings the nucleus, and its radius follows the
+real goal progress.
 
 ### The interaction
 
@@ -224,7 +239,9 @@ Nothing on the object is invented:
 
 The renderer allocates nothing per frame after the first one: every buffer
 is reused, and the object is drawn by a single Canvas. The number of
-segments in a ring follows the graphics tier (56 / 40 / 24).
+segments in a ring follows the graphics tier (56 / 40 / 24), and so does
+the number of orbiting bodies (6 / 4 / 0): on a weak device the orrery
+loses its moons before it loses its shape.
 
 ---
 

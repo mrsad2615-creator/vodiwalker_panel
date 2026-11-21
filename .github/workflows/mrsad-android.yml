@@ -280,13 +280,26 @@ jobs:
           cat > notes.md <<EOF
           MRSAD — Persian command centre for focus, typing and reading.
 
-          * A redesigned interface: an ambient background, floating navigation,
-            material surfaces, a geometric core that reacts to light and to typing,
-            and motion that follows the Material duration ladder.
-          * The orbital rings are drawn as a single path instead of forty separate
-            lines, which is the largest rendering change in this build.
+          * COSMIC LUXURY: a new visual identity — obsidian black, chrome and
+            titanium structure, and ice-blue, electric-blue and violet accents
+            that appear only where they carry meaning.
+          * ORRERY PRIME: the home centrepiece is now a mechanical cosmic
+            universe — a faceted icosahedral shell around a luminous energy
+            core, three orbital rings at different angles, and metallic
+            bodies riding them at their own speeds. It still reacts to the
+            finger, and its brightness is still the real goal progress.
+          * A custom icon family in hybrid 3D geometry: every module —
+            Home, Type, Read, Mind, Analytics, Assistant, Settings, Focus,
+            Studio — is a machined object shaded with the metal ramp,
+            replacing the generic glyphs.
+          * Typography: Space Grotesk now voices every Latin string (the
+            wordmark, Latin numerals) beside Vazirmatn and Estedad, so a
+            mixed line reads as one design.
+          * Smoked-glass surfaces with a deep-navy wash, chamfered
+            machined corners on the module cards, and a short cinematic
+            opening that plays once per launch and never on back-navigation.
           * Offline by design: no INTERNET permission, everything stays on the device.
-          * New brand mark: the "Geometric M" is now generated from one geometry and
+          * The "Geometric M" brand mark is generated from one geometry and
             shared by the launcher icon, the splash and the in-app brand mark.
           * Difficulty that actually progresses: every cognitive exercise carries its
             own ladder, moved only after two consecutive strong or weak rounds.

@@ -162,14 +162,28 @@ class Core3D(val ringSegments: Int = 40) {
     /** The facets, ordered back to front. */
     val faceOrder = IntArray(faceCount) { it }
 
-    /** The projected points of both orbital rings, `ringSegments + 1` each. */
-    val ringPointCount: Int = 2 * (ringSegments + 1)
+    /** The projected points of the three orbital rings, `ringSegments + 1` each. */
+    val ringPointCount: Int = 3 * (ringSegments + 1)
     val ringX = FloatArray(ringPointCount)
     val ringY = FloatArray(ringPointCount)
     val ringZ = FloatArray(ringPointCount)
 
     /** The offset of the second ring inside [ringX] and friends. */
     val secondRingOffset: Int = ringSegments + 1
+
+    /** The offset of the third (equatorial) ring inside [ringX] and friends. */
+    val thirdRingOffset: Int = 2 * (ringSegments + 1)
+
+    /**
+     * The orbiting nodes of the orrery: small metallic bodies that ride the
+     * rings at their own speeds. The caller sets [nodeCount] from the
+     * graphics tier; the buffers are allocated once for the maximum.
+     */
+    var nodeCount: Int = 4
+    val nodeX = FloatArray(MAX_NODES)
+    val nodeY = FloatArray(MAX_NODES)
+    val nodeZ = FloatArray(MAX_NODES)
+    val nodeSize = FloatArray(MAX_NODES)
 
     /**
      * Transforms, projects and shades the whole scene.
@@ -188,6 +202,7 @@ class Core3D(val ringSegments: Int = 40) {
         centerX: Float,
         centerY: Float,
         radiusPx: Float,
+        time: Float = 0f,
     ) {
         val cy = cos(yaw)
         val sy = sin(yaw)
@@ -300,9 +315,87 @@ class Core3D(val ringSegments: Int = 40) {
             faceOrder[j + 1] = current
         }
 
-        // 5. The two orbital rings.
+        // 5. The three orbital rings.
         buildRing(0, INNER_RING_RADIUS, INNER_RING_TILT, true)
         buildRing(secondRingOffset, OUTER_RING_RADIUS, OUTER_RING_TILT, false)
+        buildEquatorialRing(thirdRingOffset, MIDDLE_RING_RADIUS, MIDDLE_RING_TILT)
+
+        // 6. The orbiting nodes, each riding its own ring at its own speed.
+        val nodes = nodeCount.coerceIn(0, MAX_NODES)
+        for (n in 0 until nodes) {
+            val def = NODE_DEFS[n]
+            val angle = def.phase + time * def.speed
+            ringLocalPoint(def.radius, def.tilt, def.plane, angle, localPoint)
+            val x = matrix00 * localPoint[0] + matrix01 * localPoint[1] + matrix02 * localPoint[2]
+            val y = matrix10 * localPoint[0] + matrix11 * localPoint[1] + matrix12 * localPoint[2]
+            val z = matrix20 * localPoint[0] + matrix21 * localPoint[1] + matrix22 * localPoint[2]
+            val scale = FOCAL / (CAMERA_DISTANCE - z)
+            nodeX[n] = x * scale
+            nodeY[n] = -y * scale
+            nodeZ[n] = z
+            nodeSize[n] = def.size * scale
+        }
+    }
+
+    /** A scratch point for the ring maths; reused, never reallocated. */
+    private val localPoint = FloatArray(3)
+
+    /** One orbiting node: which ring it rides, how fast, and how big it is. */
+    private data class NodeDef(
+        val radius: Float,
+        val tilt: Float,
+        val plane: Int,
+        val phase: Float,
+        val speed: Float,
+        val size: Float,
+    )
+
+    /**
+     * A point of a ring in local space, before the scene rotation, written
+     * into [out] so the frame loop allocates nothing.
+     *
+     * Plane 0 and 1 are the two constructions the original rings use;
+     * plane 2 is the equatorial ring, a circle in the XY plane tipped
+     * around the horizontal axis. The ring builder and the node rider
+     * share this one function, so a node always sits exactly on its ring.
+     */
+    private fun ringLocalPoint(radius: Float, tilt: Float, plane: Int, angle: Float, out: FloatArray) {
+        val sinTilt = sin(tilt)
+        val cosTilt = cos(tilt)
+        val sinA = sin(angle)
+        val cosA = cos(angle)
+        when (plane) {
+            0 -> {
+                out[0] = cosA * radius
+                out[1] = sinA * sinTilt * radius
+                out[2] = sinA * cosTilt * radius
+            }
+            1 -> {
+                out[0] = sinA * sinTilt * radius
+                out[1] = cosA * radius
+                out[2] = sinA * cosTilt * radius
+            }
+            else -> {
+                out[0] = cosA * radius
+                out[1] = sinA * cosTilt * radius
+                out[2] = sinA * sinTilt * radius
+            }
+        }
+    }
+
+    /** Lays out the equatorial ring and projects it. */
+    private fun buildEquatorialRing(offset: Int, radius: Float, tilt: Float) {
+        for (i in 0..ringSegments) {
+            val angle = TWO_PI * i / ringSegments
+            ringLocalPoint(radius, tilt, 2, angle, localPoint)
+            val x = matrix00 * localPoint[0] + matrix01 * localPoint[1] + matrix02 * localPoint[2]
+            val y = matrix10 * localPoint[0] + matrix11 * localPoint[1] + matrix12 * localPoint[2]
+            val z = matrix20 * localPoint[0] + matrix21 * localPoint[1] + matrix22 * localPoint[2]
+            val scale = FOCAL / (CAMERA_DISTANCE - z)
+            ringX[offset + i] = x * scale
+            ringY[offset + i] = -y * scale
+            ringZ[offset + i] = z
+        }
     }
 
     /**
@@ -393,6 +486,30 @@ class Core3D(val ringSegments: Int = 40) {
 
         /** How far the outer ring is tipped out of its plane. */
         const val OUTER_RING_TILT: Float = -0.58f
+
+        /** The radius of the equatorial ring, between the other two. */
+        const val MIDDLE_RING_RADIUS: Float = 1.48f
+
+        /** How far the equatorial ring is tipped out of its plane. */
+        const val MIDDLE_RING_TILT: Float = -0.15f
+
+        /** The most orbiting nodes the orrery ever carries. */
+        const val MAX_NODES: Int = 8
+
+        /**
+         * The orbiting nodes, fastest first. Each rides one of the three
+         * rings at its own speed, so the system never repeats a pattern.
+         */
+        private val NODE_DEFS: List<NodeDef> = listOf(
+            NodeDef(INNER_RING_RADIUS, INNER_RING_TILT, 0, 0.0f, 0.55f, 0.055f),
+            NodeDef(MIDDLE_RING_RADIUS, MIDDLE_RING_TILT, 2, 2.1f, -0.38f, 0.045f),
+            NodeDef(OUTER_RING_RADIUS, OUTER_RING_TILT, 1, 4.2f, 0.27f, 0.065f),
+            NodeDef(INNER_RING_RADIUS, INNER_RING_TILT, 0, 3.4f, 0.55f, 0.040f),
+            NodeDef(MIDDLE_RING_RADIUS, MIDDLE_RING_TILT, 2, 5.0f, -0.38f, 0.035f),
+            NodeDef(OUTER_RING_RADIUS, OUTER_RING_TILT, 1, 1.3f, 0.27f, 0.050f),
+            NodeDef(INNER_RING_RADIUS, INNER_RING_TILT, 0, 5.6f, 0.55f, 0.030f),
+            NodeDef(MIDDLE_RING_RADIUS, MIDDLE_RING_TILT, 2, 0.7f, -0.38f, 0.028f),
+        )
 
         private const val AMBIENT = 0.13f
         private const val KEY_INTENSITY = 0.70f

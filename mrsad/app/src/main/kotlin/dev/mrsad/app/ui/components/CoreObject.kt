@@ -68,6 +68,13 @@ fun MrsadCore(
         GraphicsQuality.PERFORMANCE -> 24
     }
     val engine = remember(ringSegments) { Core3D(ringSegments) }
+    // The orbiting nodes follow the same tier: a full orrery on a strong
+    // device, none at all on a weak one.
+    engine.nodeCount = when (quality) {
+        GraphicsQuality.HIGH -> 6
+        GraphicsQuality.BALANCED -> 4
+        GraphicsQuality.PERFORMANCE -> 0
+    }
     val scene = remember { CoreScene() }
     val clampedEnergy = energy.coerceIn(0f, 1f)
 
@@ -274,6 +281,7 @@ private fun DrawScope.drawCore(
         centerX = centerX,
         centerY = centerY,
         radiusPx = radiusPx,
+        time = scene.time,
     )
 
     val shadow = lerpColor(colors.metalDark, colors.accent, 0.35f)
@@ -337,6 +345,17 @@ private fun DrawScope.drawCore(
         far = colors.metalMid,
         front = false,
     )
+    drawRingHalf(
+        engine = engine,
+        offset = engine.thirdRingOffset,
+        centerX = centerX,
+        centerY = centerY,
+        radiusPx = radiusPx,
+        bandWidth = radiusPx * 0.026f,
+        near = colors.metalLight,
+        far = colors.metalDark,
+        front = false,
+    )
 
     // ---- 4. The body --------------------------------------------------------
     // The facets are translucent, so the light of the nucleus shines
@@ -374,6 +393,19 @@ private fun DrawScope.drawCore(
         radius = radiusPx * (0.055f + 0.035f * energy),
         center = Offset(centerX, centerY),
     )
+    // The energy halo: a slow, breathing ring of light around the nucleus
+    // whose radius and brightness follow the real goal progress. It is the
+    // orrery's pulse — a controlled luminous edge, not a glow.
+    if (quality != GraphicsQuality.PERFORMANCE) {
+        val breath = 0.5f + 0.5f * sin(scene.time * 1.4f)
+        val haloRadius = radiusPx * (0.42f + 0.20f * energy + 0.05f * breath)
+        drawCircle(
+            color = colors.accent.copy(alpha = 0.10f + 0.22f * energy + 0.06f * breath),
+            radius = haloRadius,
+            center = Offset(centerX, centerY),
+            style = Stroke(width = (1.1f + 0.7f * breath).dp.toPx()),
+        )
+    }
 
     // ---- 6. The edges of the shell ------------------------------------------
     if (quality != GraphicsQuality.PERFORMANCE) {
@@ -425,8 +457,40 @@ private fun DrawScope.drawCore(
         far = colors.metalMid,
         front = true,
     )
+    drawRingHalf(
+        engine = engine,
+        offset = engine.thirdRingOffset,
+        centerX = centerX,
+        centerY = centerY,
+        radiusPx = radiusPx,
+        bandWidth = radiusPx * 0.026f,
+        near = colors.metalLight,
+        far = colors.metalDark,
+        front = true,
+    )
 
-    // ---- 8. The sparks of the streak ----------------------------------------
+    // ---- 8. The orbiting nodes ----------------------------------------------
+    // Small metallic bodies riding the rings. Each is a lit sphere: a dark
+    // base, a bright cap towards the key light, and a point of light on
+    // the ones that are near.
+    for (n in 0 until engine.nodeCount) {
+        val depth = ((engine.nodeZ[n] + 1.8f) / 3.6f).coerceIn(0f, 1f)
+        val x = centerX + engine.nodeX[n] * radiusPx
+        val y = centerY + engine.nodeY[n] * radiusPx
+        val radius = engine.nodeSize[n] * radiusPx
+        drawCircle(
+            color = colors.metalDark.copy(alpha = 0.55f + 0.35f * depth),
+            radius = radius,
+            center = Offset(x, y),
+        )
+        drawCircle(
+            color = colors.metalLight.copy(alpha = 0.35f + 0.55f * depth),
+            radius = radius * 0.55f,
+            center = Offset(x - radius * 0.22f, y - radius * 0.22f),
+        )
+    }
+
+    // ---- 9. The sparks of the streak ----------------------------------------
     val sparks = streakDays.coerceIn(0, 24)
     if (sparks > 0) {
         for (s in 0 until sparks) {
@@ -443,7 +507,7 @@ private fun DrawScope.drawCore(
         }
     }
 
-    // ---- 9. The graduations of the record -----------------------------------
+    // ---- 10. The graduations of the record -----------------------------------
     // The outer ring is graduated like a dial, and the number of
     // graduations follows the personal record: a faster typist gets a
     // denser dial.
@@ -467,7 +531,7 @@ private fun DrawScope.drawCore(
         }
     }
 
-    // ---- 10. The broad highlight --------------------------------------------
+    // ---- 11. The broad highlight --------------------------------------------
     val sheenColor = if (colors.isLight) colors.metalLight else Color.White
     val sheenCenter = Offset(centerX - radiusPx * 0.34f, centerY - radiusPx * 0.40f)
     val sheenRadius = radiusPx * 0.92f
@@ -481,7 +545,7 @@ private fun DrawScope.drawCore(
         center = sheenCenter,
     )
 
-    // ---- 11. The shockwave ---------------------------------------------------
+    // ---- 12. The shockwave ---------------------------------------------------
     if (pulse >= 0f) {
         val waveRadius = radiusPx * (0.5f + 1.6f * pulse)
         drawCircle(

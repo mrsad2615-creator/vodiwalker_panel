@@ -19,21 +19,22 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.AutoAwesome
-import androidx.compose.material.icons.outlined.EmojiEvents
 import androidx.compose.material.icons.outlined.Keyboard
-import androidx.compose.material.icons.outlined.LocalFireDepartment
-import androidx.compose.material.icons.outlined.MenuBook
-import androidx.compose.material.icons.outlined.Psychology
-import androidx.compose.material.icons.outlined.SelfImprovement
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.graphicsLayer
+import dev.mrsad.app.ui.components.IconFacet
+import dev.mrsad.app.ui.components.MetalIcon
+import dev.mrsad.app.ui.components.MrsadIcons
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -46,6 +47,7 @@ import dev.mrsad.app.data.settings.MrsadSettings
 import dev.mrsad.app.navigation.Routes
 import dev.mrsad.app.testing.MrsadTestTags
 import dev.mrsad.app.ui.components.LocalBottomBarClearance
+import dev.mrsad.app.ui.components.chamferedShape
 import dev.mrsad.app.ui.components.MetricValue
 import dev.mrsad.app.ui.components.MrsadCore
 import dev.mrsad.app.ui.components.MrsadReveal
@@ -55,6 +57,8 @@ import dev.mrsad.app.ui.components.MrsadSurface
 import dev.mrsad.app.ui.components.MrsadTokens
 import dev.mrsad.app.ui.components.SectionHeader
 import dev.mrsad.app.ui.theme.AmbientBackground
+import dev.mrsad.app.ui.theme.MrsadDuration
+import dev.mrsad.app.ui.theme.MrsadEasing
 import dev.mrsad.app.ui.theme.MrsadTheme
 import dev.mrsad.app.ui.theme.PageEnvironment
 import dev.mrsad.app.ui.theme.formatInt
@@ -85,11 +89,20 @@ fun HomeScreen(
     // One entrance for the whole screen: the pieces of it arrive one
     // after the other.
     val reveal = rememberRevealProgress()
+    // The cinematic opening: the whole dashboard emerges once per
+    // process, and never again on back-navigation.
+    val opening = rememberOpeningProgress()
 
     AmbientBackground(PageEnvironment.HOME) {
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
+                .graphicsLayer {
+                    alpha = opening
+                    val settle = 0.97f + 0.03f * opening
+                    scaleX = settle
+                    scaleY = settle
+                }
                 .padding(horizontal = MrsadTokens.Spacing.md)
                 .padding(bottom = LocalBottomBarClearance.current),
             verticalArrangement = Arrangement.spacedBy(MrsadTokens.Spacing.md),
@@ -120,6 +133,14 @@ fun HomeScreen(
                             horizontalAlignment = Alignment.CenterHorizontally,
                         ) {
                             Text(
+                                text = "ORRERY PRIME",
+                                style = type.caption.copy(
+                                    fontWeight = FontWeight.SemiBold,
+                                    letterSpacing = 3.sp,
+                                ),
+                                color = colors.textMuted,
+                            )
+                            Text(
                                 text = if (state.hasAnyData) "هستهٔ فعالیت شما" else "هسته در انتظار اولین تمرین",
                                 style = type.caption,
                                 color = colors.textMuted,
@@ -143,19 +164,19 @@ fun HomeScreen(
                             modifier = Modifier.weight(1f),
                             value = formatInt(state.todayMinutes, settings.persianNumerals),
                             label = "دقیقه امروز",
-                            icon = Icons.Outlined.SelfImprovement,
+                            icon = MrsadIcons.Focus,
                         )
                         StatCell(
                             modifier = Modifier.weight(1f),
                             value = formatInt(state.todaySessions, settings.persianNumerals),
                             label = "تمرین امروز",
-                            icon = Icons.Outlined.EmojiEvents,
+                            icon = MrsadIcons.Trophy,
                         )
                         StatCell(
                             modifier = Modifier.weight(1f),
                             value = formatInt(state.streakDays, settings.persianNumerals),
                             label = "روز پیوسته",
-                            icon = Icons.Outlined.LocalFireDepartment,
+                            icon = MrsadIcons.Flame,
                         )
                     }
                 }
@@ -182,7 +203,7 @@ fun HomeScreen(
             item {
                 MrsadSurface(modifier = Modifier.fillMaxWidth(), onClick = { onNavigate(Routes.STUDIO) }) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Outlined.AutoAwesome, null, tint = colors.accent, modifier = Modifier.size(20.dp))
+                        MetalIcon(MrsadIcons.Assistant, modifier = Modifier.size(20.dp))
                         Spacer(Modifier.width(MrsadTokens.Spacing.xs))
                         Column(Modifier.weight(1f)) {
                             Text(
@@ -277,23 +298,23 @@ fun HomeScreen(
 private data class ModuleEntry(
     val code: String,
     val title: String,
-    val icon: ImageVector,
+    val icon: List<IconFacet>,
     val route: String,
     val subtitle: String,
 )
 
 private val moduleEntries = listOf(
-    ModuleEntry("TYPE", "تایپ", Icons.Outlined.Keyboard, Routes.TYPE, "سرعت و دقت"),
-    ModuleEntry("READ", "خواندن", Icons.Outlined.MenuBook, Routes.READ, "درک مطلب"),
-    ModuleEntry("MIND", "ذهن", Icons.Outlined.Psychology, Routes.MIND, "تمرین شناختی"),
-    ModuleEntry("AI", "دستیار", Icons.Outlined.AutoAwesome, Routes.AI, "مربی هوشمند"),
+    ModuleEntry("TYPE", "تایپ", MrsadIcons.Type, Routes.TYPE, "سرعت و دقت"),
+    ModuleEntry("READ", "خواندن", MrsadIcons.Read, Routes.READ, "درک مطلب"),
+    ModuleEntry("MIND", "ذهن", MrsadIcons.Mind, Routes.MIND, "تمرین شناختی"),
+    ModuleEntry("AI", "دستیار", MrsadIcons.Assistant, Routes.AI, "مربی هوشمند"),
 )
 
-private fun iconFor(module: Module): ImageVector = when (module) {
-    Module.TYPE -> Icons.Outlined.Keyboard
-    Module.READ -> Icons.Outlined.MenuBook
-    Module.MIND -> Icons.Outlined.Psychology
-    Module.FOCUS -> Icons.Outlined.SelfImprovement
+private fun iconFor(module: Module): List<IconFacet> = when (module) {
+    Module.TYPE -> MrsadIcons.Type
+    Module.READ -> MrsadIcons.Read
+    Module.MIND -> MrsadIcons.Mind
+    Module.FOCUS -> MrsadIcons.Focus
 }
 
 @Composable
@@ -335,7 +356,7 @@ private fun HomeHeader() {
 private fun StatCell(
     value: String,
     label: String,
-    icon: ImageVector,
+    icon: List<IconFacet>,
     modifier: Modifier = Modifier,
 ) {
     val colors = MrsadTheme.colors
@@ -348,7 +369,7 @@ private fun StatCell(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(3.dp),
     ) {
-        Icon(icon, null, tint = colors.metalMid, modifier = Modifier.size(16.dp))
+        MetalIcon(icon, modifier = Modifier.size(16.dp))
         Text(
             value,
             style = type.metric.copy(fontSize = type.headline.fontSize, lineHeight = type.headline.lineHeight),
@@ -366,9 +387,11 @@ private fun ModuleCard(entry: ModuleEntry, onClick: () -> Unit) {
         modifier = Modifier
             .testTag(MrsadTestTags.homeModule(entry.route))
             .width(152.dp),
+        // The hybrid geometric corner: machined, not moulded.
+        shape = chamferedShape(),
         onClick = onClick,
     ) {
-        Icon(entry.icon, contentDescription = null, tint = colors.metalMid, modifier = Modifier.size(26.dp))
+        MetalIcon(entry.icon, modifier = Modifier.size(26.dp))
         Spacer(Modifier.height(MrsadTokens.Spacing.xs))
         Text(
             entry.code,
@@ -385,7 +408,7 @@ private fun PlanRow(
     title: String,
     reason: String,
     minutesLabel: String,
-    icon: ImageVector,
+    icon: List<IconFacet>,
     onClick: () -> Unit,
 ) {
     val colors = MrsadTheme.colors
@@ -398,7 +421,7 @@ private fun PlanRow(
             .padding(vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(icon, null, tint = colors.metalMid, modifier = Modifier.size(18.dp))
+        MetalIcon(icon, modifier = Modifier.size(18.dp))
         Spacer(Modifier.width(MrsadTokens.Spacing.xs))
         Column(Modifier.weight(1f)) {
             Text(title, style = type.body, color = colors.textPrimary)
@@ -439,4 +462,41 @@ private fun RecordCell(value: String?, label: String) {
             modifier = Modifier.padding(top = 2.dp),
         )
     }
+}
+
+/**
+ * The cinematic opening of the dashboard.
+ *
+ * It plays once per process: the energy core activates, the orbital
+ * components begin moving, and the panels emerge. Navigating back to
+ * Home does not replay it — the flag lives on the process, not on the
+ * screen. Under reduced motion, and inside instrumentation, there is no
+ * opening at all: the dashboard is simply there.
+ */
+private object OpeningSequence {
+    var played = false
+}
+
+@Composable
+private fun rememberOpeningProgress(): Float {
+    val motion = MrsadTheme.motion
+    val progress = remember { Animatable(0f) }
+    LaunchedEffect(Unit) {
+        if (
+            OpeningSequence.played || motion.deterministic ||
+            motion.reducedMotion || !motion.animationsEnabled
+        ) {
+            progress.snapTo(1f)
+            return@LaunchedEffect
+        }
+        OpeningSequence.played = true
+        progress.animateTo(
+            1f,
+            tween(
+                durationMillis = MrsadDuration.long4,
+                easing = MrsadEasing.emphasizedDecelerate,
+            ),
+        )
+    }
+    return progress.value
 }

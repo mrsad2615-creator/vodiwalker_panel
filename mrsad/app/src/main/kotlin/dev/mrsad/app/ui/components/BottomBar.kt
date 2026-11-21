@@ -20,9 +20,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
@@ -36,7 +33,6 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
@@ -46,7 +42,7 @@ import dev.mrsad.app.ui.theme.MrsadTheme
 data class MrsadBottomBarItem(
     val route: String,
     val label: String,
-    val icon: ImageVector,
+    val icon: List<IconFacet>,
 )
 
 /**
@@ -142,13 +138,15 @@ fun MrsadBottomBar(
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Icon(
-                    imageVector = item.icon,
+                MetalIcon(
+                    facets = item.icon,
                     // The selected item shows its label as text, so the
                     // icon must stay silent; the collapsed items have no
                     // text and have to name themselves.
                     contentDescription = if (selected) null else item.label,
-                    tint = if (colors.isLight && selected) colors.textPrimary else contentColor,
+                    // On the light pill the icon is painted dark; on the
+                    // bar it carries the metal ramp.
+                    dark = selected && !colors.isLight,
                     modifier = Modifier
                         .size(22.dp)
                         .graphicsLayer {
@@ -188,7 +186,7 @@ fun MrsadBottomBar(
                 .clickable(role = Role.Button, onClick = onSettings),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(Icons.Outlined.Settings, contentDescription = "تنظیمات", tint = colors.textSecondary, modifier = Modifier.size(20.dp))
+            MetalIcon(MrsadIcons.Settings, contentDescription = "تنظیمات", modifier = Modifier.size(20.dp))
         }
     }
 }

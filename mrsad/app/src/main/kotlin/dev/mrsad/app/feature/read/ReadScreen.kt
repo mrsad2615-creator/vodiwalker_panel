@@ -41,6 +41,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import dev.mrsad.app.data.AppContainer
 import dev.mrsad.app.data.settings.MrsadSettings
 import dev.mrsad.app.ui.components.MrsadChip
+import dev.mrsad.app.ui.components.MetalIcon
+import dev.mrsad.app.ui.components.MrsadIcons
 import dev.mrsad.app.ui.components.MrsadPrimaryButton
 import dev.mrsad.app.ui.components.MrsadProgressBar
 import dev.mrsad.app.ui.components.MrsadSecondaryButton
@@ -147,7 +149,7 @@ private fun ReadSetup(
                         .clip(RoundedCornerShape(MrsadTokens.Radius.sm)),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Icon(Icons.Outlined.MenuBook, null, tint = colors.metalMid, modifier = Modifier.size(18.dp))
+                    MetalIcon(MrsadIcons.Read, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(MrsadTokens.Spacing.xs))
                     Column(
                         Modifier

@@ -10,12 +10,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.AutoAwesome
-import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material.icons.outlined.Insights
-import androidx.compose.material.icons.outlined.Psychology
-import androidx.compose.material.icons.outlined.Keyboard
+import dev.mrsad.app.ui.components.IconFacet
+import dev.mrsad.app.ui.components.MrsadIcons
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -24,7 +20,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavDestination.Companion.hierarchy
@@ -71,15 +66,15 @@ object Routes {
 private data class BottomDestination(
     val route: String,
     val label: String,
-    val icon: ImageVector,
+    val icon: List<IconFacet>,
 )
 
 private val bottomDestinations = listOf(
-    BottomDestination(Routes.HOME, "خانه", Icons.Outlined.Home),
-    BottomDestination(Routes.TYPE, "تایپ", Icons.Outlined.Keyboard),
-    BottomDestination(Routes.MIND, "ذهن", Icons.Outlined.Psychology),
-    BottomDestination(Routes.ANALYTICS, "تحلیل", Icons.Outlined.Insights),
-    BottomDestination(Routes.AI, "دستیار", Icons.Outlined.AutoAwesome),
+    BottomDestination(Routes.HOME, "خانه", MrsadIcons.Home),
+    BottomDestination(Routes.TYPE, "تایپ", MrsadIcons.Type),
+    BottomDestination(Routes.MIND, "ذهن", MrsadIcons.Mind),
+    BottomDestination(Routes.ANALYTICS, "تحلیل", MrsadIcons.Analytics),
+    BottomDestination(Routes.AI, "دستیار", MrsadIcons.Assistant),
 )
 
 @Composable

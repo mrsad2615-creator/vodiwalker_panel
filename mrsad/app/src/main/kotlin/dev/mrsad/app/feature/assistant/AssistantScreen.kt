@@ -44,6 +44,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import dev.mrsad.app.data.AppContainer
 import dev.mrsad.app.data.settings.MrsadSettings
 import dev.mrsad.app.ui.components.LocalBottomBarClearance
+import dev.mrsad.app.ui.components.MetalIcon
+import dev.mrsad.app.ui.components.MrsadIcons
 import dev.mrsad.app.ui.components.MrsadChip
 import dev.mrsad.app.ui.components.MrsadPrimaryButton
 import dev.mrsad.app.ui.components.MrsadSurface
@@ -83,7 +85,7 @@ fun AssistantScreen(
                         .border(1.dp, colors.border, RoundedCornerShape(MrsadTokens.Radius.md)),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Icon(Icons.Outlined.AutoAwesome, null, tint = colors.accent, modifier = Modifier.size(22.dp))
+                    MetalIcon(MrsadIcons.Assistant, modifier = Modifier.size(22.dp))
                 }
                 Spacer(Modifier.width(MrsadTokens.Spacing.sm))
                 Column(Modifier.weight(1f)) {
@@ -221,7 +223,7 @@ private fun MessageBubble(message: Message) {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 if (!isUser) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Outlined.AutoAwesome, null, tint = colors.accent, modifier = Modifier.size(14.dp))
+                        MetalIcon(MrsadIcons.Assistant, modifier = Modifier.size(14.dp))
                         Spacer(Modifier.width(4.dp))
                         Text("تحلیل محلی", style = type.caption.copy(fontWeight = FontWeight.SemiBold), color = colors.accent)
                     }

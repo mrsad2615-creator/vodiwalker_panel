@@ -44,6 +44,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
@@ -93,7 +95,33 @@ object MrsadTokens {
 }
 
 /**
- * The core surface material.
+ * A chamfered rectangle: the hybrid geometric corner of the cosmic
+ * identity — a rounded corner whose tip is cut at 45 degrees, so the
+ * card reads as machined rather than moulded.
+ */
+@Composable
+fun chamferedShape(cut: Dp = 12.dp): Shape {
+    val cutPx = with(androidx.compose.ui.platform.LocalDensity.current) { cut.toPx() }
+    return androidx.compose.ui.graphics.GenericShape { size, _ ->
+        val c = cutPx.coerceAtMost(size.minDimension / 2f)
+        val w = size.width
+        val h = size.height
+        Path().apply {
+            moveTo(c, 0f)
+            lineTo(w - c, 0f)
+            lineTo(w, c)
+            lineTo(w, h - c)
+            lineTo(w - c, h)
+            lineTo(c, h)
+            lineTo(0f, h - c)
+            lineTo(0f, c)
+            close()
+        }
+    }
+}
+
+/**
+ * The core surface material: smoked glass over obsidian.
  *
  * A card is not a rectangle with a border, it is a lit object. The
  * material is built in five layers, from the back to the front:
@@ -114,7 +142,7 @@ object MrsadTokens {
 @Composable
 fun MrsadSurface(
     modifier: Modifier = Modifier,
-    shape: RoundedCornerShape = RoundedCornerShape(MrsadTokens.Radius.lg),
+    shape: Shape = RoundedCornerShape(MrsadTokens.Radius.lg),
     elevated: Boolean = false,
     accent: Color? = null,
     onClick: (() -> Unit)? = null,
@@ -150,11 +178,28 @@ fun MrsadSurface(
             .background(
                 Brush.verticalGradient(
                     listOf(
-                        surfaceColor.copy(alpha = if (colors.isLight) 0.99f else 0.97f),
-                        surfaceColor.copy(alpha = if (colors.isLight) 0.93f else 0.84f),
+                        surfaceColor.copy(alpha = if (colors.isLight) 0.99f else 0.94f),
+                        surfaceColor.copy(alpha = if (colors.isLight) 0.93f else 0.80f),
                     )
                 )
             )
+            .drawBehind {
+                // The smoked-glass wash: a whisper of deep navy through
+                // the glass, so the card has depth instead of being a
+                // flat tint.
+                if (!colors.isLight) {
+                    drawRect(
+                        brush = Brush.verticalGradient(
+                            listOf(
+                                colors.navy.copy(alpha = 0.10f),
+                                Color.Transparent,
+                            ),
+                            startY = 0f,
+                            endY = size.height * 0.6f,
+                        )
+                    )
+                }
+            }
             .drawBehind {
                 // The sheen along the top edge: the light is above.
                 drawRect(

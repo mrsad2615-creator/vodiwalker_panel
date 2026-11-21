@@ -1,5 +1,6 @@
 import { useId, useMemo, useState } from 'react';
 import { Numeric } from '@/components/ui/Numeric';
+import { useMotionLevel } from '@/lib/useAppearance';
 
 export interface BarChartDatum {
   key: string;
@@ -39,6 +40,7 @@ export function LuxuryBarChart({
 }: LuxuryBarChartProps) {
   const gradientId = useId().replace(/:/g, '');
   const [activeKey, setActiveKey] = useState<string | null>(null);
+  const animate = useMotionLevel() !== 'standard';
 
   const width = 340;
   const gutter = 26; // left space for the value axis
@@ -159,7 +161,9 @@ export function LuxuryBarChart({
                   fill={highlighted ? `url(#${gradientId}-peak)` : `url(#${gradientId}-bar)`}
                   style={{
                     transformOrigin: `center ${padTop + plotH}px`,
-                    animation: `kairos-bar-grow 520ms cubic-bezier(0.22, 1, 0.36, 1) ${index * 45}ms both`,
+                    animation: animate
+                      ? `kairos-bar-grow 520ms cubic-bezier(0.22, 1, 0.36, 1) ${index * 45}ms both`
+                      : undefined,
                   }}
                 />
               )}

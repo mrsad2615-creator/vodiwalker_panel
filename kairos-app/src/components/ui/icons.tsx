@@ -54,6 +54,9 @@ export {
   Broadcast as Radio,
   Sliders,
   SlidersHorizontal,
+  Palette,
+  PaintBrush,
+  CheckCircle,
   // media / time
   Play,
   Pause,

@@ -122,10 +122,10 @@ export function TasksPage() {
     upcoming.sort((a, b) => (a.dueDate ?? '').localeCompare(b.dueDate ?? ''));
     return [
       { id: 'overdue', title: 'عقب‌افتاده', items: overdue, accent: '#EF9095' },
-      { id: 'today', title: 'امروز', items: today, accent: '#B9A8FF' },
+      { id: 'today', title: 'امروز', items: today, accent: 'var(--accent-fg)' },
       { id: 'upcoming', title: 'آینده', items: upcoming, accent: '#ECECEF' },
       { id: 'unscheduled', title: 'بدون تاریخ', items: unscheduled, accent: '#9C9CA6' },
-      { id: 'completed', title: 'تکمیل‌شده‌های اخیر', items: completed, accent: '#6D4AFF' },
+      { id: 'completed', title: 'تکمیل‌شده‌های اخیر', items: completed, accent: 'var(--accent)' },
     ].filter((g) => g.items.length > 0);
   }, [filteredTasks, todayKey]);
 
@@ -142,7 +142,7 @@ export function TasksPage() {
         onDragStart={() => setDragTaskId(task.id)}
         onDragEnd={() => setDragTaskId(null)}
         className={`transition ${compact ? 'p-3' : 'p-3.5'} ${
-          isDone && viewMode === 'list' ? 'opacity-65' : 'hover:border-[#B9A8FF]/24'
+          isDone && viewMode === 'list' ? 'opacity-65' : 'hover:border-[var(--accent-fg)]/24'
         }`}
       >
         <div className="flex items-start gap-2.5">
@@ -154,16 +154,16 @@ export function TasksPage() {
             aria-label={isDone ? 'بازگردانی به انجام نشده' : 'تکمیل وظیفه'}
             className={`mt-0.5 flex h-5.5 w-5.5 shrink-0 items-center justify-center rounded-lg border transition ${
               isDone
-                ? 'border-[#6D4AFF] bg-[#6D4AFF] text-[#ECECEF]'
+                ? 'border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-on)]'
                 : task.status === 'in_progress'
-                ? 'border-[#B9A8FF] bg-[#1C1C21] text-[#B9A8FF]'
-                : 'border-[#B9A8FF]/28 bg-[#0E0E11] hover:border-[#B9A8FF]'
+                ? 'border-[var(--accent-fg)] bg-[#1C1C21] text-[var(--accent-fg)]'
+                : 'border-[var(--accent-fg)]/28 bg-[#0E0E11] hover:border-[var(--accent-fg)]'
             }`}
           >
             {isDone ? (
               <Check className="h-3.5 w-3.5" strokeWidth={2.5} />
             ) : task.status === 'in_progress' ? (
-              <span className="h-2 w-2 rounded-full bg-[#B9A8FF]" />
+              <span className="h-2 w-2 rounded-full bg-[var(--accent-fg)]" />
             ) : null}
           </button>
 
@@ -210,7 +210,7 @@ export function TasksPage() {
               </span>
 
               {task.subtasks.length > 0 && (
-                <span className="rounded-md bg-[#1C1C21]/80 px-1.5 py-0.5 text-[#B9A8FF]">
+                <span className="rounded-md bg-[#1C1C21]/80 px-1.5 py-0.5 text-[var(--accent-fg)]">
                   <Numeric
                     value={`${doneSubs}/${task.subtasks.length}`}
                     variant="geo"
@@ -221,11 +221,11 @@ export function TasksPage() {
               )}
 
               {task.recurrence !== 'none' && (
-                <Repeat className="h-3 w-3 text-[#B9A8FF]" aria-label="وظیفه تکرارشونده" />
+                <Repeat className="h-3 w-3 text-[var(--accent-fg)]" aria-label="وظیفه تکرارشونده" />
               )}
 
               {task.reminderEnabled && (
-                <Bell className="h-3 w-3 text-[#6D4AFF]" aria-label="دارای یادآوری" />
+                <Bell className="h-3 w-3 text-[var(--accent)]" aria-label="دارای یادآوری" />
               )}
 
               <span
@@ -250,7 +250,7 @@ export function TasksPage() {
                 pushToast({ title: 'به آرشیو منتقل شد', tone: 'default' });
               }}
               aria-label="انتقال به آرشیو"
-              className="rounded-lg p-1.5 text-[#6B6B75] hover:bg-[#1C1C21] hover:text-[#B9A8FF]"
+              className="rounded-lg p-1.5 text-[#6B6B75] hover:bg-[#1C1C21] hover:text-[var(--accent-fg)]"
             >
               <Archive className="h-3.5 w-3.5" />
             </button>
@@ -259,7 +259,7 @@ export function TasksPage() {
 
         {/* Touch-friendly Kanban Status Switcher */}
         {viewMode === 'kanban' && (
-          <div className="mt-2.5 flex items-center gap-1 border-t border-[#B9A8FF]/10 pt-2">
+          <div className="mt-2.5 flex items-center gap-1 border-t border-[var(--accent-fg)]/10 pt-2">
             {(
               [
                 { id: 'todo', label: 'انجام نشده' },
@@ -273,7 +273,7 @@ export function TasksPage() {
                 onClick={() => handleStatusChange(task, col.id)}
                 className={`flex-1 rounded-lg py-1 text-[10px] font-medium transition ${
                   task.status === col.id
-                    ? 'bg-[#6D4AFF] text-[#ECECEF]'
+                    ? 'bg-[var(--accent)] text-[var(--accent-on)]'
                     : 'bg-[#0E0E11] text-[#9C9CA6] hover:text-[#ECECEF]'
                 }`}
               >
@@ -293,12 +293,12 @@ export function TasksPage() {
         <div>
           <h1 className="text-lg font-bold text-[#ECECEF]">مدیریت وظایف</h1>
           <p className="mt-0.5 text-[11px] text-[#9C9CA6]">
-            <Numeric value={counts.done} className="font-semibold text-[#B9A8FF]" /> تکمیل‌شده از{' '}
+            <Numeric value={counts.done} className="font-semibold text-[var(--accent-fg)]" /> تکمیل‌شده از{' '}
             <Numeric value={counts.total} className="font-semibold text-[#ECECEF]" /> وظیفه فعال
             {counts.inProgress > 0 && (
               <>
                 {' '}
-                • <Numeric value={counts.inProgress} className="text-[#B9A8FF]" /> در جریان
+                • <Numeric value={counts.inProgress} className="text-[var(--accent-fg)]" /> در جریان
               </>
             )}
           </p>
@@ -315,7 +315,7 @@ export function TasksPage() {
       </div>
 
       {/* 4 View Modes Segmented Bar */}
-      <div className="grid grid-cols-4 gap-1 rounded-2xl border border-[#B9A8FF]/12 bg-[#16161A] p-1">
+      <div className="grid grid-cols-4 gap-1 rounded-2xl border border-[var(--accent-fg)]/12 bg-[#16161A] p-1">
         {(
           [
             { id: 'list', label: 'لیست', icon: List },
@@ -333,11 +333,11 @@ export function TasksPage() {
               onClick={() => setViewMode(tab.id)}
               className={`flex items-center justify-center gap-1 rounded-xl py-2 text-[11px] font-medium transition ${
                 active
-                  ? 'bg-[#1C1C21] text-[#ECECEF] shadow-[inset_0_1px_0_rgba(163,140,255,0.2)]'
+                  ? 'bg-[#1C1C21] text-[#ECECEF] shadow-[inset_0_1px_0_color-mix(in_srgb,var(--accent-fg)_20%,transparent)]'
                   : 'text-[#9C9CA6] hover:text-[#ECECEF]'
               }`}
             >
-              <Icon className={`h-3.5 w-3.5 ${active ? 'text-[#B9A8FF]' : ''}`} />
+              <Icon className={`h-3.5 w-3.5 ${active ? 'text-[var(--accent-fg)]' : ''}`} />
               <span>{tab.label}</span>
             </button>
           );
@@ -363,8 +363,8 @@ export function TasksPage() {
           aria-label="فیلتر وظایف"
           className={`flex h-10 w-10 items-center justify-center rounded-xl border transition ${
             showFilters || filterCategory !== 'all' || filterPriority !== 'all' || onlyRecurring
-              ? 'border-[#6D4AFF] bg-[#1C1C21] text-[#B9A8FF]'
-              : 'border-[#B9A8FF]/12 bg-[#16161A] text-[#9C9CA6]'
+              ? 'border-[var(--accent)] bg-[#1C1C21] text-[var(--accent-fg)]'
+              : 'border-[var(--accent-fg)]/12 bg-[#16161A] text-[#9C9CA6]'
           }`}
         >
           <SlidersHorizontal className="h-4 w-4" />
@@ -410,7 +410,7 @@ export function TasksPage() {
                 type="checkbox"
                 checked={onlyRecurring}
                 onChange={(e) => setOnlyRecurring(e.target.checked)}
-                className="accent-[#6D4AFF]"
+                className="accent-[var(--accent)]"
               />
               فقط وظایف تکرارشونده
             </label>
@@ -422,7 +422,7 @@ export function TasksPage() {
                 setOnlyRecurring(false);
                 setSearch('');
               }}
-              className="text-[11px] text-[#B9A8FF]"
+              className="text-[11px] text-[var(--accent-fg)]"
             >
               پاک کردن فیلترها
             </button>
@@ -474,8 +474,8 @@ export function TasksPage() {
           {(
             [
               { status: 'todo', title: 'انجام نشده', en: 'To Do', accent: '#9C9CA6' },
-              { status: 'in_progress', title: 'در حال انجام', en: 'In Progress', accent: '#B9A8FF' },
-              { status: 'completed', title: 'تکمیل شده', en: 'Completed', accent: '#6D4AFF' },
+              { status: 'in_progress', title: 'در حال انجام', en: 'In Progress', accent: 'var(--accent-fg)' },
+              { status: 'completed', title: 'تکمیل شده', en: 'Completed', accent: 'var(--accent)' },
             ] as const
           ).map((col) => {
             const items = filteredTasks.filter((t) => t.status === col.status);
@@ -491,7 +491,7 @@ export function TasksPage() {
                   }
                   setDragTaskId(null);
                 }}
-                className="rounded-2xl border border-[#B9A8FF]/12 bg-[#101014] p-3"
+                className="rounded-2xl border border-[var(--accent-fg)]/12 bg-[#101014] p-3"
               >
                 <div className="mb-2.5 flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -505,12 +505,12 @@ export function TasksPage() {
                   <Numeric
                     value={items.length}
                     variant="geo"
-                    className="rounded-lg bg-[#16161A] px-2 py-0.5 text-[11px] font-semibold text-[#B9A8FF]"
+                    className="rounded-lg bg-[#16161A] px-2 py-0.5 text-[11px] font-semibold text-[var(--accent-fg)]"
                   />
                 </div>
 
                 {items.length === 0 ? (
-                  <p className="rounded-xl border border-dashed border-[#B9A8FF]/12 py-4 text-center text-[11px] text-[#6B6B75]">
+                  <p className="rounded-xl border border-dashed border-[var(--accent-fg)]/12 py-4 text-center text-[11px] text-[#6B6B75]">
                     وظیفه‌ای در این ستون نیست
                   </p>
                 ) : (
@@ -544,7 +544,7 @@ export function TasksPage() {
                       <h2 className="text-xs font-bold text-[#ECECEF]">{meta.title}</h2>
                     </div>
                     <p className="mt-0.5 text-[10.5px] text-[#9C9CA6]">
-                      {meta.subtitle} — <span className="text-[#B9A8FF]">{meta.action}</span>
+                      {meta.subtitle} — <span className="text-[var(--accent-fg)]">{meta.action}</span>
                     </p>
                   </div>
 
@@ -552,7 +552,7 @@ export function TasksPage() {
                     type="button"
                     onClick={() => openCreateTask({ defaultDueDate: todayKey, defaultQuadrant: q })}
                     aria-label={`افزودن به ${meta.title}`}
-                    className="flex h-7 w-7 items-center justify-center rounded-lg border border-[#B9A8FF]/18 bg-[#1C1C21] text-[#B9A8FF] hover:bg-[#6D4AFF] hover:text-[#ECECEF]"
+                    className="flex h-7 w-7 items-center justify-center rounded-lg border border-[var(--accent-fg)]/18 bg-[#1C1C21] text-[var(--accent-fg)] hover:bg-[var(--accent)] hover:text-[var(--accent-on)]"
                   >
                     <Plus className="h-3.5 w-3.5" />
                   </button>
@@ -567,13 +567,13 @@ export function TasksPage() {
                     {items.map((task) => (
                       <div
                         key={task.id}
-                        className="flex items-center justify-between gap-2 rounded-xl border border-[#B9A8FF]/10 bg-[#0D0D10] px-3 py-2.5"
+                        className="flex items-center justify-between gap-2 rounded-xl border border-[var(--accent-fg)]/10 bg-[#0D0D10] px-3 py-2.5"
                       >
                         <button
                           type="button"
                           onClick={() => handleStatusChange(task, 'completed')}
                           aria-label="تکمیل"
-                          className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md border border-[#B9A8FF]/30 hover:border-[#B9A8FF]"
+                          className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md border border-[var(--accent-fg)]/30 hover:border-[var(--accent-fg)]"
                         />
                         <button
                           type="button"
@@ -594,7 +594,7 @@ export function TasksPage() {
                           onChange={(e) =>
                             handleMoveQuadrant(task, e.target.value as EisenhowerQuadrant)
                           }
-                          className="num-geo rounded-lg border border-[#B9A8FF]/16 bg-[#16161A] px-1.5 py-1 text-[10px] text-[#B9A8FF] outline-none"
+                          className="num-geo rounded-lg border border-[var(--accent-fg)]/16 bg-[#16161A] px-1.5 py-1 text-[10px] text-[var(--accent-fg)] outline-none"
                         >
                           <option value="q1">Q1</option>
                           <option value="q2">Q2</option>
@@ -652,7 +652,7 @@ export function TasksPage() {
                       pushToast({ title: 'از آرشیو بازیابی شد', tone: 'success' });
                     }}
                     aria-label="بازیابی از آرشیو"
-                    className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#1C1C21] text-[#B9A8FF] hover:bg-[#6D4AFF] hover:text-[#ECECEF]"
+                    className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#1C1C21] text-[var(--accent-fg)] hover:bg-[var(--accent)] hover:text-[var(--accent-on)]"
                   >
                     <RotateCcw className="h-3.5 w-3.5" />
                   </button>

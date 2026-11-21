@@ -1,3 +1,5 @@
+import type { BackgroundId, MotionLevel } from '@/lib/theme';
+
 export type NavTab =
   | 'dashboard'
   | 'tasks'
@@ -167,6 +169,10 @@ export interface Goal {
 
 export interface UserSettings {
   id: 'default';
+  /** Personalisation — the accent the whole product is painted with. */
+  accentColor: string;
+  backgroundId: BackgroundId;
+  motionLevel: MotionLevel;
   displayName: string;
   dailyFocusGoalMinutes: number;
   dailyTaskGoal: number;

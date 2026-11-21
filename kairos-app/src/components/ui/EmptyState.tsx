@@ -10,7 +10,7 @@ interface EmptyStateProps {
 export function EmptyState({ icon, title, description, action }: EmptyStateProps) {
   return (
     <div className="luxury-card-subtle flex flex-col items-center justify-center px-6 py-10 text-center">
-      <div className="mb-3.5 flex h-12 w-12 items-center justify-center rounded-2xl border border-[#B9A8FF]/18 bg-[#1C1C21]/75 text-[#B9A8FF]">
+      <div className="mb-3.5 flex h-12 w-12 items-center justify-center rounded-2xl border border-[var(--accent-fg)]/18 bg-[#1C1C21]/75 text-[var(--accent-fg)]">
         {icon}
       </div>
       <h3 className="text-sm font-semibold text-[#ECECEF]">{title}</h3>

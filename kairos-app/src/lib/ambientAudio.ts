@@ -1,3 +1,5 @@
+import { getAudioContext } from './audioContext';
+
 export type AmbientSoundType = 'off' | 'brown' | 'rain' | 'drone';
 
 class LuxuryAmbientAudioEngine {
@@ -7,18 +9,9 @@ class LuxuryAmbientAudioEngine {
   private currentType: AmbientSoundType = 'off';
 
   private ensureContext(): AudioContext | null {
-    if (typeof window === 'undefined') return null;
-    const AudioCtx =
-      window.AudioContext ||
-      (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-    if (!AudioCtx) return null;
-    if (!this.ctx) {
-      this.ctx = new AudioCtx();
-    }
-    if (this.ctx.state === 'suspended') {
-      void this.ctx.resume().catch(() => {});
-    }
-    return this.ctx;
+    const ctx = getAudioContext();
+    this.ctx = ctx;
+    return ctx;
   }
 
   stop(): void {

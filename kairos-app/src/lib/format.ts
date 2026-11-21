@@ -63,12 +63,12 @@ export const CATEGORY_META: Record<
 > = {
   work: {
     label: 'کار و پروژه',
-    badgeBg: 'rgba(109, 74, 255, 0.16)',
-    badgeText: '#B9A8FF',
+    badgeBg: 'color-mix(in srgb, var(--accent) 16%, transparent)',
+    badgeText: 'var(--accent-fg)',
   },
   personal: {
     label: 'شخصی',
-    badgeBg: 'rgba(163, 140, 255, 0.13)',
+    badgeBg: 'color-mix(in srgb, var(--accent-fg) 13%, transparent)',
     badgeText: '#DCD0FF',
   },
   health: {
@@ -79,7 +79,7 @@ export const CATEGORY_META: Record<
   learning: {
     label: 'یادگیری',
     badgeBg: 'rgba(110, 74, 189, 0.22)',
-    badgeText: '#B9A8FF',
+    badgeText: 'var(--accent-fg)',
   },
   finance: {
     label: 'مالی',
@@ -98,7 +98,7 @@ export const PRIORITY_META: Record<
   { label: string; dotColor: string; textColor: string }
 > = {
   high: { label: 'بالا', dotColor: '#E5484D', textColor: '#EF9095' },
-  medium: { label: 'متوسط', dotColor: '#6D4AFF', textColor: '#B9A8FF' },
+  medium: { label: 'متوسط', dotColor: 'var(--accent)', textColor: 'var(--accent-fg)' },
   low: { label: 'عادی', dotColor: '#6B6B75', textColor: '#A69DB8' },
 };
 
@@ -124,7 +124,7 @@ export const QUADRANT_META: Record<
     title: 'مهم و غیرفوری',
     subtitle: 'رشد بلندمدت و استراتژیک',
     action: 'برنامه‌ریزی',
-    accent: '#6D4AFF',
+    accent: 'var(--accent)',
   },
   q3: {
     code: 'Q3',

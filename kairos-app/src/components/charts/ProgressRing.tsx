@@ -12,7 +12,7 @@ export function ProgressRing({
   percent,
   size = 112,
   strokeWidth = 8,
-  trackColor = 'rgba(163, 140, 255, 0.11)',
+  trackColor = 'color-mix(in srgb, var(--accent-fg) 11%, transparent)',
   children,
 }: ProgressRingProps) {
   const gradId = useId();
@@ -35,8 +35,8 @@ export function ProgressRing({
       >
         <defs>
           <linearGradient id={gradId} x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#B9A8FF" />
-            <stop offset="55%" stopColor="#6D4AFF" />
+            <stop offset="0%" stopColor="var(--accent-fg)" />
+            <stop offset="55%" stopColor="var(--accent)" />
             <stop offset="100%" stopColor="#5D35A8" />
           </linearGradient>
         </defs>
@@ -60,7 +60,7 @@ export function ProgressRing({
           strokeDashoffset={dashOffset}
           style={{
             transition: 'stroke-dashoffset 0.55s cubic-bezier(0.22, 1, 0.36, 1)',
-            filter: clamped > 0 ? 'drop-shadow(0 0 6px rgba(109, 74, 255, 0.45))' : undefined,
+            filter: clamped > 0 ? 'drop-shadow(0 0 6px color-mix(in srgb, var(--accent) 45%, transparent))' : undefined,
           }}
         />
       </svg>

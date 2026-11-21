@@ -1,4 +1,5 @@
 import Dexie, { type Table } from 'dexie';
+import { DEFAULT_APPEARANCE } from '@/lib/theme';
 import type {
   FocusSession,
   Goal,
@@ -15,6 +16,9 @@ import { createId } from './format';
 
 export const DEFAULT_SETTINGS: UserSettings = {
   id: 'default',
+  accentColor: DEFAULT_APPEARANCE.accent,
+  backgroundId: DEFAULT_APPEARANCE.backgroundId,
+  motionLevel: DEFAULT_APPEARANCE.motionLevel,
   displayName: 'کاربر کایروس',
   dailyFocusGoalMinutes: 120,
   dailyTaskGoal: 6,
@@ -59,7 +63,18 @@ export function makeHabitLogId(habitId: string, dateKey: string): string {
 
 export async function ensureSettings(): Promise<UserSettings> {
   const existing = await db.settings.get('default');
-  if (existing) return existing;
+  if (existing) {
+    // Backfill fields added after the row was first written (1.4.0 appearance).
+    const merged: UserSettings = { ...DEFAULT_SETTINGS, ...existing, id: 'default' };
+    if (
+      merged.accentColor !== existing.accentColor ||
+      merged.backgroundId !== existing.backgroundId ||
+      merged.motionLevel !== existing.motionLevel
+    ) {
+      await db.settings.put(merged);
+    }
+    return merged;
+  }
   const fresh: UserSettings = { ...DEFAULT_SETTINGS, updatedAt: new Date().toISOString() };
   await db.settings.put(fresh);
   return fresh;

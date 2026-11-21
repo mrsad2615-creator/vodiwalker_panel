@@ -131,6 +131,18 @@ describe('KAIROS Full Application End-to-End Flow', () => {
     await waitFor(() => {
       expect(screen.getByText('ذخیره‌سازی آفلاین و پشتیبان‌گیری')).toBeInTheDocument();
     });
+
+    // Appearance Studio is wired into the real settings page and recolours the
+    // product through tokens (no layout change, no second palette).
+    expect(screen.getByRole('heading', { name: /استودیوی ظاهر/ })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'فیروزه‌ای' }));
+    await waitFor(() => {
+      expect(document.documentElement.style.getPropertyValue('--accent')).toBe('#0FB5A6');
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'بنفش کایروس' }));
+    await waitFor(() => {
+      expect(document.documentElement.style.getPropertyValue('--accent')).toBe('#6D4AFF');
+    });
   });
 
   it('NumericInput allows full backspace clearing and converts Persian digits cleanly', () => {

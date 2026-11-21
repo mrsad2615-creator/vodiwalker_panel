@@ -239,7 +239,7 @@ export function TaskModal() {
         <div className="grid grid-cols-2 gap-2.5">
           <div>
             <label className="mb-1.5 flex items-center gap-1 text-xs font-medium text-[#9C9CA6]">
-              <Calendar className="h-3.5 w-3.5 text-[#6D4AFF]" />
+              <Calendar className="h-3.5 w-3.5 text-[var(--accent)]" />
               <span>تاریخ (شمسی)</span>
             </label>
             <button
@@ -260,7 +260,7 @@ export function TaskModal() {
 
           <div>
             <label className="mb-1.5 flex items-center gap-1 text-xs font-medium text-[#9C9CA6]">
-              <Clock className="h-3.5 w-3.5 text-[#6D4AFF]" />
+              <Clock className="h-3.5 w-3.5 text-[var(--accent)]" />
               <span>ساعت</span>
             </label>
             <input
@@ -299,8 +299,8 @@ export function TaskModal() {
                 onClick={() => setStatus(st.id)}
                 className={`rounded-xl border py-2 text-xs font-medium transition ${
                   status === st.id
-                    ? 'border-[#6D4AFF] bg-[#1C1C21] text-[#ECECEF]'
-                    : 'border-[#B9A8FF]/10 bg-[#0E0E11] text-[#9C9CA6]'
+                    ? 'border-[var(--accent)] bg-[#1C1C21] text-[#ECECEF]'
+                    : 'border-[var(--accent-fg)]/10 bg-[#0E0E11] text-[#9C9CA6]'
                 }`}
               >
                 {st.label}
@@ -330,8 +330,8 @@ export function TaskModal() {
                   }}
                   className={`rounded-xl border px-3 py-2 text-right transition ${
                     active
-                      ? 'border-[#B9A8FF]/45 bg-[#1C1C21]'
-                      : 'border-[#B9A8FF]/10 bg-[#0E0E11] hover:border-[#B9A8FF]/22'
+                      ? 'border-[var(--accent-fg)]/45 bg-[#1C1C21]'
+                      : 'border-[var(--accent-fg)]/10 bg-[#0E0E11] hover:border-[var(--accent-fg)]/22'
                   }`}
                 >
                   <div className="flex items-center justify-between">
@@ -362,8 +362,8 @@ export function TaskModal() {
                   onClick={() => setPriority(p)}
                   className={`flex-1 rounded-xl border py-2 text-[11px] font-medium transition ${
                     priority === p
-                      ? 'border-[#6D4AFF] bg-[#1C1C21] text-[#ECECEF]'
-                      : 'border-[#B9A8FF]/10 bg-[#0E0E11] text-[#9C9CA6]'
+                      ? 'border-[var(--accent)] bg-[#1C1C21] text-[#ECECEF]'
+                      : 'border-[var(--accent-fg)]/10 bg-[#0E0E11] text-[#9C9CA6]'
                   }`}
                 >
                   {PRIORITY_META[p].label}
@@ -395,7 +395,7 @@ export function TaskModal() {
             {subtasks.map((sub) => (
               <div
                 key={sub.id}
-                className="flex items-center gap-2 rounded-xl border border-[#B9A8FF]/10 bg-[#0E0E11] px-3 py-2"
+                className="flex items-center gap-2 rounded-xl border border-[var(--accent-fg)]/10 bg-[#0E0E11] px-3 py-2"
               >
                 <button
                   type="button"
@@ -408,8 +408,8 @@ export function TaskModal() {
                   }
                   className={`flex h-4.5 w-4.5 items-center justify-center rounded border ${
                     sub.completed
-                      ? 'border-[#6D4AFF] bg-[#6D4AFF] text-[#ECECEF]'
-                      : 'border-[#B9A8FF]/30'
+                      ? 'border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-on)]'
+                      : 'border-[var(--accent-fg)]/30'
                   }`}
                 >
                   {sub.completed && <Check className="h-3 w-3" />}
@@ -450,7 +450,7 @@ export function TaskModal() {
               <button
                 type="button"
                 onClick={handleAddSubtask}
-                className="btn-ghost-luxury shrink-0 rounded-xl px-3 text-xs text-[#B9A8FF]"
+                className="btn-ghost-luxury shrink-0 rounded-xl px-3 text-xs text-[var(--accent-fg)]"
               >
                 <Plus className="h-4 w-4" />
               </button>
@@ -461,14 +461,14 @@ export function TaskModal() {
         {/* Tags */}
         <div>
           <label className="mb-1.5 flex items-center gap-1 text-xs font-medium text-[#9C9CA6]">
-            <Tag className="h-3.5 w-3.5 text-[#6D4AFF]" />
+            <Tag className="h-3.5 w-3.5 text-[var(--accent)]" />
             <span>برچسب‌ها</span>
           </label>
           <div className="mb-2 flex flex-wrap gap-1.5">
             {tags.map((t) => (
               <span
                 key={t}
-                className="inline-flex items-center gap-1 rounded-full border border-[#B9A8FF]/22 bg-[#1C1C21] px-2.5 py-0.5 text-[11px] text-[#B9A8FF]"
+                className="inline-flex items-center gap-1 rounded-full border border-[var(--accent-fg)]/22 bg-[#1C1C21] px-2.5 py-0.5 text-[11px] text-[var(--accent-fg)]"
               >
                 #{t}
                 <button
@@ -499,7 +499,7 @@ export function TaskModal() {
             <button
               type="button"
               onClick={handleAddTag}
-              className="btn-ghost-luxury shrink-0 rounded-xl px-3 text-xs text-[#B9A8FF]"
+              className="btn-ghost-luxury shrink-0 rounded-xl px-3 text-xs text-[var(--accent-fg)]"
             >
               افزودن
             </button>
@@ -507,16 +507,16 @@ export function TaskModal() {
         </div>
 
         {/* Recurrence & Reminder */}
-        <div className="grid grid-cols-1 gap-3 rounded-2xl border border-[#B9A8FF]/10 bg-[#0E0E11] p-3.5">
+        <div className="grid grid-cols-1 gap-3 rounded-2xl border border-[var(--accent-fg)]/10 bg-[#0E0E11] p-3.5">
           <div className="flex items-center justify-between gap-3">
             <span className="flex items-center gap-1.5 text-xs font-medium text-[#ECECEF]">
-              <Repeat className="h-3.5 w-3.5 text-[#B9A8FF]" />
+              <Repeat className="h-3.5 w-3.5 text-[var(--accent-fg)]" />
               تکرار وظیفه
             </span>
             <select
               value={recurrence}
               onChange={(e) => setRecurrence(e.target.value as RecurrenceRule)}
-              className="rounded-xl border border-[#B9A8FF]/15 bg-[#16161A] px-3 py-1.5 text-xs text-[#ECECEF] outline-none"
+              className="rounded-xl border border-[var(--accent-fg)]/15 bg-[#16161A] px-3 py-1.5 text-xs text-[#ECECEF] outline-none"
             >
               {(Object.keys(RECURRENCE_LABELS) as RecurrenceRule[]).map((r) => (
                 <option key={r} value={r} className="bg-[#16161A]">
@@ -526,11 +526,11 @@ export function TaskModal() {
             </select>
           </div>
 
-          <div className="h-px bg-[#B9A8FF]/10" />
+          <div className="h-px bg-[var(--accent-fg)]/10" />
 
           <div className="flex items-center justify-between gap-3">
             <span className="flex items-center gap-1.5 text-xs font-medium text-[#ECECEF]">
-              <Bell className="h-3.5 w-3.5 text-[#B9A8FF]" />
+              <Bell className="h-3.5 w-3.5 text-[var(--accent-fg)]" />
               یادآوری و اعلان
             </span>
             <button
@@ -539,7 +539,7 @@ export function TaskModal() {
               aria-checked={reminderEnabled}
               onClick={() => setReminderEnabled((v) => !v)}
               className={`relative h-6 w-11 rounded-full transition-colors ${
-                reminderEnabled ? 'bg-[#6D4AFF]' : 'bg-[#1C1C21]'
+                reminderEnabled ? 'bg-[var(--accent)]' : 'bg-[#1C1C21]'
               }`}
             >
               <span
@@ -556,7 +556,7 @@ export function TaskModal() {
               <select
                 value={reminderOffsetMin}
                 onChange={(e) => setReminderOffsetMin(Number(e.target.value))}
-                className="rounded-lg border border-[#B9A8FF]/15 bg-[#16161A] px-2.5 py-1 text-xs text-[#ECECEF] outline-none"
+                className="rounded-lg border border-[var(--accent-fg)]/15 bg-[#16161A] px-2.5 py-1 text-xs text-[#ECECEF] outline-none"
               >
                 <option value={0}>دقیقاً در ساعت موعد</option>
                 <option value={10}>10 دقیقه قبل</option>

@@ -96,7 +96,9 @@ export function AppShell({ children }: { children: ReactNode }) {
             className="flex items-center gap-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-fg)]"
           >
             <KairosMarkTile size={26} />
-            <span className="font-brand text-[12px] font-semibold text-[var(--text)]">KAIROS</span>
+            <span className="font-display text-[14px] font-semibold leading-none tracking-[0.12em] text-[var(--text)]">
+              KAIROS
+            </span>
           </button>
 
           {focus.isRunning && activeTab !== 'focus' && (

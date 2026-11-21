@@ -30,6 +30,10 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
+      // No auto-injected registration: main.tsx decides per platform. Inside the
+      // APK a precache service worker can serve a stale UI after an APK update,
+      // so it is only registered on the real web build.
+      injectRegister: null,
       includeAssets: ['favicon-32.png', 'kairos-icon-192.png', 'kairos-icon-512.png', 'kairos-icon-maskable-512.png'],
       manifest: {
         name: 'KAIROS — کایروس | استودیوی نظم و تمرکز',

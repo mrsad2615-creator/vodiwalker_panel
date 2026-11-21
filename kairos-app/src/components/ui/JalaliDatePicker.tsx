@@ -40,7 +40,7 @@ export function JalaliDatePicker({
   };
 
   return (
-    <div className="rounded-2xl border border-[#B9A8FF]/14 bg-[#0E0E11] p-3">
+    <div className="rounded-2xl border border-[var(--accent-fg)]/14 bg-[#0E0E11] p-3">
       {/* Quick Presets */}
       <div className="mb-3 flex flex-wrap items-center gap-1.5">
         <button
@@ -53,7 +53,7 @@ export function JalaliDatePicker({
           }}
           className={`rounded-lg px-2.5 py-1 text-[11px] font-medium transition ${
             value === todayKey
-              ? 'bg-[#6D4AFF] text-[#ECECEF]'
+              ? 'bg-[var(--accent)] text-[var(--accent-on)]'
               : 'bg-[#16161A] text-[#9C9CA6] hover:text-[#ECECEF]'
           }`}
         >
@@ -70,7 +70,7 @@ export function JalaliDatePicker({
           }}
           className={`rounded-lg px-2.5 py-1 text-[11px] font-medium transition ${
             value === addDays(todayKey, 1)
-              ? 'bg-[#6D4AFF] text-[#ECECEF]'
+              ? 'bg-[var(--accent)] text-[var(--accent-on)]'
               : 'bg-[#16161A] text-[#9C9CA6] hover:text-[#ECECEF]'
           }`}
         >
@@ -87,7 +87,7 @@ export function JalaliDatePicker({
           }}
           className={`rounded-lg px-2.5 py-1 text-[11px] font-medium transition ${
             value === addDays(todayKey, 7)
-              ? 'bg-[#6D4AFF] text-[#ECECEF]'
+              ? 'bg-[var(--accent)] text-[var(--accent-on)]'
               : 'bg-[#16161A] text-[#9C9CA6] hover:text-[#ECECEF]'
           }`}
         >
@@ -116,7 +116,7 @@ export function JalaliDatePicker({
         </button>
         <div className="flex items-center gap-1.5 text-xs font-semibold text-[#ECECEF]">
           <span>{getJalaaliMonthName(viewMonth)}</span>
-          <Numeric value={viewYear} variant="geo" className="text-[#B9A8FF]" />
+          <Numeric value={viewYear} variant="geo" className="text-[var(--accent-fg)]" />
         </div>
         <button
           type="button"
@@ -155,9 +155,9 @@ export function JalaliDatePicker({
               onClick={() => onChange(dk)}
               className={`flex h-8 items-center justify-center rounded-lg text-xs transition ${
                 isSelected
-                  ? 'bg-[#6D4AFF] font-bold text-[#ECECEF] shadow-[0_0_12px_rgba(109,74,255,0.55)]'
+                  ? 'bg-[var(--accent)] font-bold text-[var(--accent-on)] shadow-[0_0_12px_color-mix(in_srgb,var(--accent)_55%,transparent)]'
                   : isToday
-                  ? 'border border-[#B9A8FF]/50 bg-[#1C1C21] text-[#B9A8FF]'
+                  ? 'border border-[var(--accent-fg)]/50 bg-[#1C1C21] text-[var(--accent-fg)]'
                   : 'text-[#ECECEF]/85 hover:bg-[#1C1C21]/70'
               }`}
             >

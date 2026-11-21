@@ -20,6 +20,7 @@ import { Capacitor } from '@capacitor/core';
 import { ensureSettings, recordFocusSession } from '@/lib/db';
 import { useSettings, useTasks } from '@/lib/queries';
 import { getTodayKey } from '@/lib/date';
+import { applyAppearance, cacheAppearance, normalizeAppearance } from '@/lib/theme';
 import { createId } from '@/lib/format';
 import { initNativeShell, triggerHaptic } from '@/lib/native';
 import {
@@ -147,6 +148,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
       active = false;
     };
   }, []);
+
+  // Appearance: accent, environment and motion level are tokens on :root.
+  // Applying them here keeps the DB row as the single source of truth while the
+  // synchronous cache (main.tsx) guarantees a flash-free next boot.
+  useEffect(() => {
+    const appearance = normalizeAppearance({
+      accent: settings.accentColor,
+      backgroundId: settings.backgroundId,
+      motionLevel: settings.motionLevel,
+    });
+    applyAppearance(appearance);
+    cacheAppearance(appearance);
+  }, [settings.accentColor, settings.backgroundId, settings.motionLevel]);
 
   // Sync Native Android LocalNotifications whenever tasks or notification toggle change
   useEffect(() => {

@@ -2,6 +2,7 @@ import { Capacitor } from '@capacitor/core';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import type { Task } from '@/types/domain';
 import { parseDateKey } from './date';
+import { getAudioContext } from './audioContext';
 
 function stableNotificationId(key: string): number {
   let hash = 0;
@@ -56,13 +57,12 @@ export async function requestNotificationPermission(): Promise<NotificationPermi
  * Plays a refined minimal harmonic bell chime using Web Audio API (no external audio files needed).
  */
 export function playLuxuryChime(enabled: boolean = true): void {
-  if (!enabled || typeof window === 'undefined') return;
+  if (!enabled) return;
   try {
-    const AudioCtx =
-      window.AudioContext ||
-      (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-    if (!AudioCtx) return;
-    const ctx = new AudioCtx();
+    // Shared singleton: creating one context per chime used to exhaust the
+    // WebView's context budget and kill the sound after a few sessions.
+    const ctx = getAudioContext();
+    if (!ctx) return;
     const now = ctx.currentTime;
 
     const freqs = [528, 792];

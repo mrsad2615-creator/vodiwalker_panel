@@ -1,5 +1,6 @@
 import { useId, useMemo, useState } from 'react';
 import { Numeric } from '@/components/ui/Numeric';
+import { useMotionLevel } from '@/lib/useAppearance';
 
 export interface AreaChartPoint {
   key: string;
@@ -54,6 +55,7 @@ export function LuxuryAreaChart({
 }: LuxuryAreaChartProps) {
   const gradientId = useId().replace(/:/g, '');
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const animate = useMotionLevel() !== 'standard';
 
   const width = 340;
   const gutter = 26;
@@ -163,11 +165,15 @@ export function LuxuryAreaChart({
           strokeWidth="2.2"
           strokeLinecap="round"
           strokeLinejoin="round"
-          style={{
-            strokeDasharray: 2000,
-            strokeDashoffset: 2000,
-            animation: 'kairos-line-draw 900ms cubic-bezier(0.22, 1, 0.36, 1) forwards',
-          }}
+          style={
+            animate
+              ? {
+                  strokeDasharray: 2000,
+                  strokeDashoffset: 2000,
+                  animation: 'kairos-line-draw 900ms cubic-bezier(0.22, 1, 0.36, 1) forwards',
+                }
+              : undefined
+          }
         />
 
         {points.length <= 40 &&

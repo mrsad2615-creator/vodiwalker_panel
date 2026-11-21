@@ -30,7 +30,13 @@ export function useGoals(): Goal[] {
 
 export function useSettings(): UserSettings {
   return useLiveQuery(
-    async () => (await db.settings.get('default')) ?? DEFAULT_SETTINGS,
+    async () => {
+      const row = await db.settings.get('default');
+      if (!row) return DEFAULT_SETTINGS;
+      // Rows written before 1.4.0 have no appearance fields — backfill in memory
+      // so the theme engine always receives a complete, valid object.
+      return { ...DEFAULT_SETTINGS, ...row, id: 'default' as const };
+    },
     [],
     DEFAULT_SETTINGS
   );

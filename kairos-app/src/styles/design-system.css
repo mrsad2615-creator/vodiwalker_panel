@@ -23,12 +23,20 @@
   --text-2: #9c9ca6;
   --text-3: #6b6b75;
 
-  /* Single accent — pure, high-voltage violet (#6D4AFF).
-     White-on-accent ≈ 5.2:1, so button labels stay AA-compliant. */
-  --accent: #6D4AFF;
-  --accent-hover: #7C5CFF;
-  --accent-fg: #B9A8FF;
-  --accent-soft: rgba(109, 74, 255, 0.16);
+  /* Single, themeable accent — pure high-voltage violet by default.
+     The theme engine (src/lib/theme.ts) overwrites every one of these on :root
+     with values derived in OKLCH from the user's colour, so no component ever
+     hard-codes an accent hex again. Defaults here = KAIROS violet, white-on-
+     accent 5.2:1 (AA). */
+  --accent: #6d4aff;
+  --accent-hover: #7c5cff;
+  --accent-fg: #b9a8ff;
+  --accent-on: #ffffff;
+  --accent-soft: color-mix(in srgb, var(--accent) 16%, transparent);
+  --accent-glow: color-mix(in srgb, var(--accent) 34%, transparent);
+  --accent-l: 0.5283;
+  --accent-c: 0.2341;
+  --accent-h: 262.4;
   --danger: #e5484d;
   --danger-soft: rgba(229, 72, 77, 0.12);
   --warn: #c9975c;
@@ -54,6 +62,9 @@
   /* Type stacks — two families only */
   --font-persian: 'Vazirmatn Variable', 'Vazirmatn', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-numeric: 'Space Grotesk Variable', 'Space Grotesk', 'Vazirmatn Variable', ui-monospace, sans-serif;
+  /* Editorial display face — Latin only (Fraunces has no Persian glyphs, so
+     Persian headings stay on Vazirmatn and are tuned by weight/letter-spacing). */
+  --font-display: 'Fraunces Variable', 'Fraunces', 'Space Grotesk Variable', Georgia, serif;
 }
 
 * {
@@ -152,6 +163,135 @@ body,
 
 .kairos-ambient-bg {
   background-color: var(--bg);
+  position: relative;
+  isolation: isolate;
+}
+
+/* ---------------------------------------------------------------------------
+   Cinematic backgrounds — six environments, zero bitmap assets.
+   Each one is two or three radial gradients plus an SVG grain tile. They are
+   deliberately capped at ~12% alpha so body text keeps its contrast on every
+   environment, and they are painted on a fixed layer behind the shell.
+   --------------------------------------------------------------------------- */
+
+.kairos-ambient-bg::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+  background: var(--atmosphere, none);
+  background-repeat: no-repeat;
+  background-size: cover;
+  transition: background 600ms ease;
+}
+
+.kairos-ambient-bg::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: var(--atmosphere-grain, 0.035);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.9'/%3E%3C/svg%3E");
+  background-size: 140px 140px;
+}
+
+/* Default: obsidian. The accent tints it, so personalisation reaches the room
+   too — but only at 10%, never enough to fight the type. */
+:root,
+[data-bg='obsidian'] {
+  --atmosphere: radial-gradient(
+      120% 62% at 50% -12%,
+      color-mix(in srgb, var(--accent) 12%, transparent) 0%,
+      transparent 68%
+    ),
+    radial-gradient(90% 50% at 50% 108%, rgba(0, 0, 0, 0.55) 0%, transparent 70%);
+  --atmosphere-grain: 0.03;
+}
+
+[data-bg='nebula'] {
+  --atmosphere: radial-gradient(
+      70% 45% at 18% 4%,
+      color-mix(in srgb, var(--accent) 22%, transparent) 0%,
+      transparent 62%
+    ),
+    radial-gradient(60% 40% at 85% 22%, rgba(76, 96, 255, 0.16) 0%, transparent 64%),
+    radial-gradient(90% 55% at 50% 106%, rgba(120, 60, 200, 0.18) 0%, transparent 70%);
+  --atmosphere-grain: 0.05;
+}
+
+[data-bg='aurora'] {
+  --atmosphere: radial-gradient(120% 40% at 50% -6%, rgba(24, 200, 170, 0.16) 0%, transparent 62%),
+    radial-gradient(80% 38% at 20% 2%, color-mix(in srgb, var(--accent) 18%, transparent) 0%, transparent 66%),
+    radial-gradient(90% 50% at 50% 110%, rgba(10, 40, 45, 0.5) 0%, transparent 70%);
+  --atmosphere-grain: 0.04;
+}
+
+[data-bg='alpine'] {
+  --atmosphere: radial-gradient(110% 55% at 50% -8%, rgba(96, 138, 190, 0.22) 0%, transparent 66%),
+    radial-gradient(70% 40% at 80% 4%, color-mix(in srgb, var(--accent) 10%, transparent) 0%, transparent 70%),
+    radial-gradient(100% 50% at 50% 108%, rgba(12, 22, 38, 0.6) 0%, transparent 72%);
+  --atmosphere-grain: 0.045;
+}
+
+[data-bg='ember'] {
+  --atmosphere: radial-gradient(100% 42% at 50% 108%, rgba(200, 120, 58, 0.22) 0%, transparent 66%),
+    radial-gradient(70% 32% at 16% 96%, color-mix(in srgb, var(--accent) 14%, transparent) 0%, transparent 70%),
+    radial-gradient(90% 50% at 50% -10%, rgba(60, 24, 12, 0.5) 0%, transparent 70%);
+  --atmosphere-grain: 0.05;
+}
+
+[data-bg='graphite'] {
+  --atmosphere: linear-gradient(180deg, rgba(46, 46, 52, 0.34) 0%, rgba(10, 10, 12, 0) 46%),
+    radial-gradient(80% 40% at 50% 110%, rgba(255, 255, 255, 0.05) 0%, transparent 70%);
+  --atmosphere-grain: 0.075;
+}
+
+/* ---------------------------------------------------------------------------
+   Motion levels. ULTRA adds atmosphere drift, CINEMATIC is the designed
+   baseline, STANDARD removes every non-essential loop so a weak device (or a
+   user chasing battery) gets the same layout with a fraction of the work.
+   --------------------------------------------------------------------------- */
+
+@keyframes kairos-atmosphere-drift {
+  from {
+    transform: scale(1.02) translate3d(0, 0, 0);
+  }
+  to {
+    transform: scale(1.08) translate3d(-1.5%, -1%, 0);
+  }
+}
+
+[data-motion='ultra'] .kairos-ambient-bg::after {
+  animation: kairos-atmosphere-drift 90s ease-in-out infinite alternate;
+}
+
+[data-motion='standard'] .kairos-ambient-bg::after {
+  animation: none;
+}
+
+[data-motion='standard'] .kairos-chart-anim,
+[data-motion='standard'] .kairos-fx {
+  animation: none !important;
+}
+
+/* ---------------------------------------------------------------------------
+   Editorial display type (Latin only — Fraunces has no Persian glyphs)
+   --------------------------------------------------------------------------- */
+
+.font-display {
+  font-family: var(--font-display);
+  font-optical-sizing: auto;
+  font-variation-settings: 'SOFT' 0, 'WONK' 1;
+  letter-spacing: -0.015em;
+}
+
+.font-display-caps {
+  font-family: var(--font-display);
+  font-optical-sizing: auto;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
 }
 
 /* Edge-to-edge frame: keeps content clear of the notch, status bar and
@@ -243,7 +383,7 @@ body,
 
 .btn-royal {
   background: var(--accent);
-  color: #ffffff;
+  color: var(--accent-on);
   border: 1px solid transparent;
   border-radius: var(--r-field);
   font-weight: 600;

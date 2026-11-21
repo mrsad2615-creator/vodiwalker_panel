@@ -22,12 +22,12 @@ const STATE_STYLES: Record<
 > = {
   future: {
     bg: 'rgba(21, 20, 27, 0.34)',
-    border: 'rgba(163, 140, 255, 0.04)',
+    border: 'color-mix(in srgb, var(--accent-fg) 4%, transparent)',
     text: '#474154',
   },
   unlogged: {
     bg: '#0E0E11',
-    border: 'rgba(163, 140, 255, 0.1)',
+    border: 'color-mix(in srgb, var(--accent-fg) 10%, transparent)',
     text: '#6B6B75',
   },
   missed: {
@@ -37,25 +37,25 @@ const STATE_STYLES: Record<
   },
   level1: {
     bg: '#1F1940',
-    border: 'rgba(109, 74, 255, 0.38)',
+    border: 'color-mix(in srgb, var(--accent) 38%, transparent)',
     text: '#D8CAF4',
   },
   level2: {
     bg: '#4A2BC7',
-    border: 'rgba(109, 74, 255, 0.56)',
+    border: 'color-mix(in srgb, var(--accent) 56%, transparent)',
     text: '#ECECEF',
   },
   level3: {
-    bg: '#6D4AFF',
-    border: 'rgba(163, 140, 255, 0.5)',
+    bg: 'var(--accent)',
+    border: 'color-mix(in srgb, var(--accent-fg) 50%, transparent)',
     text: '#ECECEF',
-    glow: '0 0 8px rgba(109, 74, 255, 0.32)',
+    glow: '0 0 8px color-mix(in srgb, var(--accent) 32%, transparent)',
   },
   level4: {
-    bg: '#B9A8FF',
+    bg: 'var(--accent-fg)',
     border: 'rgba(244, 241, 248, 0.62)',
     text: '#0A0A0C',
-    glow: '0 0 10px rgba(163, 140, 255, 0.45)',
+    glow: '0 0 10px color-mix(in srgb, var(--accent-fg) 45%, transparent)',
   },
 };
 
@@ -204,14 +204,14 @@ export function ActivityHeatmap({
               ? 'نمای عمودی (خوانا و لمسی)'
               : 'نمای افقی سالانه (365 روز)'}
           </span>
-          <div className="inline-flex items-center gap-0.5 rounded-xl border border-[#B9A8FF]/14 bg-[#0A0A0C]/80 p-0.5">
+          <div className="inline-flex items-center gap-0.5 rounded-xl border border-[var(--accent-fg)]/14 bg-[#0A0A0C]/80 p-0.5">
             <button
               type="button"
               onClick={() => setOrientation('vertical')}
               aria-label="نمای عمودی تقویم"
               className={`flex items-center gap-1 rounded-lg px-2.5 py-1 text-[10.5px] font-semibold transition ${
                 orientation === 'vertical'
-                  ? 'bg-[#6D4AFF] text-[#ECECEF]'
+                  ? 'bg-[var(--accent)] text-[var(--accent-on)]'
                   : 'text-[#9C9CA6] hover:text-[#ECECEF]'
               }`}
             >
@@ -224,7 +224,7 @@ export function ActivityHeatmap({
               aria-label="نمای افقی تقویم"
               className={`flex items-center gap-1 rounded-lg px-2.5 py-1 text-[10.5px] font-semibold transition ${
                 orientation === 'horizontal'
-                  ? 'bg-[#6D4AFF] text-[#ECECEF]'
+                  ? 'bg-[var(--accent)] text-[var(--accent-on)]'
                   : 'text-[#9C9CA6] hover:text-[#ECECEF]'
               }`}
             >
@@ -247,8 +247,8 @@ export function ActivityHeatmap({
                 onClick={() => scrollToMonth(m.jm)}
                 className={`shrink-0 rounded-lg border px-2.5 py-1 text-[10.5px] font-medium transition ${
                   focusedMonth === m.jm
-                    ? 'border-[#B9A8FF]/50 bg-[#1C1C21] text-[#ECECEF]'
-                    : 'border-[#B9A8FF]/10 bg-[#0C0C0F] text-[#9C9CA6] hover:text-[#ECECEF]'
+                    ? 'border-[var(--accent-fg)]/50 bg-[#1C1C21] text-[#ECECEF]'
+                    : 'border-[var(--accent-fg)]/10 bg-[#0C0C0F] text-[#9C9CA6] hover:text-[#ECECEF]'
                 }`}
               >
                 {m.name}
@@ -257,8 +257,8 @@ export function ActivityHeatmap({
           </div>
 
           {/* Sticky Weekday Header + Vertical Scrollable Months */}
-          <div className="overflow-hidden rounded-2xl border border-[#B9A8FF]/12 bg-[#0A0A0C]/90">
-            <div className="grid grid-cols-7 border-b border-[#B9A8FF]/10 bg-[#13111C] px-2.5 py-2 text-center text-[10px] font-semibold text-[#9C9CA6]">
+          <div className="overflow-hidden rounded-2xl border border-[var(--accent-fg)]/12 bg-[#0A0A0C]/90">
+            <div className="grid grid-cols-7 border-b border-[var(--accent-fg)]/10 bg-[#13111C] px-2.5 py-2 text-center text-[10px] font-semibold text-[#9C9CA6]">
               {PERSIAN_WEEKDAYS_SHORT.map((dayLabel) => (
                 <span key={dayLabel}>{dayLabel}</span>
               ))}
@@ -281,7 +281,7 @@ export function ActivityHeatmap({
                     <span className="text-[10px] text-[#9C9CA6]">
                       <Numeric
                         value={month.activeCount}
-                        className="font-semibold text-[#B9A8FF]"
+                        className="font-semibold text-[var(--accent-fg)]"
                       />{' '}
                       روز فعال
                     </span>
@@ -311,7 +311,7 @@ export function ActivityHeatmap({
                             isSelected
                               ? 'z-10 ring-2 ring-[#ECECEF]'
                               : isToday
-                              ? 'ring-1.5 ring-[#B9A8FF]'
+                              ? 'ring-1.5 ring-[var(--accent-fg)]'
                               : ''
                           }`}
                           style={{
@@ -389,7 +389,7 @@ export function ActivityHeatmap({
                             isSelected
                               ? 'z-10 scale-125 ring-2 ring-[#ECECEF]'
                               : isToday
-                              ? 'ring-1 ring-[#B9A8FF]'
+                              ? 'ring-1 ring-[var(--accent-fg)]'
                               : ''
                           }`}
                           style={{
@@ -413,7 +413,7 @@ export function ActivityHeatmap({
       )}
 
       {/* Explicit Legend Separating Unlogged vs Missed vs Purple Mastery Scale */}
-      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[#B9A8FF]/10 pt-2.5 text-[10px] text-[#9C9CA6]">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[var(--accent-fg)]/10 pt-2.5 text-[10px] text-[#9C9CA6]">
         <div className="flex items-center gap-3">
           <span className="inline-flex items-center gap-1.5">
             <span
@@ -451,7 +451,7 @@ export function ActivityHeatmap({
               }}
             />
           ))}
-          <span className="text-[#B9A8FF]">کامل</span>
+          <span className="text-[var(--accent-fg)]">کامل</span>
           <span className="mr-1 text-[#6B6B75]">
             (<Numeric value={cells.length} variant="geo" className="text-[10px]" /> روز)
           </span>

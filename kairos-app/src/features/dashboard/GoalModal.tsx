@@ -189,8 +189,8 @@ export function GoalModal({ open, goal, onClose }: GoalModalProps) {
                 onClick={() => setCategory(cat)}
                 className={`rounded-xl border px-2.5 py-2 text-xs font-medium transition ${
                   category === cat
-                    ? 'border-[#6D4AFF] bg-[#1C1C21] text-[#ECECEF]'
-                    : 'border-[#B9A8FF]/10 bg-[#0E0E11] text-[#9C9CA6]'
+                    ? 'border-[var(--accent)] bg-[#1C1C21] text-[#ECECEF]'
+                    : 'border-[var(--accent-fg)]/10 bg-[#0E0E11] text-[#9C9CA6]'
                 }`}
               >
                 {CATEGORY_META[cat].label}
@@ -205,7 +205,7 @@ export function GoalModal({ open, goal, onClose }: GoalModalProps) {
             <button
               type="button"
               onClick={() => setShowDatePicker((p) => !p)}
-              className="text-xs font-medium text-[#B9A8FF]"
+              className="text-xs font-medium text-[var(--accent-fg)]"
             >
               {deadline ? (
                 <span>

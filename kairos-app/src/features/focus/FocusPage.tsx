@@ -153,13 +153,13 @@ export function FocusPage() {
           className="fixed inset-0 z-[80] flex flex-col items-center justify-between overflow-y-auto bg-[#0A0A0C] px-6 py-8"
           style={{
             backgroundImage:
-              'radial-gradient(ellipse 70% 40% at 50% 40%, rgba(109, 74, 255, 0.10), transparent 70%)',
+              'radial-gradient(ellipse 70% 40% at 50% 40%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 70%)',
           }}
         >
           {/* Cinema Top Bar */}
           <div className="flex w-full max-w-[440px] items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="font-brand text-[10.5px] font-bold text-[#B9A8FF]">
+              <span className="font-brand text-[10.5px] font-bold text-[var(--accent-fg)]">
                 KAIROS CINEMA
               </span>
               <span className="text-[11px] text-[#6B6B75]">•</span>
@@ -176,9 +176,9 @@ export function FocusPage() {
               type="button"
               onClick={() => setCinemaMode(false)}
               aria-label="خروج از نمای سینمایی"
-              className="flex items-center gap-1.5 rounded-xl border border-[#B9A8FF]/18 bg-[#16161A]/90 px-3 py-1.5 text-[11px] font-medium text-[#ECECEF]"
+              className="flex items-center gap-1.5 rounded-xl border border-[var(--accent-fg)]/18 bg-[#16161A]/90 px-3 py-1.5 text-[11px] font-medium text-[#ECECEF]"
             >
-              <Minimize2 className="h-3.5 w-3.5 text-[#B9A8FF]" />
+              <Minimize2 className="h-3.5 w-3.5 text-[var(--accent-fg)]" />
               <span>خروج</span>
             </button>
           </div>
@@ -210,11 +210,11 @@ export function FocusPage() {
                     onClick={() => handleSelectSound(sc.id)}
                     className={`flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-[11px] font-medium transition ${
                       active
-                        ? 'border-[#B9A8FF]/45 bg-[#1C1C21] text-[#ECECEF]'
-                        : 'border-[#B9A8FF]/12 bg-[#16161A]/80 text-[#9C9CA6]'
+                        ? 'border-[var(--accent-fg)]/45 bg-[#1C1C21] text-[#ECECEF]'
+                        : 'border-[var(--accent-fg)]/12 bg-[#16161A]/80 text-[#9C9CA6]'
                     }`}
                   >
-                    <Icon className="h-3.5 w-3.5 text-[#B9A8FF]" />
+                    <Icon className="h-3.5 w-3.5 text-[var(--accent-fg)]" />
                     <span>{sc.label}</span>
                   </button>
                 );
@@ -229,7 +229,7 @@ export function FocusPage() {
                 type="button"
                 onClick={resetFocus}
                 aria-label="بازنشانی تایمر"
-                className="flex h-13 w-13 items-center justify-center rounded-2xl border border-[#B9A8FF]/16 bg-[#16161A]/85 text-[#9C9CA6] transition hover:text-[#ECECEF]"
+                className="flex h-13 w-13 items-center justify-center rounded-2xl border border-[var(--accent-fg)]/16 bg-[#16161A]/85 text-[#9C9CA6] transition hover:text-[#ECECEF]"
               >
                 <RotateCcw className="h-5 w-5" />
               </button>
@@ -257,7 +257,7 @@ export function FocusPage() {
                   type="button"
                   onClick={skipPomodoroPhase}
                   aria-label="مرحله بعد"
-                  className="flex h-13 w-13 items-center justify-center rounded-2xl border border-[#B9A8FF]/16 bg-[#16161A]/85 text-[#9C9CA6] transition hover:text-[#ECECEF]"
+                  className="flex h-13 w-13 items-center justify-center rounded-2xl border border-[var(--accent-fg)]/16 bg-[#16161A]/85 text-[#9C9CA6] transition hover:text-[#ECECEF]"
                 >
                   <SkipForward className="h-5 w-5" />
                 </button>
@@ -266,7 +266,7 @@ export function FocusPage() {
                   type="button"
                   onClick={() => void finishAndSaveFocus()}
                   aria-label="پایان و ثبت جلسه"
-                  className="flex h-13 w-13 items-center justify-center rounded-2xl border border-[#6D4AFF]/50 bg-[#1C1C21] text-[#B9A8FF]"
+                  className="flex h-13 w-13 items-center justify-center rounded-2xl border border-[var(--accent)]/50 bg-[#1C1C21] text-[var(--accent-fg)]"
                 >
                   <Check className="h-5 w-5" />
                 </button>
@@ -277,7 +277,7 @@ export function FocusPage() {
               <button
                 type="button"
                 onClick={() => void finishAndSaveFocus()}
-                className="text-xs font-medium text-[#B9A8FF] underline-offset-4 hover:underline"
+                className="text-xs font-medium text-[var(--accent-fg)] underline-offset-4 hover:underline"
               >
                 پایان و ثبت{' '}
                 <Numeric value={Math.max(1, Math.round(focus.elapsedSeconds / 60))} /> دقیقه تمرکز
@@ -295,7 +295,7 @@ export function FocusPage() {
             تمرکز امروز:{' '}
             <Numeric
               value={formatDurationShort(todayTotalMin)}
-              className="font-semibold text-[#B9A8FF]"
+              className="font-semibold text-[var(--accent-fg)]"
             />{' '}
             از{' '}
             <Numeric
@@ -313,7 +313,7 @@ export function FocusPage() {
             onClick={() => setCinemaMode(true)}
             aria-label="ورود به حالت سینمایی تمام‌صفحه"
             title="حالت سینمایی تمام‌صفحه"
-            className="flex h-9 items-center gap-1.5 rounded-xl border border-[#6D4AFF]/40 bg-[#1C1C21]/80 px-2.5 text-[11px] font-semibold text-[#B9A8FF] transition hover:bg-[#6D4AFF] hover:text-[#ECECEF]"
+            className="flex h-9 items-center gap-1.5 rounded-xl border border-[var(--accent)]/40 bg-[#1C1C21]/80 px-2.5 text-[11px] font-semibold text-[var(--accent-fg)] transition hover:bg-[var(--accent)] hover:text-[var(--accent-on)]"
           >
             <Maximize2 className="h-3.5 w-3.5" />
             <span>سینمایی</span>
@@ -325,8 +325,8 @@ export function FocusPage() {
             aria-label="تنظیم زمان‌های تمرکز"
             className={`flex h-9 w-9 items-center justify-center rounded-xl border transition ${
               showCustomConfig
-                ? 'border-[#6D4AFF] bg-[#1C1C21] text-[#B9A8FF]'
-                : 'border-[#B9A8FF]/12 bg-[#16161A] text-[#9C9CA6]'
+                ? 'border-[var(--accent)] bg-[#1C1C21] text-[var(--accent-fg)]'
+                : 'border-[var(--accent-fg)]/12 bg-[#16161A] text-[#9C9CA6]'
             }`}
           >
             <Sliders className="h-4 w-4" />
@@ -345,12 +345,12 @@ export function FocusPage() {
         <Numeric
           value={dailyGoalPercent}
           suffix="%"
-          className="text-[10.5px] font-semibold text-[#B9A8FF]"
+          className="text-[10.5px] font-semibold text-[var(--accent-fg)]"
         />
       </div>
 
       {/* Mode Switcher (Pomodoro vs Free Deep Timer) */}
-      <div className="grid grid-cols-2 gap-1 rounded-2xl border border-[#B9A8FF]/12 bg-[#16161A] p-1">
+      <div className="grid grid-cols-2 gap-1 rounded-2xl border border-[var(--accent-fg)]/12 bg-[#16161A] p-1">
         <button
           type="button"
           onClick={() => setFocusMode('pomodoro')}
@@ -463,7 +463,7 @@ export function FocusPage() {
                 type="button"
                 onClick={() => adjustFocusMinutes(-5)}
                 aria-label="کاهش ۵ دقیقه"
-                className="flex h-8 w-8 items-center justify-center rounded-xl border border-[#B9A8FF]/14 bg-[#0A0A0C]/70 text-[#9C9CA6] transition hover:border-[#B9A8FF]/40 hover:text-[#ECECEF]"
+                className="flex h-8 w-8 items-center justify-center rounded-xl border border-[var(--accent-fg)]/14 bg-[#0A0A0C]/70 text-[#9C9CA6] transition hover:border-[var(--accent-fg)]/40 hover:text-[#ECECEF]"
               >
                 <Minus className="h-3.5 w-3.5" />
               </button>
@@ -478,8 +478,8 @@ export function FocusPage() {
                   }}
                   className={`num-geo rounded-xl border px-2.5 py-1.5 text-[11.5px] font-semibold transition ${
                     focus.focusMinutes === mins
-                      ? 'border-[#B9A8FF]/55 bg-[#1C1C21] text-[#ECECEF]'
-                      : 'border-[#B9A8FF]/10 bg-[#0A0A0C]/60 text-[#9C9CA6] hover:text-[#ECECEF]'
+                      ? 'border-[var(--accent-fg)]/55 bg-[#1C1C21] text-[#ECECEF]'
+                      : 'border-[var(--accent-fg)]/10 bg-[#0A0A0C]/60 text-[#9C9CA6] hover:text-[#ECECEF]'
                   }`}
                 >
                   {mins}m
@@ -490,7 +490,7 @@ export function FocusPage() {
                 type="button"
                 onClick={() => adjustFocusMinutes(5)}
                 aria-label="افزایش ۵ دقیقه"
-                className="flex h-8 w-8 items-center justify-center rounded-xl border border-[#B9A8FF]/14 bg-[#0A0A0C]/70 text-[#9C9CA6] transition hover:border-[#B9A8FF]/40 hover:text-[#ECECEF]"
+                className="flex h-8 w-8 items-center justify-center rounded-xl border border-[var(--accent-fg)]/14 bg-[#0A0A0C]/70 text-[#9C9CA6] transition hover:border-[var(--accent-fg)]/40 hover:text-[#ECECEF]"
               >
                 <Plus className="h-3.5 w-3.5" />
               </button>
@@ -504,7 +504,7 @@ export function FocusPage() {
             type="button"
             onClick={resetFocus}
             aria-label="بازنشانی تایمر"
-            className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[#B9A8FF]/14 bg-[#0A0A0C]/75 text-[#9C9CA6] transition hover:border-[#B9A8FF]/35 hover:text-[#ECECEF]"
+            className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[var(--accent-fg)]/14 bg-[#0A0A0C]/75 text-[#9C9CA6] transition hover:border-[var(--accent-fg)]/35 hover:text-[#ECECEF]"
           >
             <RotateCcw className="h-4.5 w-4.5" />
           </button>
@@ -533,7 +533,7 @@ export function FocusPage() {
               onClick={skipPomodoroPhase}
               aria-label="مرحله بعد"
               title="انتقال به مرحله بعد"
-              className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[#B9A8FF]/14 bg-[#0A0A0C]/75 text-[#9C9CA6] transition hover:border-[#B9A8FF]/35 hover:text-[#ECECEF]"
+              className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[var(--accent-fg)]/14 bg-[#0A0A0C]/75 text-[#9C9CA6] transition hover:border-[var(--accent-fg)]/35 hover:text-[#ECECEF]"
             >
               <SkipForward className="h-4.5 w-4.5" />
             </button>
@@ -543,7 +543,7 @@ export function FocusPage() {
               onClick={() => void finishAndSaveFocus()}
               aria-label="پایان و ثبت جلسه"
               title="پایان و ثبت جلسه"
-              className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[#6D4AFF]/45 bg-[#1C1C21] text-[#B9A8FF] transition hover:bg-[#6D4AFF] hover:text-[#ECECEF]"
+              className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[var(--accent)]/45 bg-[#1C1C21] text-[var(--accent-fg)] transition hover:bg-[var(--accent)] hover:text-[var(--accent-on)]"
             >
               <Check className="h-4.5 w-4.5" />
             </button>
@@ -555,7 +555,7 @@ export function FocusPage() {
           <button
             type="button"
             onClick={() => void finishAndSaveFocus()}
-            className="mt-4 text-xs font-medium text-[#B9A8FF] underline-offset-4 hover:underline"
+            className="mt-4 text-xs font-medium text-[var(--accent-fg)] underline-offset-4 hover:underline"
           >
             پایان و ثبت{' '}
             <Numeric value={Math.max(1, Math.round(focus.elapsedSeconds / 60))} /> دقیقه تمرکز
@@ -563,10 +563,10 @@ export function FocusPage() {
         )}
 
         {/* Offline Ambient Soundscape Bar */}
-        <div className="mt-5 w-full border-t border-[#B9A8FF]/10 pt-4">
+        <div className="mt-5 w-full border-t border-[var(--accent-fg)]/10 pt-4">
           <div className="mb-2 flex items-center justify-between text-[10.5px] text-[#9C9CA6]">
             <span className="inline-flex items-center gap-1.5 font-medium text-[#ECECEF]">
-              <Volume2 className="h-3.5 w-3.5 text-[#6D4AFF]" />
+              <Volume2 className="h-3.5 w-3.5 text-[var(--accent)]" />
               فضای صوتی تمرکز (آفلاین)
             </span>
             <span className="text-[10px] text-[#6B6B75]">
@@ -588,11 +588,11 @@ export function FocusPage() {
                   onClick={() => handleSelectSound(sc.id)}
                   className={`flex flex-col items-center gap-1 rounded-xl border py-2 text-[10px] font-medium transition ${
                     active
-                      ? 'border-[#B9A8FF]/45 bg-[#1C1C21] text-[#ECECEF]'
-                      : 'border-[#B9A8FF]/10 bg-[#0A0A0C]/60 text-[#9C9CA6] hover:text-[#ECECEF]'
+                      ? 'border-[var(--accent-fg)]/45 bg-[#1C1C21] text-[#ECECEF]'
+                      : 'border-[var(--accent-fg)]/10 bg-[#0A0A0C]/60 text-[#9C9CA6] hover:text-[#ECECEF]'
                   }`}
                 >
-                  <Icon className="h-3.5 w-3.5 text-[#B9A8FF]" />
+                  <Icon className="h-3.5 w-3.5 text-[var(--accent-fg)]" />
                   <span>{sc.label}</span>
                 </button>
               );
@@ -619,7 +619,7 @@ export function FocusPage() {
                   tone: 'success',
                 });
               }}
-              className="inline-flex items-center gap-1 text-[11px] font-medium text-[#B9A8FF] hover:text-[#ECECEF]"
+              className="inline-flex items-center gap-1 text-[11px] font-medium text-[var(--accent-fg)] hover:text-[#ECECEF]"
             >
               <CheckCircle2 className="h-3.5 w-3.5" />
               تکمیل این وظیفه
@@ -681,7 +681,7 @@ export function FocusPage() {
                   <Numeric
                     value={formatDurationShort(s.durationMinutes)}
                     variant="display"
-                    className="text-xl font-bold text-[#B9A8FF]"
+                    className="text-xl font-bold text-[var(--accent-fg)]"
                   />
                   <button
                     type="button"

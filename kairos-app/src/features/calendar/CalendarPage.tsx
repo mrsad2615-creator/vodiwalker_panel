@@ -197,7 +197,7 @@ export function CalendarPage() {
 
       {/* View Switcher (Monthly / Weekly / Daily) + Today shortcut */}
       <div className="flex items-center gap-2">
-        <div className="grid flex-1 grid-cols-3 gap-1 rounded-2xl border border-[#B9A8FF]/12 bg-[#16161A] p-1">
+        <div className="grid flex-1 grid-cols-3 gap-1 rounded-2xl border border-[var(--accent-fg)]/12 bg-[#16161A] p-1">
           {(
             [
               { id: 'month', label: 'ماهانه' },
@@ -211,7 +211,7 @@ export function CalendarPage() {
               onClick={() => setViewMode(m.id)}
               className={`rounded-xl py-2 text-xs font-medium transition ${
                 viewMode === m.id
-                  ? 'bg-[#1C1C21] text-[#ECECEF] shadow-[inset_0_1px_0_rgba(163,140,255,0.2)]'
+                  ? 'bg-[#1C1C21] text-[#ECECEF] shadow-[inset_0_1px_0_color-mix(in_srgb,var(--accent-fg)_20%,transparent)]'
                   : 'text-[#9C9CA6] hover:text-[#ECECEF]'
               }`}
             >
@@ -223,7 +223,7 @@ export function CalendarPage() {
         <button
           type="button"
           onClick={jumpToToday}
-          className="btn-ghost-luxury rounded-2xl px-3.5 py-2.5 text-xs font-medium text-[#B9A8FF]"
+          className="btn-ghost-luxury rounded-2xl px-3.5 py-2.5 text-xs font-medium text-[var(--accent-fg)]"
         >
           امروز
         </button>
@@ -244,7 +244,7 @@ export function CalendarPage() {
           <div className="text-center">
             <h2 className="flex items-center justify-center gap-1.5 text-sm font-bold text-[#ECECEF]">
               <span>{getJalaaliMonthName(viewMonth)}</span>
-              <Numeric value={viewYear} className="text-[#B9A8FF]" />
+              <Numeric value={viewYear} className="text-[var(--accent-fg)]" />
             </h2>
           </div>
 
@@ -287,10 +287,10 @@ export function CalendarPage() {
                     onClick={() => setSelectedDateKey(dk)}
                     className={`flex h-11 flex-col items-center justify-center rounded-xl border transition ${
                       isSelected
-                        ? 'border-[#B9A8FF]/60 bg-[#6D4AFF] text-[#ECECEF] shadow-[0_0_14px_rgba(109,74,255,0.48)]'
+                        ? 'border-[var(--accent-fg)]/60 bg-[var(--accent)] text-[var(--accent-on)] shadow-[0_0_14px_color-mix(in_srgb,var(--accent)_48%,transparent)]'
                         : isToday
-                        ? 'border-[#6D4AFF]/60 bg-[#1C1C21] text-[#ECECEF]'
-                        : 'border-transparent bg-[#0E0E11]/60 text-[#ECECEF]/85 hover:border-[#B9A8FF]/20'
+                        ? 'border-[var(--accent)]/60 bg-[#1C1C21] text-[#ECECEF]'
+                        : 'border-transparent bg-[#0E0E11]/60 text-[#ECECEF]/85 hover:border-[var(--accent-fg)]/20'
                     }`}
                   >
                     <Numeric value={day} className="text-xs font-semibold" />
@@ -298,14 +298,14 @@ export function CalendarPage() {
                       {dayTasks.length > 0 && (
                         <span
                           className={`h-1 w-1 rounded-full ${
-                            isSelected ? 'bg-[#ECECEF]' : 'bg-[#B9A8FF]'
+                            isSelected ? 'bg-[#ECECEF]' : 'bg-[var(--accent-fg)]'
                           }`}
                         />
                       )}
                       {habitCount > 0 && (
                         <span
                           className={`h-1 w-1 rounded-full ${
-                            isSelected ? 'bg-[#ECECEF]/70' : 'bg-[#6D4AFF]'
+                            isSelected ? 'bg-[#ECECEF]/70' : 'bg-[var(--accent)]'
                           }`}
                         />
                       )}
@@ -333,10 +333,10 @@ export function CalendarPage() {
                   onClick={() => setSelectedDateKey(dk)}
                   className={`flex flex-col items-center gap-1.5 rounded-2xl border py-3 transition ${
                     isSelected
-                      ? 'border-[#B9A8FF]/60 bg-[#6D4AFF] text-[#ECECEF] shadow-[0_0_16px_rgba(109,74,255,0.45)]'
+                      ? 'border-[var(--accent-fg)]/60 bg-[var(--accent)] text-[var(--accent-on)] shadow-[0_0_16px_color-mix(in_srgb,var(--accent)_45%,transparent)]'
                       : isToday
-                      ? 'border-[#6D4AFF]/50 bg-[#1C1C21] text-[#ECECEF]'
-                      : 'border-[#B9A8FF]/10 bg-[#0E0E11] text-[#9C9CA6]'
+                      ? 'border-[var(--accent)]/50 bg-[#1C1C21] text-[#ECECEF]'
+                      : 'border-[var(--accent-fg)]/10 bg-[#0E0E11] text-[#9C9CA6]'
                   }`}
                 >
                   <span className="text-[10px]">{PERSIAN_WEEKDAYS_SHORT[idx]}</span>
@@ -344,7 +344,7 @@ export function CalendarPage() {
                   <Numeric
                     value={dayTasksCount}
                     className={`rounded-md px-1.5 py-0.5 text-[9.5px] ${
-                      isSelected ? 'bg-[#0A0A0C]/30 text-[#ECECEF]' : 'bg-[#16161A] text-[#B9A8FF]'
+                      isSelected ? 'bg-[#0A0A0C]/30 text-[#ECECEF]' : 'bg-[#16161A] text-[var(--accent-fg)]'
                     }`}
                   />
                 </button>
@@ -355,11 +355,11 @@ export function CalendarPage() {
 
         {/* DAILY VIEW HEADER SUMMARY */}
         {viewMode === 'day' && (
-          <div className="flex items-center justify-between rounded-2xl border border-[#B9A8FF]/12 bg-[#0E0E11] p-3.5">
+          <div className="flex items-center justify-between rounded-2xl border border-[var(--accent-fg)]/12 bg-[#0E0E11] p-3.5">
             <div>
               <p className="text-sm font-bold text-[#ECECEF]">
                 {selectedInfo.weekday}،{' '}
-                <Numeric value={selectedInfo.day} className="text-[#B9A8FF]" />{' '}
+                <Numeric value={selectedInfo.day} className="text-[var(--accent-fg)]" />{' '}
                 {selectedInfo.month}
               </p>
               <p className="mt-0.5 text-[11px] text-[#9C9CA6]">
@@ -367,7 +367,7 @@ export function CalendarPage() {
                 <Numeric value={selectedDateHabits.length} className="text-[#ECECEF]" /> عادت
               </p>
             </div>
-            <div className="flex items-center gap-1.5 rounded-xl bg-[#1C1C21] px-3 py-1.5 text-xs text-[#B9A8FF]">
+            <div className="flex items-center gap-1.5 rounded-xl bg-[#1C1C21] px-3 py-1.5 text-xs text-[var(--accent-fg)]">
               <Timer className="h-3.5 w-3.5" />
               <Numeric value={formatDurationShort(selectedDateFocusMinutes)} />
             </div>
@@ -380,14 +380,14 @@ export function CalendarPage() {
         <div className="flex items-center justify-between px-0.5">
           <h2 className="text-xs font-bold text-[#ECECEF]">
             برنامه {selectedInfo.weekday}،{' '}
-            <Numeric value={selectedInfo.day} className="text-[#B9A8FF]" /> {selectedInfo.month}
+            <Numeric value={selectedInfo.day} className="text-[var(--accent-fg)]" /> {selectedInfo.month}
           </h2>
           {selectedDateFocusMinutes > 0 && (
             <span className="text-[11px] text-[#9C9CA6]">
               تمرکز ثبت‌شده:{' '}
               <Numeric
                 value={formatDurationShort(selectedDateFocusMinutes)}
-                className="font-semibold text-[#B9A8FF]"
+                className="font-semibold text-[var(--accent-fg)]"
               />
             </span>
           )}
@@ -403,7 +403,7 @@ export function CalendarPage() {
               <button
                 type="button"
                 onClick={() => openCreateTask({ defaultDueDate: selectedDateKey })}
-                className="btn-ghost-luxury rounded-xl px-4 py-2 text-xs font-medium text-[#B9A8FF]"
+                className="btn-ghost-luxury rounded-xl px-4 py-2 text-xs font-medium text-[var(--accent-fg)]"
               >
                 + افزودن به این روز
               </button>
@@ -425,8 +425,8 @@ export function CalendarPage() {
                     aria-label="تغییر وضعیت وظیفه"
                     className={`flex h-5.5 w-5.5 shrink-0 items-center justify-center rounded-lg border transition ${
                       isDone
-                        ? 'border-[#6D4AFF] bg-[#6D4AFF] text-[#ECECEF]'
-                        : 'border-[#B9A8FF]/28 bg-[#0E0E11]'
+                        ? 'border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-on)]'
+                        : 'border-[var(--accent-fg)]/28 bg-[#0E0E11]'
                     }`}
                   >
                     {isDone && <Check className="h-3.5 w-3.5" />}
@@ -465,7 +465,7 @@ export function CalendarPage() {
                     onClick={() => setRescheduleTask(task)}
                     title="جابه‌جایی تاریخ"
                     aria-label="جابه‌جایی تاریخ"
-                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-[#B9A8FF]/12 bg-[#0E0E11] text-[#9C9CA6] transition hover:border-[#B9A8FF]/35 hover:text-[#B9A8FF]"
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-[var(--accent-fg)]/12 bg-[#0E0E11] text-[#9C9CA6] transition hover:border-[var(--accent-fg)]/35 hover:text-[var(--accent-fg)]"
                   >
                     <ArrowLeftRight className="h-3.5 w-3.5" />
                   </button>
@@ -479,7 +479,7 @@ export function CalendarPage() {
         {selectedDateHabits.length > 0 && (
           <LuxuryCard className="space-y-2.5 p-4">
             <div className="flex items-center gap-1.5 text-xs font-bold text-[#ECECEF]">
-              <Flame className="h-3.5 w-3.5 text-[#6D4AFF]" />
+              <Flame className="h-3.5 w-3.5 text-[var(--accent)]" />
               <span>عادت‌های این روز</span>
             </div>
 
@@ -489,7 +489,7 @@ export function CalendarPage() {
                 return (
                   <div
                     key={habit.id}
-                    className="flex items-center justify-between rounded-xl border border-[#B9A8FF]/10 bg-[#0E0E11] px-3 py-2"
+                    className="flex items-center justify-between rounded-xl border border-[var(--accent-fg)]/10 bg-[#0E0E11] px-3 py-2"
                   >
                     <div>
                       <p className="text-xs font-medium text-[#ECECEF]">{habit.name}</p>
@@ -521,7 +521,7 @@ export function CalendarPage() {
                         }}
                         className={`rounded-lg px-3 py-1 text-[11px] font-medium transition ${
                           isDone
-                            ? 'bg-[#6D4AFF] text-[#ECECEF]'
+                            ? 'bg-[var(--accent)] text-[var(--accent-on)]'
                             : 'bg-[#16161A] text-[#9C9CA6] hover:text-[#ECECEF]'
                         }`}
                       >

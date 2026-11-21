@@ -112,7 +112,7 @@ export function HabitDetailView({
         <button
           type="button"
           onClick={onEdit}
-          className="btn-ghost-luxury flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-medium text-[#B9A8FF]"
+          className="btn-ghost-luxury flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-medium text-[var(--accent-fg)]"
         >
           <Edit3 className="h-3.5 w-3.5" />
           <span>ویرایش</span>
@@ -123,7 +123,7 @@ export function HabitDetailView({
       <LuxuryCard variant="hero" className="p-5">
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[#B9A8FF]/28 bg-[#1C1C21]">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[var(--accent-fg)]/28 bg-[#1C1C21]">
               <HabitIcon name={habit.icon} color={habit.accentColor} className="h-6 w-6" />
             </div>
             <div>
@@ -139,7 +139,7 @@ export function HabitDetailView({
               value={stats.adherencePercent}
               suffix="%"
               variant="display"
-              className="text-4xl font-extrabold text-[#B9A8FF]"
+              className="text-4xl font-extrabold text-[var(--accent-fg)]"
             />
             <span className="block text-[10px] text-[#9C9CA6]">نرخ پایبندی</span>
           </div>
@@ -147,7 +147,7 @@ export function HabitDetailView({
 
         {/* 4 Core KPI Tiles — Strictly Separating Completed, Missed, Unlogged, Best Streak */}
         <div className="mt-5 grid grid-cols-4 gap-2">
-          <div className="rounded-xl border border-[#B9A8FF]/12 bg-[#0A0A0C]/60 p-2.5 text-center">
+          <div className="rounded-xl border border-[var(--accent-fg)]/12 bg-[#0A0A0C]/60 p-2.5 text-center">
             <Numeric
               value={stats.completedDays}
               variant="display"
@@ -163,7 +163,7 @@ export function HabitDetailView({
             />
             <span className="mt-1 block text-[9.5px] text-[#9C9CA6]">ازدست‌رفته</span>
           </div>
-          <div className="rounded-xl border border-[#B9A8FF]/10 bg-[#0A0A0C]/60 p-2.5 text-center">
+          <div className="rounded-xl border border-[var(--accent-fg)]/10 bg-[#0A0A0C]/60 p-2.5 text-center">
             <Numeric
               value={stats.unloggedDays}
               variant="display"
@@ -171,24 +171,24 @@ export function HabitDetailView({
             />
             <span className="mt-1 block text-[9.5px] text-[#6B6B75]">ثبت‌نشده</span>
           </div>
-          <div className="rounded-xl border border-[#6D4AFF]/28 bg-[#1C1C21]/60 p-2.5 text-center">
+          <div className="rounded-xl border border-[var(--accent)]/28 bg-[#1C1C21]/60 p-2.5 text-center">
             <Numeric
               value={stats.bestStreak}
               variant="display"
-              className="text-2xl font-bold text-[#B9A8FF]"
+              className="text-2xl font-bold text-[var(--accent-fg)]"
             />
-            <span className="mt-1 block text-[9.5px] text-[#B9A8FF]">بهترین رکورد</span>
+            <span className="mt-1 block text-[9.5px] text-[var(--accent-fg)]">بهترین رکورد</span>
           </div>
         </div>
 
         <div className="mt-3 flex items-center justify-between text-[11px] text-[#9C9CA6]">
           <span className="inline-flex items-center gap-1">
-            <Flame className="h-3.5 w-3.5 text-[#6D4AFF]" />
+            <Flame className="h-3.5 w-3.5 text-[var(--accent)]" />
             رکورد متوالی فعلی:{' '}
             <Numeric value={stats.currentStreak} className="font-semibold text-[#ECECEF]" /> روز
           </span>
           <span className="inline-flex items-center gap-1">
-            <Trophy className="h-3.5 w-3.5 text-[#B9A8FF]" />
+            <Trophy className="h-3.5 w-3.5 text-[var(--accent-fg)]" />
             ثبت‌شده:{' '}
             <Numeric value={stats.loggedDaysCount} className="font-semibold text-[#ECECEF]" /> از{' '}
             <Numeric value={stats.scheduledDaysCount} />
@@ -208,7 +208,7 @@ export function HabitDetailView({
                 onClick={() => setSelectedYear(yr)}
                 className={`num-geo rounded-lg px-2 py-1 text-[11px] font-medium transition ${
                   selectedYear === yr
-                    ? 'bg-[#6D4AFF] text-[#ECECEF]'
+                    ? 'bg-[var(--accent)] text-[var(--accent-on)]'
                     : 'bg-[#0E0E11] text-[#9C9CA6]'
                 }`}
               >
@@ -226,7 +226,7 @@ export function HabitDetailView({
         />
 
         {/* Selected Day Status Control (Completed / Missed / Clear to Unlogged) */}
-        <div className="rounded-2xl border border-[#B9A8FF]/12 bg-[#0E0E11] p-3">
+        <div className="rounded-2xl border border-[var(--accent-fg)]/12 bg-[#0E0E11] p-3">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs font-semibold text-[#ECECEF]">
@@ -235,7 +235,7 @@ export function HabitDetailView({
               </p>
               <p className="mt-0.5 text-[10.5px] text-[#9C9CA6]">
                 وضعیت فعلی:{' '}
-                <span className="text-[#B9A8FF]">
+                <span className="text-[var(--accent-fg)]">
                   {!selectedLog
                     ? 'ثبت‌نشده (بدون اطلاعات)'
                     : selectedLog.status === 'completed'
@@ -255,7 +255,7 @@ export function HabitDetailView({
                 onClick={() => setDayStatus(selectedCellKey, 'completed')}
                 className={`flex items-center justify-center gap-1 rounded-xl py-1.5 text-[11px] font-medium transition ${
                   selectedLog?.status === 'completed'
-                    ? 'bg-[#6D4AFF] text-[#ECECEF]'
+                    ? 'bg-[var(--accent)] text-[var(--accent-on)]'
                     : 'bg-[#16161A] text-[#9C9CA6] hover:text-[#ECECEF]'
                 }`}
               >
@@ -279,7 +279,7 @@ export function HabitDetailView({
                 onClick={() => setDayStatus(selectedCellKey, 'unlogged')}
                 className={`flex items-center justify-center gap-1 rounded-xl py-1.5 text-[11px] font-medium transition ${
                   !selectedLog
-                    ? 'bg-[#1C1C21] text-[#B9A8FF]'
+                    ? 'bg-[#1C1C21] text-[var(--accent-fg)]'
                     : 'bg-[#16161A] text-[#6B6B75] hover:text-[#9C9CA6]'
                 }`}
               >
@@ -331,12 +331,12 @@ export function HabitDetailView({
             return (
               <div
                 key={dk}
-                className="flex items-center justify-between rounded-xl border border-[#B9A8FF]/8 bg-[#0E0E11] px-3 py-2"
+                className="flex items-center justify-between rounded-xl border border-[var(--accent-fg)]/8 bg-[#0E0E11] px-3 py-2"
               >
                 <div className="text-xs">
                   <span className="font-medium text-[#ECECEF]">{info.weekday}</span>
                   <span className="mx-1.5 text-[#6B6B75]">•</span>
-                  <Numeric value={info.day} className="text-[#B9A8FF]" />{' '}
+                  <Numeric value={info.day} className="text-[var(--accent-fg)]" />{' '}
                   <span className="text-[#9C9CA6]">{info.month}</span>
                 </div>
 
@@ -347,7 +347,7 @@ export function HabitDetailView({
                     aria-label="ثبت انجام شد"
                     className={`rounded-lg px-2 py-1 text-[10px] font-medium ${
                       log?.status === 'completed'
-                        ? 'bg-[#6D4AFF] text-[#ECECEF]'
+                        ? 'bg-[var(--accent)] text-[var(--accent-on)]'
                         : 'bg-[#16161A] text-[#6B6B75]'
                     }`}
                   >
@@ -371,7 +371,7 @@ export function HabitDetailView({
                     aria-label="بدون ثبت"
                     className={`rounded-lg px-2 py-1 text-[10px] font-medium ${
                       !log
-                        ? 'bg-[#1C1C21] text-[#B9A8FF]'
+                        ? 'bg-[#1C1C21] text-[var(--accent-fg)]'
                         : 'bg-[#16161A] text-[#6B6B75]'
                     }`}
                   >

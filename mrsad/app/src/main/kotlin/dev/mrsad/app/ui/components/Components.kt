@@ -244,70 +244,58 @@ fun MrsadSurface(
         modifier = modifier
             .graphicsLayer { scaleX = scale; scaleY = scale }
             .shadow(
-                elevation = if (elevated) 14.dp else 10.dp,
+                elevation = 8.dp,
                 shape = effectiveShape,
-                ambientColor = Color.Black,
-                spotColor = Color.Black,
                 clip = false,
             )
             .clip(effectiveShape)
             .background(
                 Brush.verticalGradient(
                     listOf(
-                        if (elevated) Color(0xFF1D2432) else Color(0xFF161C27),
+                        if (elevated) Color(0xFF1D2432) else Color(0xFF171D28),
                         surfaceColor.copy(alpha = 0.96f),
                         Color(0xFF0A0D14),
                     ),
                 ),
             )
             .drawBehind {
-                if (size.width > 1f && size.height > 1f) {
-                    val glowR = (size.width * 0.78f).coerceAtLeast(1f)
-                    // 1. Ambient radial light reflection in the upper-left glass chamber
-                    drawCircle(
-                        brush = Brush.radialGradient(
-                            colors = listOf(
-                                (accent ?: colors.accent).copy(alpha = 0.16f + 0.08f * highlight),
-                                Color.Transparent,
-                            ),
-                            center = Offset(size.width * 0.22f, 0f),
-                            radius = glowR,
+                drawRect(
+                    brush = Brush.verticalGradient(
+                        listOf(
+                            colors.navy.copy(alpha = 0.16f),
+                            Color.Transparent,
                         ),
-                        radius = glowR,
-                        center = Offset(size.width * 0.22f, 0f),
-                    )
-                    // 2. Top-edge specular bevel highlight (machined titanium lip)
-                    drawRect(
-                        brush = Brush.verticalGradient(
-                            listOf(
-                                Color.White.copy(alpha = 0.22f + 0.08f * highlight),
-                                (accent ?: colors.metalLight).copy(alpha = 0.08f),
-                                Color.Transparent,
-                            ),
-                            startY = 0f,
-                            endY = 72f.coerceAtMost(size.height),
+                        startY = 0f,
+                        endY = size.height * 0.6f,
+                    ),
+                )
+                drawRect(
+                    brush = Brush.verticalGradient(
+                        listOf(
+                            Color.White.copy(alpha = 0.18f + 0.06f * highlight),
+                            (accent ?: colors.metalLight).copy(alpha = 0.08f),
+                            Color.Transparent,
                         ),
-                    )
-                    // 3. Bottom recessed depth trench
-                    drawRect(
-                        brush = Brush.verticalGradient(
-                            listOf(Color.Transparent, Color.Black.copy(alpha = 0.48f)),
-                            startY = (size.height - 84f).coerceAtLeast(0f),
-                            endY = size.height,
-                        ),
-                    )
-                }
+                        startY = 0f,
+                        endY = 92f,
+                    ),
+                )
+                drawRect(
+                    brush = Brush.verticalGradient(
+                        listOf(Color.Transparent, Color.Black.copy(alpha = 0.42f)),
+                        startY = size.height - 88f,
+                        endY = size.height,
+                    ),
+                )
             }
             .border(
-                width = 1.25.dp,
-                brush = Brush.linearGradient(
-                    colors = listOf(
-                        Color.White.copy(alpha = if (accent != null) 0.55f else 0.42f),
-                        (accent ?: colors.metalMid).copy(alpha = 0.32f),
-                        Color(0xFF0A0D14).copy(alpha = 0.85f),
+                width = 1.2.dp,
+                brush = Brush.verticalGradient(
+                    listOf(
+                        Color.White.copy(alpha = if (accent != null) 0.52f else 0.42f),
+                        (accent ?: colors.borderStrong).copy(alpha = 0.28f),
+                        Color(0xFF080B12).copy(alpha = 0.75f),
                     ),
-                    start = Offset(0f, 0f),
-                    end = Offset(420f, 420f),
                 ),
                 shape = effectiveShape,
             )

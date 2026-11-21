@@ -11,7 +11,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
@@ -34,7 +33,7 @@ import kotlin.math.sin
  * High-Detail Volumetric 3D Sculptures for the Four Core Capabilities (Master Prompt §2):
  *
  * - [ModuleSculptureType.TYPING]: 3D extruded mechanical keycap & aluminum chassis cluster.
- * - [ModuleSculptureType.READING]: 3D open tome with thick page-stack volume & floating glass prisms.
+ * - [ModuleSculptureType.READING]: 3D open tome with thick page-stack volume & floating glass prism.
  * - [ModuleSculptureType.EYE]: 3D shaded ocular sphere, radial iris fibers & corneal reflection.
  * - [ModuleSculptureType.BRAIN]: 3D solid-shaded geodesic polyhedron cortex (`Core3D` projection).
  *
@@ -83,7 +82,7 @@ fun ModuleSculpture3D(
     }
 
     Canvas(modifier = modifier) {
-        if (size.minDimension <= 2f) return@Canvas
+        if (size.minDimension <= 4f) return@Canvas
         if (colors.isNoir) {
             drawNoirSchematic(type, scratchPath, colors)
         } else {
@@ -111,18 +110,16 @@ private fun DrawScope.drawObsidianTyping3D(
     val cx = w * 0.5f
     val cy = h * 0.54f
 
-    // Ambient volumetric glow under the CNC chassis
     drawCircle(
         brush = Brush.radialGradient(
-            colors = listOf(colors.accent.copy(alpha = 0.25f * intensity), Color.Transparent),
+            colors = listOf(colors.accent.copy(alpha = 0.24f * intensity), Color.Transparent),
             center = Offset(cx, cy),
-            radius = w * 0.50f,
+            radius = w * 0.48f,
         ),
-        radius = w * 0.50f,
+        radius = w * 0.48f,
         center = Offset(cx, cy),
     )
 
-    // 3D Isometric CNC Aluminum Chassis Base (Top Deck + Left Front Wall + Right Shadow Wall)
     val topX = cx
     val topY = cy - h * 0.30f
     val leftX = cx - w * 0.44f
@@ -133,14 +130,14 @@ private fun DrawScope.drawObsidianTyping3D(
     val botY = cy + h * 0.22f
     val wallDepth = h * 0.14f
 
-    // Drop shadow on floor
+    // Floor drop shadow
     path.reset()
     path.moveTo(leftX, leftY + wallDepth + h * 0.04f)
     path.lineTo(botX, botY + wallDepth + h * 0.06f)
     path.lineTo(rightX, rightY + wallDepth + h * 0.04f)
     path.lineTo(topX, topY + wallDepth)
     path.close()
-    drawPath(path, Color.Black.copy(alpha = 0.65f))
+    drawPath(path, Color.Black.copy(alpha = 0.62f))
 
     // Left Front Extruded Chassis Wall (lit bevel)
     path.reset()
@@ -149,14 +146,7 @@ private fun DrawScope.drawObsidianTyping3D(
     path.lineTo(botX, botY + wallDepth)
     path.lineTo(leftX, leftY + wallDepth)
     path.close()
-    drawPath(
-        path = path,
-        brush = Brush.linearGradient(
-            colors = listOf(Color(0xFF3E4A5E), Color(0xFF1B2230)),
-            start = Offset(leftX, leftY),
-            end = Offset(botX, botY + wallDepth),
-        ),
-    )
+    drawPath(path, Color(0xFF344054))
 
     // Right Extruded Chassis Wall (deep shadow side)
     path.reset()
@@ -165,14 +155,7 @@ private fun DrawScope.drawObsidianTyping3D(
     path.lineTo(rightX, rightY + wallDepth)
     path.lineTo(botX, botY + wallDepth)
     path.close()
-    drawPath(
-        path = path,
-        brush = Brush.linearGradient(
-            colors = listOf(Color(0xFF263042), Color(0xFF0D121B)),
-            start = Offset(botX, botY),
-            end = Offset(rightX, rightY + wallDepth),
-        ),
-    )
+    drawPath(path, Color(0xFF1A2230))
 
     // Top CNC Machined Deck
     path.reset()
@@ -181,18 +164,11 @@ private fun DrawScope.drawObsidianTyping3D(
     path.lineTo(botX, botY)
     path.lineTo(leftX, leftY)
     path.close()
-    drawPath(
-        path = path,
-        brush = Brush.linearGradient(
-            colors = listOf(Color(0xFF2E384B), Color(0xFF151B26)),
-            start = Offset(topX, topY),
-            end = Offset(botX, botY),
-        ),
-    )
+    drawPath(path, Color(0xFF242E40))
     drawPath(
         path = path,
         color = colors.metalLight.copy(alpha = 0.55f),
-        style = Stroke(width = 1.3.dp.toPx(), join = StrokeJoin.Round),
+        style = Stroke(width = 1.2.dp.toPx()),
     )
 
     // 4 Sculpted 3D Isometric Keycaps in 2×2 grid on the deck
@@ -207,22 +183,15 @@ private fun DrawScope.drawObsidianTyping3D(
     val keyHeight = h * 0.095f
 
     keyCoords.forEach { (kx, ky, idx) ->
-        val travel = if (idx == 3) (0.5f + 0.5f * sin(phase + idx)) * (h * 0.025f) else 0f
+        val travel = if (idx == 3) (0.5f + 0.5f * sin(phase + idx)) * (h * 0.022f) else 0f
         val topKy = ky - keyHeight + travel
         val isHeroKey = idx == 3
 
         // Switch underglow well
         drawCircle(
-            brush = Brush.radialGradient(
-                colors = listOf(
-                    (if (isHeroKey) colors.accent else colors.metalLight).copy(alpha = 0.55f),
-                    Color.Transparent,
-                ),
-                center = Offset(kx, ky + kh * 0.3f),
-                radius = kw * 1.15f,
-            ),
-            radius = kw * 1.15f,
-            center = Offset(kx, ky + kh * 0.3f),
+            color = (if (isHeroKey) colors.accent else colors.metalLight).copy(alpha = 0.35f),
+            radius = kw * 0.85f,
+            center = Offset(kx, ky + kh * 0.2f),
         )
 
         // Left Front 3D Keycap Skirt
@@ -234,13 +203,7 @@ private fun DrawScope.drawObsidianTyping3D(
         path.close()
         drawPath(
             path = path,
-            brush = Brush.verticalGradient(
-                colors = if (isHeroKey) {
-                    listOf(colors.accent.copy(alpha = 0.85f), Color(0xFF283A52))
-                } else {
-                    listOf(Color(0xFF7B889E), Color(0xFF343E50))
-                },
-            ),
+            color = if (isHeroKey) colors.accent.copy(alpha = 0.78f) else colors.metalMid,
         )
 
         // Right Shadow 3D Keycap Skirt
@@ -252,13 +215,7 @@ private fun DrawScope.drawObsidianTyping3D(
         path.close()
         drawPath(
             path = path,
-            brush = Brush.verticalGradient(
-                colors = if (isHeroKey) {
-                    listOf(Color(0xFF4C688A), Color(0xFF182436))
-                } else {
-                    listOf(Color(0xFF4A5568), Color(0xFF1D2432))
-                },
-            ),
+            color = if (isHeroKey) Color(0xFF3A5272) else colors.metalDark,
         )
 
         // Top Sculpted Keycap Dish
@@ -270,26 +227,18 @@ private fun DrawScope.drawObsidianTyping3D(
         path.close()
         drawPath(
             path = path,
-            brush = Brush.linearGradient(
-                colors = if (isHeroKey) {
-                    listOf(Color.White, colors.accent, Color(0xFF7896B8))
-                } else {
-                    listOf(Color(0xFFF5F8FC), colors.metalLight, colors.metalMid)
-                },
-                start = Offset(kx - kw, topKy - kh),
-                end = Offset(kx + kw, topKy + kh),
-            ),
+            color = if (isHeroKey) Color(0xFFEAF3FF) else colors.metalLight,
         )
         drawPath(
             path = path,
-            color = Color.White.copy(alpha = 0.80f),
-            style = Stroke(width = 0.9.dp.toPx(), join = StrokeJoin.Round),
+            color = Color.White.copy(alpha = 0.85f),
+            style = Stroke(width = 0.9.dp.toPx()),
         )
     }
 }
 
 /**
- * 2. READING — 3D Sculpted Open Tome with Thick Page-Stack Volume & Floating Glass Prisms.
+ * 2. READING — 3D Sculpted Open Tome with Thick Page-Stack Volume & Floating Glass Prism.
  */
 private fun DrawScope.drawObsidianReading3D(
     phase: Float,
@@ -301,9 +250,8 @@ private fun DrawScope.drawObsidianReading3D(
     val h = size.height
     val cx = w * 0.5f
     val cy = h * 0.54f
-    val lift = sin(phase) * (h * 0.02f)
+    val lift = sin(phase) * (h * 0.018f)
 
-    // Ambient volumetric backlight
     drawCircle(
         brush = Brush.radialGradient(
             colors = listOf(colors.accent.copy(alpha = 0.24f * intensity), Color.Transparent),
@@ -312,17 +260,6 @@ private fun DrawScope.drawObsidianReading3D(
         ),
         radius = w * 0.48f,
         center = Offset(cx, cy - h * 0.04f),
-    )
-
-    // Floor shadow under the 3D book
-    drawOval(
-        brush = Brush.radialGradient(
-            colors = listOf(Color.Black.copy(alpha = 0.68f), Color.Transparent),
-            center = Offset(cx, cy + h * 0.25f),
-            radius = w * 0.42f,
-        ),
-        topLeft = Offset(cx - w * 0.40f, cy + h * 0.16f),
-        size = Size(w * 0.80f, h * 0.18f),
     )
 
     val spineTop = cy - h * 0.20f + lift
@@ -336,14 +273,7 @@ private fun DrawScope.drawObsidianReading3D(
     path.lineTo(cx - w * 0.38f, spineBot - h * 0.08f + pageThickness)
     path.lineTo(cx, spineBot + pageThickness)
     path.close()
-    drawPath(
-        path = path,
-        brush = Brush.linearGradient(
-            colors = listOf(Color(0xFF7B889E), Color(0xFF283244)),
-            start = Offset(cx - w * 0.38f, spineBot),
-            end = Offset(cx, spineBot + pageThickness),
-        ),
-    )
+    drawPath(path, colors.metalMid)
 
     // Right Page Block 3D Front Thickness Wall
     path.reset()
@@ -352,61 +282,34 @@ private fun DrawScope.drawObsidianReading3D(
     path.lineTo(cx + w * 0.38f, spineBot - h * 0.08f + pageThickness)
     path.lineTo(cx, spineBot + pageThickness)
     path.close()
-    drawPath(
-        path = path,
-        brush = Brush.linearGradient(
-            colors = listOf(Color(0xFF566378), Color(0xFF1A2230)),
-            start = Offset(cx, spineBot),
-            end = Offset(cx + w * 0.38f, spineBot + pageThickness),
-        ),
-    )
+    drawPath(path, colors.metalDark)
 
-    // Left Sculpted 3D Curved Page Surface
+    // Left Sculpted 3D Page Surface
     path.reset()
     path.moveTo(cx, spineTop)
-    path.cubicTo(
-        cx - w * 0.14f, spineTop - h * 0.08f,
-        cx - w * 0.28f, spineTop - h * 0.08f,
-        cx - w * 0.38f, spineTop - h * 0.04f,
-    )
+    path.lineTo(cx - w * 0.38f, spineTop - h * 0.06f)
     path.lineTo(cx - w * 0.38f, spineBot - h * 0.08f)
-    path.cubicTo(
-        cx - w * 0.26f, spineBot - h * 0.12f,
-        cx - w * 0.12f, spineBot - h * 0.08f,
-        cx, spineBot,
-    )
+    path.lineTo(cx, spineBot)
     path.close()
-    drawPath(
-        path = path,
-        brush = Brush.horizontalGradient(
-            colors = listOf(Color(0xFFF3F7FC), colors.metalLight, Color(0xFF6B778D)),
-            startX = cx - w * 0.38f,
-            endX = cx,
-        ),
-    )
+    drawPath(path, colors.metalLight)
+    drawPath(path, Color.White.copy(alpha = 0.75f), style = Stroke(width = 1.dp.toPx()))
 
-    // Right Sculpted 3D Curved Page Surface
+    // Right Sculpted 3D Page Surface
     path.reset()
     path.moveTo(cx, spineTop)
-    path.cubicTo(
-        cx + w * 0.14f, spineTop - h * 0.08f,
-        cx + w * 0.28f, spineTop - h * 0.08f,
-        cx + w * 0.38f, spineTop - h * 0.04f,
-    )
+    path.lineTo(cx + w * 0.38f, spineTop - h * 0.06f)
     path.lineTo(cx + w * 0.38f, spineBot - h * 0.08f)
-    path.cubicTo(
-        cx + w * 0.26f, spineBot - h * 0.12f,
-        cx + w * 0.12f, spineBot - h * 0.08f,
-        cx, spineBot,
-    )
+    path.lineTo(cx, spineBot)
     path.close()
-    drawPath(
-        path = path,
-        brush = Brush.horizontalGradient(
-            colors = listOf(Color(0xFF5A657A), colors.metalMid, Color(0xFFDCE5F2)),
-            startX = cx,
-            endX = cx + w * 0.38f,
-        ),
+    drawPath(path, Color(0xFFB6C2D4))
+    drawPath(path, Color.White.copy(alpha = 0.55f), style = Stroke(width = 1.dp.toPx()))
+
+    // Central 3D Spine Ridge
+    drawLine(
+        color = Color(0xFF1A2232),
+        start = Offset(cx, spineTop),
+        end = Offset(cx, spineBot + pageThickness),
+        strokeWidth = 2.4.dp.toPx(),
     )
 
     // Levitating 3D Glass RSVP Prism Plane above the book
@@ -417,38 +320,23 @@ private fun DrawScope.drawObsidianReading3D(
     path.lineTo(cx + w * 0.22f, prismY + h * 0.12f)
     path.lineTo(cx - w * 0.22f, prismY + h * 0.16f)
     path.close()
-    drawPath(
-        path = path,
-        brush = Brush.linearGradient(
-            colors = listOf(
-                Color.White.copy(alpha = 0.50f),
-                colors.accent.copy(alpha = 0.28f),
-            ),
-            start = Offset(cx - w * 0.26f, prismY),
-            end = Offset(cx + w * 0.22f, prismY + h * 0.14f),
-        ),
-    )
-    drawPath(
-        path = path,
-        color = Color.White.copy(alpha = 0.85f),
-        style = Stroke(width = 1.2.dp.toPx(), join = StrokeJoin.Round),
-    )
+    drawPath(path, colors.accent.copy(alpha = 0.38f))
+    drawPath(path, Color.White.copy(alpha = 0.85f), style = Stroke(width = 1.2.dp.toPx()))
 
-    // Glowing kinetic reading lines on the pages & prism
     for (row in 0..2) {
         val ly = spineTop + h * (0.06f + row * 0.07f)
         drawLine(
             color = Color(0xFF1F2838).copy(alpha = 0.72f),
             start = Offset(cx - w * 0.30f, ly - h * 0.03f),
             end = Offset(cx - w * 0.08f, ly),
-            strokeWidth = 1.8.dp.toPx(),
+            strokeWidth = 1.6.dp.toPx(),
             cap = StrokeCap.Round,
         )
         drawLine(
             color = Color(0xFF1F2838).copy(alpha = 0.72f),
             start = Offset(cx + w * 0.08f, ly),
             end = Offset(cx + w * 0.30f, ly - h * 0.03f),
-            strokeWidth = 1.8.dp.toPx(),
+            strokeWidth = 1.6.dp.toPx(),
             cap = StrokeCap.Round,
         )
     }
@@ -471,19 +359,21 @@ private fun DrawScope.drawObsidianEye3D(
 
     // 1. Outer 3D Machined Gimbal Housing Ring
     drawCircle(
-        color = Color.Black.copy(alpha = 0.65f),
+        color = Color.Black.copy(alpha = 0.62f),
         radius = r * 1.18f,
         center = Offset(cx, cy + r * 0.08f),
     )
     drawCircle(
-        brush = Brush.linearGradient(
-            colors = listOf(Color(0xFFF2F6FC), colors.metalMid, Color(0xFF18202E)),
-            start = Offset(cx - r, cy - r),
-            end = Offset(cx + r, cy + r),
-        ),
+        color = colors.metalMid,
         radius = r * 1.12f,
         center = Offset(cx, cy),
         style = Stroke(width = r * 0.14f),
+    )
+    drawCircle(
+        color = Color.White.copy(alpha = 0.75f),
+        radius = r * 1.16f,
+        center = Offset(cx, cy),
+        style = Stroke(width = 1.dp.toPx()),
     )
 
     // 2. 3D Shaded Sclera / Metallic Globe
@@ -521,18 +411,16 @@ private fun DrawScope.drawObsidianEye3D(
         center = Offset(gazeX, gazeY),
     )
 
-    // 20 Radial 3D Iris Fibers
-    val fibers = 20
+    val fibers = 16
     for (i in 0 until fibers) {
         val angle = (2.0 * PI * i / fibers).toFloat() + phase * 0.12f
-        val innerR = irisR * 0.38f
-        val outerR = irisR * 0.92f
+        val innerR = irisR * 0.40f
+        val outerR = irisR * 0.90f
         drawLine(
             color = Color.White.copy(alpha = if (i % 2 == 0) 0.45f else 0.22f),
             start = Offset(gazeX + cos(angle) * innerR, gazeY + sin(angle) * innerR),
             end = Offset(gazeX + cos(angle) * outerR, gazeY + sin(angle) * outerR),
-            strokeWidth = 1.2.dp.toPx(),
-            cap = StrokeCap.Round,
+            strokeWidth = 1.1.dp.toPx(),
         )
     }
 
@@ -544,13 +432,13 @@ private fun DrawScope.drawObsidianEye3D(
         center = Offset(gazeX, gazeY),
     )
     drawCircle(
-        color = colors.accent.copy(alpha = 0.75f),
+        color = colors.accent.copy(alpha = 0.78f),
         radius = pupilR,
         center = Offset(gazeX, gazeY),
         style = Stroke(width = 1.2.dp.toPx()),
     )
 
-    // 5. 3D Curved Corneal Specular Highlights (makes the eye unmistakably 3D spherical!)
+    // 5. 3D Curved Corneal Specular Highlights
     drawCircle(
         color = Color.White.copy(alpha = 0.92f),
         radius = r * 0.15f,
@@ -560,16 +448,6 @@ private fun DrawScope.drawObsidianEye3D(
         color = Color.White.copy(alpha = 0.55f),
         radius = r * 0.06f,
         center = Offset(gazeX + irisR * 0.32f, gazeY + irisR * 0.30f),
-    )
-
-    // 6. Sculpted 3D Metallic Upper & Lower Eyelid Bevels
-    path.reset()
-    path.moveTo(cx - r * 1.15f, cy)
-    path.quadraticTo(cx, cy - r * 1.05f, cx + r * 1.15f, cy)
-    drawPath(
-        path = path,
-        color = Color.White.copy(alpha = 0.65f),
-        style = Stroke(width = 2.0.dp.toPx(), cap = StrokeCap.Round),
     )
 }
 
@@ -597,18 +475,16 @@ private fun DrawScope.drawObsidianBrain3D(
         time = phase,
     )
 
-    // Ambient volumetric halo + floor shadow
     drawCircle(
         brush = Brush.radialGradient(
-            colors = listOf(colors.accent.copy(alpha = 0.28f * intensity), Color.Transparent),
+            colors = listOf(colors.accent.copy(alpha = 0.26f * intensity), Color.Transparent),
             center = Offset(cx, cy),
-            radius = r * 1.5f,
+            radius = r * 1.45f,
         ),
-        radius = r * 1.5f,
+        radius = r * 1.45f,
         center = Offset(cx, cy),
     )
 
-    // Solid Shaded 3D Facets (ordered back to front)
     for (idx in 0 until engine.faceCount) {
         val f = engine.faceOrder[idx]
         if (engine.faceNormalZ[f] <= 0f) continue
@@ -638,29 +514,18 @@ private fun DrawScope.drawObsidianBrain3D(
         drawPath(
             path = path,
             color = Color(0xFF0A0E17).copy(alpha = 0.85f),
-            style = Stroke(width = 1.6.dp.toPx(), join = StrokeJoin.Round),
-        )
-        drawPath(
-            path = path,
-            color = Color.White.copy(alpha = (0.35f + 0.55f * shade).coerceIn(0f, 1f)),
-            style = Stroke(width = 0.8.dp.toPx(), join = StrokeJoin.Round),
+            style = Stroke(width = 1.4.dp.toPx()),
         )
     }
 
-    // 3D Spherical Neural Synapse Nodes on Front Vertices
     for (v in 0 until engine.vertexCount) {
         if (engine.screenZ[v] < 0f) continue
         val vx = engine.screenX[v]
         val vy = engine.screenY[v]
-        val nr = r * 0.085f
+        val nr = r * 0.08f
         drawCircle(
             color = Color.White,
             radius = nr,
-            center = Offset(vx, vy),
-        )
-        drawCircle(
-            color = colors.accent.copy(alpha = 0.65f),
-            radius = nr * 1.7f,
             center = Offset(vx, vy),
         )
     }

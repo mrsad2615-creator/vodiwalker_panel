@@ -114,14 +114,14 @@ run_one() {
     # in effect), so capture it with every test.
     {
         echo "----- LOGCAT $method -----"
-        adb logcat -d -v brief 2>/dev/null | tail -n 400
+        timeout 10 adb logcat -d -v brief 2>/dev/null | tail -n 400
     } >> "$LOG"
-    adb logcat -c >/dev/null 2>&1
+    timeout 5 adb logcat -c >/dev/null 2>&1
 
     # A killed run can leave the app process behind; stop it so the next test
     # starts from a clean device.
-    adb shell am force-stop "$APP_PKG" >/dev/null 2>&1
-    adb shell am force-stop dev.mrsad.app >/dev/null 2>&1
+    timeout 5 adb shell am force-stop "$APP_PKG" >/dev/null 2>&1
+    timeout 5 adb shell am force-stop dev.mrsad.app >/dev/null 2>&1
 
     return $rc
 }
@@ -151,6 +151,11 @@ if [ "$build_rc" -ne 0 ]; then
 fi
 
 for m in $METHODS; do
+    if ! timeout 5 adb get-state >/dev/null 2>&1; then
+        echo "===== EMULATOR DISCONNECTED BEFORE $m =====" >> "$LOG"
+        FAILED=$((FAILED + 1))
+        break
+    fi
     if run_one "$m"; then
         PASSED=$((PASSED + 1))
     else

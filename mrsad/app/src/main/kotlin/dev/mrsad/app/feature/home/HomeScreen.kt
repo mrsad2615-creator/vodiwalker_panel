@@ -607,8 +607,8 @@ private fun ObsidianHeroCore(
                 ),
             )
             .border(
-                width = 1.25.dp,
-                brush = Brush.linearGradient(
+                width = 1.2.dp,
+                brush = Brush.verticalGradient(
                     colors = listOf(
                         Color.White.copy(alpha = 0.42f),
                         colors.metalMid.copy(alpha = 0.28f),

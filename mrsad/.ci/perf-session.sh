@@ -43,7 +43,7 @@ mkdir -p "$(dirname "$REPORT")"
 # is the way into the private storage of the application, where the
 # benchmark wrote its report and its pictures.
 adb root >/dev/null 2>&1 || true
-adb wait-for-device >/dev/null 2>&1 || true
+timeout 15 adb wait-for-device >/dev/null 2>&1 || exit 1
 
 # ---- 2. Install -------------------------------------------------------------
 # The application is removed first: the two builds of the campaign are

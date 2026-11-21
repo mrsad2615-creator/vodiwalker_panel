@@ -166,23 +166,23 @@ class HomeViewModel(container: AppContainer) : ViewModel() {
             emptyList()
         }
 
-        val progression = ProgressionEngine.summarize(
-            todayIso = date,
-            activeDates = activeSet,
-            streakDays = streak,
-            typingSessions = head.totalSessions,
-            bestWpm = head.bestWpm ?: 0.0,
-            bestAccuracy = head.bestAccuracy ?: 0.0,
-            readingSessions = readEvents.size,
-            bestReadingWpm = (bestReadWpm ?: 0).toDouble(),
-            eyeSessions = eyeEvents.size,
-            bestEyeScore = eyeEvents.maxOfOrNull { it.primaryMetric.toInt() } ?: 0,
-            mindSessions = mindEvents.size,
-            bestMindScore = mindEvents.maxOfOrNull { it.primaryMetric.toInt() } ?: 0,
-            focusMinutes = focusEvents.sumOf { it.minutes },
-            aiSessions = aiEvents.size,
-            totalMinutes = totalMinutes,
-            weeklyMinutes = weeklyMinutesSum,
+        val progression = ProgressionEngine.compute(
+            ProgressionEngine.TelemetryInput(
+                totalMinutes = totalMinutes,
+                totalSessions = head.totalSessions + readEvents.size + eyeEvents.size + mindEvents.size,
+                todayMinutes = head.minutes,
+                todaySessions = head.sessions,
+                currentStreak = streak,
+                longestStreak = streak,
+                bestWpm = head.bestWpm?.toInt() ?: 0,
+                bestAccuracy = head.bestAccuracy ?: 0.0,
+                bestReadingWpm = bestReadWpm ?: 0,
+                eyeSessions = eyeEvents.size,
+                mindSessions = mindEvents.size,
+                focusSessions = focusEvents.size,
+                activeDates = activeSet,
+                todayIso = date,
+            ),
         )
 
         HomeState(

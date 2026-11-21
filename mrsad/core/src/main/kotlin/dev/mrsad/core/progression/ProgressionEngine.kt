@@ -38,7 +38,9 @@ object ProgressionEngine {
         val currentLevelXp: Int,
         val nextLevelSpanXp: Int,
         val progress: Float,
-    )
+    ) {
+        val progressFraction: Float get() = progress
+    }
 
     data class AchievementBadge(
         val id: String,
@@ -65,8 +67,10 @@ object ProgressionEngine {
         val xpReward: Int,
         val completed: Boolean,
     ) {
+        val rewardXp: Int get() = xpReward
         val progress: Float
             get() = (current.toFloat() / target.coerceAtLeast(1).toFloat()).coerceIn(0f, 1f)
+        val progressFraction: Float get() = progress
     }
 
     data class ProgressionSummary(
@@ -76,6 +80,8 @@ object ProgressionEngine {
         val weeklyChallenges: List<WeeklyChallengeStatus>,
         val dailyGoalProgress: Float,
     ) {
+        val levelInfo: LevelStatus get() = levelStatus
+        val calendarDays: List<CalendarDayCell> get() = calendar28Days
         val unlockedCount: Int get() = achievements.count { it.unlocked }
     }
 
@@ -255,8 +261,12 @@ object ProgressionEngine {
         return list
     }
 
-    private fun buildCalendar28Days(activeDates: Set<String>, todayIso: String): List<CalendarDayCell> {
-        val window = AnalyticsMath.lastDays(todayIso, 28)
+    fun buildStreakCalendar(
+        todayIso: String,
+        activeDates: Set<String>,
+        windowDays: Int = 28,
+    ): List<CalendarDayCell> {
+        val window = AnalyticsMath.lastDays(todayIso, windowDays)
         return window.map { iso ->
             CalendarDayCell(
                 dateIso = iso,
@@ -265,6 +275,9 @@ object ProgressionEngine {
             )
         }
     }
+
+    private fun buildCalendar28Days(activeDates: Set<String>, todayIso: String): List<CalendarDayCell> =
+        buildStreakCalendar(todayIso, activeDates, 28)
 
     private fun buildWeeklyChallenges(input: TelemetryInput): List<WeeklyChallengeStatus> {
         val last7 = AnalyticsMath.lastDays(input.todayIso, 7)

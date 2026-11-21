@@ -264,6 +264,9 @@ object MrsadIcons {
         else -> NoirStudio
     }
 
+    val Target: List<IconFacet> get() = Focus
+    val Spark: List<IconFacet> get() = Assistant
+
     private val NoirHome = listOf(
         linearPoly(true, 3.5f, 10.5f, 12f, 3.5f, 20.5f, 10.5f, 20.5f, 20f, 3.5f, 20f),
         linearPoly(false, 9.5f, 20f, 9.5f, 14f, 14.5f, 14f, 14.5f, 20f),

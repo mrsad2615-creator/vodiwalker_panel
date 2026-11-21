@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -135,48 +136,20 @@ fun HomeScreen(
     val type = MrsadTheme.type
     val motion = MrsadTheme.motion
     val reveal = rememberRevealProgress()
-    val opening = rememberOpeningProgress()
     val listState = rememberLazyListState()
-
-    val isTopBarCollapsed by remember {
-        derivedStateOf {
-            listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 36
-        }
-    }
-
     var selectedSectionTab by rememberSaveable { mutableStateOf("plan") }
 
     AmbientBackground(PageEnvironment.HOME) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .graphicsLayer {
-                    val open = opening.value
-                    alpha = open
-                    val settle = 0.97f + 0.03f * open
-                    scaleX = settle
-                    scaleY = settle
-                },
-        ) {
-            // Pinned Auto-Collapsing Flagship Top Bar
-            HomeAutoCollapsingTopBar(
-                state = state,
-                collapsed = isTopBarCollapsed,
-                persianNumerals = settings.persianNumerals,
-                onOpenStudio = { onNavigate(Routes.STUDIO) },
-                onOpenArena = { onNavigate(Routes.ARENA) },
-            )
-
+        Box(modifier = Modifier.fillMaxSize()) {
             LazyColumn(
                 state = listState,
                 modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
+                    .fillMaxSize()
                     .padding(horizontal = MrsadTokens.Spacing.md)
                     .padding(bottom = LocalBottomBarClearance.current),
-                verticalArrangement = Arrangement.spacedBy(MrsadTokens.Spacing.md),
+                verticalArrangement = Arrangement.spacedBy(MrsadTokens.Spacing.sm),
                 contentPadding = PaddingValues(
-                    top = MrsadTokens.Spacing.sm,
+                    top = 74.dp,
                     bottom = MrsadTokens.Spacing.lg,
                 ),
             ) {
@@ -207,7 +180,7 @@ fun HomeScreen(
                             Row(horizontalArrangement = Arrangement.spacedBy(MrsadTokens.Spacing.xs)) {
                                 PillarSculptureCard(
                                     modifier = Modifier.weight(1f),
-                                    indexCode = "01 · TYPING",
+                                    indexCode = "01 · TYPE",
                                     title = "سرعت تایپ",
                                     subtitle = state.bestWpm?.let { "رکورد: ${formatInt(it, settings.persianNumerals)} کلمه/دقیقه" }
                                         ?: "موتور استاندارد WPM",
@@ -217,7 +190,7 @@ fun HomeScreen(
                                 )
                                 PillarSculptureCard(
                                     modifier = Modifier.weight(1f),
-                                    indexCode = "02 · READING",
+                                    indexCode = "02 · READ",
                                     title = "تندخوانی و درک",
                                     subtitle = state.bestReadingWpm?.let { "رکورد: ${formatInt(it, settings.persianNumerals)} کلمه/دقیقه" }
                                         ?: "خوانش هدایت‌شده و RSVP",
@@ -242,7 +215,7 @@ fun HomeScreen(
                                 )
                                 PillarSculptureCard(
                                     modifier = Modifier.weight(1f),
-                                    indexCode = "04 · BRAIN",
+                                    indexCode = "04 · MIND",
                                     title = "تمرین مغز",
                                     subtitle = if (state.mindSessions > 0) {
                                         "${formatInt(state.mindSessions, settings.persianNumerals)} جلسه • امتیاز ${formatInt(state.avgMindScore, settings.persianNumerals)}"
@@ -357,6 +330,16 @@ fun HomeScreen(
                     }
                 }
             }
+
+            // Pinned Auto-Collapsing Flagship Top Bar (overlay inside Box so LazyColumn height never re-measures on scroll)
+            HomeAutoCollapsingTopBar(
+                state = state,
+                listState = listState,
+                persianNumerals = settings.persianNumerals,
+                onOpenStudio = { onNavigate(Routes.STUDIO) },
+                onOpenArena = { onNavigate(Routes.ARENA) },
+                modifier = Modifier.align(Alignment.TopCenter),
+            )
         }
     }
 }
@@ -404,22 +387,29 @@ private fun accentFor(module: Module): Color = when (module) {
 @Composable
 private fun HomeAutoCollapsingTopBar(
     state: HomeState,
-    collapsed: Boolean,
+    listState: androidx.compose.foundation.lazy.LazyListState,
     persianNumerals: Boolean,
     onOpenStudio: () -> Unit,
     onOpenArena: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val colors = MrsadTheme.colors
     val type = MrsadTheme.type
     val levelInfo = state.progression?.levelInfo
+    val collapsed by remember {
+        derivedStateOf {
+            listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 36
+        }
+    }
 
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
+            .graphicsLayer()
             .background(colors.background.copy(alpha = 0.96f))
             .padding(
                 horizontal = MrsadTokens.Spacing.md,
-                vertical = if (collapsed) 6.dp else 8.dp,
+                vertical = if (collapsed) 4.dp else 6.dp,
             ),
     ) {
         Row(
@@ -432,14 +422,14 @@ private fun HomeAutoCollapsingTopBar(
                     style = if (collapsed) {
                         type.title.copy(fontWeight = FontWeight.Bold, letterSpacing = 3.sp)
                     } else {
-                        type.headline.copy(fontSize = 24.sp, lineHeight = 30.sp, letterSpacing = 3.5.sp)
+                        type.headline.copy(fontSize = 23.sp, lineHeight = 28.sp, letterSpacing = 3.5.sp)
                     },
                     color = colors.textPrimary,
                     modifier = Modifier.testTag(MrsadTestTags.HOME_BRAND),
                 )
                 if (!collapsed) {
                     Text(
-                        text = "زیست‌بوم رشد شناختی • OBSIDIAN SPECTRUM",
+                        text = "زیست‌بوم رشد شناختی • OBSIDIAN",
                         style = type.caption,
                         color = colors.textSecondary,
                         maxLines = 1,
@@ -449,14 +439,14 @@ private fun HomeAutoCollapsingTopBar(
             }
 
             if (levelInfo != null) {
-                MrsadChip(
+                HeaderCompactPill(
                     text = "سطح ${formatInt(levelInfo.level, persianNumerals)}",
                     tint = ObsidianSpectrum.BrightBlue,
                     onClick = onOpenArena,
                 )
                 Spacer(Modifier.width(6.dp))
                 if (!collapsed) {
-                    MrsadChip(
+                    HeaderCompactPill(
                         text = "استودیو",
                         tint = ObsidianSpectrum.Lavender,
                         onClick = onOpenStudio,
@@ -468,7 +458,7 @@ private fun HomeAutoCollapsingTopBar(
             // Brand mark box — never wrapped in a clickable parent so HOME_BRAND_MARK remains directly addressable
             Box(
                 Modifier
-                    .size(if (collapsed) 36.dp else 40.dp)
+                    .size(if (collapsed) 34.dp else 38.dp)
                     .clip(RoundedCornerShape(MrsadTokens.Radius.md))
                     .background(colors.surfaceHigh)
                     .border(
@@ -479,7 +469,7 @@ private fun HomeAutoCollapsingTopBar(
                 contentAlignment = Alignment.Center,
             ) {
                 MrsadMarkView(
-                    size = if (collapsed) 22.dp else 25.dp,
+                    size = if (collapsed) 22.dp else 24.dp,
                     monochrome = false,
                     modifier = Modifier.testTag(MrsadTestTags.HOME_BRAND_MARK),
                     contentDescription = "MRSAD",
@@ -489,11 +479,42 @@ private fun HomeAutoCollapsingTopBar(
 
         Box(
             Modifier
-                .padding(top = 6.dp)
+                .padding(top = 5.dp)
                 .fillMaxWidth()
                 .height(1.dp)
                 .background(ObsidianSpectrum.BrightBlue.copy(alpha = 0.35f)),
         )
+    }
+}
+
+@Composable
+private fun HeaderCompactPill(
+    text: String,
+    tint: Color,
+    onClick: () -> Unit,
+) {
+    val colors = MrsadTheme.colors
+    val shape = RoundedCornerShape(MrsadTokens.Radius.pill)
+    Box(
+        modifier = Modifier
+            .heightIn(min = MrsadTokens.TouchTarget)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Box(
+            modifier = Modifier
+                .clip(shape)
+                .background(tint.copy(alpha = 0.16f))
+                .border(1.dp, tint.copy(alpha = 0.48f), shape)
+                .padding(horizontal = 10.dp, vertical = 4.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text = text,
+                style = MrsadTheme.type.caption.copy(color = colors.textPrimary, fontWeight = FontWeight.Medium),
+                maxLines = 1,
+            )
+        }
     }
 }
 
@@ -627,9 +648,9 @@ private fun ObsidianSpectrumWave(
         motion.animationsEnabled &&
         motion.quality != GraphicsQuality.PERFORMANCE
 
-    val phase = if (animate) {
+    val phaseState = if (animate) {
         val transition = rememberInfiniteTransition(label = "spectrum_wave")
-        val p by transition.animateFloat(
+        transition.animateFloat(
             initialValue = 0f,
             targetValue = (2.0 * PI).toFloat(),
             animationSpec = infiniteRepeatable(
@@ -638,9 +659,8 @@ private fun ObsidianSpectrumWave(
             ),
             label = "wave_phase",
         )
-        p
     } else {
-        0.95f
+        null
     }
 
     val nodeSpectrum = remember {
@@ -655,8 +675,9 @@ private fun ObsidianSpectrumWave(
         )
     }
 
-    Canvas(modifier = modifier) {
+    Canvas(modifier = modifier.graphicsLayer()) {
         if (size.width <= 4f || size.height <= 4f) return@Canvas
+        val phase = phaseState?.value ?: 0.95f
         val w = size.width
         val h = size.height
         val midY = h * 0.56f
@@ -746,13 +767,22 @@ private fun PillarSculptureCard(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            MrsadChip(
-                text = indexCode,
-                tint = spectralAccent,
-            )
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(MrsadTokens.Radius.pill))
+                    .background(spectralAccent.copy(alpha = 0.16f))
+                    .border(1.dp, spectralAccent.copy(alpha = 0.48f), RoundedCornerShape(MrsadTokens.Radius.pill))
+                    .padding(horizontal = 8.dp, vertical = 3.dp),
+            ) {
+                Text(
+                    text = indexCode,
+                    style = type.caption.copy(color = colors.textPrimary, fontWeight = FontWeight.Medium),
+                    maxLines = 1,
+                )
+            }
             ModuleSculpture3D(
                 type = sculptureType,
-                modifier = Modifier.size(58.dp),
+                modifier = Modifier.size(48.dp),
             )
         }
         Text(

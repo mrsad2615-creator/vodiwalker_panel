@@ -140,7 +140,7 @@ export function HabitModal({ open, habit, onClose, onDeleted }: HabitModalProps)
               type="button"
               onClick={handleDelete}
               aria-label="حذف عادت"
-              className="flex h-11 w-11 items-center justify-center rounded-xl border border-[#E5484D]/25 bg-[#E5484D]/10 text-[#EF9095] hover:bg-[#E5484D]/20"
+              className="flex h-11 w-11 items-center justify-center rounded-xl border border-[var(--danger)]/25 bg-[var(--danger)]/10 text-[var(--danger-fg)] hover:bg-[var(--danger)]/20"
             >
               <Trash2 className="h-4 w-4" />
             </button>
@@ -157,7 +157,7 @@ export function HabitModal({ open, habit, onClose, onDeleted }: HabitModalProps)
     >
       <div className="space-y-4">
         <div>
-          <label className="mb-1.5 block text-xs font-medium text-[#9C9CA6]">نام عادت</label>
+          <label className="mb-1.5 block text-xs font-medium text-[var(--text-2)]">نام عادت</label>
           <input
             type="text"
             dir="auto"
@@ -169,7 +169,7 @@ export function HabitModal({ open, habit, onClose, onDeleted }: HabitModalProps)
         </div>
 
         <div>
-          <label className="mb-1.5 block text-xs font-medium text-[#9C9CA6]">توضیحات</label>
+          <label className="mb-1.5 block text-xs font-medium text-[var(--text-2)]">توضیحات</label>
           <textarea
             rows={2}
             dir="auto"
@@ -182,7 +182,7 @@ export function HabitModal({ open, habit, onClose, onDeleted }: HabitModalProps)
 
         {/* Icon Picker */}
         <div>
-          <label className="mb-1.5 block text-xs font-medium text-[#9C9CA6]">آیکون اختصاصی</label>
+          <label className="mb-1.5 block text-xs font-medium text-[var(--text-2)]">آیکون اختصاصی</label>
           <div className="grid grid-cols-8 gap-1.5">
             {HABIT_ICON_OPTIONS.map((opt) => (
               <button
@@ -192,11 +192,11 @@ export function HabitModal({ open, habit, onClose, onDeleted }: HabitModalProps)
                 onClick={() => setIcon(opt.name)}
                 className={`flex h-9 items-center justify-center rounded-xl border transition ${
                   icon === opt.name
-                    ? 'border-[var(--accent-fg)] bg-[#1C1C21]'
-                    : 'border-[var(--accent-fg)]/10 bg-[#0E0E11] hover:border-[var(--accent-fg)]/28'
+                    ? 'border-[var(--accent-fg)] bg-[var(--surface-3)]'
+                    : 'border-[var(--accent-fg)]/10 bg-[var(--surface-input)] hover:border-[var(--accent-fg)]/28'
                 }`}
               >
-                <HabitIcon name={opt.name} color={icon === opt.name ? accentColor : '#9C9CA6'} />
+                <HabitIcon name={opt.name} color={icon === opt.name ? accentColor : 'var(--text-2)'} />
               </button>
             ))}
           </div>
@@ -204,7 +204,7 @@ export function HabitModal({ open, habit, onClose, onDeleted }: HabitModalProps)
 
         {/* Accent Swatch */}
         <div>
-          <label className="mb-1.5 block text-xs font-medium text-[#9C9CA6]">رنگ شاخص</label>
+          <label className="mb-1.5 block text-xs font-medium text-[var(--text-2)]">رنگ شاخص</label>
           <div className="flex items-center gap-2.5">
             {HABIT_ACCENT_SWATCHES.map((hex) => (
               <button
@@ -212,7 +212,7 @@ export function HabitModal({ open, habit, onClose, onDeleted }: HabitModalProps)
                 type="button"
                 onClick={() => setAccentColor(hex)}
                 className={`h-7 w-7 rounded-full transition ${
-                  accentColor === hex ? 'scale-110 ring-2 ring-[#ECECEF] ring-offset-2 ring-offset-[#16161A]' : ''
+                  accentColor === hex ? 'scale-110 ring-2 ring-[var(--text)] ring-offset-2 ring-offset-[var(--surface-2)]' : ''
                 }`}
                 style={{ backgroundColor: hex }}
                 aria-label={hex}
@@ -223,7 +223,7 @@ export function HabitModal({ open, habit, onClose, onDeleted }: HabitModalProps)
 
         {/* Schedule Type */}
         <div>
-          <label className="mb-1.5 block text-xs font-medium text-[#9C9CA6]">برنامه زمانی</label>
+          <label className="mb-1.5 block text-xs font-medium text-[var(--text-2)]">برنامه زمانی</label>
           <div className="grid grid-cols-3 gap-2">
             {(
               [
@@ -238,8 +238,8 @@ export function HabitModal({ open, habit, onClose, onDeleted }: HabitModalProps)
                 onClick={() => setScheduleType(sc.id)}
                 className={`rounded-xl border py-2 text-xs font-medium transition ${
                   scheduleType === sc.id
-                    ? 'border-[var(--accent)] bg-[#1C1C21] text-[#ECECEF]'
-                    : 'border-[var(--accent-fg)]/10 bg-[#0E0E11] text-[#9C9CA6]'
+                    ? 'border-[var(--accent)] bg-[var(--surface-3)] text-[var(--text)]'
+                    : 'border-[var(--accent-fg)]/10 bg-[var(--surface-input)] text-[var(--text-2)]'
                 }`}
               >
                 {sc.label}
@@ -259,7 +259,7 @@ export function HabitModal({ open, habit, onClose, onDeleted }: HabitModalProps)
                     className={`h-9 rounded-xl border text-xs font-semibold transition ${
                       active
                         ? 'border-[var(--accent-fg)]/50 bg-[var(--accent)] text-[var(--accent-on)]'
-                        : 'border-[var(--accent-fg)]/12 bg-[#0E0E11] text-[#6B6B75]'
+                        : 'border-[var(--accent-fg)]/12 bg-[var(--surface-input)] text-[var(--text-3)]'
                     }`}
                   >
                     {w}
@@ -270,15 +270,15 @@ export function HabitModal({ open, habit, onClose, onDeleted }: HabitModalProps)
           )}
 
           {scheduleType === 'weekly_target' && (
-            <div className="mt-2.5 flex items-center justify-between rounded-xl border border-[var(--accent-fg)]/12 bg-[#0E0E11] px-3.5 py-2.5 text-xs">
-              <span className="text-[#9C9CA6]">تعداد روز هدف در هفته:</span>
+            <div className="mt-2.5 flex items-center justify-between rounded-xl border border-[var(--accent-fg)]/12 bg-[var(--surface-input)] px-3.5 py-2.5 text-xs">
+              <span className="text-[var(--text-2)]">تعداد روز هدف در هفته:</span>
               <NumericInput
                 min={1}
                 max={7}
                 fallback={5}
                 value={weeklyTarget}
                 onChange={setWeeklyTarget}
-                className="num-geo w-14 rounded-lg border border-[var(--accent-fg)]/20 bg-[#16161A] py-1 text-center text-[#ECECEF] outline-none"
+                className="num-geo w-14 rounded-lg border border-[var(--accent-fg)]/20 bg-[var(--surface-2)] py-1 text-center text-[var(--text)] outline-none"
               />
             </div>
           )}
@@ -286,15 +286,15 @@ export function HabitModal({ open, habit, onClose, onDeleted }: HabitModalProps)
 
         {/* Tracking Mode */}
         <div>
-          <label className="mb-1.5 block text-xs font-medium text-[#9C9CA6]">نوع ثبت پیشرفت</label>
+          <label className="mb-1.5 block text-xs font-medium text-[var(--text-2)]">نوع ثبت پیشرفت</label>
           <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
               onClick={() => setTrackingMode('boolean')}
               className={`rounded-xl border py-2 text-xs font-medium transition ${
                 trackingMode === 'boolean'
-                  ? 'border-[var(--accent)] bg-[#1C1C21] text-[#ECECEF]'
-                  : 'border-[var(--accent-fg)]/10 bg-[#0E0E11] text-[#9C9CA6]'
+                  ? 'border-[var(--accent)] bg-[var(--surface-3)] text-[var(--text)]'
+                  : 'border-[var(--accent-fg)]/10 bg-[var(--surface-input)] text-[var(--text-2)]'
               }`}
             >
               تکمیلی (انجام شد / نشد)
@@ -304,8 +304,8 @@ export function HabitModal({ open, habit, onClose, onDeleted }: HabitModalProps)
               onClick={() => setTrackingMode('quantitative')}
               className={`rounded-xl border py-2 text-xs font-medium transition ${
                 trackingMode === 'quantitative'
-                  ? 'border-[var(--accent)] bg-[#1C1C21] text-[#ECECEF]'
-                  : 'border-[var(--accent-fg)]/10 bg-[#0E0E11] text-[#9C9CA6]'
+                  ? 'border-[var(--accent)] bg-[var(--surface-3)] text-[var(--text)]'
+                  : 'border-[var(--accent-fg)]/10 bg-[var(--surface-input)] text-[var(--text-2)]'
               }`}
             >
               مقداری (دقیقه / صفحه / لیوان)
@@ -315,7 +315,7 @@ export function HabitModal({ open, habit, onClose, onDeleted }: HabitModalProps)
           {trackingMode === 'quantitative' && (
             <div className="mt-2.5 grid grid-cols-2 gap-2.5">
               <div>
-                <label className="mb-1 block text-[11px] text-[#9C9CA6]">هدف روزانه</label>
+                <label className="mb-1 block text-[11px] text-[var(--text-2)]">هدف روزانه</label>
                 <NumericInput
                   min={1}
                   max={9999}
@@ -326,7 +326,7 @@ export function HabitModal({ open, habit, onClose, onDeleted }: HabitModalProps)
                 />
               </div>
               <div>
-                <label className="mb-1 block text-[11px] text-[#9C9CA6]">واحد اندازه‌گیری</label>
+                <label className="mb-1 block text-[11px] text-[var(--text-2)]">واحد اندازه‌گیری</label>
                 <input
                   type="text"
                   dir="auto"

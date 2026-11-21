@@ -102,7 +102,7 @@ export function GoalModal({ open, goal, onClose }: GoalModalProps) {
             <button
               type="button"
               onClick={handleDelete}
-              className="flex h-11 w-11 items-center justify-center rounded-xl border border-[#E5484D]/25 bg-[#E5484D]/10 text-[#EF9095] transition hover:bg-[#E5484D]/20"
+              className="flex h-11 w-11 items-center justify-center rounded-xl border border-[var(--danger)]/25 bg-[var(--danger)]/10 text-[var(--danger-fg)] transition hover:bg-[var(--danger)]/20"
               aria-label="حذف هدف"
             >
               <Trash2 className="h-4 w-4" />
@@ -120,7 +120,7 @@ export function GoalModal({ open, goal, onClose }: GoalModalProps) {
     >
       <div className="space-y-4">
         <div>
-          <label className="mb-1.5 block text-xs font-medium text-[#9C9CA6]">عنوان هدف</label>
+          <label className="mb-1.5 block text-xs font-medium text-[var(--text-2)]">عنوان هدف</label>
           <input
             type="text"
             dir="auto"
@@ -132,7 +132,7 @@ export function GoalModal({ open, goal, onClose }: GoalModalProps) {
         </div>
 
         <div>
-          <label className="mb-1.5 block text-xs font-medium text-[#9C9CA6]">توضیحات</label>
+          <label className="mb-1.5 block text-xs font-medium text-[var(--text-2)]">توضیحات</label>
           <textarea
             rows={2}
             dir="auto"
@@ -145,7 +145,7 @@ export function GoalModal({ open, goal, onClose }: GoalModalProps) {
 
         <div className="grid grid-cols-3 gap-2.5">
           <div>
-            <label className="mb-1.5 block text-[11px] font-medium text-[#9C9CA6]">پیشرفت فعلی</label>
+            <label className="mb-1.5 block text-[11px] font-medium text-[var(--text-2)]">پیشرفت فعلی</label>
             <NumericInput
               min={0}
               max={99999}
@@ -156,7 +156,7 @@ export function GoalModal({ open, goal, onClose }: GoalModalProps) {
             />
           </div>
           <div>
-            <label className="mb-1.5 block text-[11px] font-medium text-[#9C9CA6]">مقدار هدف</label>
+            <label className="mb-1.5 block text-[11px] font-medium text-[var(--text-2)]">مقدار هدف</label>
             <NumericInput
               min={1}
               max={99999}
@@ -167,7 +167,7 @@ export function GoalModal({ open, goal, onClose }: GoalModalProps) {
             />
           </div>
           <div>
-            <label className="mb-1.5 block text-[11px] font-medium text-[#9C9CA6]">واحد</label>
+            <label className="mb-1.5 block text-[11px] font-medium text-[var(--text-2)]">واحد</label>
             <input
               type="text"
               dir="auto"
@@ -180,7 +180,7 @@ export function GoalModal({ open, goal, onClose }: GoalModalProps) {
         </div>
 
         <div>
-          <label className="mb-1.5 block text-xs font-medium text-[#9C9CA6]">دسته‌بندی</label>
+          <label className="mb-1.5 block text-xs font-medium text-[var(--text-2)]">دسته‌بندی</label>
           <div className="grid grid-cols-3 gap-2">
             {(Object.keys(CATEGORY_META) as TaskCategory[]).map((cat) => (
               <button
@@ -189,8 +189,8 @@ export function GoalModal({ open, goal, onClose }: GoalModalProps) {
                 onClick={() => setCategory(cat)}
                 className={`rounded-xl border px-2.5 py-2 text-xs font-medium transition ${
                   category === cat
-                    ? 'border-[var(--accent)] bg-[#1C1C21] text-[#ECECEF]'
-                    : 'border-[var(--accent-fg)]/10 bg-[#0E0E11] text-[#9C9CA6]'
+                    ? 'border-[var(--accent)] bg-[var(--surface-3)] text-[var(--text)]'
+                    : 'border-[var(--accent-fg)]/10 bg-[var(--surface-input)] text-[var(--text-2)]'
                 }`}
               >
                 {CATEGORY_META[cat].label}
@@ -201,7 +201,7 @@ export function GoalModal({ open, goal, onClose }: GoalModalProps) {
 
         <div>
           <div className="mb-1.5 flex items-center justify-between">
-            <label className="text-xs font-medium text-[#9C9CA6]">مهلت هدف (اختیاری)</label>
+            <label className="text-xs font-medium text-[var(--text-2)]">مهلت هدف (اختیاری)</label>
             <button
               type="button"
               onClick={() => setShowDatePicker((p) => !p)}

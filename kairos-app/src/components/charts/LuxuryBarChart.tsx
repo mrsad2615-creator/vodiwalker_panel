@@ -90,8 +90,8 @@ export function LuxuryBarChart({
             <stop offset="100%" stopColor="var(--accent)" stopOpacity="0.75" />
           </linearGradient>
           <linearGradient id={`${gradientId}-bar`} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#ffffff" stopOpacity="0.26" />
-            <stop offset="100%" stopColor="#ffffff" stopOpacity="0.08" />
+            <stop offset="0%" stopColor="var(--text)" stopOpacity="0.26" />
+            <stop offset="100%" stopColor="var(--text)" stopOpacity="0.08" />
           </linearGradient>
         </defs>
 

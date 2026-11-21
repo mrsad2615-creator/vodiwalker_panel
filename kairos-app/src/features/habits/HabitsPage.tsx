@@ -42,6 +42,8 @@ import { triggerHaptic } from '@/lib/native';
 import { useApp } from '@/context/AppContext';
 import { LuxuryCard } from '@/components/ui/LuxuryCard';
 import { Numeric } from '@/components/ui/Numeric';
+import { SectionHeader } from '@/components/ui/SectionHeader';
+import { sectionEyebrow } from '@/lib/sections';
 import { HabitIcon } from '@/components/ui/KairosMark';
 import {
   ActivityHeatmap,
@@ -362,24 +364,22 @@ export function HabitsPage() {
 
   return (
     <div className="space-y-4">
-      {/* Page Header */}
-      <div className="flex items-center justify-between gap-2">
-        <div>
-          <h1 className="text-lg font-bold text-[#ECECEF]">مدیریت حرفه‌ای عادت‌ها</h1>
-          <p className="mt-0.5 text-[11px] text-[#9C9CA6]">
-            کنترل عمودی و افقی، ثبت ۷ روزه مستقیم و تفکیک دقیق روزهای ثبت‌نشده
-          </p>
-        </div>
-
-        <button
-          type="button"
-          onClick={() => setModalState({ open: true, habit: null })}
-          className="btn-royal flex shrink-0 items-center gap-1.5 rounded-2xl px-3.5 py-2.5 text-xs font-semibold"
-        >
-          <Plus className="h-4 w-4" />
-          <span>عادت جدید</span>
-        </button>
-      </div>
+      {/* Page header — one rhythm across the product */}
+      <SectionHeader
+        eyebrow={sectionEyebrow('habits')}
+        title="مدیریت حرفه‌ای عادت‌ها"
+        meta={<span>چیدمان عمودی و افقی، ثبت ۷ روزه و تفکیک روزهای ثبت‌نشده</span>}
+        action={
+          <button
+            type="button"
+            onClick={() => setModalState({ open: true, habit: null })}
+            className="btn-royal flex items-center gap-1.5 rounded-[var(--r-field)] px-3 py-2 text-[11px] font-semibold"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            <span>عادت جدید</span>
+          </button>
+        }
+      />
 
       {/* EXECUTIVE DAILY COMMAND BAR (Date Stepper + Live Daily Mastery) */}
       <LuxuryCard variant="hero" className="space-y-3.5 p-4">
@@ -389,27 +389,27 @@ export function HabitsPage() {
               type="button"
               onClick={() => shiftSelectedDate(-1)}
               aria-label="روز قبل"
-              className="flex h-8 w-8 items-center justify-center rounded-xl border border-[var(--accent-fg)]/14 bg-[#0A0A0C]/70 text-[#9C9CA6] transition hover:border-[var(--accent-fg)]/35 hover:text-[#ECECEF]"
+              className="flex h-8 w-8 items-center justify-center rounded-xl border border-[var(--accent-fg)]/14 bg-[var(--bg)]/70 text-[var(--text-2)] transition hover:border-[var(--accent-fg)]/35 hover:text-[var(--text)]"
             >
               <ChevronRight className="h-4 w-4" />
             </button>
             <div className="px-1">
-              <p className="text-xs font-bold text-[#ECECEF]">
+              <p className="text-xs font-bold text-[var(--text)]">
                 {isViewingToday ? 'امروز • ' : ''}
                 {selectedDateInfo.weekday}،{' '}
                 <Numeric value={selectedDateInfo.day} className="text-[var(--accent-fg)]" />{' '}
                 {selectedDateInfo.month}
               </p>
-              <p className="text-[10px] text-[#9C9CA6]">
+              <p className="text-[10px] text-[var(--text-2)]">
                 <Numeric
                   value={daySummary.completedCount}
-                  className="font-semibold text-[#ECECEF]"
+                  className="font-semibold text-[var(--text)]"
                 />{' '}
                 از <Numeric value={daySummary.scheduledCount} /> عادت انجام شده
                 {daySummary.missedCount > 0 && (
                   <>
                     {' '}
-                    • <Numeric value={daySummary.missedCount} className="text-[#EF9095]" /> انجام‌نشده
+                    • <Numeric value={daySummary.missedCount} className="text-[var(--danger-fg)]" /> انجام‌نشده
                   </>
                 )}
               </p>
@@ -419,7 +419,7 @@ export function HabitsPage() {
               disabled={isViewingToday}
               onClick={() => shiftSelectedDate(1)}
               aria-label="روز بعد"
-              className="flex h-8 w-8 items-center justify-center rounded-xl border border-[var(--accent-fg)]/14 bg-[#0A0A0C]/70 text-[#9C9CA6] transition hover:border-[var(--accent-fg)]/35 hover:text-[#ECECEF] disabled:opacity-35"
+              className="flex h-8 w-8 items-center justify-center rounded-xl border border-[var(--accent-fg)]/14 bg-[var(--bg)]/70 text-[var(--text-2)] transition hover:border-[var(--accent-fg)]/35 hover:text-[var(--text)] disabled:opacity-35"
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
@@ -433,7 +433,7 @@ export function HabitsPage() {
                   setSelectedDateKey(todayKey);
                   setSelectedYear(currentJYear);
                 }}
-                className="rounded-lg border border-[var(--accent-fg)]/28 bg-[#1C1C21] px-2.5 py-1 text-[10.5px] font-semibold text-[var(--accent-fg)]"
+                className="rounded-lg border border-[var(--accent-fg)]/28 bg-[var(--surface-3)] px-2.5 py-1 text-[10.5px] font-semibold text-[var(--accent-fg)]"
               >
                 امروز
               </button>
@@ -448,7 +448,7 @@ export function HabitsPage() {
         </div>
 
         {/* Daily Progress Bar */}
-        <div className="h-1.5 w-full overflow-hidden rounded-full bg-[#0A0A0C]/80">
+        <div className="h-1.5 w-full overflow-hidden rounded-full bg-[var(--bg)]/80">
           <div
             className="h-full rounded-full bg-[var(--accent)] transition-all duration-300"
             style={{ width: `${daySummary.percent}%` }}
@@ -457,15 +457,15 @@ export function HabitsPage() {
 
         {/* 3 Compact Pro KPI Chips */}
         <div className="grid grid-cols-3 gap-2 pt-0.5">
-          <div className="rounded-xl border border-[var(--accent-fg)]/10 bg-[#0A0A0C]/55 px-2.5 py-2 text-center">
+          <div className="rounded-xl border border-[var(--accent-fg)]/10 bg-[var(--bg)]/55 px-2.5 py-2 text-center">
             <Numeric
               value={daySummary.pendingCount}
               variant="display"
-              className="text-xl font-bold text-[#ECECEF]"
+              className="text-xl font-bold text-[var(--text)]"
             />
-            <span className="mt-0.5 block text-[9.5px] text-[#9C9CA6]">مانده این روز</span>
+            <span className="mt-0.5 block text-[9.5px] text-[var(--text-2)]">مانده این روز</span>
           </div>
-          <div className="rounded-xl border border-[var(--accent)]/24 bg-[#1C1C21]/55 px-2.5 py-2 text-center">
+          <div className="rounded-xl border border-[var(--accent)]/24 bg-[var(--surface-3)]/55 px-2.5 py-2 text-center">
             <Numeric
               value={daySummary.topStreak}
               suffix="d"
@@ -474,14 +474,14 @@ export function HabitsPage() {
             />
             <span className="mt-0.5 block text-[9.5px] text-[var(--accent-fg)]">بالاترین رکورد</span>
           </div>
-          <div className="rounded-xl border border-[var(--accent-fg)]/10 bg-[#0A0A0C]/55 px-2.5 py-2 text-center">
+          <div className="rounded-xl border border-[var(--accent-fg)]/10 bg-[var(--bg)]/55 px-2.5 py-2 text-center">
             <Numeric
               value={daySummary.avgAdherence}
               suffix="%"
               variant="display"
-              className="text-xl font-bold text-[#ECECEF]"
+              className="text-xl font-bold text-[var(--text)]"
             />
-            <span className="mt-0.5 block text-[9.5px] text-[#9C9CA6]">میانگین پایبندی</span>
+            <span className="mt-0.5 block text-[9.5px] text-[var(--text-2)]">میانگین پایبندی</span>
           </div>
         </div>
       </LuxuryCard>
@@ -490,15 +490,15 @@ export function HabitsPage() {
       <div className="space-y-2.5">
         <div className="flex flex-wrap items-center justify-between gap-2">
           {/* Layout Switcher: Vertical Pro / Compact / 2-Col Grid */}
-          <div className="inline-flex items-center gap-0.5 rounded-xl border border-[var(--accent-fg)]/12 bg-[#16161A] p-1">
+          <div className="inline-flex items-center gap-0.5 rounded-xl border border-[var(--accent-fg)]/12 bg-[var(--surface-2)] p-1">
             <button
               type="button"
               onClick={() => handleLayoutChange('vertical')}
               aria-label="نمای عمودی حرفه‌ای"
               className={`flex items-center gap-1 rounded-lg px-2.5 py-1 text-[11px] font-medium transition ${
                 layoutMode === 'vertical'
-                  ? 'bg-[#1C1C21] text-[#ECECEF]'
-                  : 'text-[#9C9CA6] hover:text-[#ECECEF]'
+                  ? 'bg-[var(--surface-3)] text-[var(--text)]'
+                  : 'text-[var(--text-2)] hover:text-[var(--text)]'
               }`}
             >
               <LayoutList className="h-3.5 w-3.5" />
@@ -510,8 +510,8 @@ export function HabitsPage() {
               aria-label="نمای فشرده"
               className={`flex items-center gap-1 rounded-lg px-2.5 py-1 text-[11px] font-medium transition ${
                 layoutMode === 'compact'
-                  ? 'bg-[#1C1C21] text-[#ECECEF]'
-                  : 'text-[#9C9CA6] hover:text-[#ECECEF]'
+                  ? 'bg-[var(--surface-3)] text-[var(--text)]'
+                  : 'text-[var(--text-2)] hover:text-[var(--text)]'
               }`}
             >
               <ListChecks className="h-3.5 w-3.5" />
@@ -523,8 +523,8 @@ export function HabitsPage() {
               aria-label="نمای کارتی"
               className={`flex items-center gap-1 rounded-lg px-2.5 py-1 text-[11px] font-medium transition ${
                 layoutMode === 'grid'
-                  ? 'bg-[#1C1C21] text-[#ECECEF]'
-                  : 'text-[#9C9CA6] hover:text-[#ECECEF]'
+                  ? 'bg-[var(--surface-3)] text-[var(--text)]'
+                  : 'text-[var(--text-2)] hover:text-[var(--text)]'
               }`}
             >
               <LayoutGrid className="h-3.5 w-3.5" />
@@ -533,24 +533,24 @@ export function HabitsPage() {
           </div>
 
           {/* Smart Sort Control */}
-          <div className="flex items-center gap-1.5 rounded-xl border border-[var(--accent-fg)]/12 bg-[#16161A] px-2.5 py-1.5">
+          <div className="flex items-center gap-1.5 rounded-xl border border-[var(--accent-fg)]/12 bg-[var(--surface-2)] px-2.5 py-1.5">
             <ArrowUpDown className="h-3.5 w-3.5 text-[var(--accent)]" />
             <select
               aria-label="مرتب‌سازی عادت‌ها"
               value={sortMode}
               onChange={(e) => setSortMode(e.target.value as HabitSortMode)}
-              className="bg-transparent text-[11px] font-medium text-[#ECECEF] outline-none"
+              className="bg-transparent text-[11px] font-medium text-[var(--text)] outline-none"
             >
-              <option value="default" className="bg-[#16161A]">
+              <option value="default" className="bg-[var(--surface-2)]">
                 ترتیب پیش‌فرض
               </option>
-              <option value="streak" className="bg-[#16161A]">
+              <option value="streak" className="bg-[var(--surface-2)]">
                 بیشترین رکورد
               </option>
-              <option value="adherence_desc" className="bg-[#16161A]">
+              <option value="adherence_desc" className="bg-[var(--surface-2)]">
                 بالاترین پایبندی
               </option>
-              <option value="needs_focus" className="bg-[#16161A]">
+              <option value="needs_focus" className="bg-[var(--surface-2)]">
                 نیازمند توجه
               </option>
             </select>
@@ -574,15 +574,15 @@ export function HabitsPage() {
               onClick={() => setFilterMode(tab.id)}
               className={`flex shrink-0 items-center gap-1.5 rounded-xl border px-3 py-1.5 text-[11px] font-medium transition ${
                 filterMode === tab.id
-                  ? 'border-[var(--accent)] bg-[#1C1C21] text-[#ECECEF]'
-                  : 'border-[var(--accent-fg)]/10 bg-[#16161A] text-[#9C9CA6] hover:text-[#ECECEF]'
+                  ? 'border-[var(--accent)] bg-[var(--surface-3)] text-[var(--text)]'
+                  : 'border-[var(--accent-fg)]/10 bg-[var(--surface-2)] text-[var(--text-2)] hover:text-[var(--text)]'
               }`}
             >
               <span>{tab.label}</span>
               <Numeric
                 value={tab.count}
                 className={`text-[10px] ${
-                  filterMode === tab.id ? 'text-[var(--accent-fg)]' : 'text-[#6B6B75]'
+                  filterMode === tab.id ? 'text-[var(--accent-fg)]' : 'text-[var(--text-3)]'
                 }`}
               />
             </button>
@@ -626,12 +626,12 @@ export function HabitsPage() {
             {visibleHabits.map((habit) => (
               <LuxuryCard key={habit.id} variant="subtle" className="flex items-center justify-between gap-3 p-3.5">
                 <div className="flex min-w-0 items-center gap-3">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[var(--accent-fg)]/12 bg-[#0E0E11]">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[var(--accent-fg)]/12 bg-[var(--surface-input)]">
                     <HabitIcon name={habit.icon} color={habit.accentColor} className="h-4.5 w-4.5 opacity-75" />
                   </div>
                   <div className="min-w-0">
-                    <p className="truncate text-xs font-semibold text-[#ECECEF]">{habit.name}</p>
-                    <p className="text-[10.5px] text-[#6B6B75]">{getScheduleBadge(habit)}</p>
+                    <p className="truncate text-xs font-semibold text-[var(--text)]">{habit.name}</p>
+                    <p className="text-[10.5px] text-[var(--text-3)]">{getScheduleBadge(habit)}</p>
                   </div>
                 </div>
                 <div className="flex shrink-0 items-center gap-1.5">
@@ -647,7 +647,7 @@ export function HabitsPage() {
                     type="button"
                     onClick={() => void handlePermanentDelete(habit)}
                     aria-label="حذف کامل عادت"
-                    className="flex h-8 w-8 items-center justify-center rounded-xl border border-[#E5484D]/25 bg-[#E5484D]/10 text-[#EF9095]"
+                    className="flex h-8 w-8 items-center justify-center rounded-xl border border-[var(--danger)]/25 bg-[var(--danger)]/10 text-[var(--danger-fg)]"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>
@@ -684,8 +684,8 @@ export function HabitsPage() {
                       isDone
                         ? 'border-[var(--accent-fg)]/50 bg-[var(--accent)] text-[var(--accent-on)] shadow-[0_0_12px_color-mix(in_srgb,var(--accent)_45%,transparent)]'
                         : isMissed
-                        ? 'border-[#E5484D]/45 bg-[#1A1A1E] text-[#EF9095]'
-                        : 'border-[var(--accent-fg)]/16 bg-[#0E0E11] text-[#6B6B75]'
+                        ? 'border-[var(--danger)]/45 bg-[var(--surface-3)] text-[var(--danger-fg)]'
+                        : 'border-[var(--accent-fg)]/16 bg-[var(--surface-input)] text-[var(--text-3)]'
                     }`}
                   >
                     {isDone ? (
@@ -704,12 +704,12 @@ export function HabitsPage() {
                   >
                     <p
                       className={`truncate text-[13px] font-semibold ${
-                        isDone ? 'text-[var(--accent-fg)]' : 'text-[#ECECEF]'
+                        isDone ? 'text-[var(--accent-fg)]' : 'text-[var(--text)]'
                       }`}
                     >
                       {habit.name}
                     </p>
-                    <div className="mt-0.5 flex items-center gap-2 text-[10.5px] text-[#9C9CA6]">
+                    <div className="mt-0.5 flex items-center gap-2 text-[10.5px] text-[var(--text-2)]">
                       <span className="inline-flex items-center gap-0.5">
                         <Flame className="h-3 w-3 text-[var(--accent)]" />
                         <Numeric value={stats?.currentStreak ?? 0} />d
@@ -722,7 +722,7 @@ export function HabitsPage() {
                       {habit.trackingMode === 'quantitative' && (
                         <Numeric
                           value={`${currentVal}/${habit.targetValue}`}
-                          className="text-[#ECECEF]"
+                          className="text-[var(--text)]"
                         />
                       )}
                     </div>
@@ -734,7 +734,7 @@ export function HabitsPage() {
                         type="button"
                         onClick={() => void handleSetDayHabit(habit, selectedDateKey, 'step_up')}
                         aria-label="افزایش پیشرفت"
-                        className="flex h-7 w-7 items-center justify-center rounded-lg border border-[var(--accent-fg)]/22 bg-[#1C1C21] text-[var(--accent-fg)]"
+                        className="flex h-7 w-7 items-center justify-center rounded-lg border border-[var(--accent-fg)]/22 bg-[var(--surface-3)] text-[var(--accent-fg)]"
                       >
                         <Plus className="h-3.5 w-3.5" />
                       </button>
@@ -751,8 +751,8 @@ export function HabitsPage() {
                       title="ثبت انجام‌نشده"
                       className={`flex h-7 w-7 items-center justify-center rounded-lg border transition ${
                         isMissed
-                          ? 'border-[#E5484D]/50 bg-[#E5484D]/20 text-[#EF9095]'
-                          : 'border-[var(--accent-fg)]/10 bg-[#0E0E11] text-[#6B6B75]'
+                          ? 'border-[var(--danger)]/50 bg-[var(--danger)]/20 text-[var(--danger-fg)]'
+                          : 'border-[var(--accent-fg)]/10 bg-[var(--surface-input)] text-[var(--text-3)]'
                       }`}
                     >
                       <X className="h-3.5 w-3.5" />
@@ -761,7 +761,7 @@ export function HabitsPage() {
                       type="button"
                       onClick={() => setModalState({ open: true, habit })}
                       aria-label="ویرایش سریع"
-                      className="flex h-7 w-7 items-center justify-center rounded-lg border border-[var(--accent-fg)]/10 bg-[#0E0E11] text-[#9C9CA6]"
+                      className="flex h-7 w-7 items-center justify-center rounded-lg border border-[var(--accent-fg)]/10 bg-[var(--surface-input)] text-[var(--text-2)]"
                     >
                       <Edit3 className="h-3 w-3" />
                     </button>
@@ -812,7 +812,7 @@ export function HabitsPage() {
                         type="button"
                         onClick={() => setDetailHabitId(habit.id)}
                         aria-label="تحلیل عادت"
-                        className="rounded-lg p-1 text-[#9C9CA6] hover:bg-[#1C1C21] hover:text-[#ECECEF]"
+                        className="rounded-lg p-1 text-[var(--text-2)] hover:bg-[var(--surface-3)] hover:text-[var(--text)]"
                       >
                         <BarChart3 className="h-3.5 w-3.5" />
                       </button>
@@ -823,15 +823,15 @@ export function HabitsPage() {
                       onClick={() => setDetailHabitId(habit.id)}
                       className="mt-2.5 block w-full text-right"
                     >
-                      <h3 className="line-clamp-2 min-h-[34px] text-xs font-bold leading-snug text-[#ECECEF]">
+                      <h3 className="line-clamp-2 min-h-[34px] text-xs font-bold leading-snug text-[var(--text)]">
                         {habit.name}
                       </h3>
                     </button>
 
-                    <div className="mt-2 flex items-center justify-between text-[10.5px] text-[#9C9CA6]">
+                    <div className="mt-2 flex items-center justify-between text-[10.5px] text-[var(--text-2)]">
                       <span className="inline-flex items-center gap-0.5">
                         <Flame className="h-3 w-3 text-[var(--accent)]" />
-                        <Numeric value={stats?.currentStreak ?? 0} className="text-[#ECECEF]" />d
+                        <Numeric value={stats?.currentStreak ?? 0} className="text-[var(--text)]" />d
                       </span>
                       <Numeric
                         value={stats?.adherencePercent ?? 0}
@@ -841,7 +841,7 @@ export function HabitsPage() {
                     </div>
 
                     {/* Mini progress bar */}
-                    <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-[#0A0A0C]">
+                    <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-[var(--bg)]">
                       <div
                         className="h-full rounded-full bg-[var(--accent)] transition-all"
                         style={{ width: `${quantPct}%` }}
@@ -862,7 +862,7 @@ export function HabitsPage() {
                       className={`flex flex-1 items-center justify-center gap-1 rounded-xl py-1.5 text-[11px] font-semibold transition ${
                         isDone
                           ? 'bg-[var(--accent)] text-[var(--accent-on)]'
-                          : 'border border-[var(--accent-fg)]/18 bg-[#0E0E11] text-[#ECECEF]'
+                          : 'border border-[var(--accent-fg)]/18 bg-[var(--surface-input)] text-[var(--text)]'
                       }`}
                     >
                       <Check className="h-3.5 w-3.5" />
@@ -880,8 +880,8 @@ export function HabitsPage() {
                       aria-label="انجام نشد"
                       className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-xl border ${
                         isMissed
-                          ? 'border-[#E5484D]/50 bg-[#E5484D]/20 text-[#EF9095]'
-                          : 'border-[var(--accent-fg)]/10 bg-[#0E0E11] text-[#6B6B75]'
+                          ? 'border-[var(--danger)]/50 bg-[var(--danger)]/20 text-[var(--danger-fg)]'
+                          : 'border-[var(--accent-fg)]/10 bg-[var(--surface-input)] text-[var(--text-3)]'
                       }`}
                     >
                       <X className="h-3.5 w-3.5" />
@@ -937,20 +937,20 @@ export function HabitsPage() {
 
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1.5">
-                          <h3 className="truncate text-[13.5px] font-bold text-[#ECECEF]">
+                          <h3 className="truncate text-[13.5px] font-bold text-[var(--text)]">
                             {habit.name}
                           </h3>
                         </div>
 
-                        <div className="mt-1 flex flex-wrap items-center gap-2 text-[10.5px] text-[#9C9CA6]">
-                          <span className="rounded-md bg-[#0E0E11] px-1.5 py-0.5 text-[10px] text-[#9C9CA6]">
+                        <div className="mt-1 flex flex-wrap items-center gap-2 text-[10.5px] text-[var(--text-2)]">
+                          <span className="rounded-md bg-[var(--surface-input)] px-1.5 py-0.5 text-[10px] text-[var(--text-2)]">
                             {getScheduleBadge(habit)}
                           </span>
                           <span className="inline-flex items-center gap-0.5">
                             <Flame className="h-3 w-3 text-[var(--accent)]" />
                             <Numeric
                               value={stats?.currentStreak ?? 0}
-                              className="font-semibold text-[#ECECEF]"
+                              className="font-semibold text-[var(--text)]"
                             />
                             d
                           </span>
@@ -963,7 +963,7 @@ export function HabitsPage() {
                             />
                           </span>
                           {habit.reminderTime && (
-                            <span className="inline-flex items-center gap-0.5 text-[#6B6B75]">
+                            <span className="inline-flex items-center gap-0.5 text-[var(--text-3)]">
                               <Clock className="h-3 w-3" />
                               <Numeric value={habit.reminderTime} />
                             </span>
@@ -979,7 +979,7 @@ export function HabitsPage() {
                         onClick={() => setDetailHabitId(habit.id)}
                         title="آمار و نمودار کامل"
                         aria-label="آمار و نمودار کامل"
-                        className="flex h-7 w-7 items-center justify-center rounded-lg border border-[var(--accent-fg)]/12 bg-[#0E0E11] text-[var(--accent-fg)] hover:border-[var(--accent-fg)]/35"
+                        className="flex h-7 w-7 items-center justify-center rounded-lg border border-[var(--accent-fg)]/12 bg-[var(--surface-input)] text-[var(--accent-fg)] hover:border-[var(--accent-fg)]/35"
                       >
                         <BarChart3 className="h-3.5 w-3.5" />
                       </button>
@@ -988,7 +988,7 @@ export function HabitsPage() {
                         onClick={() => setModalState({ open: true, habit })}
                         title="ویرایش عادت"
                         aria-label="ویرایش عادت"
-                        className="flex h-7 w-7 items-center justify-center rounded-lg border border-[var(--accent-fg)]/12 bg-[#0E0E11] text-[#9C9CA6] hover:text-[#ECECEF]"
+                        className="flex h-7 w-7 items-center justify-center rounded-lg border border-[var(--accent-fg)]/12 bg-[var(--surface-input)] text-[var(--text-2)] hover:text-[var(--text)]"
                       >
                         <Edit3 className="h-3.5 w-3.5" />
                       </button>
@@ -997,7 +997,7 @@ export function HabitsPage() {
                         onClick={() => void handleToggleArchive(habit)}
                         title="انتقال به آرشیو"
                         aria-label="انتقال به آرشیو"
-                        className="flex h-7 w-7 items-center justify-center rounded-lg border border-[var(--accent-fg)]/12 bg-[#0E0E11] text-[#6B6B75] hover:text-[#9C9CA6]"
+                        className="flex h-7 w-7 items-center justify-center rounded-lg border border-[var(--accent-fg)]/12 bg-[var(--surface-input)] text-[var(--text-3)] hover:text-[var(--text-2)]"
                       >
                         <Archive className="h-3.5 w-3.5" />
                       </button>
@@ -1006,9 +1006,9 @@ export function HabitsPage() {
 
                   {/* Interactive Quantitative Progress Stepper */}
                   {habit.trackingMode === 'quantitative' && (
-                    <div className="space-y-1.5 rounded-xl border border-[var(--accent-fg)]/10 bg-[#0C0C0F] px-3 py-2.5">
+                    <div className="space-y-1.5 rounded-xl border border-[var(--accent-fg)]/10 bg-[var(--bg)] px-3 py-2.5">
                       <div className="flex items-center justify-between text-[11px]">
-                        <span className="text-[#9C9CA6]">
+                        <span className="text-[var(--text-2)]">
                           پیشرفت {isViewingToday ? 'امروز' : `${selectedDateInfo.day} ${selectedDateInfo.month}`}:
                         </span>
                         <div className="flex items-center gap-2">
@@ -1018,13 +1018,13 @@ export function HabitsPage() {
                               void handleSetDayHabit(habit, selectedDateKey, 'step_down')
                             }
                             aria-label="کاهش مقدار"
-                            className="flex h-6 w-6 items-center justify-center rounded-md border border-[var(--accent-fg)]/16 bg-[#16161A] text-[#9C9CA6] hover:text-[#ECECEF]"
+                            className="flex h-6 w-6 items-center justify-center rounded-md border border-[var(--accent-fg)]/16 bg-[var(--surface-2)] text-[var(--text-2)] hover:text-[var(--text)]"
                           >
                             <Minus className="h-3 w-3" />
                           </button>
-                          <span className="font-semibold text-[#ECECEF]">
+                          <span className="font-semibold text-[var(--text)]">
                             <Numeric value={`${currentVal}/${habit.targetValue}`} />{' '}
-                            <span className="text-[10px] font-normal text-[#9C9CA6]">
+                            <span className="text-[10px] font-normal text-[var(--text-2)]">
                               {habit.unit}
                             </span>
                           </span>
@@ -1034,13 +1034,13 @@ export function HabitsPage() {
                               void handleSetDayHabit(habit, selectedDateKey, 'step_up')
                             }
                             aria-label="افزایش مقدار"
-                            className="flex h-6 w-6 items-center justify-center rounded-md border border-[var(--accent)]/45 bg-[#1C1C21] text-[var(--accent-fg)] hover:bg-[var(--accent)] hover:text-[var(--accent-on)]"
+                            className="flex h-6 w-6 items-center justify-center rounded-md border border-[var(--accent)]/45 bg-[var(--surface-3)] text-[var(--accent-fg)] hover:bg-[var(--accent)] hover:text-[var(--accent-on)]"
                           >
                             <Plus className="h-3 w-3" />
                           </button>
                         </div>
                       </div>
-                      <div className="h-1.5 w-full overflow-hidden rounded-full bg-[#16161A]">
+                      <div className="h-1.5 w-full overflow-hidden rounded-full bg-[var(--surface-2)]">
                         <div
                           className="h-full rounded-full bg-[var(--accent)] transition-all duration-200"
                           style={{ width: `${quantPercent}%` }}
@@ -1066,11 +1066,11 @@ export function HabitsPage() {
                             st === 'completed'
                               ? 'border-[var(--accent-fg)]/45 bg-[var(--accent)]/90 text-[var(--accent-on)]'
                               : st === 'partial'
-                              ? 'border-[var(--accent)]/45 bg-[#1F1940] text-[var(--accent-fg)]'
+                              ? 'border-[var(--accent)]/45 bg-[var(--surface-3)] text-[var(--accent-fg)]'
                               : st === 'missed'
-                              ? 'border-[#E5484D]/40 bg-[#1A1A1E] text-[#EF9095]'
-                              : 'border-[var(--accent-fg)]/10 bg-[#0E0E11] text-[#6B6B75]'
-                          } ${isSel ? 'ring-1.5 ring-[#ECECEF]/80' : ''}`}
+                              ? 'border-[var(--danger)]/40 bg-[var(--surface-3)] text-[var(--danger-fg)]'
+                              : 'border-[var(--accent-fg)]/10 bg-[var(--surface-input)] text-[var(--text-3)]'
+                          } ${isSel ? 'ring-1.5 ring-[var(--text)]/80' : ''}`}
                         >
                           <span className="text-[9px] leading-none opacity-80">
                             {d.weekdayShort}
@@ -1097,7 +1097,7 @@ export function HabitsPage() {
                       className={`flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 text-[11px] font-semibold transition ${
                         isCompleted
                           ? 'bg-[var(--accent)] text-[var(--accent-on)] shadow-[0_0_14px_color-mix(in_srgb,var(--accent)_42%,transparent)]'
-                          : 'border border-[var(--accent-fg)]/18 bg-[#0E0E11] text-[#ECECEF] hover:border-[var(--accent-fg)]/45'
+                          : 'border border-[var(--accent-fg)]/18 bg-[var(--surface-input)] text-[var(--text)] hover:border-[var(--accent-fg)]/45'
                       }`}
                     >
                       <Check className="h-3.5 w-3.5" />
@@ -1122,8 +1122,8 @@ export function HabitsPage() {
                         }
                         className={`flex items-center gap-1 rounded-xl border px-2.5 py-1.5 text-[10.5px] font-medium transition ${
                           isMissed
-                            ? 'border-[#E5484D]/50 bg-[#E5484D]/20 text-[#EF9095]'
-                            : 'border-[var(--accent-fg)]/10 bg-[#0E0E11] text-[#6B6B75] hover:text-[#EF9095]'
+                            ? 'border-[var(--danger)]/50 bg-[var(--danger)]/20 text-[var(--danger-fg)]'
+                            : 'border-[var(--accent-fg)]/10 bg-[var(--surface-input)] text-[var(--text-3)] hover:text-[var(--danger-fg)]'
                         }`}
                       >
                         <X className="h-3 w-3" />
@@ -1137,7 +1137,7 @@ export function HabitsPage() {
                             void handleSetDayHabit(habit, selectedDateKey, 'unlogged')
                           }
                           title="برگرداندن به ثبت‌نشده"
-                          className="flex h-7 w-7 items-center justify-center rounded-xl border border-[var(--accent-fg)]/10 bg-[#0E0E11] text-[#6B6B75] hover:text-[#9C9CA6]"
+                          className="flex h-7 w-7 items-center justify-center rounded-xl border border-[var(--accent-fg)]/10 bg-[var(--surface-input)] text-[var(--text-3)] hover:text-[var(--text-2)]"
                         >
                           <Minus className="h-3.5 w-3.5" />
                         </button>
@@ -1159,15 +1159,15 @@ export function HabitsPage() {
             onClick={() => setHeatmapExpanded((v) => !v)}
             className="flex items-center gap-2 text-right focus:outline-none"
           >
-            <div className="flex h-8 w-8 items-center justify-center rounded-xl border border-[var(--accent-fg)]/16 bg-[#1C1C21]/75 text-[var(--accent-fg)]">
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl border border-[var(--accent-fg)]/16 bg-[var(--surface-3)]/75 text-[var(--accent-fg)]">
               <CalendarDays className="h-4 w-4" />
             </div>
             <div>
-              <h2 className="text-xs font-bold text-[#ECECEF]">تقویم حرارتی سالانه</h2>
-              <p className="text-[10px] text-[#9C9CA6]">
+              <h2 className="text-xs font-bold text-[var(--text)]">تقویم حرارتی سالانه</h2>
+              <p className="text-[10px] text-[var(--text-2)]">
                 <Numeric value={heatmap.activeDays} className="font-semibold text-[var(--accent-fg)]" /> روز
                 فعال •{' '}
-                <Numeric value={heatmap.perfectDays} className="font-semibold text-[#ECECEF]" /> روز
+                <Numeric value={heatmap.perfectDays} className="font-semibold text-[var(--text)]" /> روز
                 کامل
               </p>
             </div>
@@ -1175,7 +1175,7 @@ export function HabitsPage() {
 
           <div className="flex items-center gap-1.5">
             {heatmapExpanded && (
-              <div className="flex items-center gap-0.5 rounded-xl border border-[var(--accent-fg)]/14 bg-[#0A0A0C]/70 p-0.5">
+              <div className="flex items-center gap-0.5 rounded-xl border border-[var(--accent-fg)]/14 bg-[var(--bg)]/70 p-0.5">
                 {[currentJYear - 1, currentJYear].map((yr) => (
                   <button
                     key={yr}
@@ -1187,7 +1187,7 @@ export function HabitsPage() {
                     className={`num-geo rounded-lg px-2 py-1 text-[10.5px] font-semibold transition ${
                       selectedYear === yr
                         ? 'bg-[var(--accent)] text-[var(--accent-on)]'
-                        : 'text-[#9C9CA6] hover:text-[#ECECEF]'
+                        : 'text-[var(--text-2)] hover:text-[var(--text)]'
                     }`}
                   >
                     {yr}
@@ -1199,7 +1199,7 @@ export function HabitsPage() {
               type="button"
               onClick={() => setHeatmapExpanded((v) => !v)}
               aria-label={heatmapExpanded ? 'بستن تقویم حرارتی' : 'باز کردن تقویم حرارتی'}
-              className="flex h-8 w-8 items-center justify-center rounded-xl border border-[var(--accent-fg)]/12 bg-[#0E0E11] text-[#9C9CA6]"
+              className="flex h-8 w-8 items-center justify-center rounded-xl border border-[var(--accent-fg)]/12 bg-[var(--surface-input)] text-[var(--text-2)]"
             >
               {heatmapExpanded ? (
                 <ChevronUp className="h-4 w-4" />
@@ -1223,15 +1223,15 @@ export function HabitsPage() {
 
             {/* Selected Day Inspector */}
             {selectedCell && (
-              <div className="flex items-center justify-between rounded-2xl border border-[var(--accent-fg)]/12 bg-[#0A0A0C]/90 px-3.5 py-2.5">
+              <div className="flex items-center justify-between rounded-2xl border border-[var(--accent-fg)]/12 bg-[var(--bg)]/90 px-3.5 py-2.5">
                 <div>
-                  <p className="text-xs font-bold text-[#ECECEF]">
+                  <p className="text-xs font-bold text-[var(--text)]">
                     {selectedDateInfo.weekday}،{' '}
                     <Numeric value={selectedDateInfo.day} className="text-[var(--accent-fg)]" />{' '}
                     {selectedDateInfo.month}{' '}
-                    <Numeric value={selectedDateInfo.year} className="text-[#9C9CA6]" />
+                    <Numeric value={selectedDateInfo.year} className="text-[var(--text-2)]" />
                   </p>
-                  <p className="mt-0.5 text-[10px] text-[#9C9CA6]">
+                  <p className="mt-0.5 text-[10px] text-[var(--text-2)]">
                     {selectedCell.state === 'future'
                       ? 'تاریخ آینده'
                       : selectedCell.state === 'unlogged'

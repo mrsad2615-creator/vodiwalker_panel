@@ -30,6 +30,8 @@ import { isNativeAndroid, triggerHaptic } from '@/lib/native';
 import { useApp } from '@/context/AppContext';
 import { LuxuryCard } from '@/components/ui/LuxuryCard';
 import { Numeric } from '@/components/ui/Numeric';
+import { SectionHeader } from '@/components/ui/SectionHeader';
+import { sectionEyebrow } from '@/lib/sections';
 import { NumericInput } from '@/components/ui/NumericInput';
 import { KairosLogoMark } from '@/components/ui/KairosMark';
 import { SafeAreaDiagnostics } from '@/components/ui/SafeAreaDiagnostics';
@@ -154,22 +156,21 @@ export function SettingsPage() {
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-lg font-bold text-[#ECECEF]">تنظیمات</h1>
-        <p className="mt-0.5 text-[11px] text-[#9C9CA6]">
-          شخصی‌سازی، یادآوری‌ها و مدیریت داده‌های آفلاین دستگاه
-        </p>
-      </div>
+      <SectionHeader
+        eyebrow={sectionEyebrow('settings')}
+        title="تنظیمات"
+        meta={<span>شخصی‌سازی، یادآوری‌ها و مدیریت دادهٔ آفلاین دستگاه</span>}
+      />
 
       {/* PROFILE & DAILY GOALS */}
       <LuxuryCard className="space-y-3.5 p-4">
-        <div className="flex items-center gap-2 text-xs font-bold text-[#ECECEF]">
+        <div className="flex items-center gap-2 text-xs font-bold text-[var(--text)]">
           <User className="h-4 w-4 text-[var(--accent-fg)]" />
           <span>پروفایل و اهداف روزانه</span>
         </div>
 
         <div>
-          <label className="mb-1.5 block text-[11px] text-[#9C9CA6]">نام نمایشی در داشبورد</label>
+          <label className="mb-1.5 block text-[11px] text-[var(--text-2)]">نام نمایشی در داشبورد</label>
           <input
             type="text"
             dir="auto"
@@ -181,7 +182,7 @@ export function SettingsPage() {
 
         <div className="grid grid-cols-2 gap-2.5">
           <div>
-            <label className="mb-1.5 block text-[11px] text-[#9C9CA6]">هدف تمرکز روزانه (دقیقه)</label>
+            <label className="mb-1.5 block text-[11px] text-[var(--text-2)]">هدف تمرکز روزانه (دقیقه)</label>
             <NumericInput
               min={15}
               max={720}
@@ -192,7 +193,7 @@ export function SettingsPage() {
             />
           </div>
           <div>
-            <label className="mb-1.5 block text-[11px] text-[#9C9CA6]">هدف وظایف روزانه</label>
+            <label className="mb-1.5 block text-[11px] text-[var(--text-2)]">هدف وظایف روزانه</label>
             <NumericInput
               min={1}
               max={50}
@@ -221,11 +222,11 @@ export function SettingsPage() {
       {/* NOTIFICATIONS & HAPTICS */}
       <LuxuryCard className="space-y-3.5 p-4">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-xs font-bold text-[#ECECEF]">
+          <div className="flex items-center gap-2 text-xs font-bold text-[var(--text)]">
             <Bell className="h-4 w-4 text-[var(--accent-fg)]" />
             <span>اعلان‌ها و یادآوری‌ها</span>
           </div>
-          <span className="rounded-lg bg-[#1C1C21] px-2 py-0.5 text-[10px] font-medium text-[var(--accent-fg)]">
+          <span className="rounded-lg bg-[var(--surface-3)] px-2 py-0.5 text-[10px] font-medium text-[var(--accent-fg)]">
             {permState === 'granted'
               ? 'مجوز فعال'
               : permState === 'denied'
@@ -237,7 +238,7 @@ export function SettingsPage() {
         {/* Toggle rows */}
         <div className="space-y-3 text-xs">
           <div className="flex items-center justify-between">
-            <span className="text-[#ECECEF]">یادآوری وظایف و پایان تمرکز</span>
+            <span className="text-[var(--text)]">یادآوری وظایف و پایان تمرکز</span>
             <button
               type="button"
               role="switch"
@@ -246,11 +247,11 @@ export function SettingsPage() {
                 updateSettings({ notificationsEnabled: !settings.notificationsEnabled })
               }
               className={`relative h-6 w-11 rounded-full transition-colors ${
-                settings.notificationsEnabled ? 'bg-[var(--accent)]' : 'bg-[#1C1C21]'
+                settings.notificationsEnabled ? 'bg-[var(--accent)]' : 'bg-[var(--surface-3)]'
               }`}
             >
               <span
-                className={`absolute top-0.5 h-5 w-5 rounded-full bg-[#ECECEF] transition-all ${
+                className={`absolute top-0.5 h-5 w-5 rounded-full bg-[var(--text)] transition-all ${
                   settings.notificationsEnabled ? 'left-0.5' : 'left-[22px]'
                 }`}
               />
@@ -258,8 +259,8 @@ export function SettingsPage() {
           </div>
 
           <div className="flex items-center justify-between">
-            <span className="flex items-center gap-1.5 text-[#ECECEF]">
-              <Volume2 className="h-3.5 w-3.5 text-[#9C9CA6]" />
+            <span className="flex items-center gap-1.5 text-[var(--text)]">
+              <Volume2 className="h-3.5 w-3.5 text-[var(--text-2)]" />
               صدای زنگ آرام تمرکز
             </span>
             <button
@@ -268,11 +269,11 @@ export function SettingsPage() {
               aria-checked={settings.soundEnabled}
               onClick={() => updateSettings({ soundEnabled: !settings.soundEnabled })}
               className={`relative h-6 w-11 rounded-full transition-colors ${
-                settings.soundEnabled ? 'bg-[var(--accent)]' : 'bg-[#1C1C21]'
+                settings.soundEnabled ? 'bg-[var(--accent)]' : 'bg-[var(--surface-3)]'
               }`}
             >
               <span
-                className={`absolute top-0.5 h-5 w-5 rounded-full bg-[#ECECEF] transition-all ${
+                className={`absolute top-0.5 h-5 w-5 rounded-full bg-[var(--text)] transition-all ${
                   settings.soundEnabled ? 'left-0.5' : 'left-[22px]'
                 }`}
               />
@@ -280,8 +281,8 @@ export function SettingsPage() {
           </div>
 
           <div className="flex items-center justify-between">
-            <span className="flex items-center gap-1.5 text-[#ECECEF]">
-              <Smartphone className="h-3.5 w-3.5 text-[#9C9CA6]" />
+            <span className="flex items-center gap-1.5 text-[var(--text)]">
+              <Smartphone className="h-3.5 w-3.5 text-[var(--text-2)]" />
               بازخورد لمسی (Haptics)
             </span>
             <button
@@ -290,11 +291,11 @@ export function SettingsPage() {
               aria-checked={settings.hapticsEnabled}
               onClick={() => updateSettings({ hapticsEnabled: !settings.hapticsEnabled })}
               className={`relative h-6 w-11 rounded-full transition-colors ${
-                settings.hapticsEnabled ? 'bg-[var(--accent)]' : 'bg-[#1C1C21]'
+                settings.hapticsEnabled ? 'bg-[var(--accent)]' : 'bg-[var(--surface-3)]'
               }`}
             >
               <span
-                className={`absolute top-0.5 h-5 w-5 rounded-full bg-[#ECECEF] transition-all ${
+                className={`absolute top-0.5 h-5 w-5 rounded-full bg-[var(--text)] transition-all ${
                   settings.hapticsEnabled ? 'left-0.5' : 'left-[22px]'
                 }`}
               />
@@ -315,7 +316,7 @@ export function SettingsPage() {
           <button
             type="button"
             onClick={handleTestNotification}
-            className={`btn-ghost-luxury rounded-xl py-2 text-[11px] font-medium text-[#ECECEF] ${
+            className={`btn-ghost-luxury rounded-xl py-2 text-[11px] font-medium text-[var(--text)] ${
               permState === 'granted' ? 'col-span-2' : ''
             }`}
           >
@@ -326,31 +327,31 @@ export function SettingsPage() {
 
       {/* LOCAL DATA & PRIVACY */}
       <LuxuryCard className="space-y-3.5 p-4">
-        <div className="flex items-center gap-2 text-xs font-bold text-[#ECECEF]">
+        <div className="flex items-center gap-2 text-xs font-bold text-[var(--text)]">
           <Database className="h-4 w-4 text-[var(--accent-fg)]" />
           <span>ذخیره‌سازی آفلاین و پشتیبان‌گیری</span>
         </div>
 
-        <div className="grid grid-cols-5 gap-1.5 rounded-2xl border border-[var(--accent-fg)]/10 bg-[#0D0D10] p-2.5 text-center">
+        <div className="grid grid-cols-5 gap-1.5 rounded-2xl border border-[var(--accent-fg)]/10 bg-[var(--surface-input)] p-2.5 text-center">
           <div>
-            <Numeric value={dbCounts.tasks} variant="display" className="text-xl font-bold text-[#ECECEF]" />
-            <span className="mt-0.5 block text-[9px] text-[#9C9CA6]">وظیفه</span>
+            <Numeric value={dbCounts.tasks} variant="display" className="text-xl font-bold text-[var(--text)]" />
+            <span className="mt-0.5 block text-[9px] text-[var(--text-2)]">وظیفه</span>
           </div>
           <div>
             <Numeric value={dbCounts.habits} variant="display" className="text-xl font-bold text-[var(--accent-fg)]" />
-            <span className="mt-0.5 block text-[9px] text-[#9C9CA6]">عادت</span>
+            <span className="mt-0.5 block text-[9px] text-[var(--text-2)]">عادت</span>
           </div>
           <div>
-            <Numeric value={dbCounts.logs} variant="display" className="text-xl font-bold text-[#ECECEF]" />
-            <span className="mt-0.5 block text-[9px] text-[#9C9CA6]">ثبت عادت</span>
+            <Numeric value={dbCounts.logs} variant="display" className="text-xl font-bold text-[var(--text)]" />
+            <span className="mt-0.5 block text-[9px] text-[var(--text-2)]">ثبت عادت</span>
           </div>
           <div>
             <Numeric value={dbCounts.sessions} variant="display" className="text-xl font-bold text-[var(--accent-fg)]" />
-            <span className="mt-0.5 block text-[9px] text-[#9C9CA6]">تمرکز</span>
+            <span className="mt-0.5 block text-[9px] text-[var(--text-2)]">تمرکز</span>
           </div>
           <div>
-            <Numeric value={dbCounts.goals} variant="display" className="text-xl font-bold text-[#ECECEF]" />
-            <span className="mt-0.5 block text-[9px] text-[#9C9CA6]">هدف</span>
+            <Numeric value={dbCounts.goals} variant="display" className="text-xl font-bold text-[var(--text)]" />
+            <span className="mt-0.5 block text-[9px] text-[var(--text-2)]">هدف</span>
           </div>
         </div>
 
@@ -358,7 +359,7 @@ export function SettingsPage() {
           <button
             type="button"
             onClick={handleExport}
-            className="btn-ghost-luxury flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-xs font-medium text-[#ECECEF]"
+            className="btn-ghost-luxury flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-xs font-medium text-[var(--text)]"
           >
             <Download className="h-3.5 w-3.5 text-[var(--accent-fg)]" />
             <span>خروجی پشتیبان</span>
@@ -366,7 +367,7 @@ export function SettingsPage() {
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="btn-ghost-luxury flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-xs font-medium text-[#ECECEF]"
+            className="btn-ghost-luxury flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-xs font-medium text-[var(--text)]"
           >
             <Upload className="h-3.5 w-3.5 text-[var(--accent-fg)]" />
             <span>بازیابی پشتیبان</span>
@@ -395,7 +396,7 @@ export function SettingsPage() {
                 tone: 'success',
               });
             }}
-            className="btn-ghost-luxury flex w-full items-center justify-center gap-1.5 rounded-xl py-2 text-[11px] font-medium text-[#9C9CA6]"
+            className="btn-ghost-luxury flex w-full items-center justify-center gap-1.5 rounded-xl py-2 text-[11px] font-medium text-[var(--text-2)]"
           >
             <RefreshCw className="h-3.5 w-3.5" />
             <span>بارگذاری مجدد داده‌های نمونه</span>
@@ -405,14 +406,14 @@ export function SettingsPage() {
             <button
               type="button"
               onClick={() => setConfirmWipe(true)}
-              className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-[#E5484D]/25 bg-[#E5484D]/10 py-2 text-[11px] font-medium text-[#EF9095] transition hover:bg-[#E5484D]/20"
+              className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-[var(--danger)]/25 bg-[var(--danger)]/10 py-2 text-[11px] font-medium text-[var(--danger-fg)] transition hover:bg-[var(--danger)]/20"
             >
               <Trash2 className="h-3.5 w-3.5" />
               <span>پاک‌سازی کامل و شروع از فضای خالی</span>
             </button>
           ) : (
-            <div className="flex items-center gap-2 rounded-xl border border-[#E5484D]/35 bg-[#E5484D]/12 p-2.5">
-              <span className="flex-1 text-[11px] text-[#ECECEF]">
+            <div className="flex items-center gap-2 rounded-xl border border-[var(--danger)]/35 bg-[var(--danger)]/12 p-2.5">
+              <span className="flex-1 text-[11px] text-[var(--text)]">
                 تمام داده‌ها حذف شوند؟
               </span>
               <button
@@ -422,14 +423,14 @@ export function SettingsPage() {
                   setConfirmWipe(false);
                   pushToast({ title: 'تمام داده‌ها پاک شدند', tone: 'default' });
                 }}
-                className="rounded-lg bg-[#E5484D] px-3 py-1 text-[11px] font-bold text-[#0A0A0C]"
+                className="rounded-lg bg-[var(--danger)] px-3 py-1 text-[11px] font-bold text-[var(--bg)]"
               >
                 بله، پاک کن
               </button>
               <button
                 type="button"
                 onClick={() => setConfirmWipe(false)}
-                className="rounded-lg bg-[#16161A] px-2.5 py-1 text-[11px] text-[#9C9CA6]"
+                className="rounded-lg bg-[var(--surface-2)] px-2.5 py-1 text-[11px] text-[var(--text-2)]"
               >
                 انصراف
               </button>
@@ -443,11 +444,11 @@ export function SettingsPage() {
         <div className="flex items-center gap-3">
           <KairosLogoMark size={34} />
           <div>
-            <p className="font-brand text-xs font-bold text-[#ECECEF]">KAIROS {APP_VERSION} • MRSAD</p>
+            <p className="font-brand text-xs font-bold text-[var(--text)]">KAIROS {APP_VERSION} • MRSAD</p>
             <p className="num-geo mt-0.5 text-[10px] text-[var(--text-3)]">
               build {BUILD_NUMBER} · {BUILD_SHA}
             </p>
-            <p className="mt-0.5 flex items-center gap-1 text-[10.5px] text-[#9C9CA6]">
+            <p className="mt-0.5 flex items-center gap-1 text-[10.5px] text-[var(--text-2)]">
               <ShieldCheck className="h-3.5 w-3.5 text-[var(--accent)]" />
               <span>
                 100% آفلاین •{' '}

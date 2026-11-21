@@ -19,7 +19,6 @@ export const DEFAULT_SETTINGS: UserSettings = {
   accentColor: DEFAULT_APPEARANCE.accent,
   backgroundId: DEFAULT_APPEARANCE.backgroundId,
   motionLevel: DEFAULT_APPEARANCE.motionLevel,
-  sectionIdentityEnabled: true,
   displayName: 'کاربر کایروس',
   dailyFocusGoalMinutes: 120,
   dailyTaskGoal: 6,

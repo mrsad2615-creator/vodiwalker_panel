@@ -68,13 +68,13 @@ export const CATEGORY_META: Record<
   },
   personal: {
     label: 'شخصی',
-    badgeBg: 'color-mix(in srgb, var(--accent-fg) 13%, transparent)',
-    badgeText: '#DCD0FF',
+    badgeBg: 'var(--cat-soft)',
+    badgeText: 'var(--cat-personal)',
   },
   health: {
     label: 'سلامت',
-    badgeBg: 'rgba(155, 118, 224, 0.16)',
-    badgeText: '#C5B0F3',
+    badgeBg: 'var(--cat-health-soft)',
+    badgeText: 'var(--cat-health)',
   },
   learning: {
     label: 'یادگیری',
@@ -83,13 +83,13 @@ export const CATEGORY_META: Record<
   },
   finance: {
     label: 'مالی',
-    badgeBg: 'rgba(196, 139, 92, 0.14)',
-    badgeText: '#DFB08A',
+    badgeBg: 'var(--cat-finance-soft)',
+    badgeText: 'var(--cat-finance)',
   },
   creative: {
     label: 'خلاقیت',
-    badgeBg: 'rgba(186, 108, 168, 0.16)',
-    badgeText: '#E2A6D5',
+    badgeBg: 'var(--cat-creative-soft)',
+    badgeText: 'var(--cat-creative)',
   },
 };
 
@@ -97,9 +97,9 @@ export const PRIORITY_META: Record<
   TaskPriority,
   { label: string; dotColor: string; textColor: string }
 > = {
-  high: { label: 'بالا', dotColor: '#E5484D', textColor: '#EF9095' },
+  high: { label: 'بالا', dotColor: 'var(--danger)', textColor: 'var(--danger-fg)' },
   medium: { label: 'متوسط', dotColor: 'var(--accent)', textColor: 'var(--accent-fg)' },
-  low: { label: 'عادی', dotColor: '#6B6B75', textColor: '#A69DB8' },
+  low: { label: 'عادی', dotColor: 'var(--text-3)', textColor: 'var(--text-2)' },
 };
 
 export const QUADRANT_META: Record<
@@ -117,7 +117,7 @@ export const QUADRANT_META: Record<
     title: 'مهم و فوری',
     subtitle: 'اولویت مطلق امروز',
     action: 'انجام فوری',
-    accent: '#E5484D',
+    accent: 'var(--danger)',
   },
   q2: {
     code: 'Q2',
@@ -131,14 +131,14 @@ export const QUADRANT_META: Record<
     title: 'غیرمهم و فوری',
     subtitle: 'کارهای سریع یا واگذاری',
     action: 'مدیریت سریع',
-    accent: '#C9975C',
+    accent: 'var(--warn)',
   },
   q4: {
     code: 'Q4',
     title: 'غیرمهم و غیرفوری',
     subtitle: 'کم‌اولویت یا قابل حذف',
     action: 'ارزیابی مجدد',
-    accent: '#6B6B75',
+    accent: 'var(--text-3)',
   },
 };
 

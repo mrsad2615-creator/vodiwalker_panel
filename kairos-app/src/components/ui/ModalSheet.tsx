@@ -43,7 +43,7 @@ export function ModalSheet({
             exit={{ opacity: 0 }}
             transition={{ duration: 0.18 }}
             onClick={onClose}
-            className="fixed inset-0 bg-[#050508]/78 backdrop-blur-[6px]"
+            className="fixed inset-0 bg-[color-mix(in_srgb,var(--bg)_84%,transparent)] backdrop-blur-[6px]"
           />
 
           <motion.div
@@ -61,16 +61,16 @@ export function ModalSheet({
             {/* Header */}
             <div className="flex items-start justify-between gap-3 border-b border-[var(--accent-fg)]/10 px-5 py-3.5">
               <div>
-                <h2 className="text-[1.02rem] font-bold text-[#ECECEF]">{title}</h2>
+                <h2 className="text-[1.02rem] font-bold text-[var(--text)]">{title}</h2>
                 {subtitle && (
-                  <p className="mt-0.5 text-xs text-[#9C9CA6]">{subtitle}</p>
+                  <p className="mt-0.5 text-xs text-[var(--text-2)]">{subtitle}</p>
                 )}
               </div>
               <button
                 type="button"
                 onClick={onClose}
                 aria-label="بستن"
-                className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#1C1C21]/60 text-[#9C9CA6] transition hover:bg-[#1C1C21] hover:text-[#ECECEF]"
+                className="flex h-8 w-8 items-center justify-center rounded-xl bg-[var(--surface-3)]/60 text-[var(--text-2)] transition hover:bg-[var(--surface-3)] hover:text-[var(--text)]"
               >
                 <X className="h-4 w-4" />
               </button>

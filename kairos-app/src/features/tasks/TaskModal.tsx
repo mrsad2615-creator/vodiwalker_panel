@@ -179,14 +179,14 @@ export function TaskModal() {
                 type="button"
                 onClick={handleDelete}
                 aria-label="حذف وظیفه"
-                className="flex h-11 w-11 items-center justify-center rounded-xl border border-[#E5484D]/25 bg-[#E5484D]/10 text-[#EF9095] transition hover:bg-[#E5484D]/20"
+                className="flex h-11 w-11 items-center justify-center rounded-xl border border-[var(--danger)]/25 bg-[var(--danger)]/10 text-[var(--danger-fg)] transition hover:bg-[var(--danger)]/20"
               >
                 <Trash2 className="h-4 w-4" />
               </button>
               <button
                 type="button"
                 onClick={handleArchiveToggle}
-                className="btn-ghost-luxury rounded-xl px-3 py-2.5 text-xs font-medium text-[#9C9CA6]"
+                className="btn-ghost-luxury rounded-xl px-3 py-2.5 text-xs font-medium text-[var(--text-2)]"
               >
                 {editing.archived ? 'بازیابی' : 'آرشیو'}
               </button>
@@ -205,7 +205,7 @@ export function TaskModal() {
       <div className="space-y-4">
         {/* Title */}
         <div>
-          <label className="mb-1.5 block text-xs font-medium text-[#9C9CA6]">عنوان وظیفه</label>
+          <label className="mb-1.5 block text-xs font-medium text-[var(--text-2)]">عنوان وظیفه</label>
           <input
             type="text"
             dir="auto"
@@ -224,7 +224,7 @@ export function TaskModal() {
 
         {/* Description */}
         <div>
-          <label className="mb-1.5 block text-xs font-medium text-[#9C9CA6]">توضیحات</label>
+          <label className="mb-1.5 block text-xs font-medium text-[var(--text-2)]">توضیحات</label>
           <textarea
             rows={2}
             dir="auto"
@@ -238,7 +238,7 @@ export function TaskModal() {
         {/* Date & Time */}
         <div className="grid grid-cols-2 gap-2.5">
           <div>
-            <label className="mb-1.5 flex items-center gap-1 text-xs font-medium text-[#9C9CA6]">
+            <label className="mb-1.5 flex items-center gap-1 text-xs font-medium text-[var(--text-2)]">
               <Calendar className="h-3.5 w-3.5 text-[var(--accent)]" />
               <span>تاریخ (شمسی)</span>
             </label>
@@ -248,18 +248,18 @@ export function TaskModal() {
               className="luxury-input flex items-center justify-between text-right text-xs"
             >
               {dueDate ? (
-                <span className="text-[#ECECEF]">
+                <span className="text-[var(--text)]">
                   <Numeric value={formatJalaaliFull(dueDate).day} /> {formatJalaaliFull(dueDate).month}{' '}
-                  <Numeric value={formatJalaaliFull(dueDate).year} className="text-[#9C9CA6]" />
+                  <Numeric value={formatJalaaliFull(dueDate).year} className="text-[var(--text-2)]" />
                 </span>
               ) : (
-                <span className="text-[#6B6B75]">بدون تاریخ</span>
+                <span className="text-[var(--text-3)]">بدون تاریخ</span>
               )}
             </button>
           </div>
 
           <div>
-            <label className="mb-1.5 flex items-center gap-1 text-xs font-medium text-[#9C9CA6]">
+            <label className="mb-1.5 flex items-center gap-1 text-xs font-medium text-[var(--text-2)]">
               <Clock className="h-3.5 w-3.5 text-[var(--accent)]" />
               <span>ساعت</span>
             </label>
@@ -284,7 +284,7 @@ export function TaskModal() {
 
         {/* Status */}
         <div>
-          <label className="mb-1.5 block text-xs font-medium text-[#9C9CA6]">وضعیت اجرا</label>
+          <label className="mb-1.5 block text-xs font-medium text-[var(--text-2)]">وضعیت اجرا</label>
           <div className="grid grid-cols-3 gap-2">
             {(
               [
@@ -299,8 +299,8 @@ export function TaskModal() {
                 onClick={() => setStatus(st.id)}
                 className={`rounded-xl border py-2 text-xs font-medium transition ${
                   status === st.id
-                    ? 'border-[var(--accent)] bg-[#1C1C21] text-[#ECECEF]'
-                    : 'border-[var(--accent-fg)]/10 bg-[#0E0E11] text-[#9C9CA6]'
+                    ? 'border-[var(--accent)] bg-[var(--surface-3)] text-[var(--text)]'
+                    : 'border-[var(--accent-fg)]/10 bg-[var(--surface-input)] text-[var(--text-2)]'
                 }`}
               >
                 {st.label}
@@ -311,7 +311,7 @@ export function TaskModal() {
 
         {/* Eisenhower Quadrant (4-box Matrix) */}
         <div>
-          <label className="mb-1.5 block text-xs font-medium text-[#9C9CA6]">
+          <label className="mb-1.5 block text-xs font-medium text-[var(--text-2)]">
             ماتریس اولویت آیزنهاور
           </label>
           <div className="grid grid-cols-2 gap-2">
@@ -330,12 +330,12 @@ export function TaskModal() {
                   }}
                   className={`rounded-xl border px-3 py-2 text-right transition ${
                     active
-                      ? 'border-[var(--accent-fg)]/45 bg-[#1C1C21]'
-                      : 'border-[var(--accent-fg)]/10 bg-[#0E0E11] hover:border-[var(--accent-fg)]/22'
+                      ? 'border-[var(--accent-fg)]/45 bg-[var(--surface-3)]'
+                      : 'border-[var(--accent-fg)]/10 bg-[var(--surface-input)] hover:border-[var(--accent-fg)]/22'
                   }`}
                 >
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-[#ECECEF]">{meta.title}</span>
+                    <span className="text-xs font-semibold text-[var(--text)]">{meta.title}</span>
                     <span
                       className="num-geo text-[10px] font-bold"
                       style={{ color: meta.accent }}
@@ -343,7 +343,7 @@ export function TaskModal() {
                       {meta.code}
                     </span>
                   </div>
-                  <p className="mt-0.5 text-[10px] text-[#9C9CA6]">{meta.action}</p>
+                  <p className="mt-0.5 text-[10px] text-[var(--text-2)]">{meta.action}</p>
                 </button>
               );
             })}
@@ -353,7 +353,7 @@ export function TaskModal() {
         {/* Priority & Category */}
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="mb-1.5 block text-xs font-medium text-[#9C9CA6]">سطح اولویت</label>
+            <label className="mb-1.5 block text-xs font-medium text-[var(--text-2)]">سطح اولویت</label>
             <div className="flex gap-1.5">
               {(['high', 'medium', 'low'] as TaskPriority[]).map((p) => (
                 <button
@@ -362,8 +362,8 @@ export function TaskModal() {
                   onClick={() => setPriority(p)}
                   className={`flex-1 rounded-xl border py-2 text-[11px] font-medium transition ${
                     priority === p
-                      ? 'border-[var(--accent)] bg-[#1C1C21] text-[#ECECEF]'
-                      : 'border-[var(--accent-fg)]/10 bg-[#0E0E11] text-[#9C9CA6]'
+                      ? 'border-[var(--accent)] bg-[var(--surface-3)] text-[var(--text)]'
+                      : 'border-[var(--accent-fg)]/10 bg-[var(--surface-input)] text-[var(--text-2)]'
                   }`}
                 >
                   {PRIORITY_META[p].label}
@@ -373,14 +373,14 @@ export function TaskModal() {
           </div>
 
           <div>
-            <label className="mb-1.5 block text-xs font-medium text-[#9C9CA6]">دسته‌بندی</label>
+            <label className="mb-1.5 block text-xs font-medium text-[var(--text-2)]">دسته‌بندی</label>
             <select
               value={category}
               onChange={(e) => setCategory(e.target.value as TaskCategory)}
               className="luxury-input py-2 text-xs"
             >
               {(Object.keys(CATEGORY_META) as TaskCategory[]).map((cat) => (
-                <option key={cat} value={cat} className="bg-[#16161A] text-[#ECECEF]">
+                <option key={cat} value={cat} className="bg-[var(--surface-2)] text-[var(--text)]">
                   {CATEGORY_META[cat].label}
                 </option>
               ))}
@@ -390,12 +390,12 @@ export function TaskModal() {
 
         {/* Subtasks */}
         <div>
-          <label className="mb-1.5 block text-xs font-medium text-[#9C9CA6]">زیرکارها</label>
+          <label className="mb-1.5 block text-xs font-medium text-[var(--text-2)]">زیرکارها</label>
           <div className="space-y-1.5">
             {subtasks.map((sub) => (
               <div
                 key={sub.id}
-                className="flex items-center gap-2 rounded-xl border border-[var(--accent-fg)]/10 bg-[#0E0E11] px-3 py-2"
+                className="flex items-center gap-2 rounded-xl border border-[var(--accent-fg)]/10 bg-[var(--surface-input)] px-3 py-2"
               >
                 <button
                   type="button"
@@ -416,7 +416,7 @@ export function TaskModal() {
                 </button>
                 <span
                   className={`flex-1 text-xs ${
-                    sub.completed ? 'text-[#6B6B75] line-through' : 'text-[#ECECEF]'
+                    sub.completed ? 'text-[var(--text-3)] line-through' : 'text-[var(--text)]'
                   }`}
                 >
                   {sub.title}
@@ -424,7 +424,7 @@ export function TaskModal() {
                 <button
                   type="button"
                   onClick={() => setSubtasks(subtasks.filter((s) => s.id !== sub.id))}
-                  className="text-[#6B6B75] hover:text-[#EF9095]"
+                  className="text-[var(--text-3)] hover:text-[var(--danger-fg)]"
                   aria-label="حذف زیرکار"
                 >
                   <X className="h-3.5 w-3.5" />
@@ -460,7 +460,7 @@ export function TaskModal() {
 
         {/* Tags */}
         <div>
-          <label className="mb-1.5 flex items-center gap-1 text-xs font-medium text-[#9C9CA6]">
+          <label className="mb-1.5 flex items-center gap-1 text-xs font-medium text-[var(--text-2)]">
             <Tag className="h-3.5 w-3.5 text-[var(--accent)]" />
             <span>برچسب‌ها</span>
           </label>
@@ -468,13 +468,13 @@ export function TaskModal() {
             {tags.map((t) => (
               <span
                 key={t}
-                className="inline-flex items-center gap-1 rounded-full border border-[var(--accent-fg)]/22 bg-[#1C1C21] px-2.5 py-0.5 text-[11px] text-[var(--accent-fg)]"
+                className="inline-flex items-center gap-1 rounded-full border border-[var(--accent-fg)]/22 bg-[var(--surface-3)] px-2.5 py-0.5 text-[11px] text-[var(--accent-fg)]"
               >
                 #{t}
                 <button
                   type="button"
                   onClick={() => setTags(tags.filter((x) => x !== t))}
-                  className="hover:text-[#ECECEF]"
+                  className="hover:text-[var(--text)]"
                 >
                   <X className="h-3 w-3" />
                 </button>
@@ -507,19 +507,19 @@ export function TaskModal() {
         </div>
 
         {/* Recurrence & Reminder */}
-        <div className="grid grid-cols-1 gap-3 rounded-2xl border border-[var(--accent-fg)]/10 bg-[#0E0E11] p-3.5">
+        <div className="grid grid-cols-1 gap-3 rounded-2xl border border-[var(--accent-fg)]/10 bg-[var(--surface-input)] p-3.5">
           <div className="flex items-center justify-between gap-3">
-            <span className="flex items-center gap-1.5 text-xs font-medium text-[#ECECEF]">
+            <span className="flex items-center gap-1.5 text-xs font-medium text-[var(--text)]">
               <Repeat className="h-3.5 w-3.5 text-[var(--accent-fg)]" />
               تکرار وظیفه
             </span>
             <select
               value={recurrence}
               onChange={(e) => setRecurrence(e.target.value as RecurrenceRule)}
-              className="rounded-xl border border-[var(--accent-fg)]/15 bg-[#16161A] px-3 py-1.5 text-xs text-[#ECECEF] outline-none"
+              className="rounded-xl border border-[var(--accent-fg)]/15 bg-[var(--surface-2)] px-3 py-1.5 text-xs text-[var(--text)] outline-none"
             >
               {(Object.keys(RECURRENCE_LABELS) as RecurrenceRule[]).map((r) => (
-                <option key={r} value={r} className="bg-[#16161A]">
+                <option key={r} value={r} className="bg-[var(--surface-2)]">
                   {RECURRENCE_LABELS[r]}
                 </option>
               ))}
@@ -529,7 +529,7 @@ export function TaskModal() {
           <div className="h-px bg-[var(--accent-fg)]/10" />
 
           <div className="flex items-center justify-between gap-3">
-            <span className="flex items-center gap-1.5 text-xs font-medium text-[#ECECEF]">
+            <span className="flex items-center gap-1.5 text-xs font-medium text-[var(--text)]">
               <Bell className="h-3.5 w-3.5 text-[var(--accent-fg)]" />
               یادآوری و اعلان
             </span>
@@ -539,11 +539,11 @@ export function TaskModal() {
               aria-checked={reminderEnabled}
               onClick={() => setReminderEnabled((v) => !v)}
               className={`relative h-6 w-11 rounded-full transition-colors ${
-                reminderEnabled ? 'bg-[var(--accent)]' : 'bg-[#1C1C21]'
+                reminderEnabled ? 'bg-[var(--accent)]' : 'bg-[var(--surface-3)]'
               }`}
             >
               <span
-                className={`absolute top-0.5 h-5 w-5 rounded-full bg-[#ECECEF] transition-all ${
+                className={`absolute top-0.5 h-5 w-5 rounded-full bg-[var(--text)] transition-all ${
                   reminderEnabled ? 'left-0.5' : 'left-[22px]'
                 }`}
               />
@@ -551,12 +551,12 @@ export function TaskModal() {
           </div>
 
           {reminderEnabled && (
-            <div className="flex items-center justify-between text-[11px] text-[#9C9CA6]">
+            <div className="flex items-center justify-between text-[11px] text-[var(--text-2)]">
               <span>زمان اعلام قبل از موعد:</span>
               <select
                 value={reminderOffsetMin}
                 onChange={(e) => setReminderOffsetMin(Number(e.target.value))}
-                className="rounded-lg border border-[var(--accent-fg)]/15 bg-[#16161A] px-2.5 py-1 text-xs text-[#ECECEF] outline-none"
+                className="rounded-lg border border-[var(--accent-fg)]/15 bg-[var(--surface-2)] px-2.5 py-1 text-xs text-[var(--text)] outline-none"
               >
                 <option value={0}>دقیقاً در ساعت موعد</option>
                 <option value={10}>10 دقیقه قبل</option>

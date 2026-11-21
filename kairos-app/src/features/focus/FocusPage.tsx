@@ -149,7 +149,7 @@ export function FocusPage() {
           role="dialog"
           aria-modal="true"
           aria-label="حالت سینمایی تمرکز"
-          className="fixed inset-0 z-[80] flex flex-col items-center justify-between overflow-y-auto bg-[#0A0A0C] px-6 py-8"
+          className="fixed inset-0 z-[80] flex flex-col items-center justify-between overflow-y-auto bg-[var(--bg)] px-6 py-8"
           style={{
             backgroundImage:
               'radial-gradient(ellipse 70% 40% at 50% 40%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 70%)',
@@ -161,12 +161,12 @@ export function FocusPage() {
               <span className="font-brand text-[10.5px] font-bold text-[var(--accent-fg)]">
                 KAIROS CINEMA
               </span>
-              <span className="text-[11px] text-[#6B6B75]">•</span>
-              <span className="text-[11px] text-[#9C9CA6]">
+              <span className="text-[11px] text-[var(--text-3)]">•</span>
+              <span className="text-[11px] text-[var(--text-2)]">
                 امروز{' '}
                 <Numeric
                   value={formatDurationShort(todayTotalMin)}
-                  className="font-semibold text-[#ECECEF]"
+                  className="font-semibold text-[var(--text)]"
                 />
               </span>
             </div>
@@ -175,7 +175,7 @@ export function FocusPage() {
               type="button"
               onClick={() => setCinemaMode(false)}
               aria-label="خروج از نمای سینمایی"
-              className="flex items-center gap-1.5 rounded-xl border border-[var(--accent-fg)]/18 bg-[#16161A]/90 px-3 py-1.5 text-[11px] font-medium text-[#ECECEF]"
+              className="flex items-center gap-1.5 rounded-xl border border-[var(--accent-fg)]/18 bg-[var(--surface-2)]/90 px-3 py-1.5 text-[11px] font-medium text-[var(--text)]"
             >
               <Minimize2 className="h-3.5 w-3.5 text-[var(--accent-fg)]" />
               <span>خروج</span>
@@ -210,8 +210,8 @@ export function FocusPage() {
                     onClick={() => handleSelectSound(sc.id)}
                     className={`flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-[11px] font-medium transition ${
                       active
-                        ? 'border-[var(--accent-fg)]/45 bg-[#1C1C21] text-[#ECECEF]'
-                        : 'border-[var(--accent-fg)]/12 bg-[#16161A]/80 text-[#9C9CA6]'
+                        ? 'border-[var(--accent-fg)]/45 bg-[var(--surface-3)] text-[var(--text)]'
+                        : 'border-[var(--accent-fg)]/12 bg-[var(--surface-2)]/80 text-[var(--text-2)]'
                     }`}
                   >
                     <Icon className="h-3.5 w-3.5 text-[var(--accent-fg)]" />
@@ -229,7 +229,7 @@ export function FocusPage() {
                 type="button"
                 onClick={resetFocus}
                 aria-label="بازنشانی تایمر"
-                className="flex h-13 w-13 items-center justify-center rounded-2xl border border-[var(--accent-fg)]/16 bg-[#16161A]/85 text-[#9C9CA6] transition hover:text-[#ECECEF]"
+                className="flex h-13 w-13 items-center justify-center rounded-2xl border border-[var(--accent-fg)]/16 bg-[var(--surface-2)]/85 text-[var(--text-2)] transition hover:text-[var(--text)]"
               >
                 <RotateCcw className="h-5 w-5" />
               </button>
@@ -257,7 +257,7 @@ export function FocusPage() {
                   type="button"
                   onClick={skipPomodoroPhase}
                   aria-label="مرحله بعد"
-                  className="flex h-13 w-13 items-center justify-center rounded-2xl border border-[var(--accent-fg)]/16 bg-[#16161A]/85 text-[#9C9CA6] transition hover:text-[#ECECEF]"
+                  className="flex h-13 w-13 items-center justify-center rounded-2xl border border-[var(--accent-fg)]/16 bg-[var(--surface-2)]/85 text-[var(--text-2)] transition hover:text-[var(--text)]"
                 >
                   <SkipForward className="h-5 w-5" />
                 </button>
@@ -266,7 +266,7 @@ export function FocusPage() {
                   type="button"
                   onClick={() => void finishAndSaveFocus()}
                   aria-label="پایان و ثبت جلسه"
-                  className="flex h-13 w-13 items-center justify-center rounded-2xl border border-[var(--accent)]/50 bg-[#1C1C21] text-[var(--accent-fg)]"
+                  className="flex h-13 w-13 items-center justify-center rounded-2xl border border-[var(--accent)]/50 bg-[var(--surface-3)] text-[var(--accent-fg)]"
                 >
                   <Check className="h-5 w-5" />
                 </button>
@@ -619,11 +619,11 @@ export function FocusPage() {
           onChange={(e) => setFocusLinkedTask(e.target.value || null)}
           className="min-w-0 flex-1 bg-transparent text-[11.5px] text-[var(--text)] outline-none"
         >
-          <option value="" className="bg-[#16161A]">
+          <option value="" className="bg-[var(--surface-2)]">
             تمرکز آزاد
           </option>
           {availableTasks.map((t) => (
-            <option key={t.id} value={t.id} className="bg-[#16161A]">
+            <option key={t.id} value={t.id} className="bg-[var(--surface-2)]">
               {t.title}
             </option>
           ))}
@@ -690,7 +690,7 @@ export function FocusPage() {
                   type="button"
                   onClick={() => deleteFocusSession(s.id)}
                   aria-label="حذف جلسه"
-                  className="shrink-0 rounded-md p-1 text-[var(--text-3)] transition hover:text-[#EF9095]"
+                  className="shrink-0 rounded-md p-1 text-[var(--text-3)] transition hover:text-[var(--danger-fg)]"
                 >
                   <Trash2 className="h-3 w-3" />
                 </button>

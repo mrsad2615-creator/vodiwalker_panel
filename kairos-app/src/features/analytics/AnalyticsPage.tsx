@@ -32,6 +32,8 @@ import {
 import { formatDurationShort } from '@/lib/format';
 import { LuxuryCard } from '@/components/ui/LuxuryCard';
 import { Numeric } from '@/components/ui/Numeric';
+import { SectionHeader } from '@/components/ui/SectionHeader';
+import { sectionEyebrow } from '@/lib/sections';
 import { ActivityHeatmap } from '@/components/charts/ActivityHeatmap';
 import { LuxuryBarChart } from '@/components/charts/LuxuryBarChart';
 import { LuxuryAreaChart } from '@/components/charts/LuxuryAreaChart';
@@ -46,7 +48,7 @@ function DeltaBadge({ value, suffix = '%' }: { value: number; suffix?: string })
       className={`inline-flex items-center gap-0.5 rounded-lg px-2 py-0.5 text-[10.5px] font-semibold ${
         positive
           ? 'bg-[var(--accent)]/20 text-[var(--accent-fg)]'
-          : 'bg-[#E5484D]/18 text-[#EF9095]'
+          : 'bg-[var(--danger)]/18 text-[var(--danger-fg)]'
       }`}
     >
       {positive ? (
@@ -166,16 +168,14 @@ export function AnalyticsPage() {
 
   return (
     <div className="space-y-4">
-      {/* Page Title */}
-      <div>
-        <h1 className="text-lg font-bold text-[#ECECEF]">تحلیل و گزارش عملکرد</h1>
-        <p className="mt-0.5 text-[11px] text-[#9C9CA6]">
-          آمار واقعی مبتنی بر داده‌های ثبت‌شده شما • مرور ماهانه و سالانه
-        </p>
-      </div>
+      <SectionHeader
+        eyebrow={sectionEyebrow('analytics')}
+        title="تحلیل و گزارش عملکرد"
+        meta={<span>آمار واقعی از داده‌های ثبت‌شدهٔ شما · مرور ماهانه و سالانه</span>}
+      />
 
       {/* Sub-Navigation Switcher */}
-      <div className="grid grid-cols-3 gap-1 rounded-2xl border border-[var(--accent-fg)]/12 bg-[#16161A] p-1">
+      <div className="grid grid-cols-3 gap-1 rounded-2xl border border-[var(--accent-fg)]/12 bg-[var(--surface-2)] p-1">
         {(
           [
             { id: 'overview', label: 'نمای کلی' },
@@ -189,8 +189,8 @@ export function AnalyticsPage() {
             onClick={() => setSubTab(tab.id)}
             className={`rounded-xl py-2 text-xs font-medium transition ${
               subTab === tab.id
-                ? 'bg-[#1C1C21] text-[#ECECEF] shadow-[inset_0_1px_0_color-mix(in_srgb,var(--accent-fg)_20%,transparent)]'
-                : 'text-[#9C9CA6] hover:text-[#ECECEF]'
+                ? 'bg-[var(--surface-3)] text-[var(--text)] shadow-[inset_0_1px_0_color-mix(in_srgb,var(--accent-fg)_20%,transparent)]'
+                : 'text-[var(--text-2)] hover:text-[var(--text)]'
             }`}
           >
             {tab.label}
@@ -205,8 +205,8 @@ export function AnalyticsPage() {
           <LuxuryCard className="p-4">
             <div className="mb-3 flex items-center justify-between">
               <div>
-                <h2 className="text-xs font-bold text-[#ECECEF]">زمان تمرکز 7 روز اخیر</h2>
-                <p className="mt-0.5 text-[10.5px] text-[#9C9CA6]">دقیقه تمرکز ثبت‌شده در هر روز</p>
+                <h2 className="text-xs font-bold text-[var(--text)]">زمان تمرکز 7 روز اخیر</h2>
+                <p className="mt-0.5 text-[10.5px] text-[var(--text-2)]">دقیقه تمرکز ثبت‌شده در هر روز</p>
               </div>
               <Numeric
                 value={formatDurationShort(
@@ -233,14 +233,14 @@ export function AnalyticsPage() {
           <LuxuryCard className="p-4">
             <div className="mb-3 flex items-center justify-between">
               <div>
-                <h2 className="text-xs font-bold text-[#ECECEF]">روند تکمیل وظایف هفتگی</h2>
-                <p className="mt-0.5 text-[10.5px] text-[#9C9CA6]">تعداد وظایف تکمیل‌شده در هر روز</p>
+                <h2 className="text-xs font-bold text-[var(--text)]">روند تکمیل وظایف هفتگی</h2>
+                <p className="mt-0.5 text-[10.5px] text-[var(--text-2)]">تعداد وظایف تکمیل‌شده در هر روز</p>
               </div>
               <Numeric
                 value={last7DaysData.reduce((s, d) => s + d.tasksDone, 0)}
                 variant="display"
-                className="text-2xl font-bold text-[#ECECEF]"
-                suffix={<span className="num-geo ml-1 text-xs text-[#9C9CA6]">کار</span>}
+                className="text-2xl font-bold text-[var(--text)]"
+                suffix={<span className="num-geo ml-1 text-xs text-[var(--text-2)]">کار</span>}
               />
             </div>
 
@@ -258,12 +258,12 @@ export function AnalyticsPage() {
           {/* Habit Adherence Overview */}
           <LuxuryCard className="space-y-3 p-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-xs font-bold text-[#ECECEF]">میزان پایبندی به عادت‌ها</h2>
+              <h2 className="text-xs font-bold text-[var(--text)]">میزان پایبندی به عادت‌ها</h2>
               <Flame className="h-4 w-4 text-[var(--accent)]" />
             </div>
 
             {habitAdherenceList.length === 0 ? (
-              <p className="py-4 text-center text-xs text-[#6B6B75]">
+              <p className="py-4 text-center text-xs text-[var(--text-3)]">
                 عادتی ثبت نشده است.
               </p>
             ) : (
@@ -271,9 +271,9 @@ export function AnalyticsPage() {
                 {habitAdherenceList.map(({ habit, stats }) => (
                   <div key={habit.id} className="space-y-1.5">
                     <div className="flex items-center justify-between text-xs">
-                      <span className="truncate font-medium text-[#ECECEF]">{habit.name}</span>
+                      <span className="truncate font-medium text-[var(--text)]">{habit.name}</span>
                       <div className="flex items-center gap-2">
-                        <span className="text-[10px] text-[#6B6B75]">
+                        <span className="text-[10px] text-[var(--text-3)]">
                           رکورد <Numeric value={stats.bestStreak} />d
                         </span>
                         <Numeric
@@ -283,7 +283,7 @@ export function AnalyticsPage() {
                         />
                       </div>
                     </div>
-                    <div className="h-1.5 w-full overflow-hidden rounded-full bg-[#0A0A0C]">
+                    <div className="h-1.5 w-full overflow-hidden rounded-full bg-[var(--bg)]">
                       <div
                         className="h-full rounded-full transition-all duration-300"
                         style={{
@@ -302,8 +302,8 @@ export function AnalyticsPage() {
           <LuxuryCard className="space-y-3 p-4">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-xs font-bold text-[#ECECEF]">تقویم حرارتی کلی فعالیت‌ها</h2>
-                <p className="mt-0.5 text-[10.5px] text-[#9C9CA6]">
+                <h2 className="text-xs font-bold text-[var(--text)]">تقویم حرارتی کلی فعالیت‌ها</h2>
+                <p className="mt-0.5 text-[10.5px] text-[var(--text-2)]">
                   ترکیب واقعی وظایف، عادت‌ها و جلسات تمرکز سال <Numeric value={todayJ.jy} />
                 </p>
               </div>
@@ -311,7 +311,7 @@ export function AnalyticsPage() {
                 value={overviewHeatmap.activeDays}
                 variant="display"
                 className="text-2xl font-bold text-[var(--accent-fg)]"
-                suffix={<span className="num-geo ml-1 text-[10px] text-[#9C9CA6]">روز</span>}
+                suffix={<span className="num-geo ml-1 text-[10px] text-[var(--text-2)]">روز</span>}
               />
             </div>
 
@@ -323,14 +323,14 @@ export function AnalyticsPage() {
             />
 
             {selectedHeatCell && (
-              <div className="flex items-center justify-between rounded-xl border border-[var(--accent-fg)]/12 bg-[#0E0E11] px-3 py-2 text-[11px]">
-                <span className="text-[#ECECEF]">
+              <div className="flex items-center justify-between rounded-xl border border-[var(--accent-fg)]/12 bg-[var(--surface-input)] px-3 py-2 text-[11px]">
+                <span className="text-[var(--text)]">
                   {formatJalaaliFull(selectedHeatCell.dateKey).compact}
                 </span>
-                <span className="text-[#9C9CA6]">
-                  کار: <Numeric value={selectedHeatCell.tasksCompleted} className="text-[#ECECEF]" /> •
+                <span className="text-[var(--text-2)]">
+                  کار: <Numeric value={selectedHeatCell.tasksCompleted} className="text-[var(--text)]" /> •
                   عادت: <Numeric value={selectedHeatCell.habitsCompleted} className="text-[var(--accent-fg)]" /> •
-                  تمرکز: <Numeric value={`${selectedHeatCell.focusMinutes}m`} className="text-[#ECECEF]" />
+                  تمرکز: <Numeric value={`${selectedHeatCell.focusMinutes}m`} className="text-[var(--text)]" />
                 </span>
               </div>
             )}
@@ -347,19 +347,19 @@ export function AnalyticsPage() {
               type="button"
               onClick={() => shiftReviewMonth(-1)}
               aria-label="ماه قبل"
-              className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#0E0E11] text-[#9C9CA6] hover:text-[#ECECEF]"
+              className="flex h-8 w-8 items-center justify-center rounded-xl bg-[var(--surface-input)] text-[var(--text-2)] hover:text-[var(--text)]"
             >
               <ChevronRight className="h-4 w-4" />
             </button>
             <div className="text-center">
-              <p className="text-sm font-bold text-[#ECECEF]">{monthlyReport.monthLabel}</p>
-              <p className="text-[10px] text-[#9C9CA6]">مرور عملکرد ماهانه</p>
+              <p className="text-sm font-bold text-[var(--text)]">{monthlyReport.monthLabel}</p>
+              <p className="text-[10px] text-[var(--text-2)]">مرور عملکرد ماهانه</p>
             </div>
             <button
               type="button"
               onClick={() => shiftReviewMonth(1)}
               aria-label="ماه بعد"
-              className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#0E0E11] text-[#9C9CA6] hover:text-[#ECECEF]"
+              className="flex h-8 w-8 items-center justify-center rounded-xl bg-[var(--surface-input)] text-[var(--text-2)] hover:text-[var(--text)]"
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
@@ -384,7 +384,7 @@ export function AnalyticsPage() {
                       <Numeric
                         value={monthlyReport.overallSuccessRate}
                         variant="display"
-                        className="text-[3.6rem] font-extrabold text-[#ECECEF]"
+                        className="text-[3.6rem] font-extrabold text-[var(--text)]"
                       />
                       <span className="num-display text-2xl font-bold text-[var(--accent-fg)]">%</span>
                     </div>
@@ -392,7 +392,7 @@ export function AnalyticsPage() {
 
                   {monthlyReport.comparison.hasPrevData && (
                     <div className="text-left">
-                      <span className="block text-[10px] text-[#9C9CA6]">
+                      <span className="block text-[10px] text-[var(--text-2)]">
                         مقایسه با {monthlyReport.comparison.prevMonthLabel}
                       </span>
                       <div className="mt-1.5 flex flex-col items-end gap-1">
@@ -405,41 +405,41 @@ export function AnalyticsPage() {
 
                 {/* 6 Exact Monthly Metrics */}
                 <div className="mt-5 grid grid-cols-3 gap-2">
-                  <div className="rounded-xl border border-[var(--accent-fg)]/12 bg-[#0A0A0C]/60 p-2.5">
-                    <span className="block text-[10px] text-[#9C9CA6]">کل وظایف</span>
+                  <div className="rounded-xl border border-[var(--accent-fg)]/12 bg-[var(--bg)]/60 p-2.5">
+                    <span className="block text-[10px] text-[var(--text-2)]">کل وظایف</span>
                     <Numeric
                       value={monthlyReport.totalTasks}
                       variant="display"
-                      className="mt-1 text-2xl font-bold text-[#ECECEF]"
+                      className="mt-1 text-2xl font-bold text-[var(--text)]"
                     />
                   </div>
-                  <div className="rounded-xl border border-[var(--accent-fg)]/12 bg-[#0A0A0C]/60 p-2.5">
-                    <span className="block text-[10px] text-[#9C9CA6]">تکمیل‌شده</span>
+                  <div className="rounded-xl border border-[var(--accent-fg)]/12 bg-[var(--bg)]/60 p-2.5">
+                    <span className="block text-[10px] text-[var(--text-2)]">تکمیل‌شده</span>
                     <Numeric
                       value={monthlyReport.completedTasks}
                       variant="display"
                       className="mt-1 text-2xl font-bold text-[var(--accent-fg)]"
                     />
                   </div>
-                  <div className="rounded-xl border border-[#E5484D]/18 bg-[#0A0A0C]/60 p-2.5">
-                    <span className="block text-[10px] text-[#9C9CA6]">عقب‌افتاده</span>
+                  <div className="rounded-xl border border-[var(--danger)]/18 bg-[var(--bg)]/60 p-2.5">
+                    <span className="block text-[10px] text-[var(--text-2)]">عقب‌افتاده</span>
                     <Numeric
                       value={monthlyReport.overdueTasks}
                       variant="display"
-                      className="mt-1 text-2xl font-bold text-[#EF9095]"
+                      className="mt-1 text-2xl font-bold text-[var(--danger-fg)]"
                     />
                   </div>
 
-                  <div className="rounded-xl border border-[var(--accent-fg)]/12 bg-[#0A0A0C]/60 p-2.5">
-                    <span className="block text-[10px] text-[#9C9CA6]">زمان تمرکز</span>
+                  <div className="rounded-xl border border-[var(--accent-fg)]/12 bg-[var(--bg)]/60 p-2.5">
+                    <span className="block text-[10px] text-[var(--text-2)]">زمان تمرکز</span>
                     <Numeric
                       value={formatDurationShort(monthlyReport.totalFocusMinutes)}
                       variant="display"
-                      className="mt-1 text-2xl font-bold text-[#ECECEF]"
+                      className="mt-1 text-2xl font-bold text-[var(--text)]"
                     />
                   </div>
-                  <div className="rounded-xl border border-[var(--accent-fg)]/12 bg-[#0A0A0C]/60 p-2.5">
-                    <span className="block text-[10px] text-[#9C9CA6]">پایبندی عادت</span>
+                  <div className="rounded-xl border border-[var(--accent-fg)]/12 bg-[var(--bg)]/60 p-2.5">
+                    <span className="block text-[10px] text-[var(--text-2)]">پایبندی عادت</span>
                     <Numeric
                       value={monthlyReport.habitAdherenceRate}
                       suffix="%"
@@ -447,13 +447,13 @@ export function AnalyticsPage() {
                       className="mt-1 text-2xl font-bold text-[var(--accent-fg)]"
                     />
                   </div>
-                  <div className="rounded-xl border border-[var(--accent-fg)]/12 bg-[#0A0A0C]/60 p-2.5">
-                    <span className="block text-[10px] text-[#9C9CA6]">موفقیت وظایف</span>
+                  <div className="rounded-xl border border-[var(--accent-fg)]/12 bg-[var(--bg)]/60 p-2.5">
+                    <span className="block text-[10px] text-[var(--text-2)]">موفقیت وظایف</span>
                     <Numeric
                       value={monthlyReport.taskSuccessRate}
                       suffix="%"
                       variant="display"
-                      className="mt-1 text-2xl font-bold text-[#ECECEF]"
+                      className="mt-1 text-2xl font-bold text-[var(--text)]"
                     />
                   </div>
                 </div>
@@ -462,13 +462,13 @@ export function AnalyticsPage() {
               {/* Best Day & Most Productive Week */}
               <div className="grid grid-cols-2 gap-2.5">
                 <LuxuryCard className="p-3.5">
-                  <div className="flex items-center gap-1.5 text-[11px] text-[#9C9CA6]">
+                  <div className="flex items-center gap-1.5 text-[11px] text-[var(--text-2)]">
                     <Award className="h-3.5 w-3.5 text-[var(--accent-fg)]" />
                     <span>بهترین روز ماه</span>
                   </div>
                   {monthlyReport.bestDay ? (
                     <>
-                      <p className="mt-2 text-sm font-bold text-[#ECECEF]">
+                      <p className="mt-2 text-sm font-bold text-[var(--text)]">
                         {monthlyReport.bestDay.label}
                       </p>
                       <Numeric
@@ -478,21 +478,21 @@ export function AnalyticsPage() {
                       />
                     </>
                   ) : (
-                    <p className="mt-2 text-xs text-[#6B6B75]">ثبت نشده</p>
+                    <p className="mt-2 text-xs text-[var(--text-3)]">ثبت نشده</p>
                   )}
                 </LuxuryCard>
 
                 <LuxuryCard className="p-3.5">
-                  <div className="flex items-center gap-1.5 text-[11px] text-[#9C9CA6]">
+                  <div className="flex items-center gap-1.5 text-[11px] text-[var(--text-2)]">
                     <TrendingUp className="h-3.5 w-3.5 text-[var(--accent)]" />
                     <span>پربازده‌ترین هفته</span>
                   </div>
                   {monthlyReport.mostProductiveWeek ? (
                     <>
-                      <p className="mt-2 text-sm font-bold text-[#ECECEF]">
+                      <p className="mt-2 text-sm font-bold text-[var(--text)]">
                         {monthlyReport.mostProductiveWeek.label}
                       </p>
-                      <p className="mt-0.5 text-[10.5px] text-[#9C9CA6]">
+                      <p className="mt-0.5 text-[10.5px] text-[var(--text-2)]">
                         <Numeric
                           value={monthlyReport.mostProductiveWeek.completedTasks}
                           className="text-[var(--accent-fg)]"
@@ -500,19 +500,19 @@ export function AnalyticsPage() {
                         کار •{' '}
                         <Numeric
                           value={formatDurationShort(monthlyReport.mostProductiveWeek.focusMinutes)}
-                          className="text-[#ECECEF]"
+                          className="text-[var(--text)]"
                         />
                       </p>
                     </>
                   ) : (
-                    <p className="mt-2 text-xs text-[#6B6B75]">ثبت نشده</p>
+                    <p className="mt-2 text-xs text-[var(--text-3)]">ثبت نشده</p>
                   )}
                 </LuxuryCard>
               </div>
 
               {/* Monthly Performance Curve */}
               <LuxuryCard className="p-4">
-                <h2 className="mb-2 text-xs font-bold text-[#ECECEF]">نمودار تغییرات عملکرد ماهانه</h2>
+                <h2 className="mb-2 text-xs font-bold text-[var(--text)]">نمودار تغییرات عملکرد ماهانه</h2>
                 <LuxuryAreaChart
                   points={monthlyReport.dailyCurve.map((pt) => ({
                     key: pt.dateKey,
@@ -527,24 +527,24 @@ export function AnalyticsPage() {
               {/* Month-over-Month Comparison Card */}
               {monthlyReport.comparison.hasPrevData && (
                 <LuxuryCard className="space-y-2.5 p-4">
-                  <h2 className="text-xs font-bold text-[#ECECEF]">
+                  <h2 className="text-xs font-bold text-[var(--text)]">
                     مقایسه با {monthlyReport.comparison.prevMonthLabel}
                   </h2>
                   <div className="grid grid-cols-3 gap-2 text-center">
-                    <div className="rounded-xl bg-[#0E0E11] p-2.5">
-                      <span className="block text-[10px] text-[#9C9CA6]">وظایف تکمیلی</span>
+                    <div className="rounded-xl bg-[var(--surface-input)] p-2.5">
+                      <span className="block text-[10px] text-[var(--text-2)]">وظایف تکمیلی</span>
                       <div className="mt-1.5 flex justify-center">
                         <DeltaBadge value={monthlyReport.comparison.completedTasksDelta} suffix="" />
                       </div>
                     </div>
-                    <div className="rounded-xl bg-[#0E0E11] p-2.5">
-                      <span className="block text-[10px] text-[#9C9CA6]">پایبندی عادت</span>
+                    <div className="rounded-xl bg-[var(--surface-input)] p-2.5">
+                      <span className="block text-[10px] text-[var(--text-2)]">پایبندی عادت</span>
                       <div className="mt-1.5 flex justify-center">
                         <DeltaBadge value={monthlyReport.comparison.habitAdherenceDelta} suffix="%" />
                       </div>
                     </div>
-                    <div className="rounded-xl bg-[#0E0E11] p-2.5">
-                      <span className="block text-[10px] text-[#9C9CA6]">تمرکز (دقیقه)</span>
+                    <div className="rounded-xl bg-[var(--surface-input)] p-2.5">
+                      <span className="block text-[10px] text-[var(--text-2)]">تمرکز (دقیقه)</span>
                       <div className="mt-1.5 flex justify-center">
                         <DeltaBadge value={monthlyReport.comparison.focusMinutesDelta} suffix="m" />
                       </div>
@@ -557,22 +557,22 @@ export function AnalyticsPage() {
               <section className="space-y-2.5">
                 <div className="flex items-center gap-1.5 px-0.5">
                   <Sparkles className="h-4 w-4 text-[var(--accent-fg)]" />
-                  <h2 className="text-sm font-bold text-[#ECECEF]">تحلیل هوشمند داده‌های واقعی</h2>
+                  <h2 className="text-sm font-bold text-[var(--text)]">تحلیل هوشمند داده‌های واقعی</h2>
                 </div>
 
                 <div className="space-y-2">
                   {monthlyReport.insights.map((ins) => (
                     <LuxuryCard key={ins.id} className="p-4">
                       <div className="flex items-center justify-between gap-2">
-                        <h3 className="text-xs font-bold text-[#ECECEF]">{ins.title}</h3>
+                        <h3 className="text-xs font-bold text-[var(--text)]">{ins.title}</h3>
                         {ins.metricBadge && (
                           <Numeric
                             value={ins.metricBadge}
-                            className="rounded-lg bg-[#1C1C21] px-2 py-0.5 text-[10.5px] font-semibold text-[var(--accent-fg)]"
+                            className="rounded-lg bg-[var(--surface-3)] px-2 py-0.5 text-[10.5px] font-semibold text-[var(--accent-fg)]"
                           />
                         )}
                       </div>
-                      <p className="mt-1.5 text-xs leading-6 text-[#9C9CA6]">{ins.body}</p>
+                      <p className="mt-1.5 text-xs leading-6 text-[var(--text-2)]">{ins.body}</p>
                     </LuxuryCard>
                   ))}
                 </div>
@@ -589,7 +589,7 @@ export function AnalyticsPage() {
           <LuxuryCard className="flex items-center justify-between px-4 py-3">
             <div className="flex items-center gap-2">
               <Calendar className="h-4 w-4 text-[var(--accent)]" />
-              <span className="text-xs font-bold text-[#ECECEF]">گزارش سالانه شمسی</span>
+              <span className="text-xs font-bold text-[var(--text)]">گزارش سالانه شمسی</span>
             </div>
             <div className="flex items-center gap-1">
               {[todayJ.jy - 2, todayJ.jy - 1, todayJ.jy].map((yr) => (
@@ -600,7 +600,7 @@ export function AnalyticsPage() {
                   className={`num-geo rounded-lg px-2.5 py-1 text-xs font-semibold transition ${
                     annualYear === yr
                       ? 'bg-[var(--accent)] text-[var(--accent-on)]'
-                      : 'bg-[#0E0E11] text-[#9C9CA6]'
+                      : 'bg-[var(--surface-input)] text-[var(--text-2)]'
                   }`}
                 >
                   {yr}
@@ -619,24 +619,24 @@ export function AnalyticsPage() {
             <>
               {/* Annual Hero Summary */}
               <LuxuryCard variant="hero" className="grid grid-cols-2 gap-3 p-4">
-                <div className="rounded-2xl border border-[var(--accent-fg)]/12 bg-[#0A0A0C]/60 p-3">
-                  <span className="text-[10.5px] text-[#9C9CA6]">وظایف تکمیل‌شده سال</span>
+                <div className="rounded-2xl border border-[var(--accent-fg)]/12 bg-[var(--bg)]/60 p-3">
+                  <span className="text-[10.5px] text-[var(--text-2)]">وظایف تکمیل‌شده سال</span>
                   <Numeric
                     value={annualReport.totalCompletedTasks}
                     variant="display"
-                    className="mt-1 block text-3xl font-extrabold text-[#ECECEF]"
+                    className="mt-1 block text-3xl font-extrabold text-[var(--text)]"
                   />
                 </div>
-                <div className="rounded-2xl border border-[var(--accent-fg)]/12 bg-[#0A0A0C]/60 p-3">
-                  <span className="text-[10.5px] text-[#9C9CA6]">مجموع زمان تمرکز</span>
+                <div className="rounded-2xl border border-[var(--accent-fg)]/12 bg-[var(--bg)]/60 p-3">
+                  <span className="text-[10.5px] text-[var(--text-2)]">مجموع زمان تمرکز</span>
                   <Numeric
                     value={formatDurationShort(annualReport.totalFocusMinutes)}
                     variant="display"
                     className="mt-1 block text-3xl font-extrabold text-[var(--accent-fg)]"
                   />
                 </div>
-                <div className="rounded-2xl border border-[var(--accent-fg)]/12 bg-[#0A0A0C]/60 p-3">
-                  <span className="text-[10.5px] text-[#9C9CA6]">میانگین پایبندی عادت‌ها</span>
+                <div className="rounded-2xl border border-[var(--accent-fg)]/12 bg-[var(--bg)]/60 p-3">
+                  <span className="text-[10.5px] text-[var(--text-2)]">میانگین پایبندی عادت‌ها</span>
                   <Numeric
                     value={annualReport.averageHabitAdherence}
                     suffix="%"
@@ -644,12 +644,12 @@ export function AnalyticsPage() {
                     className="mt-1 block text-3xl font-extrabold text-[var(--accent-fg)]"
                   />
                 </div>
-                <div className="rounded-2xl border border-[var(--accent-fg)]/12 bg-[#0A0A0C]/60 p-3">
-                  <span className="text-[10.5px] text-[#9C9CA6]">روزهای فعال سال</span>
+                <div className="rounded-2xl border border-[var(--accent-fg)]/12 bg-[var(--bg)]/60 p-3">
+                  <span className="text-[10.5px] text-[var(--text-2)]">روزهای فعال سال</span>
                   <Numeric
                     value={annualReport.activeDays}
                     variant="display"
-                    className="mt-1 block text-3xl font-extrabold text-[#ECECEF]"
+                    className="mt-1 block text-3xl font-extrabold text-[var(--text)]"
                   />
                 </div>
               </LuxuryCard>
@@ -660,7 +660,7 @@ export function AnalyticsPage() {
                   <span className="text-[10.5px] text-[var(--accent-fg)]">بهترین ماه سال</span>
                   {annualReport.bestMonth ? (
                     <>
-                      <p className="mt-1.5 text-sm font-bold text-[#ECECEF]">
+                      <p className="mt-1.5 text-sm font-bold text-[var(--text)]">
                         {annualReport.bestMonth.label}
                       </p>
                       <Numeric
@@ -671,33 +671,33 @@ export function AnalyticsPage() {
                       />
                     </>
                   ) : (
-                    <p className="mt-2 text-xs text-[#6B6B75]">—</p>
+                    <p className="mt-2 text-xs text-[var(--text-3)]">—</p>
                   )}
                 </LuxuryCard>
 
                 <LuxuryCard className="p-3.5">
-                  <span className="text-[10.5px] text-[#9C9CA6]">ضعیف‌ترین ماه فعال</span>
+                  <span className="text-[10.5px] text-[var(--text-2)]">ضعیف‌ترین ماه فعال</span>
                   {annualReport.weakestMonth ? (
                     <>
-                      <p className="mt-1.5 text-sm font-bold text-[#ECECEF]">
+                      <p className="mt-1.5 text-sm font-bold text-[var(--text)]">
                         {annualReport.weakestMonth.label}
                       </p>
                       <Numeric
                         value={annualReport.weakestMonth.overallScore}
                         suffix="%"
                         variant="display"
-                        className="mt-1 text-2xl font-bold text-[#EF9095]"
+                        className="mt-1 text-2xl font-bold text-[var(--danger-fg)]"
                       />
                     </>
                   ) : (
-                    <p className="mt-2 text-[11px] text-[#6B6B75]">نیاز به حداقل 2 ماه فعال</p>
+                    <p className="mt-2 text-[11px] text-[var(--text-3)]">نیاز به حداقل 2 ماه فعال</p>
                   )}
                 </LuxuryCard>
               </div>
 
               {/* 12-Month Comparison Bar Chart */}
               <LuxuryCard className="p-4">
-                <h2 className="mb-2 text-xs font-bold text-[#ECECEF]">
+                <h2 className="mb-2 text-xs font-bold text-[var(--text)]">
                   مقایسه 12 ماه سال <Numeric value={annualYear} className="text-[var(--accent-fg)]" />
                 </h2>
                 <LuxuryBarChart
@@ -715,7 +715,7 @@ export function AnalyticsPage() {
 
               {/* Annual 365-Day Heatmap */}
               <LuxuryCard className="space-y-3 p-4">
-                <h2 className="text-xs font-bold text-[#ECECEF]">
+                <h2 className="text-xs font-bold text-[var(--text)]">
                   نقشه حرارتی کل سال <Numeric value={annualYear} className="text-[var(--accent-fg)]" />
                 </h2>
                 <ActivityHeatmap

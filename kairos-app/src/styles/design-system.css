@@ -37,18 +37,37 @@
   --accent-l: 0.5283;
   --accent-c: 0.2341;
   --accent-h: 262.4;
-  --section-light: 50% -12%;
+  --section-light: 50% -10%;
+  /* Category hues — data semantics, not surfaces. Defined once, referenced by
+     lib/format.ts so no component carries a literal colour. */
+  --cat-personal: #dcd0ff;
+  --cat-health: #c5b0f3;
+  --cat-finance: #dfb08a;
+  --cat-creative: #e2a6d5;
+  --cat-soft: color-mix(in srgb, var(--accent-fg) 13%, transparent);
+  --cat-health-soft: rgba(155, 118, 224, 0.16);
+  --cat-finance-soft: rgba(196, 139, 92, 0.14);
+  --cat-creative-soft: rgba(186, 108, 168, 0.16);
+
   --danger: #e5484d;
-  --danger-soft: rgba(229, 72, 77, 0.12);
+  --danger-fg: color-mix(in srgb, var(--danger) 58%, #ffffff);
+  --danger-soft: color-mix(in srgb, var(--danger) 12%, transparent);
   --warn: #c9975c;
   --success: #46a06b;
 
   /* Geometry */
+  --r-rail: 16px;
   --r-card: 16px;
   --r-hero: 18px;
   --r-field: 12px;
   --r-pill: 999px;
   --nav-height: 64px;
+
+  /* Motion — three durations, one easing. Nothing animates on a guess. */
+  --dur-fast: 120ms;
+  --dur-base: 200ms;
+  --dur-slow: 320ms;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
 
   /* Safe-area (notch) tokens.
      Defaults come from the CSS standard; `src/lib/safeArea.ts` re-publishes them
@@ -203,7 +222,7 @@ body,
 :root,
 [data-bg='obsidian'] {
   --atmosphere: radial-gradient(
-      120% 62% at var(--section-light, 50% -12%),
+      120% 62% at 50% -10%,
       color-mix(in srgb, var(--accent) 12%, transparent) 0%,
       transparent 68%
     ),
@@ -213,7 +232,7 @@ body,
 
 [data-bg='nebula'] {
   --atmosphere: radial-gradient(
-      74% 48% at var(--section-light, 18% 4%),
+      74% 48% at 50% -6%,
       color-mix(in srgb, var(--accent) 26%, transparent) 0%,
       transparent 64%
     ),
@@ -363,6 +382,69 @@ body,
   background: var(--border);
 }
 
+
+/* ---------------------------------------------------------------------------
+   Rail — the one content container in the product.
+   A rail is a grouped surface: header row, then rows separated by hairlines.
+   No floating cards, no mixed radii, no per-screen border colours. Every
+   section is built from this and only this (Apple Settings / Things 3 model).
+   --------------------------------------------------------------------------- */
+
+.rail {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--r-rail);
+  overflow: hidden;
+}
+
+.rail-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  min-height: 52px;
+  padding: 0.7rem 0.85rem;
+  text-align: start;
+  background: transparent;
+  color: inherit;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+
+.rail-row + .rail-row {
+  border-top: 1px solid var(--border);
+}
+
+button.rail-row:active {
+  background: color-mix(in srgb, var(--text) 5%, transparent);
+}
+
+.rail-row:focus-visible {
+  outline: 2px solid var(--accent-fg);
+  outline-offset: -2px;
+}
+
+.rail-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-height: 38px;
+  padding: 0.5rem 0.85rem;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface-2) 60%, transparent);
+}
+
+/* Section eyebrow — the uppercase Latin voice that marks a room. */
+.eyebrow {
+  font-family: var(--font-display);
+  font-optical-sizing: auto;
+  font-size: 8.5px;
+  font-weight: 600;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: var(--accent-fg);
+}
+
 /* ---------------------------------------------------------------------------
    Surfaces — flat, one border, one radius
    --------------------------------------------------------------------------- */
@@ -374,9 +456,9 @@ body,
 }
 
 .luxury-card-hero {
-  background: var(--surface-2);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--r-hero);
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--r-rail);
 }
 
 .luxury-card-subtle {

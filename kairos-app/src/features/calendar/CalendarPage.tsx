@@ -37,6 +37,8 @@ import { triggerHaptic } from '@/lib/native';
 import { useApp } from '@/context/AppContext';
 import { LuxuryCard } from '@/components/ui/LuxuryCard';
 import { Numeric } from '@/components/ui/Numeric';
+import { SectionHeader } from '@/components/ui/SectionHeader';
+import { sectionEyebrow } from '@/lib/sections';
 import { ModalSheet } from '@/components/ui/ModalSheet';
 import { JalaliDatePicker } from '@/components/ui/JalaliDatePicker';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -176,28 +178,25 @@ export function CalendarPage() {
 
   return (
     <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-lg font-bold text-[#ECECEF]">تقویم و برنامه‌ریزی</h1>
-          <p className="mt-0.5 text-[11px] text-[#9C9CA6]">
-            تقویم شمسی دقیق • جابه‌جایی سریع برنامه‌ها
-          </p>
-        </div>
-
-        <button
-          type="button"
-          onClick={() => openCreateTask({ defaultDueDate: selectedDateKey })}
-          className="btn-royal flex items-center gap-1.5 rounded-2xl px-3.5 py-2.5 text-xs font-semibold"
-        >
-          <Plus className="h-4 w-4" />
-          <span>رویداد جدید</span>
-        </button>
-      </div>
+      <SectionHeader
+        eyebrow={sectionEyebrow('calendar')}
+        title="تقویم و برنامه‌ریزی"
+        meta={<span>تقویم شمسی دقیق · جابه‌جایی سریع برنامه‌ها</span>}
+        action={
+          <button
+            type="button"
+            onClick={() => openCreateTask({ defaultDueDate: selectedDateKey })}
+            className="btn-royal flex items-center gap-1.5 rounded-[var(--r-field)] px-3 py-2 text-[11px] font-semibold"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            <span>رویداد جدید</span>
+          </button>
+        }
+      />
 
       {/* View Switcher (Monthly / Weekly / Daily) + Today shortcut */}
       <div className="flex items-center gap-2">
-        <div className="grid flex-1 grid-cols-3 gap-1 rounded-2xl border border-[var(--accent-fg)]/12 bg-[#16161A] p-1">
+        <div className="grid flex-1 grid-cols-3 gap-1 rounded-2xl border border-[var(--accent-fg)]/12 bg-[var(--surface-2)] p-1">
           {(
             [
               { id: 'month', label: 'ماهانه' },
@@ -211,8 +210,8 @@ export function CalendarPage() {
               onClick={() => setViewMode(m.id)}
               className={`rounded-xl py-2 text-xs font-medium transition ${
                 viewMode === m.id
-                  ? 'bg-[#1C1C21] text-[#ECECEF] shadow-[inset_0_1px_0_color-mix(in_srgb,var(--accent-fg)_20%,transparent)]'
-                  : 'text-[#9C9CA6] hover:text-[#ECECEF]'
+                  ? 'bg-[var(--surface-3)] text-[var(--text)] shadow-[inset_0_1px_0_color-mix(in_srgb,var(--accent-fg)_20%,transparent)]'
+                  : 'text-[var(--text-2)] hover:text-[var(--text)]'
               }`}
             >
               {m.label}
@@ -236,13 +235,13 @@ export function CalendarPage() {
             type="button"
             onClick={navigatePrev}
             aria-label="دوره قبل"
-            className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#0E0E11] text-[#9C9CA6] hover:text-[#ECECEF]"
+            className="flex h-8 w-8 items-center justify-center rounded-xl bg-[var(--surface-input)] text-[var(--text-2)] hover:text-[var(--text)]"
           >
             <ChevronRight className="h-4 w-4" />
           </button>
 
           <div className="text-center">
-            <h2 className="flex items-center justify-center gap-1.5 text-sm font-bold text-[#ECECEF]">
+            <h2 className="flex items-center justify-center gap-1.5 text-sm font-bold text-[var(--text)]">
               <span>{getJalaaliMonthName(viewMonth)}</span>
               <Numeric value={viewYear} className="text-[var(--accent-fg)]" />
             </h2>
@@ -252,7 +251,7 @@ export function CalendarPage() {
             type="button"
             onClick={navigateNext}
             aria-label="دوره بعد"
-            className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#0E0E11] text-[#9C9CA6] hover:text-[#ECECEF]"
+            className="flex h-8 w-8 items-center justify-center rounded-xl bg-[var(--surface-input)] text-[var(--text-2)] hover:text-[var(--text)]"
           >
             <ChevronLeft className="h-4 w-4" />
           </button>
@@ -261,7 +260,7 @@ export function CalendarPage() {
         {/* MONTHLY VIEW */}
         {viewMode === 'month' && (
           <>
-            <div className="mb-1.5 grid grid-cols-7 text-center text-[10.5px] font-medium text-[#6B6B75]">
+            <div className="mb-1.5 grid grid-cols-7 text-center text-[10.5px] font-medium text-[var(--text-3)]">
               {PERSIAN_WEEKDAYS_SHORT.map((d) => (
                 <div key={d} className="py-1">
                   {d}
@@ -289,8 +288,8 @@ export function CalendarPage() {
                       isSelected
                         ? 'border-[var(--accent-fg)]/60 bg-[var(--accent)] text-[var(--accent-on)] shadow-[0_0_14px_color-mix(in_srgb,var(--accent)_48%,transparent)]'
                         : isToday
-                        ? 'border-[var(--accent)]/60 bg-[#1C1C21] text-[#ECECEF]'
-                        : 'border-transparent bg-[#0E0E11]/60 text-[#ECECEF]/85 hover:border-[var(--accent-fg)]/20'
+                        ? 'border-[var(--accent)]/60 bg-[var(--surface-3)] text-[var(--text)]'
+                        : 'border-transparent bg-[var(--surface-input)]/60 text-[var(--text)]/85 hover:border-[var(--accent-fg)]/20'
                     }`}
                   >
                     <Numeric value={day} className="text-xs font-semibold" />
@@ -298,14 +297,14 @@ export function CalendarPage() {
                       {dayTasks.length > 0 && (
                         <span
                           className={`h-1 w-1 rounded-full ${
-                            isSelected ? 'bg-[#ECECEF]' : 'bg-[var(--accent-fg)]'
+                            isSelected ? 'bg-[var(--text)]' : 'bg-[var(--accent-fg)]'
                           }`}
                         />
                       )}
                       {habitCount > 0 && (
                         <span
                           className={`h-1 w-1 rounded-full ${
-                            isSelected ? 'bg-[#ECECEF]/70' : 'bg-[var(--accent)]'
+                            isSelected ? 'bg-[var(--text)]/70' : 'bg-[var(--accent)]'
                           }`}
                         />
                       )}
@@ -335,16 +334,16 @@ export function CalendarPage() {
                     isSelected
                       ? 'border-[var(--accent-fg)]/60 bg-[var(--accent)] text-[var(--accent-on)] shadow-[0_0_16px_color-mix(in_srgb,var(--accent)_45%,transparent)]'
                       : isToday
-                      ? 'border-[var(--accent)]/50 bg-[#1C1C21] text-[#ECECEF]'
-                      : 'border-[var(--accent-fg)]/10 bg-[#0E0E11] text-[#9C9CA6]'
+                      ? 'border-[var(--accent)]/50 bg-[var(--surface-3)] text-[var(--text)]'
+                      : 'border-[var(--accent-fg)]/10 bg-[var(--surface-input)] text-[var(--text-2)]'
                   }`}
                 >
                   <span className="text-[10px]">{PERSIAN_WEEKDAYS_SHORT[idx]}</span>
-                  <Numeric value={j.jd} variant="display" className="text-xl font-bold text-[#ECECEF]" />
+                  <Numeric value={j.jd} variant="display" className="text-xl font-bold text-[var(--text)]" />
                   <Numeric
                     value={dayTasksCount}
                     className={`rounded-md px-1.5 py-0.5 text-[9.5px] ${
-                      isSelected ? 'bg-[#0A0A0C]/30 text-[#ECECEF]' : 'bg-[#16161A] text-[var(--accent-fg)]'
+                      isSelected ? 'bg-[var(--bg)]/30 text-[var(--text)]' : 'bg-[var(--surface-2)] text-[var(--accent-fg)]'
                     }`}
                   />
                 </button>
@@ -355,19 +354,19 @@ export function CalendarPage() {
 
         {/* DAILY VIEW HEADER SUMMARY */}
         {viewMode === 'day' && (
-          <div className="flex items-center justify-between rounded-2xl border border-[var(--accent-fg)]/12 bg-[#0E0E11] p-3.5">
+          <div className="flex items-center justify-between rounded-2xl border border-[var(--accent-fg)]/12 bg-[var(--surface-input)] p-3.5">
             <div>
-              <p className="text-sm font-bold text-[#ECECEF]">
+              <p className="text-sm font-bold text-[var(--text)]">
                 {selectedInfo.weekday}،{' '}
                 <Numeric value={selectedInfo.day} className="text-[var(--accent-fg)]" />{' '}
                 {selectedInfo.month}
               </p>
-              <p className="mt-0.5 text-[11px] text-[#9C9CA6]">
-                <Numeric value={selectedDateTasks.length} className="text-[#ECECEF]" /> وظیفه •{' '}
-                <Numeric value={selectedDateHabits.length} className="text-[#ECECEF]" /> عادت
+              <p className="mt-0.5 text-[11px] text-[var(--text-2)]">
+                <Numeric value={selectedDateTasks.length} className="text-[var(--text)]" /> وظیفه •{' '}
+                <Numeric value={selectedDateHabits.length} className="text-[var(--text)]" /> عادت
               </p>
             </div>
-            <div className="flex items-center gap-1.5 rounded-xl bg-[#1C1C21] px-3 py-1.5 text-xs text-[var(--accent-fg)]">
+            <div className="flex items-center gap-1.5 rounded-xl bg-[var(--surface-3)] px-3 py-1.5 text-xs text-[var(--accent-fg)]">
               <Timer className="h-3.5 w-3.5" />
               <Numeric value={formatDurationShort(selectedDateFocusMinutes)} />
             </div>
@@ -378,12 +377,12 @@ export function CalendarPage() {
       {/* SELECTED DAY AGENDA (Tasks + Habits + Reschedule) */}
       <section className="space-y-3">
         <div className="flex items-center justify-between px-0.5">
-          <h2 className="text-xs font-bold text-[#ECECEF]">
+          <h2 className="text-xs font-bold text-[var(--text)]">
             برنامه {selectedInfo.weekday}،{' '}
             <Numeric value={selectedInfo.day} className="text-[var(--accent-fg)]" /> {selectedInfo.month}
           </h2>
           {selectedDateFocusMinutes > 0 && (
-            <span className="text-[11px] text-[#9C9CA6]">
+            <span className="text-[11px] text-[var(--text-2)]">
               تمرکز ثبت‌شده:{' '}
               <Numeric
                 value={formatDurationShort(selectedDateFocusMinutes)}
@@ -426,7 +425,7 @@ export function CalendarPage() {
                     className={`flex h-5.5 w-5.5 shrink-0 items-center justify-center rounded-lg border transition ${
                       isDone
                         ? 'border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-on)]'
-                        : 'border-[var(--accent-fg)]/28 bg-[#0E0E11]'
+                        : 'border-[var(--accent-fg)]/28 bg-[var(--surface-input)]'
                     }`}
                   >
                     {isDone && <Check className="h-3.5 w-3.5" />}
@@ -439,7 +438,7 @@ export function CalendarPage() {
                   >
                     <p
                       className={`truncate text-xs font-medium ${
-                        isDone ? 'text-[#9C9CA6] line-through' : 'text-[#ECECEF]'
+                        isDone ? 'text-[var(--text-2)] line-through' : 'text-[var(--text)]'
                       }`}
                     >
                       {task.title}
@@ -452,8 +451,8 @@ export function CalendarPage() {
                         {cat.label}
                       </span>
                       {task.dueTime && (
-                        <span className="inline-flex items-center gap-1 text-[#9C9CA6]">
-                          <Clock className="h-3 w-3 text-[#6B6B75]" />
+                        <span className="inline-flex items-center gap-1 text-[var(--text-2)]">
+                          <Clock className="h-3 w-3 text-[var(--text-3)]" />
                           <Numeric value={task.dueTime} className="text-[10px]" />
                         </span>
                       )}
@@ -465,7 +464,7 @@ export function CalendarPage() {
                     onClick={() => setRescheduleTask(task)}
                     title="جابه‌جایی تاریخ"
                     aria-label="جابه‌جایی تاریخ"
-                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-[var(--accent-fg)]/12 bg-[#0E0E11] text-[#9C9CA6] transition hover:border-[var(--accent-fg)]/35 hover:text-[var(--accent-fg)]"
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-[var(--accent-fg)]/12 bg-[var(--surface-input)] text-[var(--text-2)] transition hover:border-[var(--accent-fg)]/35 hover:text-[var(--accent-fg)]"
                   >
                     <ArrowLeftRight className="h-3.5 w-3.5" />
                   </button>
@@ -478,7 +477,7 @@ export function CalendarPage() {
         {/* Habits on Selected Date */}
         {selectedDateHabits.length > 0 && (
           <LuxuryCard className="space-y-2.5 p-4">
-            <div className="flex items-center gap-1.5 text-xs font-bold text-[#ECECEF]">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-[var(--text)]">
               <Flame className="h-3.5 w-3.5 text-[var(--accent)]" />
               <span>عادت‌های این روز</span>
             </div>
@@ -489,11 +488,11 @@ export function CalendarPage() {
                 return (
                   <div
                     key={habit.id}
-                    className="flex items-center justify-between rounded-xl border border-[var(--accent-fg)]/10 bg-[#0E0E11] px-3 py-2"
+                    className="flex items-center justify-between rounded-xl border border-[var(--accent-fg)]/10 bg-[var(--surface-input)] px-3 py-2"
                   >
                     <div>
-                      <p className="text-xs font-medium text-[#ECECEF]">{habit.name}</p>
-                      <p className="text-[10px] text-[#6B6B75]">
+                      <p className="text-xs font-medium text-[var(--text)]">{habit.name}</p>
+                      <p className="text-[10px] text-[var(--text-3)]">
                         {!log
                           ? 'ثبت‌نشده'
                           : log.status === 'completed'
@@ -522,7 +521,7 @@ export function CalendarPage() {
                         className={`rounded-lg px-3 py-1 text-[11px] font-medium transition ${
                           isDone
                             ? 'bg-[var(--accent)] text-[var(--accent-on)]'
-                            : 'bg-[#16161A] text-[#9C9CA6] hover:text-[#ECECEF]'
+                            : 'bg-[var(--surface-2)] text-[var(--text-2)] hover:text-[var(--text)]'
                         }`}
                       >
                         {isDone ? 'انجام شد' : 'ثبت'}

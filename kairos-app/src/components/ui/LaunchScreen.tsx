@@ -119,11 +119,11 @@ export function LaunchScreen({ exiting, progress, onSkip }: LaunchScreenProps) {
               y2={KAIROS_MARK_VIEWBOX.height}
             >
               <stop offset="0%" stopColor="#FFFFFF" />
-              <stop offset="22%" stopColor="#EDEDF2" />
-              <stop offset="41%" stopColor="#ADADB9" />
-              <stop offset="55%" stopColor="#F6F6F9" />
-              <stop offset="73%" stopColor="#BEBEC9" />
-              <stop offset="88%" stopColor="#EFEFF4" />
+              <stop offset="22%" stopColor="var(--text)" />
+              <stop offset="41%" stopColor="var(--text-2)" />
+              <stop offset="55%" stopColor="var(--text)" />
+              <stop offset="73%" stopColor="var(--text-2)" />
+              <stop offset="88%" stopColor="var(--text)" />
               <stop offset="100%" stopColor="#FFFFFF" />
             </linearGradient>
 

@@ -21,40 +21,40 @@ const STATE_STYLES: Record<
   { bg: string; border: string; text: string; glow?: string }
 > = {
   future: {
-    bg: 'rgba(21, 20, 27, 0.34)',
+    bg: 'color-mix(in srgb, var(--surface-1) 34%, transparent)',
     border: 'color-mix(in srgb, var(--accent-fg) 4%, transparent)',
-    text: '#474154',
+    text: 'color-mix(in srgb, var(--text-3) 60%, transparent)',
   },
   unlogged: {
-    bg: '#0E0E11',
+    bg: 'var(--surface-input)',
     border: 'color-mix(in srgb, var(--accent-fg) 10%, transparent)',
-    text: '#6B6B75',
+    text: 'var(--text-3)',
   },
   missed: {
-    bg: '#1A1A1E',
-    border: 'rgba(217, 119, 139, 0.36)',
-    text: '#EF9095',
+    bg: 'var(--surface-3)',
+    border: 'color-mix(in srgb, var(--danger) 40%, transparent)',
+    text: 'var(--danger-fg)',
   },
   level1: {
-    bg: '#1F1940',
+    bg: 'var(--surface-3)',
     border: 'color-mix(in srgb, var(--accent) 38%, transparent)',
-    text: '#D8CAF4',
+    text: 'var(--text)',
   },
   level2: {
-    bg: '#4A2BC7',
+    bg: 'color-mix(in srgb, var(--accent) 62%, var(--surface-3))',
     border: 'color-mix(in srgb, var(--accent) 56%, transparent)',
-    text: '#ECECEF',
+    text: 'var(--text)',
   },
   level3: {
     bg: 'var(--accent)',
     border: 'color-mix(in srgb, var(--accent-fg) 50%, transparent)',
-    text: '#ECECEF',
+    text: 'var(--text)',
     glow: '0 0 8px color-mix(in srgb, var(--accent) 32%, transparent)',
   },
   level4: {
     bg: 'var(--accent-fg)',
-    border: 'rgba(244, 241, 248, 0.62)',
-    text: '#0A0A0C',
+    border: 'color-mix(in srgb, var(--text) 62%, transparent)',
+    text: 'var(--bg)',
     glow: '0 0 10px color-mix(in srgb, var(--accent-fg) 45%, transparent)',
   },
 };
@@ -199,12 +199,12 @@ export function ActivityHeatmap({
       {/* Orientation Control Strip (Vertical Portrait vs Horizontal 365-Day) */}
       {showOrientationToggle && (
         <div className="flex items-center justify-between gap-2">
-          <span className="text-[10.5px] font-medium text-[#9C9CA6]">
+          <span className="text-[10.5px] font-medium text-[var(--text-2)]">
             {orientation === 'vertical'
               ? 'نمای عمودی (خوانا و لمسی)'
               : 'نمای افقی سالانه (365 روز)'}
           </span>
-          <div className="inline-flex items-center gap-0.5 rounded-xl border border-[var(--accent-fg)]/14 bg-[#0A0A0C]/80 p-0.5">
+          <div className="inline-flex items-center gap-0.5 rounded-xl border border-[var(--accent-fg)]/14 bg-[var(--bg)]/80 p-0.5">
             <button
               type="button"
               onClick={() => setOrientation('vertical')}
@@ -212,7 +212,7 @@ export function ActivityHeatmap({
               className={`flex items-center gap-1 rounded-lg px-2.5 py-1 text-[10.5px] font-semibold transition ${
                 orientation === 'vertical'
                   ? 'bg-[var(--accent)] text-[var(--accent-on)]'
-                  : 'text-[#9C9CA6] hover:text-[#ECECEF]'
+                  : 'text-[var(--text-2)] hover:text-[var(--text)]'
               }`}
             >
               <Rows3 className="h-3 w-3" />
@@ -225,7 +225,7 @@ export function ActivityHeatmap({
               className={`flex items-center gap-1 rounded-lg px-2.5 py-1 text-[10.5px] font-semibold transition ${
                 orientation === 'horizontal'
                   ? 'bg-[var(--accent)] text-[var(--accent-on)]'
-                  : 'text-[#9C9CA6] hover:text-[#ECECEF]'
+                  : 'text-[var(--text-2)] hover:text-[var(--text)]'
               }`}
             >
               <Columns3 className="h-3 w-3" />
@@ -247,8 +247,8 @@ export function ActivityHeatmap({
                 onClick={() => scrollToMonth(m.jm)}
                 className={`shrink-0 rounded-lg border px-2.5 py-1 text-[10.5px] font-medium transition ${
                   focusedMonth === m.jm
-                    ? 'border-[var(--accent-fg)]/50 bg-[#1C1C21] text-[#ECECEF]'
-                    : 'border-[var(--accent-fg)]/10 bg-[#0C0C0F] text-[#9C9CA6] hover:text-[#ECECEF]'
+                    ? 'border-[var(--accent-fg)]/50 bg-[var(--surface-3)] text-[var(--text)]'
+                    : 'border-[var(--accent-fg)]/10 bg-[var(--bg)] text-[var(--text-2)] hover:text-[var(--text)]'
                 }`}
               >
                 {m.name}
@@ -257,8 +257,8 @@ export function ActivityHeatmap({
           </div>
 
           {/* Sticky Weekday Header + Vertical Scrollable Months */}
-          <div className="overflow-hidden rounded-2xl border border-[var(--accent-fg)]/12 bg-[#0A0A0C]/90">
-            <div className="grid grid-cols-7 border-b border-[var(--accent-fg)]/10 bg-[#13111C] px-2.5 py-2 text-center text-[10px] font-semibold text-[#9C9CA6]">
+          <div className="overflow-hidden rounded-2xl border border-[var(--accent-fg)]/12 bg-[var(--bg)]/90">
+            <div className="grid grid-cols-7 border-b border-[var(--accent-fg)]/10 bg-[var(--surface-2)] px-2.5 py-2 text-center text-[10px] font-semibold text-[var(--text-2)]">
               {PERSIAN_WEEKDAYS_SHORT.map((dayLabel) => (
                 <span key={dayLabel}>{dayLabel}</span>
               ))}
@@ -274,11 +274,11 @@ export function ActivityHeatmap({
                   className="space-y-2"
                 >
                   <div className="flex items-center justify-between px-0.5">
-                    <span className="text-[11px] font-bold text-[#ECECEF]">
+                    <span className="text-[11px] font-bold text-[var(--text)]">
                       {month.name}{' '}
-                      <Numeric value={month.jy} className="font-normal text-[#6B6B75]" />
+                      <Numeric value={month.jy} className="font-normal text-[var(--text-3)]" />
                     </span>
-                    <span className="text-[10px] text-[#9C9CA6]">
+                    <span className="text-[10px] text-[var(--text-2)]">
                       <Numeric
                         value={month.activeCount}
                         className="font-semibold text-[var(--accent-fg)]"
@@ -309,7 +309,7 @@ export function ActivityHeatmap({
                           aria-label={`${cell.jd} ${month.name} ${cell.jy}`}
                           className={`relative flex h-8 items-center justify-center rounded-lg transition-transform duration-100 active:scale-95 focus:outline-none ${
                             isSelected
-                              ? 'z-10 ring-2 ring-[#ECECEF]'
+                              ? 'z-10 ring-2 ring-[var(--text)]'
                               : isToday
                               ? 'ring-1.5 ring-[var(--accent-fg)]'
                               : ''
@@ -327,7 +327,7 @@ export function ActivityHeatmap({
                             {cell.jd}
                           </span>
                           {cell.state === 'missed' && (
-                            <span className="absolute bottom-1 h-[3px] w-[3px] rounded-full bg-[#E5484D]" />
+                            <span className="absolute bottom-1 h-[3px] w-[3px] rounded-full bg-[var(--danger)]" />
                           )}
                         </button>
                       );
@@ -342,7 +342,7 @@ export function ActivityHeatmap({
         /* ===================== HORIZONTAL 365-DAY PANORAMA ===================== */
         <div className="flex items-start gap-2">
           {/* Weekday Axis */}
-          <div className="flex flex-col gap-[3px] pt-[22px] text-[9px] font-medium text-[#6B6B75]">
+          <div className="flex flex-col gap-[3px] pt-[22px] text-[9px] font-medium text-[var(--text-3)]">
             {PERSIAN_WEEKDAYS_SHORT.map((label, idx) => (
               <div
                 key={label}
@@ -363,7 +363,7 @@ export function ActivityHeatmap({
                       {monthName && (
                         <span
                           dir="rtl"
-                          className="absolute top-0 left-0 whitespace-nowrap text-[9.5px] font-medium text-[#9C9CA6]"
+                          className="absolute top-0 left-0 whitespace-nowrap text-[9.5px] font-medium text-[var(--text-2)]"
                         >
                           {monthName}
                         </span>
@@ -387,7 +387,7 @@ export function ActivityHeatmap({
                           aria-label={`${cell.jd} ${getJalaaliMonthName(cell.jm)} ${cell.jy}`}
                           className={`relative h-[12px] w-[12px] rounded-[3px] transition-transform duration-100 hover:scale-125 focus:outline-none ${
                             isSelected
-                              ? 'z-10 scale-125 ring-2 ring-[#ECECEF]'
+                              ? 'z-10 scale-125 ring-2 ring-[var(--text)]'
                               : isToday
                               ? 'ring-1 ring-[var(--accent-fg)]'
                               : ''
@@ -399,7 +399,7 @@ export function ActivityHeatmap({
                           }}
                         >
                           {cell.state === 'missed' && (
-                            <span className="absolute inset-0 m-auto h-[3px] w-[3px] rounded-full bg-[#E5484D]" />
+                            <span className="absolute inset-0 m-auto h-[3px] w-[3px] rounded-full bg-[var(--danger)]" />
                           )}
                         </button>
                       );
@@ -413,7 +413,7 @@ export function ActivityHeatmap({
       )}
 
       {/* Explicit Legend Separating Unlogged vs Missed vs Purple Mastery Scale */}
-      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[var(--accent-fg)]/10 pt-2.5 text-[10px] text-[#9C9CA6]">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[var(--accent-fg)]/10 pt-2.5 text-[10px] text-[var(--text-2)]">
         <div className="flex items-center gap-3">
           <span className="inline-flex items-center gap-1.5">
             <span
@@ -433,14 +433,14 @@ export function ActivityHeatmap({
                 border: `1px solid ${STATE_STYLES.missed.border}`,
               }}
             >
-              <span className="h-[3px] w-[3px] rounded-full bg-[#E5484D]" />
+              <span className="h-[3px] w-[3px] rounded-full bg-[var(--danger)]" />
             </span>
             انجام‌نشده
           </span>
         </div>
 
         <div className="flex items-center gap-1.5">
-          <span className="text-[#6B6B75]">کم</span>
+          <span className="text-[var(--text-3)]">کم</span>
           {(['level1', 'level2', 'level3', 'level4'] as const).map((lvl) => (
             <span
               key={lvl}
@@ -452,7 +452,7 @@ export function ActivityHeatmap({
             />
           ))}
           <span className="text-[var(--accent-fg)]">کامل</span>
-          <span className="mr-1 text-[#6B6B75]">
+          <span className="mr-1 text-[var(--text-3)]">
             (<Numeric value={cells.length} variant="geo" className="text-[10px]" /> روز)
           </span>
         </div>

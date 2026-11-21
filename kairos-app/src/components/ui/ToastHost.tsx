@@ -22,7 +22,7 @@ export function ToastHost({ toasts, onDismiss }: ToastHostProps) {
               : Info;
           const accent =
             toast.tone === 'warning'
-              ? 'text-[#EF9095]'
+              ? 'text-[var(--danger-fg)]'
               : toast.tone === 'reminder'
               ? 'text-[var(--accent-fg)]'
               : 'text-[var(--accent-fg)]';
@@ -38,9 +38,9 @@ export function ToastHost({ toasts, onDismiss }: ToastHostProps) {
             >
               <Icon className={`mt-0.5 h-4 w-4 shrink-0 ${accent}`} />
               <div className="min-w-0 flex-1">
-                <p className="text-xs font-semibold text-[#ECECEF]">{toast.title}</p>
+                <p className="text-xs font-semibold text-[var(--text)]">{toast.title}</p>
                 {toast.description && (
-                  <p className="mt-0.5 text-[11px] leading-5 text-[#9C9CA6]">
+                  <p className="mt-0.5 text-[11px] leading-5 text-[var(--text-2)]">
                     {toast.description}
                   </p>
                 )}
@@ -48,7 +48,7 @@ export function ToastHost({ toasts, onDismiss }: ToastHostProps) {
               <button
                 type="button"
                 onClick={() => onDismiss(toast.id)}
-                className="text-[#6B6B75] hover:text-[#ECECEF]"
+                className="text-[var(--text-3)] hover:text-[var(--text)]"
                 aria-label="بستن پیام"
               >
                 <X className="h-3.5 w-3.5" />

@@ -41,7 +41,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [moreOpen, setMoreOpen] = useState(false);
   const [chrome, setChrome] = useState<ScrollChrome>(INITIAL_CHROME);
 
-  // Each section paints itself: hue, environment and light position.
+  // One palette for the product; the section only records which room it is.
   useEffect(() => {
     applySectionAppearance(
       {
@@ -49,10 +49,9 @@ export function AppShell({ children }: { children: ReactNode }) {
         backgroundId: settings.backgroundId,
         motionLevel: settings.motionLevel,
       },
-      activeTab,
-      settings.sectionIdentityEnabled !== false
+      activeTab
     );
-  }, [activeTab, settings.accentColor, settings.backgroundId, settings.motionLevel, settings.sectionIdentityEnabled]);
+  }, [activeTab, settings.accentColor, settings.backgroundId, settings.motionLevel]);
 
   const handleNav = (tab: NavTab) => {
     setMoreOpen(false);

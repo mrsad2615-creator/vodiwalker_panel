@@ -3,6 +3,7 @@ import {
   Archive,
   Bell,
   Check,
+  ChevronLeft,
   CheckSquare,
   Clock,
   Columns3,
@@ -34,6 +35,9 @@ import {
 import { triggerHaptic } from '@/lib/native';
 import { useApp } from '@/context/AppContext';
 import { LuxuryCard } from '@/components/ui/LuxuryCard';
+import { Rail, RailRow } from '@/components/ui/Rail';
+import { SectionHeader } from '@/components/ui/SectionHeader';
+import { sectionEyebrow } from '@/lib/sections';
 import { Numeric } from '@/components/ui/Numeric';
 import { EmptyState } from '@/components/ui/EmptyState';
 
@@ -121,13 +125,79 @@ export function TasksPage() {
 
     upcoming.sort((a, b) => (a.dueDate ?? '').localeCompare(b.dueDate ?? ''));
     return [
-      { id: 'overdue', title: 'عقب‌افتاده', items: overdue, accent: '#EF9095' },
+      { id: 'overdue', title: 'عقب‌افتاده', items: overdue, accent: 'var(--danger-fg)' },
       { id: 'today', title: 'امروز', items: today, accent: 'var(--accent-fg)' },
-      { id: 'upcoming', title: 'آینده', items: upcoming, accent: '#ECECEF' },
-      { id: 'unscheduled', title: 'بدون تاریخ', items: unscheduled, accent: '#9C9CA6' },
+      { id: 'upcoming', title: 'آینده', items: upcoming, accent: 'var(--text)' },
+      { id: 'unscheduled', title: 'بدون تاریخ', items: unscheduled, accent: 'var(--text-2)' },
       { id: 'completed', title: 'تکمیل‌شده‌های اخیر', items: completed, accent: 'var(--accent)' },
     ].filter((g) => g.items.length > 0);
   }, [filteredTasks, todayKey]);
+
+  /** One ledger row — the list view's only shape. */
+  const renderTaskRow = (task: Task) => {
+    const isDone = task.status === 'completed';
+    const dueInfo = formatRelativeDueLabel(task.dueDate, todayKey);
+    const doneSubs = task.subtasks.filter((s) => s.completed).length;
+    const cat = CATEGORY_META[task.category];
+    const priority = PRIORITY_META[task.priority];
+
+    return (
+      <RailRow key={task.id}>
+        <button
+          type="button"
+          onClick={() => void handleStatusChange(task, isDone ? 'todo' : 'completed')}
+          aria-label={isDone ? `بازگرداندن ${task.title}` : `تکمیل ${task.title}`}
+          aria-pressed={isDone}
+          className={`grid h-[18px] w-[18px] shrink-0 place-items-center rounded-[5px] border transition-colors ${
+            isDone
+              ? 'border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-on)]'
+              : 'border-white/20 text-transparent hover:border-[var(--accent-fg)]'
+          }`}
+        >
+          <Check className="h-3 w-3" strokeWidth={3} />
+        </button>
+
+        <span
+          aria-hidden="true"
+          className="h-[18px] w-[2px] shrink-0 rounded-full"
+          style={{ background: priority.dotColor, opacity: isDone ? 0.3 : 0.9 }}
+        />
+
+        <button
+          type="button"
+          onClick={() => openEditTask(task)}
+          className="min-w-0 flex-1 text-start"
+        >
+          <span
+            className={`block truncate text-[12.5px] ${
+              isDone ? 'text-[var(--text-3)] line-through' : 'text-[var(--text)]'
+            }`}
+          >
+            {task.title}
+          </span>
+          <span className="mt-0.5 flex items-center gap-1.5 text-[9.5px] text-[var(--text-3)]">
+            <span style={{ color: cat.badgeText }}>{cat.label}</span>
+            {dueInfo?.label && (
+              <>
+                <span className="opacity-50">·</span>
+                <span className={dueInfo.isOverdue ? 'text-[var(--danger-fg)]' : ''}>
+                  {dueInfo.label}
+                </span>
+              </>
+            )}
+            {doneSubs > 0 && (
+              <>
+                <span className="opacity-50">·</span>
+                <Numeric value={`${doneSubs}/${task.subtasks.length}`} variant="geo" />
+              </>
+            )}
+          </span>
+        </button>
+
+        <ChevronLeft className="h-3.5 w-3.5 shrink-0 text-[var(--text-3)]" />
+      </RailRow>
+    );
+  };
 
   const renderTaskCard = (task: Task, compact = false) => {
     const isDone = task.status === 'completed';
@@ -156,8 +226,8 @@ export function TasksPage() {
               isDone
                 ? 'border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-on)]'
                 : task.status === 'in_progress'
-                ? 'border-[var(--accent-fg)] bg-[#1C1C21] text-[var(--accent-fg)]'
-                : 'border-[var(--accent-fg)]/28 bg-[#0E0E11] hover:border-[var(--accent-fg)]'
+                ? 'border-[var(--accent-fg)] bg-[var(--surface-3)] text-[var(--accent-fg)]'
+                : 'border-[var(--accent-fg)]/28 bg-[var(--surface-input)] hover:border-[var(--accent-fg)]'
             }`}
           >
             {isDone ? (
@@ -174,13 +244,13 @@ export function TasksPage() {
           >
             <p
               className={`text-[13px] font-medium leading-5 ${
-                isDone ? 'text-[#9C9CA6] line-through' : 'text-[#ECECEF]'
+                isDone ? 'text-[var(--text-2)] line-through' : 'text-[var(--text)]'
               }`}
             >
               {task.title}
             </p>
             {!compact && task.description && (
-              <p className="mt-0.5 line-clamp-1 text-[11px] text-[#6B6B75]">
+              <p className="mt-0.5 line-clamp-1 text-[11px] text-[var(--text-3)]">
                 {task.description}
               </p>
             )}
@@ -196,8 +266,8 @@ export function TasksPage() {
               <span
                 className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 ${
                   dueInfo.isOverdue && !isDone
-                    ? 'bg-[#E5484D]/15 text-[#EF9095]'
-                    : 'bg-[#0E0E11] text-[#9C9CA6]'
+                    ? 'bg-[var(--danger)]/15 text-[var(--danger-fg)]'
+                    : 'bg-[var(--surface-input)] text-[var(--text-2)]'
                 }`}
               >
                 <Numeric value={dueInfo.label} variant="geo" className="text-[10px]" />
@@ -210,7 +280,7 @@ export function TasksPage() {
               </span>
 
               {task.subtasks.length > 0 && (
-                <span className="rounded-md bg-[#1C1C21]/80 px-1.5 py-0.5 text-[var(--accent-fg)]">
+                <span className="rounded-md bg-[var(--surface-3)]/80 px-1.5 py-0.5 text-[var(--accent-fg)]">
                   <Numeric
                     value={`${doneSubs}/${task.subtasks.length}`}
                     variant="geo"
@@ -250,7 +320,7 @@ export function TasksPage() {
                 pushToast({ title: 'به آرشیو منتقل شد', tone: 'default' });
               }}
               aria-label="انتقال به آرشیو"
-              className="rounded-lg p-1.5 text-[#6B6B75] hover:bg-[#1C1C21] hover:text-[var(--accent-fg)]"
+              className="rounded-lg p-1.5 text-[var(--text-3)] hover:bg-[var(--surface-3)] hover:text-[var(--accent-fg)]"
             >
               <Archive className="h-3.5 w-3.5" />
             </button>
@@ -274,7 +344,7 @@ export function TasksPage() {
                 className={`flex-1 rounded-lg py-1 text-[10px] font-medium transition ${
                   task.status === col.id
                     ? 'bg-[var(--accent)] text-[var(--accent-on)]'
-                    : 'bg-[#0E0E11] text-[#9C9CA6] hover:text-[#ECECEF]'
+                    : 'bg-[var(--surface-input)] text-[var(--text-2)] hover:text-[var(--text)]'
                 }`}
               >
                 {col.label}
@@ -288,34 +358,39 @@ export function TasksPage() {
 
   return (
     <div className="space-y-4">
-      {/* Header & KPI Counter */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-lg font-bold text-[#ECECEF]">مدیریت وظایف</h1>
-          <p className="mt-0.5 text-[11px] text-[#9C9CA6]">
-            <Numeric value={counts.done} className="font-semibold text-[var(--accent-fg)]" /> تکمیل‌شده از{' '}
-            <Numeric value={counts.total} className="font-semibold text-[#ECECEF]" /> وظیفه فعال
+      {/* Page header — one rhythm across the product */}
+      <SectionHeader
+        eyebrow={sectionEyebrow('tasks')}
+        title="مدیریت وظایف"
+        meta={
+          <>
+            <Numeric value={counts.done} className="font-semibold text-[var(--accent-fg)]" />
+            <span>تکمیل‌شده از</span>
+            <Numeric value={counts.total} className="font-semibold text-[var(--text)]" />
+            <span>وظیفه</span>
             {counts.inProgress > 0 && (
               <>
-                {' '}
-                • <Numeric value={counts.inProgress} className="text-[var(--accent-fg)]" /> در جریان
+                <span className="opacity-50">·</span>
+                <Numeric value={counts.inProgress} className="text-[var(--accent-fg)]" />
+                <span>در جریان</span>
               </>
             )}
-          </p>
-        </div>
+          </>
+        }
+        action={
+          <button
+            type="button"
+            onClick={() => openCreateTask({ defaultDueDate: todayKey })}
+            className="btn-royal flex items-center gap-1.5 rounded-[var(--r-field)] px-3 py-2 text-[11px] font-semibold"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            <span>وظیفه جدید</span>
+          </button>
+        }
+      />
 
-        <button
-          type="button"
-          onClick={() => openCreateTask({ defaultDueDate: todayKey })}
-          className="btn-royal flex items-center gap-1.5 rounded-2xl px-3.5 py-2.5 text-xs font-semibold"
-        >
-          <Plus className="h-4 w-4" />
-          <span>وظیفه جدید</span>
-        </button>
-      </div>
-
-      {/* 4 View Modes Segmented Bar */}
-      <div className="grid grid-cols-4 gap-1 rounded-2xl border border-[var(--accent-fg)]/12 bg-[#16161A] p-1">
+      {/* View modes — editorial tabs on a rule, not a segmented pill */}
+      <div className="grid grid-cols-4 border-b border-[var(--border)]">
         {(
           [
             { id: 'list', label: 'لیست', icon: List },
@@ -331,14 +406,22 @@ export function TasksPage() {
               key={tab.id}
               type="button"
               onClick={() => setViewMode(tab.id)}
-              className={`flex items-center justify-center gap-1 rounded-xl py-2 text-[11px] font-medium transition ${
+              aria-pressed={active}
+              className={`relative flex items-center justify-center gap-1 pb-2.5 pt-1 text-[11px] font-medium transition-colors ${
                 active
-                  ? 'bg-[#1C1C21] text-[#ECECEF] shadow-[inset_0_1px_0_color-mix(in_srgb,var(--accent-fg)_20%,transparent)]'
-                  : 'text-[#9C9CA6] hover:text-[#ECECEF]'
+                  ? 'text-[var(--text)]'
+                  : 'text-[var(--text-3)] hover:text-[var(--text-2)]'
               }`}
             >
               <Icon className={`h-3.5 w-3.5 ${active ? 'text-[var(--accent-fg)]' : ''}`} />
               <span>{tab.label}</span>
+              {active && (
+                <span
+                  aria-hidden="true"
+                  className="absolute inset-x-2 -bottom-px h-[2px] rounded-full"
+                  style={{ background: 'var(--accent)' }}
+                />
+              )}
             </button>
           );
         })}
@@ -347,7 +430,7 @@ export function TasksPage() {
       {/* Search & Filter Row */}
       <div className="flex items-center gap-2">
         <div className="relative flex-1">
-          <Search className="pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 text-[#6B6B75]" />
+          <Search className="pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 text-[var(--text-3)]" />
           <input
             type="text"
             dir="auto"
@@ -363,8 +446,8 @@ export function TasksPage() {
           aria-label="فیلتر وظایف"
           className={`flex h-10 w-10 items-center justify-center rounded-xl border transition ${
             showFilters || filterCategory !== 'all' || filterPriority !== 'all' || onlyRecurring
-              ? 'border-[var(--accent)] bg-[#1C1C21] text-[var(--accent-fg)]'
-              : 'border-[var(--accent-fg)]/12 bg-[#16161A] text-[#9C9CA6]'
+              ? 'border-[var(--accent)] bg-[var(--surface-3)] text-[var(--accent-fg)]'
+              : 'border-[var(--accent-fg)]/12 bg-[var(--surface-2)] text-[var(--text-2)]'
           }`}
         >
           <SlidersHorizontal className="h-4 w-4" />
@@ -375,7 +458,7 @@ export function TasksPage() {
         <LuxuryCard variant="subtle" className="space-y-3 p-3.5">
           <div className="grid grid-cols-2 gap-2.5">
             <div>
-              <label className="mb-1 block text-[10.5px] text-[#9C9CA6]">دسته‌بندی</label>
+              <label className="mb-1 block text-[10.5px] text-[var(--text-2)]">دسته‌بندی</label>
               <select
                 value={filterCategory}
                 onChange={(e) => setFilterCategory(e.target.value as TaskCategory | 'all')}
@@ -383,14 +466,14 @@ export function TasksPage() {
               >
                 <option value="all">همه دسته‌ها</option>
                 {(Object.keys(CATEGORY_META) as TaskCategory[]).map((cat) => (
-                  <option key={cat} value={cat} className="bg-[#16161A]">
+                  <option key={cat} value={cat} className="bg-[var(--surface-2)]">
                     {CATEGORY_META[cat].label}
                   </option>
                 ))}
               </select>
             </div>
             <div>
-              <label className="mb-1 block text-[10.5px] text-[#9C9CA6]">اولویت</label>
+              <label className="mb-1 block text-[10.5px] text-[var(--text-2)]">اولویت</label>
               <select
                 value={filterPriority}
                 onChange={(e) => setFilterPriority(e.target.value as TaskPriority | 'all')}
@@ -405,7 +488,7 @@ export function TasksPage() {
           </div>
 
           <div className="flex items-center justify-between">
-            <label className="flex items-center gap-2 text-xs text-[#ECECEF]">
+            <label className="flex items-center gap-2 text-xs text-[var(--text)]">
               <input
                 type="checkbox"
                 checked={onlyRecurring}
@@ -451,17 +534,12 @@ export function TasksPage() {
           ) : (
             listGroups.map((group) => (
               <section key={group.id} className="space-y-2">
-                <div className="flex items-center justify-between px-1">
-                  <h2 className="text-xs font-bold" style={{ color: group.accent }}>
-                    {group.title}
-                  </h2>
-                  <Numeric
-                    value={group.items.length}
-                    variant="geo"
-                    className="rounded-md bg-[#16161A] px-2 py-0.5 text-[11px] text-[#9C9CA6]"
-                  />
-                </div>
-                <div className="space-y-2">{group.items.map((t) => renderTaskCard(t))}</div>
+                <SectionHeader
+                  size="section"
+                  title={group.title}
+                  meta={<Numeric value={group.items.length} variant="geo" />}
+                />
+                <Rail>{group.items.map((t) => renderTaskRow(t))}</Rail>
               </section>
             ))
           )}
@@ -473,7 +551,7 @@ export function TasksPage() {
         <div className="space-y-3.5">
           {(
             [
-              { status: 'todo', title: 'انجام نشده', en: 'To Do', accent: '#9C9CA6' },
+              { status: 'todo', title: 'انجام نشده', en: 'To Do', accent: 'var(--text-2)' },
               { status: 'in_progress', title: 'در حال انجام', en: 'In Progress', accent: 'var(--accent-fg)' },
               { status: 'completed', title: 'تکمیل شده', en: 'Completed', accent: 'var(--accent)' },
             ] as const
@@ -491,7 +569,7 @@ export function TasksPage() {
                   }
                   setDragTaskId(null);
                 }}
-                className="rounded-2xl border border-[var(--accent-fg)]/12 bg-[#101014] p-3"
+                className="rounded-2xl border border-[var(--accent-fg)]/12 bg-[var(--surface-1)] p-3"
               >
                 <div className="mb-2.5 flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -499,18 +577,18 @@ export function TasksPage() {
                       className="h-2 w-2 rounded-full"
                       style={{ backgroundColor: col.accent }}
                     />
-                    <h2 className="text-xs font-bold text-[#ECECEF]">{col.title}</h2>
-                    <span className="num-geo text-[10px] text-[#6B6B75]">{col.en}</span>
+                    <h2 className="text-xs font-bold text-[var(--text)]">{col.title}</h2>
+                    <span className="num-geo text-[10px] text-[var(--text-3)]">{col.en}</span>
                   </div>
                   <Numeric
                     value={items.length}
                     variant="geo"
-                    className="rounded-lg bg-[#16161A] px-2 py-0.5 text-[11px] font-semibold text-[var(--accent-fg)]"
+                    className="rounded-lg bg-[var(--surface-2)] px-2 py-0.5 text-[11px] font-semibold text-[var(--accent-fg)]"
                   />
                 </div>
 
                 {items.length === 0 ? (
-                  <p className="rounded-xl border border-dashed border-[var(--accent-fg)]/12 py-4 text-center text-[11px] text-[#6B6B75]">
+                  <p className="rounded-xl border border-dashed border-[var(--accent-fg)]/12 py-4 text-center text-[11px] text-[var(--text-3)]">
                     وظیفه‌ای در این ستون نیست
                   </p>
                 ) : (
@@ -536,14 +614,14 @@ export function TasksPage() {
                   <div>
                     <div className="flex items-center gap-2">
                       <span
-                        className="num-geo rounded-md px-1.5 py-0.5 text-[10px] font-bold text-[#0A0A0C]"
+                        className="num-geo rounded-md px-1.5 py-0.5 text-[10px] font-bold text-[var(--bg)]"
                         style={{ backgroundColor: meta.accent }}
                       >
                         {meta.code}
                       </span>
-                      <h2 className="text-xs font-bold text-[#ECECEF]">{meta.title}</h2>
+                      <h2 className="text-xs font-bold text-[var(--text)]">{meta.title}</h2>
                     </div>
-                    <p className="mt-0.5 text-[10.5px] text-[#9C9CA6]">
+                    <p className="mt-0.5 text-[10.5px] text-[var(--text-2)]">
                       {meta.subtitle} — <span className="text-[var(--accent-fg)]">{meta.action}</span>
                     </p>
                   </div>
@@ -552,14 +630,14 @@ export function TasksPage() {
                     type="button"
                     onClick={() => openCreateTask({ defaultDueDate: todayKey, defaultQuadrant: q })}
                     aria-label={`افزودن به ${meta.title}`}
-                    className="flex h-7 w-7 items-center justify-center rounded-lg border border-[var(--accent-fg)]/18 bg-[#1C1C21] text-[var(--accent-fg)] hover:bg-[var(--accent)] hover:text-[var(--accent-on)]"
+                    className="flex h-7 w-7 items-center justify-center rounded-lg border border-[var(--accent-fg)]/18 bg-[var(--surface-3)] text-[var(--accent-fg)] hover:bg-[var(--accent)] hover:text-[var(--accent-on)]"
                   >
                     <Plus className="h-3.5 w-3.5" />
                   </button>
                 </div>
 
                 {items.length === 0 ? (
-                  <p className="rounded-xl bg-[#0A0A0C]/55 py-3 text-center text-[11px] text-[#6B6B75]">
+                  <p className="rounded-xl bg-[var(--bg)]/55 py-3 text-center text-[11px] text-[var(--text-3)]">
                     وظیفه فعالی در این خانه نیست
                   </p>
                 ) : (
@@ -567,7 +645,7 @@ export function TasksPage() {
                     {items.map((task) => (
                       <div
                         key={task.id}
-                        className="flex items-center justify-between gap-2 rounded-xl border border-[var(--accent-fg)]/10 bg-[#0D0D10] px-3 py-2.5"
+                        className="flex items-center justify-between gap-2 rounded-xl border border-[var(--accent-fg)]/10 bg-[var(--surface-input)] px-3 py-2.5"
                       >
                         <button
                           type="button"
@@ -580,9 +658,9 @@ export function TasksPage() {
                           onClick={() => openEditTask(task)}
                           className="min-w-0 flex-1 text-right"
                         >
-                          <p className="truncate text-xs font-medium text-[#ECECEF]">{task.title}</p>
+                          <p className="truncate text-xs font-medium text-[var(--text)]">{task.title}</p>
                           {task.dueTime && (
-                            <span className="inline-flex items-center gap-1 text-[10px] text-[#9C9CA6]">
+                            <span className="inline-flex items-center gap-1 text-[10px] text-[var(--text-2)]">
                               <Clock className="h-2.5 w-2.5" />
                               <Numeric value={task.dueTime} className="text-[10px]" />
                             </span>
@@ -594,7 +672,7 @@ export function TasksPage() {
                           onChange={(e) =>
                             handleMoveQuadrant(task, e.target.value as EisenhowerQuadrant)
                           }
-                          className="num-geo rounded-lg border border-[var(--accent-fg)]/16 bg-[#16161A] px-1.5 py-1 text-[10px] text-[var(--accent-fg)] outline-none"
+                          className="num-geo rounded-lg border border-[var(--accent-fg)]/16 bg-[var(--surface-2)] px-1.5 py-1 text-[10px] text-[var(--accent-fg)] outline-none"
                         >
                           <option value="q1">Q1</option>
                           <option value="q2">Q2</option>
@@ -627,10 +705,10 @@ export function TasksPage() {
                 className="flex items-center justify-between gap-3 px-3.5 py-3"
               >
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-xs font-medium text-[#9C9CA6] line-through">
+                  <p className="truncate text-xs font-medium text-[var(--text-2)] line-through">
                     {task.title}
                   </p>
-                  <p className="mt-0.5 text-[10.5px] text-[#6B6B75]">
+                  <p className="mt-0.5 text-[10.5px] text-[var(--text-3)]">
                     {CATEGORY_META[task.category].label}
                     {task.completedDate && (
                       <>
@@ -652,7 +730,7 @@ export function TasksPage() {
                       pushToast({ title: 'از آرشیو بازیابی شد', tone: 'success' });
                     }}
                     aria-label="بازیابی از آرشیو"
-                    className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#1C1C21] text-[var(--accent-fg)] hover:bg-[var(--accent)] hover:text-[var(--accent-on)]"
+                    className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--surface-3)] text-[var(--accent-fg)] hover:bg-[var(--accent)] hover:text-[var(--accent-on)]"
                   >
                     <RotateCcw className="h-3.5 w-3.5" />
                   </button>
@@ -663,7 +741,7 @@ export function TasksPage() {
                       pushToast({ title: 'برای همیشه حذف شد', tone: 'default' });
                     }}
                     aria-label="حذف دائمی"
-                    className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#E5484D]/12 text-[#EF9095] hover:bg-[#E5484D]/25"
+                    className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--danger)]/12 text-[var(--danger-fg)] hover:bg-[var(--danger)]/25"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>

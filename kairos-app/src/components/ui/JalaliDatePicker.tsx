@@ -40,7 +40,7 @@ export function JalaliDatePicker({
   };
 
   return (
-    <div className="rounded-2xl border border-[var(--accent-fg)]/14 bg-[#0E0E11] p-3">
+    <div className="rounded-2xl border border-[var(--accent-fg)]/14 bg-[var(--surface-input)] p-3">
       {/* Quick Presets */}
       <div className="mb-3 flex flex-wrap items-center gap-1.5">
         <button
@@ -54,7 +54,7 @@ export function JalaliDatePicker({
           className={`rounded-lg px-2.5 py-1 text-[11px] font-medium transition ${
             value === todayKey
               ? 'bg-[var(--accent)] text-[var(--accent-on)]'
-              : 'bg-[#16161A] text-[#9C9CA6] hover:text-[#ECECEF]'
+              : 'bg-[var(--surface-2)] text-[var(--text-2)] hover:text-[var(--text)]'
           }`}
         >
           امروز
@@ -71,7 +71,7 @@ export function JalaliDatePicker({
           className={`rounded-lg px-2.5 py-1 text-[11px] font-medium transition ${
             value === addDays(todayKey, 1)
               ? 'bg-[var(--accent)] text-[var(--accent-on)]'
-              : 'bg-[#16161A] text-[#9C9CA6] hover:text-[#ECECEF]'
+              : 'bg-[var(--surface-2)] text-[var(--text-2)] hover:text-[var(--text)]'
           }`}
         >
           فردا
@@ -88,7 +88,7 @@ export function JalaliDatePicker({
           className={`rounded-lg px-2.5 py-1 text-[11px] font-medium transition ${
             value === addDays(todayKey, 7)
               ? 'bg-[var(--accent)] text-[var(--accent-on)]'
-              : 'bg-[#16161A] text-[#9C9CA6] hover:text-[#ECECEF]'
+              : 'bg-[var(--surface-2)] text-[var(--text-2)] hover:text-[var(--text)]'
           }`}
         >
           هفته بعد
@@ -97,7 +97,7 @@ export function JalaliDatePicker({
           <button
             type="button"
             onClick={() => onChange(null)}
-            className="mr-auto rounded-lg px-2 py-1 text-[11px] text-[#6B6B75] hover:text-[#EF9095]"
+            className="mr-auto rounded-lg px-2 py-1 text-[11px] text-[var(--text-3)] hover:text-[var(--danger-fg)]"
           >
             حذف تاریخ
           </button>
@@ -110,11 +110,11 @@ export function JalaliDatePicker({
           type="button"
           onClick={() => handleShift(-1)}
           aria-label="ماه قبل"
-          className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#16161A] text-[#9C9CA6] hover:text-[#ECECEF]"
+          className="flex h-7 w-7 items-center justify-center rounded-lg bg-[var(--surface-2)] text-[var(--text-2)] hover:text-[var(--text)]"
         >
           <ChevronRight className="h-4 w-4" />
         </button>
-        <div className="flex items-center gap-1.5 text-xs font-semibold text-[#ECECEF]">
+        <div className="flex items-center gap-1.5 text-xs font-semibold text-[var(--text)]">
           <span>{getJalaaliMonthName(viewMonth)}</span>
           <Numeric value={viewYear} variant="geo" className="text-[var(--accent-fg)]" />
         </div>
@@ -122,14 +122,14 @@ export function JalaliDatePicker({
           type="button"
           onClick={() => handleShift(1)}
           aria-label="ماه بعد"
-          className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#16161A] text-[#9C9CA6] hover:text-[#ECECEF]"
+          className="flex h-7 w-7 items-center justify-center rounded-lg bg-[var(--surface-2)] text-[var(--text-2)] hover:text-[var(--text)]"
         >
           <ChevronLeft className="h-4 w-4" />
         </button>
       </div>
 
       {/* Weekdays */}
-      <div className="mb-1 grid grid-cols-7 text-center text-[10px] font-medium text-[#6B6B75]">
+      <div className="mb-1 grid grid-cols-7 text-center text-[10px] font-medium text-[var(--text-3)]">
         {PERSIAN_WEEKDAYS_SHORT.map((w) => (
           <div key={w} className="py-1">
             {w}
@@ -157,8 +157,8 @@ export function JalaliDatePicker({
                 isSelected
                   ? 'bg-[var(--accent)] font-bold text-[var(--accent-on)] shadow-[0_0_12px_color-mix(in_srgb,var(--accent)_55%,transparent)]'
                   : isToday
-                  ? 'border border-[var(--accent-fg)]/50 bg-[#1C1C21] text-[var(--accent-fg)]'
-                  : 'text-[#ECECEF]/85 hover:bg-[#1C1C21]/70'
+                  ? 'border border-[var(--accent-fg)]/50 bg-[var(--surface-3)] text-[var(--accent-fg)]'
+                  : 'text-[var(--text)]/85 hover:bg-[var(--surface-3)]/70'
               }`}
             >
               <Numeric value={day} variant="geo" className="text-xs" />

@@ -103,7 +103,7 @@ export function HabitDetailView({
         <button
           type="button"
           onClick={onBack}
-          className="btn-ghost-luxury flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-medium text-[#ECECEF]"
+          className="btn-ghost-luxury flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-medium text-[var(--text)]"
         >
           <ArrowRight className="h-4 w-4" />
           <span>بازگشت به عادت‌ها</span>
@@ -123,13 +123,13 @@ export function HabitDetailView({
       <LuxuryCard variant="hero" className="p-5">
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[var(--accent-fg)]/28 bg-[#1C1C21]">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[var(--accent-fg)]/28 bg-[var(--surface-3)]">
               <HabitIcon name={habit.icon} color={habit.accentColor} className="h-6 w-6" />
             </div>
             <div>
-              <h1 className="text-base font-bold text-[#ECECEF]">{habit.name}</h1>
+              <h1 className="text-base font-bold text-[var(--text)]">{habit.name}</h1>
               {habit.description && (
-                <p className="mt-0.5 text-xs text-[#9C9CA6]">{habit.description}</p>
+                <p className="mt-0.5 text-xs text-[var(--text-2)]">{habit.description}</p>
               )}
             </div>
           </div>
@@ -141,37 +141,37 @@ export function HabitDetailView({
               variant="display"
               className="text-4xl font-extrabold text-[var(--accent-fg)]"
             />
-            <span className="block text-[10px] text-[#9C9CA6]">نرخ پایبندی</span>
+            <span className="block text-[10px] text-[var(--text-2)]">نرخ پایبندی</span>
           </div>
         </div>
 
         {/* 4 Core KPI Tiles — Strictly Separating Completed, Missed, Unlogged, Best Streak */}
         <div className="mt-5 grid grid-cols-4 gap-2">
-          <div className="rounded-xl border border-[var(--accent-fg)]/12 bg-[#0A0A0C]/60 p-2.5 text-center">
+          <div className="rounded-xl border border-[var(--accent-fg)]/12 bg-[var(--bg)]/60 p-2.5 text-center">
             <Numeric
               value={stats.completedDays}
               variant="display"
-              className="text-2xl font-bold text-[#ECECEF]"
+              className="text-2xl font-bold text-[var(--text)]"
             />
-            <span className="mt-1 block text-[9.5px] text-[#9C9CA6]">روز موفق</span>
+            <span className="mt-1 block text-[9.5px] text-[var(--text-2)]">روز موفق</span>
           </div>
-          <div className="rounded-xl border border-[#E5484D]/18 bg-[#0A0A0C]/60 p-2.5 text-center">
+          <div className="rounded-xl border border-[var(--danger)]/18 bg-[var(--bg)]/60 p-2.5 text-center">
             <Numeric
               value={stats.missedDays}
               variant="display"
-              className="text-2xl font-bold text-[#EF9095]"
+              className="text-2xl font-bold text-[var(--danger-fg)]"
             />
-            <span className="mt-1 block text-[9.5px] text-[#9C9CA6]">ازدست‌رفته</span>
+            <span className="mt-1 block text-[9.5px] text-[var(--text-2)]">ازدست‌رفته</span>
           </div>
-          <div className="rounded-xl border border-[var(--accent-fg)]/10 bg-[#0A0A0C]/60 p-2.5 text-center">
+          <div className="rounded-xl border border-[var(--accent-fg)]/10 bg-[var(--bg)]/60 p-2.5 text-center">
             <Numeric
               value={stats.unloggedDays}
               variant="display"
-              className="text-2xl font-bold text-[#9C9CA6]"
+              className="text-2xl font-bold text-[var(--text-2)]"
             />
-            <span className="mt-1 block text-[9.5px] text-[#6B6B75]">ثبت‌نشده</span>
+            <span className="mt-1 block text-[9.5px] text-[var(--text-3)]">ثبت‌نشده</span>
           </div>
-          <div className="rounded-xl border border-[var(--accent)]/28 bg-[#1C1C21]/60 p-2.5 text-center">
+          <div className="rounded-xl border border-[var(--accent)]/28 bg-[var(--surface-3)]/60 p-2.5 text-center">
             <Numeric
               value={stats.bestStreak}
               variant="display"
@@ -181,16 +181,16 @@ export function HabitDetailView({
           </div>
         </div>
 
-        <div className="mt-3 flex items-center justify-between text-[11px] text-[#9C9CA6]">
+        <div className="mt-3 flex items-center justify-between text-[11px] text-[var(--text-2)]">
           <span className="inline-flex items-center gap-1">
             <Flame className="h-3.5 w-3.5 text-[var(--accent)]" />
             رکورد متوالی فعلی:{' '}
-            <Numeric value={stats.currentStreak} className="font-semibold text-[#ECECEF]" /> روز
+            <Numeric value={stats.currentStreak} className="font-semibold text-[var(--text)]" /> روز
           </span>
           <span className="inline-flex items-center gap-1">
             <Trophy className="h-3.5 w-3.5 text-[var(--accent-fg)]" />
             ثبت‌شده:{' '}
-            <Numeric value={stats.loggedDaysCount} className="font-semibold text-[#ECECEF]" /> از{' '}
+            <Numeric value={stats.loggedDaysCount} className="font-semibold text-[var(--text)]" /> از{' '}
             <Numeric value={stats.scheduledDaysCount} />
           </span>
         </div>
@@ -199,7 +199,7 @@ export function HabitDetailView({
       {/* Individual Habit 365-Day Heatmap */}
       <LuxuryCard className="space-y-3 p-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-xs font-bold text-[#ECECEF]">تقویم فعالیت سالانه</h2>
+          <h2 className="text-xs font-bold text-[var(--text)]">تقویم فعالیت سالانه</h2>
           <div className="flex items-center gap-1">
             {[currentJYear - 1, currentJYear].map((yr) => (
               <button
@@ -209,7 +209,7 @@ export function HabitDetailView({
                 className={`num-geo rounded-lg px-2 py-1 text-[11px] font-medium transition ${
                   selectedYear === yr
                     ? 'bg-[var(--accent)] text-[var(--accent-on)]'
-                    : 'bg-[#0E0E11] text-[#9C9CA6]'
+                    : 'bg-[var(--surface-input)] text-[var(--text-2)]'
                 }`}
               >
                 {yr}
@@ -226,14 +226,14 @@ export function HabitDetailView({
         />
 
         {/* Selected Day Status Control (Completed / Missed / Clear to Unlogged) */}
-        <div className="rounded-2xl border border-[var(--accent-fg)]/12 bg-[#0E0E11] p-3">
+        <div className="rounded-2xl border border-[var(--accent-fg)]/12 bg-[var(--surface-input)] p-3">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs font-semibold text-[#ECECEF]">
+              <p className="text-xs font-semibold text-[var(--text)]">
                 {selectedDateInfo.weekday}، <Numeric value={selectedDateInfo.day} />{' '}
-                {selectedDateInfo.month} <Numeric value={selectedDateInfo.year} className="text-[#9C9CA6]" />
+                {selectedDateInfo.month} <Numeric value={selectedDateInfo.year} className="text-[var(--text-2)]" />
               </p>
-              <p className="mt-0.5 text-[10.5px] text-[#9C9CA6]">
+              <p className="mt-0.5 text-[10.5px] text-[var(--text-2)]">
                 وضعیت فعلی:{' '}
                 <span className="text-[var(--accent-fg)]">
                   {!selectedLog
@@ -256,7 +256,7 @@ export function HabitDetailView({
                 className={`flex items-center justify-center gap-1 rounded-xl py-1.5 text-[11px] font-medium transition ${
                   selectedLog?.status === 'completed'
                     ? 'bg-[var(--accent)] text-[var(--accent-on)]'
-                    : 'bg-[#16161A] text-[#9C9CA6] hover:text-[#ECECEF]'
+                    : 'bg-[var(--surface-2)] text-[var(--text-2)] hover:text-[var(--text)]'
                 }`}
               >
                 <Check className="h-3.5 w-3.5" />
@@ -267,8 +267,8 @@ export function HabitDetailView({
                 onClick={() => setDayStatus(selectedCellKey, 'missed')}
                 className={`flex items-center justify-center gap-1 rounded-xl py-1.5 text-[11px] font-medium transition ${
                   selectedLog?.status === 'missed'
-                    ? 'bg-[#E5484D]/25 text-[#EF9095] ring-1 ring-[#E5484D]/40'
-                    : 'bg-[#16161A] text-[#9C9CA6] hover:text-[#EF9095]'
+                    ? 'bg-[var(--danger)]/25 text-[var(--danger-fg)] ring-1 ring-[var(--danger)]/40'
+                    : 'bg-[var(--surface-2)] text-[var(--text-2)] hover:text-[var(--danger-fg)]'
                 }`}
               >
                 <X className="h-3.5 w-3.5" />
@@ -279,8 +279,8 @@ export function HabitDetailView({
                 onClick={() => setDayStatus(selectedCellKey, 'unlogged')}
                 className={`flex items-center justify-center gap-1 rounded-xl py-1.5 text-[11px] font-medium transition ${
                   !selectedLog
-                    ? 'bg-[#1C1C21] text-[var(--accent-fg)]'
-                    : 'bg-[#16161A] text-[#6B6B75] hover:text-[#9C9CA6]'
+                    ? 'bg-[var(--surface-3)] text-[var(--accent-fg)]'
+                    : 'bg-[var(--surface-2)] text-[var(--text-3)] hover:text-[var(--text-2)]'
                 }`}
               >
                 <Minus className="h-3.5 w-3.5" />
@@ -293,7 +293,7 @@ export function HabitDetailView({
 
       {/* 14-Day Progress Trend */}
       <LuxuryCard className="p-4">
-        <h2 className="mb-2 text-xs font-bold text-[#ECECEF]">روند پیشرفت 14 روز اخیر</h2>
+        <h2 className="mb-2 text-xs font-bold text-[var(--text)]">روند پیشرفت 14 روز اخیر</h2>
         <LuxuryAreaChart
           points={stats.last14Days.map((d) => ({
             key: d.dateKey,
@@ -307,7 +307,7 @@ export function HabitDetailView({
 
       {/* 6-Month Comparison */}
       <LuxuryCard className="p-4">
-        <h2 className="mb-2 text-xs font-bold text-[#ECECEF]">مقایسه پایبندی ماهانه</h2>
+        <h2 className="mb-2 text-xs font-bold text-[var(--text)]">مقایسه پایبندی ماهانه</h2>
         <LuxuryBarChart
           data={stats.monthlyComparison.map((m) => ({
             key: `${m.jy}-${m.jm}`,
@@ -323,7 +323,7 @@ export function HabitDetailView({
 
       {/* Full Interactive Recent History */}
       <LuxuryCard className="space-y-2.5 p-4">
-        <h2 className="text-xs font-bold text-[#ECECEF]">تاریخچه 14 روز اخیر</h2>
+        <h2 className="text-xs font-bold text-[var(--text)]">تاریخچه 14 روز اخیر</h2>
         <div className="space-y-1.5">
           {recentHistoryDays.map((dk) => {
             const log = logByDate.get(dk);
@@ -331,13 +331,13 @@ export function HabitDetailView({
             return (
               <div
                 key={dk}
-                className="flex items-center justify-between rounded-xl border border-[var(--accent-fg)]/8 bg-[#0E0E11] px-3 py-2"
+                className="flex items-center justify-between rounded-xl border border-[var(--accent-fg)]/8 bg-[var(--surface-input)] px-3 py-2"
               >
                 <div className="text-xs">
-                  <span className="font-medium text-[#ECECEF]">{info.weekday}</span>
-                  <span className="mx-1.5 text-[#6B6B75]">•</span>
+                  <span className="font-medium text-[var(--text)]">{info.weekday}</span>
+                  <span className="mx-1.5 text-[var(--text-3)]">•</span>
                   <Numeric value={info.day} className="text-[var(--accent-fg)]" />{' '}
-                  <span className="text-[#9C9CA6]">{info.month}</span>
+                  <span className="text-[var(--text-2)]">{info.month}</span>
                 </div>
 
                 <div className="flex items-center gap-1">
@@ -348,7 +348,7 @@ export function HabitDetailView({
                     className={`rounded-lg px-2 py-1 text-[10px] font-medium ${
                       log?.status === 'completed'
                         ? 'bg-[var(--accent)] text-[var(--accent-on)]'
-                        : 'bg-[#16161A] text-[#6B6B75]'
+                        : 'bg-[var(--surface-2)] text-[var(--text-3)]'
                     }`}
                   >
                     موفق
@@ -359,8 +359,8 @@ export function HabitDetailView({
                     aria-label="ثبت انجام نشد"
                     className={`rounded-lg px-2 py-1 text-[10px] font-medium ${
                       log?.status === 'missed'
-                        ? 'bg-[#E5484D]/25 text-[#EF9095]'
-                        : 'bg-[#16161A] text-[#6B6B75]'
+                        ? 'bg-[var(--danger)]/25 text-[var(--danger-fg)]'
+                        : 'bg-[var(--surface-2)] text-[var(--text-3)]'
                     }`}
                   >
                     نشد
@@ -371,8 +371,8 @@ export function HabitDetailView({
                     aria-label="بدون ثبت"
                     className={`rounded-lg px-2 py-1 text-[10px] font-medium ${
                       !log
-                        ? 'bg-[#1C1C21] text-[var(--accent-fg)]'
-                        : 'bg-[#16161A] text-[#6B6B75]'
+                        ? 'bg-[var(--surface-3)] text-[var(--accent-fg)]'
+                        : 'bg-[var(--surface-2)] text-[var(--text-3)]'
                     }`}
                   >
                     ثبت‌نشده

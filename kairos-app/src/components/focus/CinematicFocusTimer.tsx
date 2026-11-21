@@ -141,9 +141,9 @@ export function CinematicFocusTimer({
       <svg width={size} height={size} viewBox={`0 0 ${VIEW} ${VIEW}`} aria-hidden="true" focusable="false">
         <defs>
           <radialGradient id="chrono-face" cx="50%" cy="26%" r="78%">
-            <stop offset="0%" stopColor="#15151A" />
-            <stop offset="72%" stopColor="#0D0D10" />
-            <stop offset="100%" stopColor="#09090B" />
+            <stop offset="0%" stopColor="var(--surface-2)" />
+            <stop offset="72%" stopColor="var(--surface-input)" />
+            <stop offset="100%" stopColor="var(--bg)" />
           </radialGradient>
         </defs>
 

@@ -8,8 +8,11 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.produceState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
@@ -33,13 +36,12 @@ fun FullResolutionImage(
     modifier: Modifier = Modifier,
 ) {
     val resolver = container.contentResolver
-    // Lint cannot see through `withContext` inside a `produceState` block, so the
-    // decode is awaited first and the result assigned directly.
-    val bitmap by produceState<Bitmap?>(initialValue = null, item.id) {
-        val decoded = withContext(Dispatchers.IO) {
+    var bitmap by remember(item.id) { mutableStateOf<Bitmap?>(null) }
+
+    LaunchedEffect(item.id) {
+        bitmap = withContext(Dispatchers.IO) {
             decodeBounded(resolver, item.uri, maxEdge = 2048)
         }
-        value = decoded
     }
 
     Box(modifier, contentAlignment = Alignment.Center) {

@@ -82,6 +82,9 @@ jobs:
         run: |
           set -o pipefail
           ./gradlew --console=plain --no-daemon :app:lintDebug 2>&1 | tee -a build.log
+      # The lint text report is the only complete record of what lint objected
+      # to. It is echoed line by line as annotations because neither the raw log
+      # nor the uploaded artefact can be fetched from every environment.
       - name: Report lint findings
         if: failure() || cancelled()
         shell: bash
@@ -89,11 +92,11 @@ jobs:
           set -uo pipefail
           REPORT=app/build/reports/lint-results-debug.txt
           if [ -f "$REPORT" ]; then
-            grep -E "Error:|Warning:" "$REPORT" | head -25 | while IFS= read -r line; do
+            grep -nE "Error:|Warning:" "$REPORT" | head -60 | while IFS= read -r line; do
               echo "::error title=lint::$line"
             done
           else
-            echo "::warning title=lint::no lint report was produced"
+            echo "::warning title=lint::no lint text report was produced"
           fi
       - name: Report failure details
         if: failure() || cancelled()

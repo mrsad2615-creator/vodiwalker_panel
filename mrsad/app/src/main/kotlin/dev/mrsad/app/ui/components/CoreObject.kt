@@ -237,7 +237,6 @@ private fun DrawScope.drawCore(
     drawOval(
         brush = Brush.radialGradient(
             colors = listOf(
-                Color.Black.copy(alpha = 0.62f),
                 colors.accent.copy(alpha = 0.14f + 0.08f * energy),
                 Color.Transparent,
             ),
@@ -304,25 +303,35 @@ private fun DrawScope.drawCore(
 
     // ---- 4. Volumetric 3D PBR / Phong Plasma & Chrome Nucleus Sphere --------
     val nucleusRadius = radiusPx * (0.58f + 0.10f * energy + 0.10f * pulseGlow)
-    val hotspot = Offset(centerX - nucleusRadius * 0.32f, centerY - nucleusRadius * 0.34f)
+    val hotspot = Offset(centerX - nucleusRadius * 0.30f, centerY - nucleusRadius * 0.32f)
     drawCircle(
-        brush = Brush.radialGradient(
-            colors = listOf(
-                Color.White,
-                colors.accent,
-                Color(0xFF344B6E),
-                Color(0xFF0A0F1A),
-            ),
-            center = hotspot,
-            radius = nucleusRadius * 1.30f,
-        ),
+        color = Color(0xFF0D1422),
         radius = nucleusRadius,
         center = Offset(centerX, centerY),
     )
     drawCircle(
-        color = Color.White.copy(alpha = 0.90f),
-        radius = nucleusRadius * 0.16f,
-        center = Offset(centerX - nucleusRadius * 0.32f, centerY - nucleusRadius * 0.32f),
+        brush = Brush.radialGradient(
+            colors = listOf(
+                colors.accent,
+                Color(0xFF1A283E),
+            ),
+            center = hotspot,
+            radius = nucleusRadius * 1.20f,
+        ),
+        radius = nucleusRadius * 0.94f,
+        center = Offset(centerX, centerY),
+    )
+    drawCircle(
+        brush = Brush.radialGradient(
+            colors = listOf(
+                Color.White,
+                Color.Transparent,
+            ),
+            center = hotspot,
+            radius = nucleusRadius * 0.68f,
+        ),
+        radius = nucleusRadius * 0.68f,
+        center = hotspot,
     )
 
     // ---- 5. Solid Front-Facing 3D Bevelled Titanium Exoskeleton Plates ------

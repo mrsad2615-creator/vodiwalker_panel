@@ -32,8 +32,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
@@ -590,85 +588,44 @@ private fun ObsidianHeroCore(
 ) {
     val colors = MrsadTheme.colors
     val type = MrsadTheme.type
-    val shape = RoundedCornerShape(MrsadTokens.Radius.xl)
     Box(
         Modifier
             .testTag(MrsadTestTags.HOME_CORE)
             .fillMaxWidth()
-            .height(312.dp)
-            .clip(shape)
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        Color(0xFF141A26),
-                        Color(0xFF0A0D14),
-                        Color(0xFF06080C),
-                    ),
-                ),
-            )
-            .border(
-                width = 1.2.dp,
-                brush = Brush.verticalGradient(
-                    colors = listOf(
-                        Color.White.copy(alpha = 0.42f),
-                        colors.metalMid.copy(alpha = 0.28f),
-                        Color(0xFF080A10),
-                    ),
-                ),
-                shape = shape,
-            )
-            .padding(horizontal = MrsadTokens.Spacing.md, vertical = MrsadTokens.Spacing.sm),
+            .height(300.dp),
     ) {
-        // Top HUD bar inside the 3D Core Chamber
-        Row(
+        MrsadCore(
+            energy = state.energy,
+            modifier = Modifier.fillMaxSize(),
+            streakDays = state.streakDays,
+            bestWpm = state.bestWpm ?: 0,
+        )
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .align(Alignment.TopCenter),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 2.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
                 text = "ORRERY PRIME // 3D CORE",
                 style = type.caption.copy(
                     fontWeight = FontWeight.SemiBold,
-                    letterSpacing = 2.2.sp,
+                    letterSpacing = 2.6.sp,
                 ),
                 color = colors.metalLight,
             )
-            MrsadChip(
-                text = "${formatPercent(state.todayProgress * 100.0, persianNumerals)} هدف امروز",
-                tint = colors.accent,
-            )
-        }
-
-        // The 3D Volumetric PBR / Machined Titanium Core
-        MrsadCore(
-            energy = state.energy,
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(top = 18.dp, bottom = 22.dp),
-            streakDays = state.streakDays,
-            bestWpm = state.bestWpm ?: 0,
-        )
-
-        // Sleek bottom caption
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .align(Alignment.BottomCenter),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
             Text(
                 text = if (state.hasAnyData) "هستهٔ سه‌بعدی فعالیت شما" else "هسته در انتظار اولین تمرین",
                 style = type.caption,
-                color = colors.textSecondary,
-            )
-            Text(
-                text = "چرخش سه‌بعدی با لمس",
-                style = type.caption,
                 color = colors.textMuted,
             )
+            if (state.hasAnyData) {
+                Text(
+                    text = "${formatPercent(state.todayProgress * 100.0, persianNumerals)} از هدف امروز",
+                    style = type.label,
+                    color = colors.textSecondary,
+                )
+            }
         }
     }
 }
@@ -739,70 +696,31 @@ private fun PillarSculptureCard(
 ) {
     val colors = MrsadTheme.colors
     val type = MrsadTheme.type
-    val isNoir = colors.isNoir
-    val stageShape = RoundedCornerShape(if (isNoir) 2.dp else MrsadTokens.Radius.md)
-
     MrsadSurface(
         modifier = modifier,
         onClick = onClick,
-        elevated = !isNoir,
     ) {
-        // Dedicated 3D Object Showcase Well
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(88.dp)
-                .clip(stageShape)
-                .background(
-                    if (isNoir) {
-                        Brush.verticalGradient(listOf(colors.background, colors.background))
-                    } else {
-                        Brush.verticalGradient(
-                            colors = listOf(
-                                Color(0xFF1E2738),
-                                Color(0xFF0B0E16),
-                            ),
-                        )
-                    },
-                )
-                .border(
-                    width = 1.dp,
-                    color = if (isNoir) colors.border else colors.metalMid.copy(alpha = 0.28f),
-                    shape = stageShape,
-                )
-                .padding(horizontal = 8.dp, vertical = 4.dp),
-        ) {
-            Text(
-                indexCode,
-                style = type.caption.copy(fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp),
-                color = colors.textMuted,
-                modifier = Modifier.align(Alignment.TopStart),
-            )
-            ModuleSculpture3D(
-                type = sculptureType,
-                modifier = Modifier
-                    .size(76.dp)
-                    .align(Alignment.Center),
-            )
-        }
-        Spacer(Modifier.height(2.dp))
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                title,
-                style = type.title.copy(fontWeight = FontWeight.Bold),
-                color = colors.textPrimary,
-                maxLines = 1,
+                indexCode,
+                style = type.caption.copy(fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp),
+                color = colors.textMuted,
             )
-            Text(
-                "←",
-                style = type.label,
-                color = colors.accent,
+            ModuleSculpture3D(
+                type = sculptureType,
+                modifier = Modifier.size(64.dp),
             )
         }
+        Text(
+            title,
+            style = type.title.copy(fontWeight = FontWeight.Bold),
+            color = colors.textPrimary,
+            maxLines = 1,
+        )
         Text(
             subtitle,
             style = type.caption,
@@ -821,26 +739,13 @@ private fun StatCell(
 ) {
     val colors = MrsadTheme.colors
     val type = MrsadTheme.type
-    val cellShape = RoundedCornerShape(if (colors.isNoir) 2.dp else MrsadTokens.Radius.md)
     Column(
         modifier = modifier
-            .clip(cellShape)
-            .background(
-                if (colors.isNoir) {
-                    colors.background
-                } else {
-                    Color(0xFF0B0E16)
-                },
-            )
-            .border(
-                width = 1.dp,
-                color = if (colors.isNoir) colors.border else colors.metalMid.copy(alpha = 0.25f),
-                shape = cellShape,
-            )
-            .padding(vertical = MrsadTokens.Spacing.sm, horizontal = 4.dp)
+            .clip(RoundedCornerShape(if (colors.isNoir) 2.dp else MrsadTokens.Radius.md))
+            .padding(vertical = MrsadTokens.Spacing.sm, horizontal = 2.dp)
             .fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+        verticalArrangement = Arrangement.spacedBy(3.dp),
     ) {
         MetalIcon(icon, modifier = Modifier.size(18.dp))
         Text(
@@ -848,7 +753,7 @@ private fun StatCell(
             style = type.metric.copy(fontSize = type.headline.fontSize, lineHeight = type.headline.lineHeight),
             color = colors.textPrimary,
         )
-        Text(label, style = type.caption, color = colors.textSecondary, textAlign = TextAlign.Center, maxLines = 1)
+        Text(label, style = type.caption, color = colors.textMuted, textAlign = TextAlign.Center, maxLines = 1)
     }
 }
 

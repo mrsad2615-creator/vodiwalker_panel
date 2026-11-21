@@ -54,9 +54,9 @@ adb logcat -G 16M >/dev/null 2>&1
 adb logcat -c >/dev/null 2>&1
 
 app_pid() {
-    pid=$(adb shell pidof "$APP_PKG" 2>/dev/null | tr -d '\r' | awk '{print $1}')
+    pid=$(timeout 5 adb shell pidof "$APP_PKG" 2>/dev/null | tr -d '\r' | awk '{print $1}')
     if [ -z "$pid" ]; then
-        pid=$(adb shell ps -A 2>/dev/null | tr -d '\r' | awk '$NF ~ /'"$APP_PKG"'$/ {print $2; exit}')
+        pid=$(timeout 5 adb shell ps -A 2>/dev/null | tr -d '\r' | awk '$NF ~ /'"$APP_PKG"'$/ {print $2; exit}')
     fi
     echo "$pid"
 }
@@ -65,13 +65,16 @@ app_pid() {
 # when the timeout approaches, dump the app's thread stacks.
 watchdog() {
     method="$1"
-    sleep $((PER_TEST_TIMEOUT - DUMP_LEAD))
+    sleep $((PER_TEST_TIMEOUT - DUMP_LEAD)) &
+    sleep_pid=$!
+    trap 'kill "$sleep_pid" >/dev/null 2>&1; exit 0' TERM INT
+    wait "$sleep_pid" || return 0
     pid=$(app_pid)
     [ -n "$pid" ] || return 0
     # SIGQUIT makes the runtime print every thread's stack into logcat.
-    adb shell kill -3 "$pid" >/dev/null 2>&1
+    timeout 5 adb shell kill -3 "$pid" >/dev/null 2>&1
     sleep 3
-    adb logcat -d -v threadtime 2>/dev/null \
+    timeout 10 adb logcat -d -v threadtime 2>/dev/null \
         | sed -n '/DALVIK THREADS/,/^$/p' \
         > "$DUMPS/$method.txt" 2>/dev/null
     {

@@ -86,6 +86,19 @@ fun ModuleSculpture3D(
         if (colors.isNoir) {
             drawNoirSchematic(type, scratchPath, colors)
         } else {
+            val wellCenter = Offset(size.width * 0.5f, size.height * 0.5f)
+            val wellRadius = size.minDimension * 0.47f
+            drawCircle(
+                color = Color(0xFF0A0E16),
+                radius = wellRadius,
+                center = wellCenter,
+            )
+            drawCircle(
+                color = colors.metalMid.copy(alpha = 0.30f),
+                radius = wellRadius,
+                center = wellCenter,
+                style = Stroke(width = 1.dp.toPx()),
+            )
             when (type) {
                 ModuleSculptureType.TYPING -> drawObsidianTyping3D(phase, intensity, scratchPath, colors)
                 ModuleSculptureType.READING -> drawObsidianReading3D(phase, intensity, scratchPath, colors)
@@ -378,17 +391,20 @@ private fun DrawScope.drawObsidianEye3D(
 
     // 2. 3D Shaded Sclera / Metallic Globe
     drawCircle(
+        color = Color(0xFF141B28),
+        radius = r * 0.96f,
+        center = Offset(cx, cy),
+    )
+    drawCircle(
         brush = Brush.radialGradient(
             colors = listOf(
                 Color(0xFFD8E3F2),
-                Color(0xFF6B7890),
                 Color(0xFF1E2636),
-                Color(0xFF090C14),
             ),
             center = Offset(cx - r * 0.28f, cy - r * 0.28f),
-            radius = r * 1.25f,
+            radius = r * 1.15f,
         ),
-        radius = r * 0.96f,
+        radius = r * 0.92f,
         center = Offset(cx, cy),
     )
 
@@ -401,8 +417,7 @@ private fun DrawScope.drawObsidianEye3D(
         brush = Brush.radialGradient(
             colors = listOf(
                 colors.accent,
-                Color(0xFF42638E),
-                Color(0xFF142034),
+                Color(0xFF162236),
             ),
             center = Offset(gazeX, gazeY),
             radius = irisR,

@@ -244,7 +244,7 @@ fun MrsadSurface(
         modifier = modifier
             .graphicsLayer { scaleX = scale; scaleY = scale }
             .shadow(
-                elevation = 8.dp,
+                elevation = 6.dp,
                 shape = effectiveShape,
                 clip = false,
             )
@@ -252,9 +252,8 @@ fun MrsadSurface(
             .background(
                 Brush.verticalGradient(
                     listOf(
-                        if (elevated) Color(0xFF1D2432) else Color(0xFF171D28),
-                        surfaceColor.copy(alpha = 0.96f),
-                        Color(0xFF0A0D14),
+                        if (elevated) Color(0xFF1D2432) else surfaceColor.copy(alpha = 0.96f),
+                        Color(0xFF0B0E15),
                     ),
                 ),
             )
@@ -272,29 +271,27 @@ fun MrsadSurface(
                 drawRect(
                     brush = Brush.verticalGradient(
                         listOf(
-                            Color.White.copy(alpha = 0.18f + 0.06f * highlight),
-                            (accent ?: colors.metalLight).copy(alpha = 0.08f),
+                            (accent ?: colors.metalLight).copy(alpha = 0.20f + 0.06f * highlight),
                             Color.Transparent,
                         ),
                         startY = 0f,
-                        endY = 92f,
+                        endY = 96f,
                     ),
                 )
                 drawRect(
                     brush = Brush.verticalGradient(
-                        listOf(Color.Transparent, Color.Black.copy(alpha = 0.42f)),
-                        startY = size.height - 88f,
+                        listOf(Color.Transparent, Color.Black.copy(alpha = 0.38f)),
+                        startY = size.height - 92f,
                         endY = size.height,
                     ),
                 )
             }
             .border(
-                width = 1.2.dp,
+                width = 1.dp,
                 brush = Brush.verticalGradient(
                     listOf(
-                        Color.White.copy(alpha = if (accent != null) 0.52f else 0.42f),
-                        (accent ?: colors.borderStrong).copy(alpha = 0.28f),
-                        Color(0xFF080B12).copy(alpha = 0.75f),
+                        (accent ?: colors.metalLight).copy(alpha = if (accent != null) 0.56f else 0.48f),
+                        (accent ?: colors.borderStrong).copy(alpha = 0.14f),
                     ),
                 ),
                 shape = effectiveShape,

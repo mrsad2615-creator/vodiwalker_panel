@@ -21,12 +21,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -40,7 +39,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import dev.mrsad.app.data.AppContainer
@@ -58,20 +56,21 @@ import dev.mrsad.app.ui.components.MrsadProgressBar
 import dev.mrsad.app.ui.components.MrsadSecondaryButton
 import dev.mrsad.app.ui.components.MrsadSurface
 import dev.mrsad.app.ui.components.MrsadTokens
+import dev.mrsad.app.ui.components.ObsidianCollapsingTopBar
+import dev.mrsad.app.ui.components.ObsidianSegmentedBar
 import dev.mrsad.app.ui.components.SectionHeader
+import dev.mrsad.app.ui.components.SegmentedBarItem
 import dev.mrsad.app.ui.theme.AmbientBackground
 import dev.mrsad.app.ui.theme.MrsadTheme
+import dev.mrsad.app.ui.theme.ObsidianSpectrum
 import dev.mrsad.app.ui.theme.PageEnvironment
 import dev.mrsad.app.ui.theme.formatInt
 import dev.mrsad.core.eye.EyeTrainingEngine
 import dev.mrsad.core.eye.EyeTrainingEngine.DrillType
 
 /**
- * MRSAD EYE — Visual Attention & Ocular Skill Training (Master Prompt §5).
- *
- * Non-medical visual attention, saccadic agility, smooth pursuit, and
- * peripheral span drills rendered in both OBSIDIAN (3D Ocular Aperture) and
- * NOIR (Swiss Monochrome Reticle).
+ * MODULE 03 — MRSAD EYE TRAINING (Master Prompt §4):
+ * Primary Identity: Turquoise / Teal (`#138F91`) & Aqua (`#67E7DA`).
  */
 @Composable
 fun EyeTrainingScreen(
@@ -84,81 +83,73 @@ fun EyeTrainingScreen(
         factory = EyeTrainingViewModel.Factory(container),
     )
     val state by viewModel.state.collectAsStateWithLifecycle()
-    val colors = MrsadTheme.colors
-    val type = MrsadTheme.type
+    val scrollState = rememberScrollState()
+    val isCollapsed by remember { derivedStateOf { scrollState.value > 28 } }
 
     AmbientBackground(PageEnvironment.EYE) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(bottom = LocalBottomBarClearance.current)
-                .verticalScroll(rememberScrollState())
-                .padding(MrsadTokens.Spacing.md),
-            verticalArrangement = Arrangement.spacedBy(MrsadTokens.Spacing.md),
+                .padding(bottom = LocalBottomBarClearance.current),
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                if (onBack != null) {
-                    Box(
-                        Modifier
-                            .size(MrsadTokens.TouchTarget)
-                            .clip(RoundedCornerShape(if (colors.isNoir) 2.dp else MrsadTokens.Radius.sm))
-                            .clickable(role = Role.Button, onClick = onBack),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(
-                            Icons.AutoMirrored.Outlined.ArrowBack,
-                            contentDescription = "بازگشت",
-                            tint = colors.textPrimary,
-                        )
-                    }
-                    Spacer(Modifier.width(MrsadTokens.Spacing.xs))
-                }
-                MetalIcon(MrsadIcons.Eye, modifier = Modifier.size(26.dp))
-                Spacer(Modifier.width(MrsadTokens.Spacing.xs))
-                Column(Modifier.weight(1f)) {
-                    Text(
-                        "MRSAD EYE",
-                        style = type.headline.copy(letterSpacing = 1.sp),
-                        color = colors.textPrimary,
+            ObsidianCollapsingTopBar(
+                title = "MRSAD EYE",
+                subtitle = "تمرین مهارت‌های دیداری، ساکاد و میدان توجه",
+                collapsed = isCollapsed,
+                spectralColor = ObsidianSpectrum.Aqua,
+                onBack = onBack,
+                leading = {
+                    ModuleSculpture3D(
+                        type = ModuleSculptureType.EYE,
+                        modifier = Modifier.size(if (isCollapsed) 36.dp else 46.dp),
+                        animated = true,
                     )
-                    Text(
-                        "تمرین مهارت‌های دیداری، ساکاد و میدان توجه",
-                        style = type.caption,
-                        color = colors.textSecondary,
+                },
+                trailing = {
+                    MrsadChip(
+                        text = "${formatInt(state.totalEyeSessions, settings.persianNumerals)} جلسه",
+                        tint = ObsidianSpectrum.Aqua,
+                    )
+                },
+            )
+
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .verticalScroll(scrollState)
+                    .padding(horizontal = MrsadTokens.Spacing.md),
+                verticalArrangement = Arrangement.spacedBy(MrsadTokens.Spacing.md),
+            ) {
+                Spacer(Modifier.height(MrsadTokens.Spacing.xs))
+
+                when (state.phase) {
+                    EyePhase.SETUP -> EyeSetupPanel(
+                        state = state,
+                        persianNumerals = settings.persianNumerals,
+                        onSelectDrill = viewModel::selectDrill,
+                        onSpeed = viewModel::setSpeed,
+                        onDifficulty = viewModel::setDifficulty,
+                        onDuration = viewModel::setDuration,
+                        onStart = viewModel::startSession,
+                    )
+                    EyePhase.RUNNING -> EyeRunningPanel(
+                        state = state,
+                        persianNumerals = settings.persianNumerals,
+                        onHit = viewModel::onTargetHit,
+                        onSchulteTap = viewModel::onSchulteCellTap,
+                        onFinishEarly = { viewModel.finishSession(completed = false) },
+                    )
+                    EyePhase.RESULT -> EyeResultPanel(
+                        state = state,
+                        persianNumerals = settings.persianNumerals,
+                        onRestart = viewModel::startSession,
+                        onBackToSetup = viewModel::resetToSetup,
                     )
                 }
-                MrsadChip(
-                    text = "${formatInt(state.totalEyeSessions, settings.persianNumerals)} جلسه",
-                    tint = colors.accent,
-                )
-            }
 
-            when (state.phase) {
-                EyePhase.SETUP -> EyeSetupPanel(
-                    state = state,
-                    persianNumerals = settings.persianNumerals,
-                    onSelectDrill = viewModel::selectDrill,
-                    onSpeed = viewModel::setSpeed,
-                    onDifficulty = viewModel::setDifficulty,
-                    onDuration = viewModel::setDuration,
-                    onStart = viewModel::startSession,
-                )
-                EyePhase.RUNNING -> EyeRunningPanel(
-                    state = state,
-                    persianNumerals = settings.persianNumerals,
-                    onHit = viewModel::onTargetHit,
-                    onSchulteTap = viewModel::onSchulteCellTap,
-                    onFinishEarly = { viewModel.finishSession(completed = false) },
-                )
-                EyePhase.RESULT -> EyeResultPanel(
-                    state = state,
-                    persianNumerals = settings.persianNumerals,
-                    onRestart = viewModel::startSession,
-                    onBackToSetup = viewModel::resetToSetup,
-                )
+                Spacer(Modifier.height(96.dp))
             }
-
-            Spacer(Modifier.height(96.dp))
         }
     }
 }
@@ -175,10 +166,11 @@ private fun EyeSetupPanel(
 ) {
     val colors = MrsadTheme.colors
     val type = MrsadTheme.type
-    val isNoir = colors.isNoir
 
-    // Hero Ocular 3D Sculpture (OBSIDIAN) / Technical Reticle Header (NOIR)
-    MrsadSurface(Modifier.fillMaxWidth()) {
+    MrsadSurface(
+        Modifier.fillMaxWidth(),
+        accent = ObsidianSpectrum.Aqua,
+    ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
@@ -186,12 +178,12 @@ private fun EyeSetupPanel(
         ) {
             ModuleSculpture3D(
                 type = ModuleSculptureType.EYE,
-                modifier = Modifier.size(92.dp),
+                modifier = Modifier.size(80.dp),
                 animated = true,
             )
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
-                    if (isNoir) "پروتکل توجه دیداری // 03" else "مرکز چابکی نگاه و میدان دید",
+                    "مرکز چابکی نگاه و میدان دید",
                     style = type.title,
                     color = colors.textPrimary,
                 )
@@ -211,11 +203,13 @@ private fun EyeSetupPanel(
                 value = formatInt(state.totalEyeSessions, persianNumerals),
                 label = "کل جلسات",
                 size = type.title.fontSize,
+                accent = ObsidianSpectrum.Aqua,
             )
             MetricValue(
                 value = if (state.averageAgilityScore > 0) "${formatInt(state.averageAgilityScore, persianNumerals)}٪" else "—",
                 label = "میانگین چابکی دید",
                 size = type.title.fontSize,
+                accent = ObsidianSpectrum.BrightBlue,
             )
             MetricValue(
                 value = "سطح ${formatInt(state.difficultyLevel, persianNumerals)}",
@@ -225,20 +219,28 @@ private fun EyeSetupPanel(
         }
     }
 
-    // 4 Interactive Drills Selection
-    MrsadSurface(Modifier.fillMaxWidth()) {
+    MrsadSurface(
+        Modifier.fillMaxWidth(),
+        accent = ObsidianSpectrum.Aqua,
+    ) {
         SectionHeader(title = "انتخاب نوع تمرین دیداری")
         DrillType.entries.forEach { drill ->
             val selected = drill == state.selectedDrill
-            val itemShape = if (isNoir) RoundedCornerShape(2.dp) else RoundedCornerShape(MrsadTokens.Radius.md)
+            val itemShape = RoundedCornerShape(MrsadTokens.Radius.md)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(itemShape)
-                    .background(if (selected) colors.accentSoft else colors.surfaceHigh.copy(alpha = 0.45f))
+                    .background(
+                        if (selected) {
+                            ObsidianSpectrum.Teal.copy(alpha = 0.25f)
+                        } else {
+                            colors.backgroundElevated.copy(alpha = 0.6f)
+                        },
+                    )
                     .border(
                         width = 1.dp,
-                        color = if (selected) colors.accent else colors.border,
+                        color = if (selected) ObsidianSpectrum.Aqua else colors.border,
                         shape = itemShape,
                     )
                     .heightIn(min = MrsadTokens.TouchTarget)
@@ -246,7 +248,11 @@ private fun EyeSetupPanel(
                     .padding(horizontal = MrsadTokens.Spacing.sm, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                MetalIcon(MrsadIcons.Eye, modifier = Modifier.size(20.dp))
+                MetalIcon(
+                    MrsadIcons.Eye,
+                    accentOverride = ObsidianSpectrum.Aqua,
+                    modifier = Modifier.size(20.dp),
+                )
                 Spacer(Modifier.width(MrsadTokens.Spacing.sm))
                 Column(Modifier.weight(1f)) {
                     Text(
@@ -261,56 +267,60 @@ private fun EyeSetupPanel(
                     )
                 }
                 if (selected) {
-                    Text("فعال", style = type.caption, color = colors.accent)
+                    MrsadChip(text = "فعال", tint = ObsidianSpectrum.Aqua)
                 }
             }
         }
     }
 
-    // Speed, Difficulty & Duration Controls
-    MrsadSurface(Modifier.fillMaxWidth()) {
+    MrsadSurface(
+        Modifier.fillMaxWidth(),
+        accent = ObsidianSpectrum.Aqua,
+    ) {
         SectionHeader(title = "کنترل سرعت، دشواری و زمان")
 
         Text("سرعت حرکت محرک (۱ تا ۵)", style = type.label, color = colors.textSecondary)
-        Row(horizontalArrangement = Arrangement.spacedBy(MrsadTokens.Spacing.xs)) {
-            (1..5).forEach { lvl ->
-                LevelChoicePill(
+        ObsidianSegmentedBar(
+            items = (1..5).map { lvl ->
+                SegmentedBarItem(
+                    id = lvl.toString(),
                     label = formatInt(lvl, persianNumerals),
-                    selected = state.speedLevel == lvl,
-                    modifier = Modifier.weight(1f),
-                    onClick = { onSpeed(lvl) },
+                    accent = ObsidianSpectrum.Aqua,
                 )
-            }
-        }
+            },
+            selectedId = state.speedLevel.toString(),
+            onSelect = { id -> id.toIntOrNull()?.let(onSpeed) },
+        )
 
         Spacer(Modifier.height(MrsadTokens.Spacing.xxs))
         Text("سطح دشواری و فشردگی میدان دید (۱ تا ۵)", style = type.label, color = colors.textSecondary)
-        Row(horizontalArrangement = Arrangement.spacedBy(MrsadTokens.Spacing.xs)) {
-            (1..5).forEach { lvl ->
-                LevelChoicePill(
+        ObsidianSegmentedBar(
+            items = (1..5).map { lvl ->
+                SegmentedBarItem(
+                    id = lvl.toString(),
                     label = formatInt(lvl, persianNumerals),
-                    selected = state.difficultyLevel == lvl,
-                    modifier = Modifier.weight(1f),
-                    onClick = { onDifficulty(lvl) },
+                    accent = ObsidianSpectrum.Aqua,
                 )
-            }
-        }
+            },
+            selectedId = state.difficultyLevel.toString(),
+            onSelect = { id -> id.toIntOrNull()?.let(onDifficulty) },
+        )
 
         Spacer(Modifier.height(MrsadTokens.Spacing.xxs))
         Text("مدت جلسه", style = type.label, color = colors.textSecondary)
-        Row(horizontalArrangement = Arrangement.spacedBy(MrsadTokens.Spacing.xs)) {
-            listOf(30, 45, 60, 90).forEach { sec ->
-                LevelChoicePill(
+        ObsidianSegmentedBar(
+            items = listOf(30, 45, 60, 90).map { sec ->
+                SegmentedBarItem(
+                    id = sec.toString(),
                     label = "${formatInt(sec, persianNumerals)} ثانیه",
-                    selected = state.durationSeconds == sec,
-                    modifier = Modifier.weight(1f),
-                    onClick = { onDuration(sec) },
+                    accent = ObsidianSpectrum.Aqua,
                 )
-            }
-        }
+            },
+            selectedId = state.durationSeconds.toString(),
+            onSelect = { id -> id.toIntOrNull()?.let(onDuration) },
+        )
     }
 
-    // Non-medical scope notice
     MrsadSurface(Modifier.fillMaxWidth()) {
         Text("راهنمای علمی و دامنهٔ کاربرد", style = type.label, color = colors.textPrimary)
         Text(
@@ -323,35 +333,9 @@ private fun EyeSetupPanel(
     MrsadPrimaryButton(
         text = "شروع تمرین دیداری",
         onClick = onStart,
+        accentColor = ObsidianSpectrum.Aqua,
         modifier = Modifier.fillMaxWidth(),
     )
-}
-
-@Composable
-private fun LevelChoicePill(
-    label: String,
-    selected: Boolean,
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit,
-) {
-    val colors = MrsadTheme.colors
-    val shape = if (colors.isNoir) RoundedCornerShape(2.dp) else RoundedCornerShape(MrsadTokens.Radius.sm)
-    Box(
-        modifier = modifier
-            .heightIn(min = MrsadTokens.TouchTarget)
-            .clip(shape)
-            .background(if (selected) colors.accentSoft else colors.surfaceHigh.copy(alpha = 0.5f))
-            .border(1.dp, if (selected) colors.accent else colors.border, shape)
-            .clickable(role = Role.Button, onClick = onClick)
-            .padding(vertical = 8.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            label,
-            style = MrsadTheme.type.label,
-            color = if (selected) colors.textPrimary else colors.textSecondary,
-        )
-    }
 }
 
 @Composable
@@ -366,7 +350,10 @@ private fun EyeRunningPanel(
     val type = MrsadTheme.type
     val secondsLeft = ((state.remainingMillis + 999L) / 1000L).toInt().coerceAtLeast(0)
 
-    MrsadSurface(Modifier.fillMaxWidth()) {
+    MrsadSurface(
+        Modifier.fillMaxWidth(),
+        accent = ObsidianSpectrum.Aqua,
+    ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -376,11 +363,13 @@ private fun EyeRunningPanel(
                 value = "${formatInt(secondsLeft, persianNumerals)}s",
                 label = "زمان باقی‌مانده",
                 size = type.title.fontSize,
+                accent = ObsidianSpectrum.Aqua,
             )
             MetricValue(
                 value = formatInt(state.hits, persianNumerals),
                 label = "ثبت دقیق",
                 size = type.title.fontSize,
+                accent = ObsidianSpectrum.BrightBlue,
             )
             MetricValue(
                 value = "سطح ${formatInt(state.difficultyLevel, persianNumerals)}",
@@ -388,7 +377,7 @@ private fun EyeRunningPanel(
                 size = type.label.fontSize,
             )
         }
-        MrsadProgressBar(progress = state.progress)
+        MrsadProgressBar(progress = state.progress, tint = ObsidianSpectrum.Aqua)
         Text(
             state.selectedDrill.guideFa,
             style = type.caption,
@@ -397,7 +386,10 @@ private fun EyeRunningPanel(
     }
 
     if (state.selectedDrill == DrillType.PERIPHERAL_SPAN) {
-        MrsadSurface(Modifier.fillMaxWidth()) {
+        MrsadSurface(
+            Modifier.fillMaxWidth(),
+            accent = ObsidianSpectrum.Aqua,
+        ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -406,7 +398,7 @@ private fun EyeRunningPanel(
                 Text("کانون دید را روی مرکز نگه دارید", style = type.caption, color = colors.textMuted)
                 MrsadChip(
                     text = "عدد بعدی: ${formatInt(state.nextSchulteNumber, persianNumerals)}",
-                    tint = colors.accent,
+                    tint = ObsidianSpectrum.Aqua,
                 )
             }
             val side = state.schulteBoard.side
@@ -418,21 +410,31 @@ private fun EyeRunningPanel(
                     ) {
                         rowNums.forEach { num ->
                             val done = num < state.nextSchulteNumber
-                            val cellShape = if (colors.isNoir) RoundedCornerShape(2.dp) else RoundedCornerShape(MrsadTokens.Radius.sm)
+                            val cellShape = RoundedCornerShape(MrsadTokens.Radius.sm)
                             Box(
                                 modifier = Modifier
                                     .weight(1f)
                                     .aspectRatio(1.15f)
                                     .clip(cellShape)
-                                    .background(if (done) colors.accentSoft else colors.surfaceHigh)
-                                    .border(1.dp, if (done) colors.accent else colors.border, cellShape)
+                                    .background(
+                                        if (done) {
+                                            ObsidianSpectrum.Teal.copy(alpha = 0.25f)
+                                        } else {
+                                            colors.surfaceHigh
+                                        },
+                                    )
+                                    .border(
+                                        1.dp,
+                                        if (done) ObsidianSpectrum.Aqua else colors.border,
+                                        cellShape,
+                                    )
                                     .clickable(role = Role.Button) { onSchulteTap(num) },
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Text(
                                     formatInt(num, persianNumerals),
                                     style = type.title,
-                                    color = if (done) colors.textMuted else colors.textPrimary,
+                                    color = if (done) ObsidianSpectrum.Aqua else colors.textPrimary,
                                 )
                             }
                         }
@@ -441,7 +443,10 @@ private fun EyeRunningPanel(
             }
         }
     } else {
-        MrsadSurface(Modifier.fillMaxWidth()) {
+        MrsadSurface(
+            Modifier.fillMaxWidth(),
+            accent = ObsidianSpectrum.Aqua,
+        ) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -457,7 +462,13 @@ private fun EyeRunningPanel(
                     val cx = size.width / 2f
                     val cy = size.height / 2f
 
-                    // Guide horizon & reticle lines
+                    // Precision circular optical rings & horizon crosshairs
+                    drawCircle(
+                        color = ObsidianSpectrum.Teal.copy(alpha = 0.22f),
+                        radius = size.minDimension * 0.36f,
+                        center = Offset(cx, cy),
+                        style = Stroke(width = 1.dp.toPx()),
+                    )
                     drawLine(
                         color = colors.border,
                         start = Offset(16.dp.toPx(), cy),
@@ -482,49 +493,32 @@ private fun EyeRunningPanel(
                         (state.currentPoint.y * size.height).coerceIn(28.dp.toPx(), size.height - 28.dp.toPx())
                     }
 
-                    if (colors.isNoir) {
-                        // NOIR: Monochrome calibrated reticle
-                        drawCircle(
-                            color = colors.textPrimary,
-                            radius = 18.dp.toPx(),
+                    drawCircle(
+                        brush = Brush.radialGradient(
+                            listOf(ObsidianSpectrum.Aqua.copy(alpha = 0.38f), colors.surface.copy(alpha = 0f)),
                             center = Offset(tx, ty),
-                            style = Stroke(width = 1.6.dp.toPx()),
-                        )
-                        if (state.stabilitySignalActive || state.selectedDrill != DrillType.GAZE_STABILITY) {
-                            drawCircle(
-                                color = colors.textPrimary,
-                                radius = 5.dp.toPx(),
-                                center = Offset(tx, ty),
-                            )
-                        }
-                    } else {
-                        // OBSIDIAN: 3D Metallic/Glass Ocular Target
-                        drawCircle(
-                            brush = Brush.radialGradient(
-                                listOf(colors.accent.copy(alpha = 0.35f), colors.surface.copy(alpha = 0f)),
-                                center = Offset(tx, ty),
-                                radius = 34.dp.toPx(),
-                            ),
-                            radius = 34.dp.toPx(),
-                            center = Offset(tx, ty),
-                        )
-                        drawCircle(
-                            color = colors.metalLight,
-                            radius = 15.dp.toPx(),
-                            center = Offset(tx, ty),
-                            style = Stroke(width = 1.8.dp.toPx()),
-                        )
-                        drawCircle(
-                            color = if (state.stabilitySignalActive) colors.textPrimary else colors.metalMid,
-                            radius = 6.dp.toPx(),
-                            center = Offset(tx, ty),
-                        )
-                    }
+                            radius = 36.dp.toPx(),
+                        ),
+                        radius = 36.dp.toPx(),
+                        center = Offset(tx, ty),
+                    )
+                    drawCircle(
+                        color = ObsidianSpectrum.Aqua,
+                        radius = 16.dp.toPx(),
+                        center = Offset(tx, ty),
+                        style = Stroke(width = 1.8.dp.toPx()),
+                    )
+                    drawCircle(
+                        color = if (state.stabilitySignalActive) ObsidianSpectrum.SoftWhite else ObsidianSpectrum.Aqua,
+                        radius = 6.dp.toPx(),
+                        center = Offset(tx, ty),
+                    )
                 }
             }
             MrsadPrimaryButton(
                 text = "ثبت تمرکز روی هدف",
                 onClick = onHit,
+                accentColor = ObsidianSpectrum.Aqua,
                 modifier = Modifier.fillMaxWidth(),
             )
         }
@@ -548,7 +542,10 @@ private fun EyeResultPanel(
     val colors = MrsadTheme.colors
     val type = MrsadTheme.type
 
-    MrsadSurface(Modifier.fillMaxWidth()) {
+    MrsadSurface(
+        Modifier.fillMaxWidth(),
+        accent = ObsidianSpectrum.Aqua,
+    ) {
         SectionHeader(title = "گزارش جلسهٔ مهارت دیداری")
         Text(report.drill.titleFa, style = type.title, color = colors.textPrimary)
         Spacer(Modifier.height(MrsadTokens.Spacing.xs))
@@ -560,11 +557,13 @@ private fun EyeResultPanel(
                 value = "${formatInt(report.agilityScore, persianNumerals)}٪",
                 label = "شاخص چابکی دیداری",
                 size = type.headline.fontSize,
+                accent = ObsidianSpectrum.Aqua,
             )
             MetricValue(
                 value = "${formatInt(report.accuracyPercent, persianNumerals)}٪",
                 label = "دقت تعقیب و تمرکز",
                 size = type.headline.fontSize,
+                accent = ObsidianSpectrum.BrightBlue,
             )
             MetricValue(
                 value = "${formatInt(report.durationSeconds, persianNumerals)}s",
@@ -585,6 +584,7 @@ private fun EyeResultPanel(
         MrsadPrimaryButton(
             text = "تکرار تمرین",
             onClick = onRestart,
+            accentColor = ObsidianSpectrum.Aqua,
             modifier = Modifier.weight(1f),
         )
         MrsadSecondaryButton(

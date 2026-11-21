@@ -321,6 +321,16 @@ object MrsadIcons {
     val Target: List<IconFacet> get() = Focus
     val Spark: List<IconFacet> get() = Assistant
 
+    internal fun spectralAccentFor(facets: List<IconFacet>, fallback: Color): Color = when {
+        facets === Type -> dev.mrsad.app.ui.theme.ObsidianSpectrum.BrightBlue
+        facets === Read -> dev.mrsad.app.ui.theme.ObsidianSpectrum.Lavender
+        facets === Eye || facets === Focus -> dev.mrsad.app.ui.theme.ObsidianSpectrum.Aqua
+        facets === Mind || facets === Memory || facets === Flame || facets === Bolt -> dev.mrsad.app.ui.theme.ObsidianSpectrum.Pink
+        facets === Analytics || facets === Calendar -> dev.mrsad.app.ui.theme.ObsidianSpectrum.BrightBlue
+        facets === Assistant || facets === Studio || facets === Trophy -> dev.mrsad.app.ui.theme.ObsidianSpectrum.Lavender
+        else -> fallback
+    }
+
     private val NoirHome = listOf(
         linearPoly(true, 3.8f, 3.8f, 10.8f, 3.8f, 10.8f, 10.8f, 3.8f, 10.8f),
         linearPoly(true, 13.2f, 3.8f, 20.2f, 3.8f, 20.2f, 10.8f, 13.2f, 10.8f),
@@ -424,10 +434,11 @@ fun MetalIcon(
     modifier: Modifier = Modifier,
     contentDescription: String? = null,
     dark: Boolean = false,
+    accentOverride: Color? = null,
 ) {
     val colors = MrsadTheme.colors
-    val isNoir = colors.isNoir
     val label = contentDescription
+    val resolvedAccent = accentOverride ?: MrsadIcons.spectralAccentFor(facets, colors.accent)
     Canvas(
         modifier = modifier
             .then(
@@ -439,51 +450,36 @@ fun MetalIcon(
             ),
     ) {
         val unit = size.minDimension / 24f
-        if (isNoir) {
-            val strokeColor = if (dark) colors.background else colors.textPrimary
-            val paths = MrsadIcons.noirPathsFor(facets)
-            val strokeStyle = Stroke(
-                width = 1.55f,
-                cap = StrokeCap.Square,
-                join = StrokeJoin.Miter,
-            )
-            scale(unit, unit) {
-                paths.forEach { path ->
-                    drawPath(path = path, color = strokeColor, style = strokeStyle)
-                }
+        fun toneColor(tone: MetalTone): Color = if (dark) {
+            when (tone) {
+                MetalTone.LIGHT -> Color(0xFF090810)
+                MetalTone.MID -> Color(0xFF282236)
+                MetalTone.DARK -> Color(0xFF564D69)
+                MetalTone.ACCENT -> resolvedAccent
             }
         } else {
-            fun toneColor(tone: MetalTone): Color = if (dark) {
-                when (tone) {
-                    MetalTone.LIGHT -> Color(0xFF07080B)
-                    MetalTone.MID -> Color(0xFF343A46)
-                    MetalTone.DARK -> Color(0xFF6B7485)
-                    MetalTone.ACCENT -> colors.accent
-                }
-            } else {
-                when (tone) {
-                    MetalTone.LIGHT -> colors.metalLight
-                    MetalTone.MID -> colors.metalMid
-                    MetalTone.DARK -> colors.metalDark
-                    MetalTone.ACCENT -> colors.accent
-                }
+            when (tone) {
+                MetalTone.LIGHT -> colors.metalLight
+                MetalTone.MID -> colors.textSecondary
+                MetalTone.DARK -> colors.metalDark
+                MetalTone.ACCENT -> resolvedAccent
             }
-            scale(unit, unit) {
-                facets.forEach { facet ->
-                    val color = toneColor(facet.tone)
-                    if (facet.stroke) {
-                        drawPath(
-                            path = facet.path,
-                            color = color,
-                            style = Stroke(
-                                width = facet.strokeWidth,
-                                cap = StrokeCap.Round,
-                                join = StrokeJoin.Round,
-                            ),
-                        )
-                    } else {
-                        drawPath(facet.path, color)
-                    }
+        }
+        scale(unit, unit) {
+            facets.forEach { facet ->
+                val color = toneColor(facet.tone)
+                if (facet.stroke) {
+                    drawPath(
+                        path = facet.path,
+                        color = color,
+                        style = Stroke(
+                            width = facet.strokeWidth,
+                            cap = StrokeCap.Round,
+                            join = StrokeJoin.Round,
+                        ),
+                    )
+                } else {
+                    drawPath(facet.path, color)
                 }
             }
         }

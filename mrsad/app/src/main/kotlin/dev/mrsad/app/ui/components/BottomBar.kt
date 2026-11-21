@@ -29,16 +29,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import dev.mrsad.app.navigation.Routes
 import dev.mrsad.app.testing.MrsadTestTags
 import dev.mrsad.app.ui.theme.MrsadTheme
+import dev.mrsad.app.ui.theme.ObsidianSpectrum
 
 data class MrsadBottomBarItem(
     val route: String,
@@ -46,14 +47,19 @@ data class MrsadBottomBarItem(
     val icon: List<IconFacet>,
 )
 
+private fun spectralForRoute(route: String): Color = when (route) {
+    Routes.TYPE -> ObsidianSpectrum.BrightBlue
+    Routes.MIND -> ObsidianSpectrum.Pink
+    Routes.ANALYTICS -> ObsidianSpectrum.Aqua
+    Routes.AI -> ObsidianSpectrum.Lavender
+    else -> ObsidianSpectrum.BrightBlue
+}
+
 /**
- * Dual-System Five-Destination Bottom Navigation (Master Prompt §3):
+ * OBSIDIAN SPECTRUM — Integrated Dimensional Navigation Bar (Master Prompt §11).
  *
- * - **OBSIDIAN**: Floating smoked-glass & brushed-titanium dock with a
- *   metallic active pill, top specular sheen, and 3D faceted icons.
- * - **NOIR**: Sharp architectural monochrome bar (`#000000` with `1dp`
- *   `#27272A` hairline border, `0dp` shadow, `2dp` top white active rule,
- *   and uniform `1.5dp` geometric linear icons).
+ * Unified Obsidian foundation (`#211B2C` -> `#090810`) with spectral active
+ * indicator pills, smooth selection transitions, and 48dp touch targets.
  */
 @Composable
 fun MrsadBottomBar(
@@ -66,9 +72,8 @@ fun MrsadBottomBar(
     val colors = MrsadTheme.colors
     val type = MrsadTheme.type
     val motion = MrsadTheme.motion
-    val isNoir = colors.isNoir
-    val shape = if (isNoir) RoundedCornerShape(14.dp) else RoundedCornerShape(MrsadTokens.Radius.pill)
-    val itemShape = if (isNoir) RoundedCornerShape(10.dp) else RoundedCornerShape(MrsadTokens.Radius.pill)
+    val shape = RoundedCornerShape(MrsadTokens.Radius.pill)
+    val itemShape = RoundedCornerShape(MrsadTokens.Radius.pill)
 
     Row(
         modifier = modifier
@@ -77,30 +82,22 @@ fun MrsadBottomBar(
             .testTag(MrsadTestTags.NAV_BAR)
             .clip(shape)
             .background(
-                if (isNoir) {
-                    Brush.verticalGradient(listOf(colors.surface, colors.backgroundElevated))
-                } else {
-                    Brush.verticalGradient(
-                        listOf(
-                            Color(0xFF18181E),
-                            Color(0xFF0A0A0E),
-                        ),
-                    )
-                },
+                Brush.verticalGradient(
+                    listOf(
+                        colors.surfaceHigh,
+                        colors.background,
+                    ),
+                ),
             )
-            .then(if (isNoir) Modifier else Modifier.drawBehindTopSheen())
+            .drawBehindTopSheen()
             .border(
                 width = 1.dp,
-                brush = if (isNoir) {
-                    Brush.verticalGradient(listOf(colors.borderStrong, colors.border))
-                } else {
-                    Brush.verticalGradient(
-                        listOf(
-                            Color.White.copy(alpha = 0.32f),
-                            Color.White.copy(alpha = 0.08f),
-                        ),
-                    )
-                },
+                brush = Brush.verticalGradient(
+                    listOf(
+                        colors.borderStrong.copy(alpha = 0.72f),
+                        colors.border.copy(alpha = 0.45f),
+                    ),
+                ),
                 shape = shape,
             )
             .padding(horizontal = MrsadTokens.Spacing.xs, vertical = 7.dp),
@@ -109,8 +106,9 @@ fun MrsadBottomBar(
     ) {
         items.forEach { item ->
             val selected = item.route == selectedRoute
+            val routeAccent = spectralForRoute(item.route)
             val contentColor by animateColorAsState(
-                targetValue = if (selected) colors.background else colors.textSecondary,
+                targetValue = if (selected) colors.textPrimary else colors.textSecondary,
                 animationSpec = motion.effectsDefault(),
                 label = "navColor",
             )
@@ -120,7 +118,7 @@ fun MrsadBottomBar(
                 label = "navBg",
             )
             val iconScale by animateFloatAsState(
-                targetValue = if (selected) (if (isNoir) 1.02f else 1.08f) else 1f,
+                targetValue = if (selected) 1.08f else 1f,
                 animationSpec = motion.spatialDefault(),
                 label = "navIcon",
             )
@@ -129,26 +127,28 @@ fun MrsadBottomBar(
                     .testTag(MrsadTestTags.navItem(item.route))
                     .clip(itemShape)
                     .background(
-                        if (isNoir) {
-                            colors.textPrimary.copy(alpha = bgAlpha)
+                        Brush.horizontalGradient(
+                            listOf(
+                                routeAccent.copy(alpha = 0.24f * bgAlpha),
+                                colors.surfaceHigh.copy(alpha = 0.90f * bgAlpha),
+                            ),
+                        ),
+                    )
+                    .then(
+                        if (selected) {
+                            Modifier.border(
+                                width = 1.dp,
+                                color = routeAccent.copy(alpha = 0.65f),
+                                shape = itemShape,
+                            )
                         } else {
-                            colors.metalMid.copy(alpha = bgAlpha * 0.88f)
+                            Modifier
                         },
                     )
-                    .drawBehind {
-                        if (isNoir && selected) {
-                            drawLine(
-                                color = colors.textPrimary,
-                                start = Offset(0f, 0f),
-                                end = Offset(size.width, 0f),
-                                strokeWidth = 2.dp.toPx(),
-                            )
-                        }
-                    }
                     .heightIn(min = MrsadTokens.TouchTarget)
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
-                        indication = ripple(color = colors.metalLight),
+                        indication = ripple(color = routeAccent),
                         role = Role.Tab,
                         onClick = { onSelect(item.route) },
                     )
@@ -162,7 +162,8 @@ fun MrsadBottomBar(
                 MetalIcon(
                     facets = item.icon,
                     contentDescription = if (selected) null else item.label,
-                    dark = selected,
+                    dark = false,
+                    accentOverride = routeAccent,
                     modifier = Modifier
                         .size(22.dp)
                         .graphicsLayer {
@@ -185,7 +186,7 @@ fun MrsadBottomBar(
                 ) {
                     Text(
                         text = item.label,
-                        style = type.label,
+                        style = type.label.copy(fontWeight = FontWeight.SemiBold),
                         color = contentColor,
                         maxLines = 1,
                         modifier = Modifier.padding(start = MrsadTokens.Spacing.xxs),
@@ -197,7 +198,7 @@ fun MrsadBottomBar(
             Modifier
                 .testTag(MrsadTestTags.NAV_SETTINGS)
                 .size(MrsadTokens.TouchTarget)
-                .clip(if (isNoir) RoundedCornerShape(2.dp) else CircleShape)
+                .clip(CircleShape)
                 .clickable(role = Role.Button, onClick = onSettings),
             contentAlignment = Alignment.Center,
         ) {

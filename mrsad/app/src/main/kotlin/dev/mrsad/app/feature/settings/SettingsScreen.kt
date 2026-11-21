@@ -2,7 +2,6 @@ package dev.mrsad.app.feature.settings
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,19 +17,18 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
@@ -42,20 +40,19 @@ import dev.mrsad.app.data.settings.MrsadSettings
 import dev.mrsad.app.data.settings.ThemeVariant
 import dev.mrsad.app.testing.MrsadTestTags
 import dev.mrsad.app.ui.components.MrsadMarkView
-import dev.mrsad.app.ui.components.MrsadPrimaryButton
 import dev.mrsad.app.ui.components.MrsadSecondaryButton
 import dev.mrsad.app.ui.components.MrsadSurface
 import dev.mrsad.app.ui.components.MrsadTokens
+import dev.mrsad.app.ui.components.ObsidianCollapsingTopBar
 import dev.mrsad.app.ui.theme.AmbientBackground
 import dev.mrsad.app.ui.theme.MrsadTheme
+import dev.mrsad.app.ui.theme.ObsidianSpectrum
 import dev.mrsad.app.ui.theme.PageEnvironment
 import dev.mrsad.app.ui.theme.colorsFor
 import kotlinx.coroutines.launch
 
 /**
- * Real settings: every toggle writes to DataStore and is applied app-wide
- * through [MrsadTheme] on the next frame (spec §8: theme changes must actually
- * change the application, not just a preview).
+ * OBSIDIAN SPECTRUM — Settings Screen (Master Prompt §12).
  */
 @Composable
 fun SettingsScreen(
@@ -67,173 +64,175 @@ fun SettingsScreen(
     val type = MrsadTheme.type
     val scope = rememberCoroutineScope()
     val repo = container.settingsRepository
+    val scrollState = rememberScrollState()
+    val isCollapsed by remember { derivedStateOf { scrollState.value > 28 } }
 
     AmbientBackground(PageEnvironment.SETTINGS) {
         Column(
             Modifier
                 .testTag(MrsadTestTags.SETTINGS_ROOT)
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(MrsadTokens.Spacing.md),
-            verticalArrangement = Arrangement.spacedBy(MrsadTokens.Spacing.md),
+                .fillMaxSize(),
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    Modifier
-                        .size(MrsadTokens.TouchTarget)
-                        .clip(RoundedCornerShape(MrsadTokens.Radius.sm))
-                        .clickable(onClick = onBack),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    // RTL: back points to the right.
-                    Icon(
-                        Icons.AutoMirrored.Outlined.ArrowBack,
-                        contentDescription = "بازگشت",
-                        tint = colors.textPrimary,
-                    )
-                }
-                Spacer(Modifier.size(MrsadTokens.Spacing.xs))
-                Text("تنظیمات", style = type.headline, color = colors.textPrimary)
-            }
+            ObsidianCollapsingTopBar(
+                title = "تنظیمات",
+                subtitle = "شخصی‌سازی OBSIDIAN SPECTRUM، کیفیت رندر و دسترس‌پذیری",
+                collapsed = isCollapsed,
+                spectralColor = ObsidianSpectrum.BrightBlue,
+                onBack = onBack,
+            )
 
-            MrsadSurface(
+            Column(
                 Modifier
-                    .testTag(MrsadTestTags.SETTINGS_THEME_SECTION)
-                    .fillMaxWidth(),
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .verticalScroll(scrollState)
+                    .padding(horizontal = MrsadTokens.Spacing.md),
+                verticalArrangement = Arrangement.spacedBy(MrsadTokens.Spacing.md),
             ) {
-                Text("تم بصری", style = type.title, color = colors.textPrimary)
-                Text(
-                    "تم انتخابی روی همهٔ صفحات اعمال می‌شود.",
-                    style = type.caption,
-                    color = colors.textMuted,
-                )
                 Spacer(Modifier.height(MrsadTokens.Spacing.xs))
-                // Live swatches: each shows the ACTUAL palette of that theme.
-                ThemeVariant.entries.chunked(2).forEach { row ->
+
+                MrsadSurface(
+                    Modifier
+                        .testTag(MrsadTestTags.SETTINGS_THEME_SECTION)
+                        .fillMaxWidth(),
+                    accent = ObsidianSpectrum.Lavender,
+                ) {
+                    Text("تم بصری", style = type.title, color = colors.textPrimary)
+                    Text(
+                        "تم انتخابی روی همهٔ صفحات اعمال می‌شود.",
+                        style = type.caption,
+                        color = colors.textMuted,
+                    )
+                    Spacer(Modifier.height(MrsadTokens.Spacing.xs))
+                    ThemeVariant.entries.chunked(2).forEach { row ->
+                        Row(horizontalArrangement = Arrangement.spacedBy(MrsadTokens.Spacing.xs)) {
+                            row.forEach { variant ->
+                                ThemeSwatch(
+                                    variant = variant,
+                                    selected = settings.theme == variant,
+                                    modifier = Modifier.weight(1f),
+                                    onClick = { scope.launch { repo.setTheme(variant) } },
+                                )
+                            }
+                        }
+                    }
+                }
+
+                MrsadSurface(
+                    Modifier
+                        .testTag(MrsadTestTags.SETTINGS_QUALITY_SECTION)
+                        .fillMaxWidth(),
+                    accent = ObsidianSpectrum.Aqua,
+                ) {
+                    Text("کیفیت گرافیکی", style = type.title, color = colors.textPrimary)
+                    Text(
+                        "سطح جلوه‌های بصری، مصرف باتری را متعادل می‌کند.",
+                        style = type.caption,
+                        color = colors.textMuted,
+                    )
+                    Spacer(Modifier.height(MrsadTokens.Spacing.xs))
                     Row(horizontalArrangement = Arrangement.spacedBy(MrsadTokens.Spacing.xs)) {
-                        row.forEach { variant ->
-                            ThemeSwatch(
-                                variant = variant,
-                                selected = settings.theme == variant,
-                                modifier = Modifier.weight(1f),
-                                onClick = { scope.launch { repo.setTheme(variant) } },
+                        GraphicsQuality.entries.forEach { quality ->
+                            QualityChoice(
+                                label = when (quality) {
+                                    GraphicsQuality.HIGH -> "بالا"
+                                    GraphicsQuality.BALANCED -> "متعادل"
+                                    GraphicsQuality.PERFORMANCE -> "عملکرد"
+                                },
+                                selected = settings.quality == quality,
+                                modifier = Modifier
+                                    .testTag(MrsadTestTags.settingsQuality(quality.id))
+                                    .weight(1f),
+                                onClick = { scope.launch { repo.setQuality(quality) } },
                             )
                         }
                     }
                 }
-            }
 
-            MrsadSurface(
-                Modifier
-                    .testTag(MrsadTestTags.SETTINGS_QUALITY_SECTION)
-                    .fillMaxWidth(),
-            ) {
-                Text("کیفیت گرافیکی", style = type.title, color = colors.textPrimary)
-                Text(
-                    "سطح جلوه‌های بصری، مصرف باتری را متعادل می‌کند.",
-                    style = type.caption,
-                    color = colors.textMuted,
-                )
-                Spacer(Modifier.height(MrsadTokens.Spacing.xs))
-                Row(horizontalArrangement = Arrangement.spacedBy(MrsadTokens.Spacing.xs)) {
-                    GraphicsQuality.entries.forEach { quality ->
-                        QualityChoice(
-                            label = when (quality) {
-                                GraphicsQuality.HIGH -> "بالا"
-                                GraphicsQuality.BALANCED -> "متعادل"
-                                GraphicsQuality.PERFORMANCE -> "عملکرد"
-                            },
-                            selected = settings.quality == quality,
-                            modifier = Modifier
-                                .testTag(MrsadTestTags.settingsQuality(quality.id))
-                                .weight(1f),
-                            onClick = { scope.launch { repo.setQuality(quality) } },
-                        )
-                    }
-                }
-            }
-
-            MrsadSurface(
-                Modifier
-                    .testTag(MrsadTestTags.SETTINGS_TOGGLES)
-                    .fillMaxWidth(),
-            ) {
-                Text("نمايش و ورودی", style = type.title, color = colors.textPrimary)
-                ToggleRow(
-                    title = "ارقام فارسی",
-                    subtitle = "نمایش اعداد به‌صورت ۱۲۳ به‌جای 123",
-                    checked = settings.persianNumerals,
-                    onCheckedChange = { scope.launch { repo.setPersianNumerals(it) } },
-                    modifier = Modifier.testTag(MrsadTestTags.SETTINGS_PERSIAN_NUMERALS),
-                )
-                ToggleRow(
-                    title = "بازخورد لمسی",
-                    subtitle = "لرزش کوتاه هنگام کلید و تکمیل تمرین",
-                    checked = settings.hapticsEnabled,
-                    onCheckedChange = { scope.launch { repo.setHaptics(it) } },
-                )
-                ToggleRow(
-                    title = "کاهش حرکت",
-                    subtitle = "خاموش‌کردن انیمیشن‌های پس‌زمینه (دسترس‌پذیری)",
-                    checked = settings.reduceMotion,
-                    onCheckedChange = { scope.launch { repo.setReduceMotion(it) } },
-                    modifier = Modifier.testTag(MrsadTestTags.SETTINGS_REDUCE_MOTION),
-                )
-                ToggleRow(
-                    title = "افکت صوتی",
-                    subtitle = "صدای ظریف بازخورد کلیدها و تکمیل جلسهٔ تمرین",
-                    checked = settings.soundEnabled,
-                    enabled = true,
-                    onCheckedChange = { scope.launch { repo.setSound(it) } },
-                )
-            }
-
-            MrsadSurface(Modifier.fillMaxWidth()) {
-                Text("حریم خصوصی", style = type.title, color = colors.textPrimary)
-                Text(
-                    "همهٔ داده‌های تمرین فقط روی همین دستگاه ذخیره می‌شوند. مرصاد مجوز اینترنت ندارد و هیچ اطلاعاتی ارسال نمی‌کند.",
-                    style = type.body,
-                    color = colors.textSecondary,
-                )
-            }
-
-            MrsadSurface(Modifier.fillMaxWidth()) {
-                // The about block carries the real mark, so the settings
-                // screen states the identity the same way the launcher does.
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
+                MrsadSurface(
+                    Modifier
+                        .testTag(MrsadTestTags.SETTINGS_TOGGLES)
+                        .fillMaxWidth(),
+                    accent = ObsidianSpectrum.BrightBlue,
                 ) {
-                    MrsadMarkView(
-                        size = 44.dp,
-                        modifier = Modifier.testTag(MrsadTestTags.SETTINGS_BRAND_MARK),
-                        contentDescription = "MRSAD",
+                    Text("نمايش و ورودی", style = type.title, color = colors.textPrimary)
+                    ToggleRow(
+                        title = "ارقام فارسی",
+                        subtitle = "نمایش اعداد به‌صورت ۱۲۳ به‌جای 123",
+                        checked = settings.persianNumerals,
+                        onCheckedChange = { scope.launch { repo.setPersianNumerals(it) } },
+                        modifier = Modifier.testTag(MrsadTestTags.SETTINGS_PERSIAN_NUMERALS),
                     )
-                    Spacer(Modifier.width(MrsadTokens.Spacing.sm))
-                    Column(Modifier.weight(1f)) {
-                        Text("دربارهٔ مرصاد", style = type.title, color = colors.textPrimary)
-                        Text(
-                            "نسخهٔ ${BuildConfig.VERSION_NAME} — پروژهٔ MRSAD",
-                            style = type.caption,
-                            color = colors.textMuted,
-                        )
-                    }
+                    ToggleRow(
+                        title = "بازخورد لمسی",
+                        subtitle = "لرزش کوتاه هنگام کلید و تکمیل تمرین",
+                        checked = settings.hapticsEnabled,
+                        onCheckedChange = { scope.launch { repo.setHaptics(it) } },
+                    )
+                    ToggleRow(
+                        title = "کاهش حرکت",
+                        subtitle = "خاموش‌کردن انیمیشن‌های پس‌زمینه (دسترس‌پذیری)",
+                        checked = settings.reduceMotion,
+                        onCheckedChange = { scope.launch { repo.setReduceMotion(it) } },
+                        modifier = Modifier.testTag(MrsadTestTags.SETTINGS_REDUCE_MOTION),
+                    )
+                    ToggleRow(
+                        title = "افکت صوتی",
+                        subtitle = "صدای ظریف بازخورد کلیدها و تکمیل جلسهٔ تمرین",
+                        checked = settings.soundEnabled,
+                        enabled = true,
+                        onCheckedChange = { scope.launch { repo.setSound(it) } },
+                    )
                 }
-                Text(
-                    "فونت‌ها: Vazirmatn و Estedad با لایسنس SIL OFL 1.1.",
-                    style = type.caption,
-                    color = colors.textMuted,
-                )
-            }
 
-            MrsadSecondaryButton(
-                text = "بازگردانی تنظیمات پیش‌فرض",
-                onClick = { scope.launch { repo.restoreDefaults() } },
-                modifier = Modifier
-                    .testTag(MrsadTestTags.SETTINGS_RESTORE_DEFAULTS)
-                    .fillMaxWidth(),
-            )
-            Spacer(Modifier.height(96.dp))
+                MrsadSurface(Modifier.fillMaxWidth()) {
+                    Text("حریم خصوصی", style = type.title, color = colors.textPrimary)
+                    Text(
+                        "همهٔ داده‌های تمرین فقط روی همین دستگاه ذخیره می‌شوند. مرصاد مجوز اینترنت ندارد و هیچ اطلاعاتی ارسال نمی‌کند.",
+                        style = type.body,
+                        color = colors.textSecondary,
+                    )
+                }
+
+                MrsadSurface(
+                    Modifier.fillMaxWidth(),
+                    accent = ObsidianSpectrum.Pink,
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        MrsadMarkView(
+                            size = 44.dp,
+                            modifier = Modifier.testTag(MrsadTestTags.SETTINGS_BRAND_MARK),
+                            contentDescription = "MRSAD",
+                        )
+                        Spacer(Modifier.width(MrsadTokens.Spacing.sm))
+                        Column(Modifier.weight(1f)) {
+                            Text("دربارهٔ مرصاد", style = type.title, color = colors.textPrimary)
+                            Text(
+                                "نسخهٔ ${BuildConfig.VERSION_NAME} — OBSIDIAN SPECTRUM",
+                                style = type.caption,
+                                color = colors.textMuted,
+                            )
+                        }
+                    }
+                    Text(
+                        "فونت‌ها: Vazirmatn، Estedad و Space Grotesk با لایسنس SIL OFL 1.1.",
+                        style = type.caption,
+                        color = colors.textMuted,
+                    )
+                }
+
+                MrsadSecondaryButton(
+                    text = "بازگردانی تنظیمات پیش‌فرض",
+                    onClick = { scope.launch { repo.restoreDefaults() } },
+                    modifier = Modifier
+                        .testTag(MrsadTestTags.SETTINGS_RESTORE_DEFAULTS)
+                        .fillMaxWidth(),
+                )
+                Spacer(Modifier.height(96.dp))
+            }
         }
     }
 }
@@ -253,12 +252,9 @@ private fun ThemeSwatch(
             .clip(RoundedCornerShape(MrsadTokens.Radius.md))
             .border(
                 1.dp,
-                if (selected) MrsadTheme.colors.borderStrong else MrsadTheme.colors.border,
+                if (selected) palette.accent else MrsadTheme.colors.border,
                 RoundedCornerShape(MrsadTokens.Radius.md),
             )
-            // A theme swatch is an option in a group, not a plain button:
-            // `selectable` publishes the selected state to accessibility
-            // services and to instrumented tests.
             .selectable(
                 selected = selected,
                 role = Role.RadioButton,
@@ -273,9 +269,9 @@ private fun ThemeSwatch(
                 .clip(RoundedCornerShape(MrsadTokens.Radius.sm))
                 .background(
                     Brush.linearGradient(
-                        listOf(palette.background, palette.surface, palette.accent.copy(alpha = 0.55f))
-                    )
-                )
+                        listOf(palette.surfaceHigh, palette.accent.copy(alpha = 0.55f)),
+                    ),
+                ),
         )
         Text(
             variant.labelFa,
@@ -304,8 +300,18 @@ private fun QualityChoice(
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(MrsadTokens.Radius.sm))
-            .background(if (selected) colors.accentSoft else colors.surfaceHigh.copy(alpha = 0.5f))
-            .border(1.dp, if (selected) colors.borderStrong else colors.border, RoundedCornerShape(MrsadTokens.Radius.sm))
+            .background(
+                if (selected) {
+                    ObsidianSpectrum.Teal.copy(alpha = 0.25f)
+                } else {
+                    colors.surfaceHigh.copy(alpha = 0.5f)
+                },
+            )
+            .border(
+                1.dp,
+                if (selected) ObsidianSpectrum.Aqua else colors.border,
+                RoundedCornerShape(MrsadTokens.Radius.sm),
+            )
             .selectable(
                 selected = selected,
                 role = Role.RadioButton,
@@ -343,7 +349,7 @@ private fun ToggleRow(
             enabled = enabled,
             colors = SwitchDefaults.colors(
                 checkedThumbColor = colors.background,
-                checkedTrackColor = colors.metalMid,
+                checkedTrackColor = ObsidianSpectrum.BrightBlue,
                 uncheckedThumbColor = colors.textMuted,
                 uncheckedTrackColor = colors.surfaceHigh,
             ),

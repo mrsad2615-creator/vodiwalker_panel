@@ -14,17 +14,88 @@ import dev.mrsad.app.data.settings.ThemeVariant
 import dev.mrsad.app.testing.MrsadTestHooks
 
 /**
- * MRSAD Minimal OLED Black & Monochrome Frosted Glass Colour System.
+ * OBSIDIAN SPECTRUM — Global Color Architecture & Module Spectral Identities
+ * (Master Prompt §2, §3 & §4).
  *
- * - **THEME 01 — OBSIDIAN (OLED Frosted Glass Monochrome)**:
- *   Pure OLED Black (`#000000`), Translucent Dark Glass (`#0D0D10` / `#151519`),
- *   Pure White (`#FFFFFF`), Luminous Silver (`#D4D4D8`), Neutral Grey (`#9E9EA8`),
- *   and Pure Monochrome White-Silver Accent (`#F4F4F6`). Zero blue/neon tint.
+ * Foundation colors:
+ * - Obsidian Black: `#090810`
+ * - Deep Black: `#100E18`
+ * - Dark Surface: `#181522`
+ * - Elevated Surface: `#211B2C`
+ * - Metallic Gray: `#96909F`
+ * - Soft White: `#F5F2FA`
  *
- * - **THEME 02 — NOIR (Pure Minimalism / Swiss Editorial Monochrome)**:
- *   Pure Black (`#000000`), Soft Black (`#0A0A0A`), Charcoal (`#121212`),
- *   Pure White (`#FFFFFF`), Silver Grey (`#C4C4CC`), Neutral Grey (`#909098`, `#27272A`).
+ * Spectral colors:
+ * - MODULE 01 (TYPING): Electric Blue `#176ED4` & Bright Blue `#54B8FF`
+ * - MODULE 02 (READING): Deep Violet `#7040B9` & Lavender `#C69CFF`
+ * - MODULE 03 (EYE TRAINING): Teal `#138F91` & Aqua `#67E7DA`
+ * - MODULE 04 (BRAIN TRAINING): Magenta `#B53D91` & Pink `#F18ACD`
  */
+object ObsidianSpectrum {
+    // Foundation
+    val ObsidianBlack = Color(0xFF090810)
+    val DeepBlack = Color(0xFF100E18)
+    val DarkSurface = Color(0xFF181522)
+    val ElevatedSurface = Color(0xFF211B2C)
+    val MetallicGray = Color(0xFF96909F)
+    val SoftSilver = Color(0xFFD0C9DE)
+    val SoftWhite = Color(0xFFF5F2FA)
+
+    // Module 01 — Typing (Electric Blue & Bright Blue)
+    val ElectricBlue = Color(0xFF176ED4)
+    val BrightBlue = Color(0xFF54B8FF)
+
+    // Module 02 — Reading (Deep Violet & Lavender)
+    val DeepViolet = Color(0xFF7040B9)
+    val Lavender = Color(0xFFC69CFF)
+
+    // Module 03 — Eye Training (Teal & Aqua)
+    val Teal = Color(0xFF138F91)
+    val Aqua = Color(0xFF67E7DA)
+
+    // Module 04 — Brain Training (Magenta & Pink)
+    val Magenta = Color(0xFFB53D91)
+    val Pink = Color(0xFFF18ACD)
+}
+
+/**
+ * Visual identity token pair for each of the four core modules (Master Prompt §4).
+ */
+@Immutable
+data class ModuleSpectralIdentity(
+    val primary: Color,
+    val luminous: Color,
+    val softGlow: Color,
+    val borderGlow: Color,
+)
+
+object ModulePalettes {
+    val Typing = ModuleSpectralIdentity(
+        primary = ObsidianSpectrum.ElectricBlue,
+        luminous = ObsidianSpectrum.BrightBlue,
+        softGlow = ObsidianSpectrum.ElectricBlue.copy(alpha = 0.20f),
+        borderGlow = ObsidianSpectrum.BrightBlue.copy(alpha = 0.48f),
+    )
+    val Reading = ModuleSpectralIdentity(
+        primary = ObsidianSpectrum.DeepViolet,
+        luminous = ObsidianSpectrum.Lavender,
+        softGlow = ObsidianSpectrum.DeepViolet.copy(alpha = 0.22f),
+        borderGlow = ObsidianSpectrum.Lavender.copy(alpha = 0.48f),
+    )
+    val Eye = ModuleSpectralIdentity(
+        primary = ObsidianSpectrum.Teal,
+        luminous = ObsidianSpectrum.Aqua,
+        softGlow = ObsidianSpectrum.Teal.copy(alpha = 0.20f),
+        borderGlow = ObsidianSpectrum.Aqua.copy(alpha = 0.48f),
+    )
+    val Brain = ModuleSpectralIdentity(
+        primary = ObsidianSpectrum.Magenta,
+        luminous = ObsidianSpectrum.Pink,
+        softGlow = ObsidianSpectrum.Magenta.copy(alpha = 0.20f),
+        borderGlow = ObsidianSpectrum.Pink.copy(alpha = 0.48f),
+    )
+}
+
 @Immutable
 data class MrsadColors(
     val variant: ThemeVariant,
@@ -72,8 +143,8 @@ data class MrsadDesignSpec(
 private val ObsidianSpec = MrsadDesignSpec(
     variant = ThemeVariant.OBSIDIAN,
     use3DSculptures = true,
-    useChamferedCards = false,
-    useLinearIcons = true,
+    useChamferedCards = true,
+    useLinearIcons = false,
     useFloatingDock = true,
     useSwissGridBackground = false,
     cardCornerDp = 22f,
@@ -86,82 +157,65 @@ private val NoirSpec = MrsadDesignSpec(
     useLinearIcons = true,
     useFloatingDock = false,
     useSwissGridBackground = true,
-    cardCornerDp = 12f,
+    cardCornerDp = 18f,
 )
 
-// ---- THEME 01: OBSIDIAN (OLED Pitch Black + Monochrome Frosted Glass) ------
-private val OledPitchBlack = Color(0xFF000000)
-private val OledGlassLow = Color(0xFF070709)
-private val OledGlassSurface = Color(0xFF0E0E12)
-private val OledGlassHigh = Color(0xFF16161C)
-private val PureWhite = Color(0xFFFFFFFF)
-private val FrostedSilverLight = Color(0xFFF4F4F6)
-private val FrostedSilver = Color(0xFFD4D4D8)
-private val FrostedMutedGrey = Color(0xFF9E9EA8)
-private val FrostedDarkRim = Color(0xFF52525B)
-
+// ---- Unified OBSIDIAN SPECTRUM Foundation ----------------------------------
 private val ObsidianColors = MrsadColors(
     variant = ThemeVariant.OBSIDIAN,
-    background = OledPitchBlack,
-    backgroundElevated = OledGlassLow,
-    surface = OledGlassSurface,
-    surfaceHigh = OledGlassHigh,
-    glass = Color(0xD90E0E12),
-    border = Color(0x2EFFFFFF),
-    borderStrong = Color(0xFF5A5A64),
-    textPrimary = PureWhite,
-    textSecondary = FrostedSilver,
-    textMuted = FrostedMutedGrey,
-    metalLight = PureWhite,
-    metalMid = FrostedSilver,
-    metalDark = FrostedDarkRim,
-    navy = OledGlassLow,
-    iceBlue = FrostedSilverLight,
-    electricBlue = FrostedSilverLight,
-    violet = FrostedSilver,
-    accent = FrostedSilverLight,
-    accentSoft = Color(0x1FFFFFFF),
-    success = Color(0xFFD4D4D8),
-    warning = Color(0xFFE4E4E7),
-    error = Color(0xFFF27474),
-    disabled = Color(0xFF27272A),
+    background = ObsidianSpectrum.ObsidianBlack,          // #090810
+    backgroundElevated = ObsidianSpectrum.DeepBlack,      // #100E18
+    surface = ObsidianSpectrum.DarkSurface,               // #181522
+    surfaceHigh = ObsidianSpectrum.ElevatedSurface,       // #211B2C
+    glass = Color(0xE6181522),
+    border = Color(0xFF332C42),
+    borderStrong = Color(0xFF665C7A),
+    textPrimary = ObsidianSpectrum.SoftWhite,             // #F5F2FA
+    textSecondary = ObsidianSpectrum.SoftSilver,          // #D0C9DE
+    textMuted = ObsidianSpectrum.MetallicGray,            // #96909F
+    metalLight = ObsidianSpectrum.SoftWhite,              // #F5F2FA
+    metalMid = ObsidianSpectrum.Lavender,                 // #C69CFF
+    metalDark = Color(0xFF5A526B),
+    navy = ObsidianSpectrum.ElectricBlue,                 // #176ED4
+    iceBlue = ObsidianSpectrum.Aqua,                      // #67E7DA
+    electricBlue = ObsidianSpectrum.BrightBlue,           // #54B8FF
+    violet = ObsidianSpectrum.Lavender,                   // #C69CFF
+    accent = ObsidianSpectrum.BrightBlue,                 // #54B8FF
+    accentSoft = Color(0x2854B8FF),
+    success = ObsidianSpectrum.Aqua,                      // #67E7DA
+    warning = ObsidianSpectrum.Lavender,                  // #C69CFF
+    error = ObsidianSpectrum.Pink,                        // #F18ACD
+    disabled = Color(0xFF2D273A),
     isLight = false,
 )
 
-// ---- THEME 02: NOIR (Pure Minimalism / Swiss Editorial / Monochrome) -------
-private val SoftBlack = Color(0xFF080808)
-private val Charcoal = Color(0xFF101012)
-private val CharcoalHigh = Color(0xFF18181B)
-private val SilverGrey = Color(0xFFC4C4CC)
-private val NeutralGreyText = Color(0xFF909098)
-private val NeutralGreyLine = Color(0xFF27272A)
-private val NeutralGreyStrong = Color(0xFF52525B)
-
+// Secondary variant shares the exact same unified Obsidian foundation so
+// switching themes never breaks visual consistency or introduces noise.
 private val NoirColors = MrsadColors(
     variant = ThemeVariant.NOIR,
-    background = OledPitchBlack,
-    backgroundElevated = SoftBlack,
-    surface = Charcoal,
-    surfaceHigh = CharcoalHigh,
-    glass = Charcoal,
-    border = NeutralGreyLine,
-    borderStrong = NeutralGreyStrong,
-    textPrimary = PureWhite,
-    textSecondary = SilverGrey,
-    textMuted = NeutralGreyText,
-    metalLight = PureWhite,
-    metalMid = SilverGrey,
-    metalDark = NeutralGreyStrong,
-    navy = SoftBlack,
-    iceBlue = PureWhite,
-    electricBlue = PureWhite,
-    violet = SilverGrey,
-    accent = PureWhite,
-    accentSoft = Color(0x1AFFFFFF),
-    success = PureWhite,
-    warning = SilverGrey,
-    error = Color(0xFFE4E4E7),
-    disabled = NeutralGreyLine,
+    background = ObsidianSpectrum.ObsidianBlack,          // #090810
+    backgroundElevated = ObsidianSpectrum.DeepBlack,      // #100E18
+    surface = ObsidianSpectrum.DarkSurface,               // #181522
+    surfaceHigh = ObsidianSpectrum.ElevatedSurface,       // #211B2C
+    glass = Color(0xE6181522),
+    border = Color(0xFF332C42),
+    borderStrong = Color(0xFF665C7A),
+    textPrimary = ObsidianSpectrum.SoftWhite,             // #F5F2FA
+    textSecondary = ObsidianSpectrum.SoftSilver,          // #D0C9DE
+    textMuted = ObsidianSpectrum.MetallicGray,            // #96909F
+    metalLight = ObsidianSpectrum.SoftWhite,
+    metalMid = ObsidianSpectrum.SoftSilver,
+    metalDark = Color(0xFF5A526B),
+    navy = ObsidianSpectrum.ElectricBlue,
+    iceBlue = ObsidianSpectrum.Aqua,
+    electricBlue = ObsidianSpectrum.BrightBlue,
+    violet = ObsidianSpectrum.Lavender,
+    accent = ObsidianSpectrum.Lavender,                   // #C69CFF
+    accentSoft = Color(0x28C69CFF),
+    success = ObsidianSpectrum.Aqua,                      // #67E7DA
+    warning = ObsidianSpectrum.BrightBlue,                // #54B8FF
+    error = ObsidianSpectrum.Pink,                        // #F18ACD
+    disabled = Color(0xFF2D273A),
     isLight = false,
 )
 

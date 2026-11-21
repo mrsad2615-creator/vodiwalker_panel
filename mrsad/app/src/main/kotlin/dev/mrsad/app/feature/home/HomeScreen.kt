@@ -1,5 +1,7 @@
 package dev.mrsad.app.feature.home
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.animation.core.LinearEasing
@@ -8,6 +10,11 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -27,14 +34,19 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Keyboard
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -46,9 +58,9 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -60,6 +72,7 @@ import dev.mrsad.app.navigation.Routes
 import dev.mrsad.app.testing.MrsadTestHooks
 import dev.mrsad.app.testing.MrsadTestTags
 import dev.mrsad.app.ui.components.IconFacet
+import dev.mrsad.app.ui.components.LiveDot
 import dev.mrsad.app.ui.components.LocalBottomBarClearance
 import dev.mrsad.app.ui.components.MetalIcon
 import dev.mrsad.app.ui.components.MetricValue
@@ -74,32 +87,38 @@ import dev.mrsad.app.ui.components.MrsadProgressBar
 import dev.mrsad.app.ui.components.MrsadReveal
 import dev.mrsad.app.ui.components.MrsadSurface
 import dev.mrsad.app.ui.components.MrsadTokens
+import dev.mrsad.app.ui.components.ObsidianSegmentedBar
 import dev.mrsad.app.ui.components.SectionHeader
+import dev.mrsad.app.ui.components.SegmentedBarItem
 import dev.mrsad.app.ui.components.SparkLine
 import dev.mrsad.app.ui.components.StreakCalendarMatrix
-import dev.mrsad.app.ui.components.chamferedShape
 import dev.mrsad.app.ui.components.rememberRevealProgress
 import dev.mrsad.app.ui.theme.AmbientBackground
+import dev.mrsad.app.ui.theme.ModulePalettes
 import dev.mrsad.app.ui.theme.MrsadDuration
 import dev.mrsad.app.ui.theme.MrsadEasing
 import dev.mrsad.app.ui.theme.MrsadTheme
+import dev.mrsad.app.ui.theme.ObsidianSpectrum
 import dev.mrsad.app.ui.theme.PageEnvironment
 import dev.mrsad.app.ui.theme.formatInt
 import dev.mrsad.app.ui.theme.formatNumber
 import dev.mrsad.app.ui.theme.formatPercent
 import dev.mrsad.core.coach.Module
-import dev.mrsad.core.progression.ProgressionEngine
 import kotlin.math.PI
 import kotlin.math.sin
 
 /**
- * MRSAD HOME — Dual-System Flagship Command Center (Master Prompt §4):
+ * OBSIDIAN SPECTRUM — Flagship Dashboard & Command Center (Master Prompt §10).
  *
- * - **OBSIDIAN (Luxury Dark 3D Spatial)**: 3D Orbital Core (`ORRERY PRIME`),
- *   smoked-glass chamfered cards, bespoke 3D module sculptures, and silver depth.
- * - **NOIR (Minimal Black & White Editorial)**: Swiss numbered index sections
- *   (`01`–`07`), 1dp hairline architecture, monochrome technical schematics,
- *   and zero-shadow editorial typography.
+ * Features:
+ * 1. Pinned Auto-Collapsing Top Bar (`HomeAutoCollapsingTopBar`) that smoothly
+ *    compacts when scrolling down and expands when scrolling back to the top.
+ * 2. Obsidian Spectrum Daily Performance & Multi-Spectral Activity Wave Hero
+ *    (`MrsadTestTags.HOME_CORE`).
+ * 3. Four Main Training Modules (`TYPING` Electric Blue, `READING` Deep Violet,
+ *    `EYE` Teal/Aqua, `BRAIN` Magenta/Pink) + unified module bar (`HOME_MODULES`).
+ * 4. Separate Dashboard Sections organized inside a unified `ObsidianSegmentedBar`
+ *    (`برنامه و مأموریت` | `نمودار و استمرار` | `رکوردها و نشان‌ها`).
  */
 @Composable
 fun HomeScreen(
@@ -114,12 +133,21 @@ fun HomeScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val colors = MrsadTheme.colors
     val type = MrsadTheme.type
-    val isNoir = colors.isNoir
+    val motion = MrsadTheme.motion
     val reveal = rememberRevealProgress()
     val opening = rememberOpeningProgress()
+    val listState = rememberLazyListState()
+
+    val isTopBarCollapsed by remember {
+        derivedStateOf {
+            listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 36
+        }
+    }
+
+    var selectedSectionTab by rememberSaveable { mutableStateOf("plan") }
 
     AmbientBackground(PageEnvironment.HOME) {
-        LazyColumn(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .graphicsLayer {
@@ -128,320 +156,204 @@ fun HomeScreen(
                     val settle = 0.97f + 0.03f * open
                     scaleX = settle
                     scaleY = settle
-                }
-                .padding(horizontal = MrsadTokens.Spacing.md)
-                .padding(bottom = LocalBottomBarClearance.current),
-            verticalArrangement = Arrangement.spacedBy(MrsadTokens.Spacing.md),
-            contentPadding = PaddingValues(top = MrsadTokens.Spacing.lg, bottom = MrsadTokens.Spacing.lg),
+                },
         ) {
-            // 01: Header + Personalized Greeting + Level/XP Banner
-            item {
-                MrsadReveal(reveal, modifier = Modifier.fillMaxWidth(), index = 0) {
-                    HomeHeader(
-                        state = state,
-                        persianNumerals = settings.persianNumerals,
-                        onOpenSettings = { onNavigate(Routes.SETTINGS) },
-                    )
-                }
-            }
+            // Pinned Auto-Collapsing Flagship Top Bar
+            HomeAutoCollapsingTopBar(
+                state = state,
+                collapsed = isTopBarCollapsed,
+                persianNumerals = settings.persianNumerals,
+                onOpenStudio = { onNavigate(Routes.STUDIO) },
+                onOpenArena = { onNavigate(Routes.ARENA) },
+            )
 
-            // 02: Minimal Frosted Glass Typography & Luminous Activity Wave Hero (Core completely removed)
-            item {
-                MrsadReveal(reveal, modifier = Modifier.fillMaxWidth(), index = 1) {
-                    GlassTelemetryWaveHero(
-                        state = state,
-                        persianNumerals = settings.persianNumerals,
-                    )
-                }
-            }
-
-            // 03: Four Core Pillars — Minimal Frosted Glass 2×2 Bento Grid + Quick Access Strip
-            item {
-                MrsadReveal(reveal, modifier = Modifier.fillMaxWidth(), index = 2) {
-                    SectionHeader(
-                        title = if (isNoir) "02 // چهار ستون مهارت و ماژول‌ها" else "چهار ستون اصلی و ماژول‌ها",
-                        actionLabel = "تحلیل کامل",
-                        onAction = { onNavigate(Routes.ANALYTICS) },
-                    )
-                }
-            }
-
-            // 2×2 Minimal Frosted Glass Pillar Showcase
-            item {
-                MrsadReveal(reveal, modifier = Modifier.fillMaxWidth(), index = 3) {
-                    Column(verticalArrangement = Arrangement.spacedBy(MrsadTokens.Spacing.xs)) {
-                        Row(horizontalArrangement = Arrangement.spacedBy(MrsadTokens.Spacing.xs)) {
-                            PillarSculptureCard(
-                                modifier = Modifier.weight(1f),
-                                indexCode = "01",
-                                title = "سرعت تایپ",
-                                subtitle = state.bestWpm?.let { "رکورد: ${formatInt(it, settings.persianNumerals)} کلمه/دقیقه" }
-                                    ?: "موتور استاندارد WPM",
-                                sculptureType = ModuleSculptureType.TYPING,
-                                onClick = { onNavigate(Routes.TYPE) },
-                            )
-                            PillarSculptureCard(
-                                modifier = Modifier.weight(1f),
-                                indexCode = "02",
-                                title = "تندخوانی و درک",
-                                subtitle = state.bestReadingWpm?.let { "رکورد: ${formatInt(it, settings.persianNumerals)} کلمه/دقیقه" }
-                                    ?: "خوانش هدایت‌شده و RSVP",
-                                sculptureType = ModuleSculptureType.READING,
-                                onClick = { onNavigate(Routes.READ) },
-                            )
-                        }
-                        Row(horizontalArrangement = Arrangement.spacedBy(MrsadTokens.Spacing.xs)) {
-                            PillarSculptureCard(
-                                modifier = Modifier.weight(1f),
-                                indexCode = "03",
-                                title = "تمرین چشم",
-                                subtitle = if (state.eyeSessions > 0) {
-                                    "${formatInt(state.eyeSessions, settings.persianNumerals)} جلسه • چابکی ${formatInt(state.avgEyeScore, settings.persianNumerals)}٪"
-                                } else {
-                                    "ساکاد، تعقیب و دید محیطی"
-                                },
-                                sculptureType = ModuleSculptureType.EYE,
-                                onClick = { onNavigate(Routes.EYE) },
-                            )
-                            PillarSculptureCard(
-                                modifier = Modifier.weight(1f),
-                                indexCode = "04",
-                                title = "تمرین مغز",
-                                subtitle = if (state.mindSessions > 0) {
-                                    "${formatInt(state.mindSessions, settings.persianNumerals)} جلسه • امتیاز ${formatInt(state.avgMindScore, settings.persianNumerals)}"
-                                } else {
-                                    "حافظه، تمرکز و سرعت واکنش"
-                                },
-                                sculptureType = ModuleSculptureType.BRAIN,
-                                onClick = { onNavigate(Routes.MIND) },
-                            )
-                        }
-                    }
-                }
-            }
-
-            item {
-                MrsadReveal(reveal, modifier = Modifier.fillMaxWidth(), index = 4) {
-                    LazyRow(
-                        modifier = Modifier.testTag(MrsadTestTags.HOME_MODULES),
-                        horizontalArrangement = Arrangement.spacedBy(MrsadTokens.Spacing.xs),
-                    ) {
-                        items(moduleEntries) { entry ->
-                            ModuleCard(entry = entry, onClick = { onNavigate(entry.route) })
-                        }
-                    }
-                }
-            }
-
-            // Studio / Theme Architecture Entry
-            item {
-                MrsadSurface(modifier = Modifier.fillMaxWidth(), onClick = { onNavigate(Routes.STUDIO) }) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        MetalIcon(MrsadIcons.Assistant, modifier = Modifier.size(20.dp))
-                        Spacer(Modifier.width(MrsadTokens.Spacing.xs))
-                        Column(Modifier.weight(1f)) {
-                            Text(
-                                "MRSAD STUDIO — معماری دوگانهٔ تم",
-                                style = type.label.copy(fontWeight = FontWeight.SemiBold, letterSpacing = 1.sp),
-                                color = colors.textPrimary,
-                            )
-                            Text(
-                                if (isNoir) "تم فعال: NOIR (مینیمال سیاه‌وسفید) • تغییر آنی به OBSIDIAN" else "تم فعال: OBSIDIAN (لوکس سه‌بعدی تیره) • تغییر آنی به NOIR",
-                                style = type.caption,
-                                color = colors.textSecondary,
-                            )
-                        }
-                        Text("استودیو ←", style = type.caption, color = colors.accent)
-                    }
-                }
-            }
-
-            // 05: Daily Missions & Smart Plan
-            item {
-                MrsadSurface(modifier = Modifier.fillMaxWidth()) {
-                    SectionHeader(
-                        title = if (isNoir) "04 // مأموریت روزانه و برنامهٔ هوشمند" else "برنامهٔ امروز و مأموریت‌ها",
-                        actionLabel = "مربی هوشمند",
-                        onAction = { onNavigate(Routes.AI) },
-                    )
-                    if (state.plan.isEmpty()) {
-                        Text(
-                            "پس از اولین تمرین، برنامهٔ روزانه بر پایهٔ داده‌های واقعی شما ساخته می‌شود.",
-                            style = type.body,
-                            color = colors.textSecondary,
+            LazyColumn(
+                state = listState,
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .padding(horizontal = MrsadTokens.Spacing.md)
+                    .padding(bottom = LocalBottomBarClearance.current),
+                verticalArrangement = Arrangement.spacedBy(MrsadTokens.Spacing.md),
+                contentPadding = PaddingValues(
+                    top = MrsadTokens.Spacing.sm,
+                    bottom = MrsadTokens.Spacing.lg,
+                ),
+            ) {
+                // 01: Obsidian Spectrum Daily Performance & Multi-Spectral Activity Wave Hero
+                item(key = "hero") {
+                    MrsadReveal(reveal, modifier = Modifier.fillMaxWidth(), index = 0) {
+                        ObsidianSpectrumHero(
+                            state = state,
+                            persianNumerals = settings.persianNumerals,
                         )
-                    } else {
-                        Text("بر اساس داده‌های واقعی تمرین شما", style = type.caption, color = colors.textMuted)
-                        state.plan.forEach { item ->
-                            PlanRow(
-                                title = item.titleFa,
-                                reason = item.reasonFa,
-                                minutesLabel = "${formatInt(item.minutes, settings.persianNumerals)} دقیقه",
-                                icon = iconFor(item.module),
-                                onClick = {
-                                    when (item.module) {
-                                        Module.TYPE -> onNavigate(Routes.TYPE)
-                                        Module.READ -> onNavigate(Routes.READ)
-                                        Module.EYE -> onNavigate(Routes.EYE)
-                                        Module.MIND -> onNavigate(Routes.MIND)
-                                        Module.FOCUS -> onNavigate(Routes.FOCUS)
-                                    }
-                                },
-                            )
-                        }
                     }
+                }
 
-                    state.progression?.weeklyChallenges?.takeIf { it.isNotEmpty() }?.let { challenges ->
-                        MrsadDivider()
-                        Text("چالش‌های هفتگی", style = type.label, color = colors.textPrimary)
-                        challenges.forEach { ch ->
-                            Column(
-                                modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
-                                verticalArrangement = Arrangement.spacedBy(3.dp),
-                            ) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                ) {
-                                    Text(ch.titleFa, style = type.caption, color = colors.textSecondary)
-                                    Text(
-                                        "${formatInt(ch.current, settings.persianNumerals)} / ${formatInt(ch.target, settings.persianNumerals)} (+${formatInt(ch.rewardXp, settings.persianNumerals)} XP)",
-                                        style = type.caption,
-                                        color = if (ch.completed) colors.success else colors.textMuted,
-                                    )
-                                }
-                                MrsadProgressBar(
-                                    progress = ch.progressFraction,
-                                    height = 4.dp,
-                                    tint = if (ch.completed) colors.success else colors.accent,
+                // 02: Four Main Training Modules — Module-Specific Spectral Identities
+                item(key = "pillars_header") {
+                    MrsadReveal(reveal, modifier = Modifier.fillMaxWidth(), index = 1) {
+                        SectionHeader(
+                            title = "چهار ستون اصلی آموزش",
+                            actionLabel = "تحلیل کامل",
+                            onAction = { onNavigate(Routes.ANALYTICS) },
+                        )
+                    }
+                }
+
+                item(key = "pillars_grid") {
+                    MrsadReveal(reveal, modifier = Modifier.fillMaxWidth(), index = 2) {
+                        Column(verticalArrangement = Arrangement.spacedBy(MrsadTokens.Spacing.xs)) {
+                            Row(horizontalArrangement = Arrangement.spacedBy(MrsadTokens.Spacing.xs)) {
+                                PillarSculptureCard(
+                                    modifier = Modifier.weight(1f),
+                                    indexCode = "01 · TYPING",
+                                    title = "سرعت تایپ",
+                                    subtitle = state.bestWpm?.let { "رکورد: ${formatInt(it, settings.persianNumerals)} کلمه/دقیقه" }
+                                        ?: "موتور استاندارد WPM",
+                                    sculptureType = ModuleSculptureType.TYPING,
+                                    spectralAccent = ModulePalettes.Typing.luminous,
+                                    onClick = { onNavigate(Routes.TYPE) },
+                                )
+                                PillarSculptureCard(
+                                    modifier = Modifier.weight(1f),
+                                    indexCode = "02 · READING",
+                                    title = "تندخوانی و درک",
+                                    subtitle = state.bestReadingWpm?.let { "رکورد: ${formatInt(it, settings.persianNumerals)} کلمه/دقیقه" }
+                                        ?: "خوانش هدایت‌شده و RSVP",
+                                    sculptureType = ModuleSculptureType.READING,
+                                    spectralAccent = ModulePalettes.Reading.luminous,
+                                    onClick = { onNavigate(Routes.READ) },
+                                )
+                            }
+                            Row(horizontalArrangement = Arrangement.spacedBy(MrsadTokens.Spacing.xs)) {
+                                PillarSculptureCard(
+                                    modifier = Modifier.weight(1f),
+                                    indexCode = "03 · EYE",
+                                    title = "تمرین چشم",
+                                    subtitle = if (state.eyeSessions > 0) {
+                                        "${formatInt(state.eyeSessions, settings.persianNumerals)} جلسه • چابکی ${formatInt(state.avgEyeScore, settings.persianNumerals)}٪"
+                                    } else {
+                                        "ساکاد، تعقیب و دید محیطی"
+                                    },
+                                    sculptureType = ModuleSculptureType.EYE,
+                                    spectralAccent = ModulePalettes.Eye.luminous,
+                                    onClick = { onNavigate(Routes.EYE) },
+                                )
+                                PillarSculptureCard(
+                                    modifier = Modifier.weight(1f),
+                                    indexCode = "04 · BRAIN",
+                                    title = "تمرین مغز",
+                                    subtitle = if (state.mindSessions > 0) {
+                                        "${formatInt(state.mindSessions, settings.persianNumerals)} جلسه • امتیاز ${formatInt(state.avgMindScore, settings.persianNumerals)}"
+                                    } else {
+                                        "حافظه، تمرکز و سرعت واکنش"
+                                    },
+                                    sculptureType = ModuleSculptureType.BRAIN,
+                                    spectralAccent = ModulePalettes.Brain.luminous,
+                                    onClick = { onNavigate(Routes.MIND) },
                                 )
                             }
                         }
                     }
                 }
-            }
 
-            // 06: Weekly Progress Chart & 28-Day Streak Matrix
-            item {
-                MrsadSurface(modifier = Modifier.fillMaxWidth()) {
-                    SectionHeader(
-                        title = if (isNoir) "05 // نمودار پیشرفت هفتگی و تقویم استمرار" else "نمودار پیشرفت هفتگی و استمرار",
-                        actionLabel = "جزئیات",
-                        onAction = { onNavigate(Routes.ANALYTICS) },
-                    )
-                    SparkLine(
-                        values = state.weeklyMinutesSeries,
-                        label = "دقایق تمرین در ۷ روز اخیر",
-                    )
-                    state.progression?.calendarDays?.takeIf { it.isNotEmpty() }?.let { calendar ->
-                        MrsadDivider()
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
+                // 03: Integrated Quick-Access Module Bar (`HOME_MODULES`)
+                item(key = "modules_bar") {
+                    MrsadReveal(reveal, modifier = Modifier.fillMaxWidth(), index = 3) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(MrsadTokens.Radius.lg))
+                                .background(colors.backgroundElevated)
+                                .border(1.dp, colors.border, RoundedCornerShape(MrsadTokens.Radius.lg))
+                                .padding(MrsadTokens.Spacing.sm),
+                            verticalArrangement = Arrangement.spacedBy(MrsadTokens.Spacing.xs),
                         ) {
-                            Text("تقویم استمرار ۲۸ روزه", style = type.caption, color = colors.textSecondary)
-                            Text(
-                                "${formatInt(calendar.count { it.active }, settings.persianNumerals)} روز فعال",
-                                style = type.caption,
-                                color = colors.textPrimary,
-                            )
-                        }
-                        StreakCalendarMatrix(days = calendar)
-                    }
-                }
-            }
-
-            // 07: Personal Records & Recent Stats
-            item {
-                MrsadSurface(modifier = Modifier.fillMaxWidth()) {
-                    SectionHeader(title = if (isNoir) "06 // رکوردهای شخصی و آمار اخیر" else "رکوردهای شخصی")
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(top = MrsadTokens.Spacing.xxs),
-                        horizontalArrangement = Arrangement.SpaceEvenly,
-                    ) {
-                        RecordCell(
-                            value = state.bestWpm?.let { formatNumber(it.toString(), settings.persianNumerals) },
-                            label = "بهترین سرعت (کلمه/دقیقه)",
-                        )
-                        RecordCell(
-                            value = state.bestAccuracy?.let { formatPercent(it, settings.persianNumerals, decimals = 1) },
-                            label = "بهترین دقت",
-                        )
-                        RecordCell(
-                            value = formatInt(state.totalSessions, settings.persianNumerals),
-                            label = "کل جلسات تایپ",
-                        )
-                    }
-                }
-            }
-
-            // 08: Achievements & Badges Preview
-            state.progression?.let { prog ->
-                item {
-                    MrsadSurface(
-                        modifier = Modifier.fillMaxWidth(),
-                        onClick = { onNavigate(Routes.ARENA) },
-                    ) {
-                        SectionHeader(
-                            title = if (isNoir) "07 // دستاوردها و نشان‌های مهارت" else "دستاوردهای مهارتی",
-                            actionLabel = "${formatInt(prog.unlockedCount, settings.persianNumerals)} از ${formatInt(prog.achievements.size, settings.persianNumerals)}",
-                            onAction = { onNavigate(Routes.ARENA) },
-                        )
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(MrsadTokens.Spacing.xs),
-                        ) {
-                            prog.achievements.take(4).forEach { badge ->
-                                val badgeShape = if (isNoir) RoundedCornerShape(2.dp) else RoundedCornerShape(MrsadTokens.Radius.sm)
-                                Column(
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .clip(badgeShape)
-                                        .background(if (badge.unlocked) colors.accentSoft else colors.surfaceHigh.copy(alpha = 0.45f))
-                                        .border(
-                                            1.dp,
-                                            if (badge.unlocked) colors.accent else colors.border,
-                                            badgeShape,
-                                        )
-                                        .padding(vertical = 8.dp, horizontal = 4.dp),
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    verticalArrangement = Arrangement.spacedBy(4.dp),
-                                ) {
-                                    MetalIcon(
-                                        facets = if (badge.unlocked) MrsadIcons.Trophy else MrsadIcons.Target,
-                                        modifier = Modifier.size(18.dp),
-                                    )
-                                    Text(
-                                        badge.titleFa,
-                                        style = type.caption,
-                                        color = if (badge.unlocked) colors.textPrimary else colors.textMuted,
-                                        textAlign = TextAlign.Center,
-                                        maxLines = 1,
-                                    )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Text(
+                                    "نوار دسترسی سریع ابزارها",
+                                    style = type.caption.copy(fontWeight = FontWeight.SemiBold),
+                                    color = colors.textSecondary,
+                                )
+                                Text(
+                                    "۶ محیط تخصصی",
+                                    style = type.caption,
+                                    color = colors.textMuted,
+                                )
+                            }
+                            LazyRow(
+                                modifier = Modifier.testTag(MrsadTestTags.HOME_MODULES),
+                                horizontalArrangement = Arrangement.spacedBy(MrsadTokens.Spacing.xs),
+                            ) {
+                                items(moduleEntries, key = { it.route }) { entry ->
+                                    ModuleBarPill(entry = entry, onClick = { onNavigate(entry.route) })
                                 }
                             }
                         }
                     }
                 }
-            }
 
-            // Onboarding Quick-Start CTA when database is empty
-            if (!state.hasAnyData) {
-                item {
-                    MrsadSurface(modifier = Modifier.fillMaxWidth()) {
-                        Text("شروع سریع", style = type.title, color = colors.textPrimary)
-                        Text(
-                            "برای دیدن آمار واقعی، یک تمرین تایپ ۶۰ ثانیه‌ای انجام دهید. همهٔ اعداد این صفحه از همان جلسه ساخته می‌شوند.",
-                            style = type.body,
-                            color = colors.textSecondary,
-                        )
-                        Spacer(Modifier.height(MrsadTokens.Spacing.xs))
-                        MrsadPrimaryButton(
-                            text = "شروع تمرین تایپ",
-                            icon = Icons.Outlined.Keyboard,
-                            onClick = { onNavigate(Routes.TYPE) },
-                            modifier = Modifier.testTag(MrsadTestTags.HOME_PRIMARY_CTA),
-                        )
+                // 04: Separate Dashboard Sections Inside a Unified Bar (`ObsidianSegmentedBar`)
+                item(key = "sections_bar") {
+                    MrsadReveal(reveal, modifier = Modifier.fillMaxWidth(), index = 4) {
+                        Column(verticalArrangement = Arrangement.spacedBy(MrsadTokens.Spacing.sm)) {
+                            ObsidianSegmentedBar(
+                                items = listOf(
+                                    SegmentedBarItem(
+                                        id = "plan",
+                                        label = "برنامه و مأموریت",
+                                        accent = ObsidianSpectrum.BrightBlue,
+                                        icon = MrsadIcons.Target,
+                                    ),
+                                    SegmentedBarItem(
+                                        id = "trends",
+                                        label = "نمودار و استمرار",
+                                        accent = ObsidianSpectrum.Aqua,
+                                        icon = MrsadIcons.Analytics,
+                                    ),
+                                    SegmentedBarItem(
+                                        id = "records",
+                                        label = "رکوردها و نشان‌ها",
+                                        accent = ObsidianSpectrum.Pink,
+                                        icon = MrsadIcons.Trophy,
+                                    ),
+                                ),
+                                selectedId = selectedSectionTab,
+                                onSelect = { selectedSectionTab = it },
+                            )
+
+                            AnimatedContent(
+                                targetState = selectedSectionTab,
+                                transitionSpec = {
+                                    fadeIn(animationSpec = motion.effectsDefault()) togetherWith
+                                        fadeOut(animationSpec = motion.effectsFast())
+                                },
+                                label = "dashboardSectionContent",
+                            ) { tab ->
+                                when (tab) {
+                                    "plan" -> DashboardPlanSection(
+                                        state = state,
+                                        persianNumerals = settings.persianNumerals,
+                                        onNavigate = onNavigate,
+                                    )
+                                    "trends" -> DashboardTrendsSection(
+                                        state = state,
+                                        persianNumerals = settings.persianNumerals,
+                                        onNavigate = onNavigate,
+                                    )
+                                    else -> DashboardRecordsSection(
+                                        state = state,
+                                        persianNumerals = settings.persianNumerals,
+                                        onNavigate = onNavigate,
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -455,15 +367,16 @@ private data class ModuleEntry(
     val icon: List<IconFacet>,
     val route: String,
     val subtitle: String,
+    val spectralAccent: Color,
 )
 
 private val moduleEntries = listOf(
-    ModuleEntry("TYPE", "تایپ", MrsadIcons.Type, Routes.TYPE, "سرعت و دقت"),
-    ModuleEntry("READ", "خواندن", MrsadIcons.Read, Routes.READ, "درک مطلب"),
-    ModuleEntry("EYE", "چشم", MrsadIcons.Eye, Routes.EYE, "مهارت دیداری"),
-    ModuleEntry("MIND", "ذهن", MrsadIcons.Mind, Routes.MIND, "تمرین شناختی"),
-    ModuleEntry("FOCUS", "تمرکز", MrsadIcons.Focus, Routes.FOCUS, "زمان‌سنج عمیق"),
-    ModuleEntry("AI", "دستیار", MrsadIcons.Assistant, Routes.AI, "مربی هوشمند"),
+    ModuleEntry("TYPE", "تایپ", MrsadIcons.Type, Routes.TYPE, "سرعت و دقت", ObsidianSpectrum.BrightBlue),
+    ModuleEntry("READ", "خواندن", MrsadIcons.Read, Routes.READ, "درک مطلب", ObsidianSpectrum.Lavender),
+    ModuleEntry("EYE", "چشم", MrsadIcons.Eye, Routes.EYE, "مهارت دیداری", ObsidianSpectrum.Aqua),
+    ModuleEntry("MIND", "ذهن", MrsadIcons.Mind, Routes.MIND, "تمرین شناختی", ObsidianSpectrum.Pink),
+    ModuleEntry("FOCUS", "تمرکز", MrsadIcons.Focus, Routes.FOCUS, "زمان‌سنج عمیق", ObsidianSpectrum.Aqua),
+    ModuleEntry("AI", "دستیار", MrsadIcons.Assistant, Routes.AI, "مربی هوشمند", ObsidianSpectrum.Lavender),
 )
 
 private fun iconFor(module: Module): List<IconFacet> = when (module) {
@@ -474,20 +387,48 @@ private fun iconFor(module: Module): List<IconFacet> = when (module) {
     Module.FOCUS -> MrsadIcons.Focus
 }
 
+private fun accentFor(module: Module): Color = when (module) {
+    Module.TYPE -> ObsidianSpectrum.BrightBlue
+    Module.READ -> ObsidianSpectrum.Lavender
+    Module.EYE -> ObsidianSpectrum.Aqua
+    Module.MIND -> ObsidianSpectrum.Pink
+    Module.FOCUS -> ObsidianSpectrum.Aqua
+}
+
+/**
+ * Pinned Auto-Collapsing Flagship Header on `HomeScreen`.
+ *
+ * Notice that `HOME_BRAND_MARK` sits in a non-clickable `Box` so Jetpack Compose
+ * never merges its descendant semantics in `MrsadSmokeTest`.
+ */
 @Composable
-private fun HomeHeader(
+private fun HomeAutoCollapsingTopBar(
     state: HomeState,
+    collapsed: Boolean,
     persianNumerals: Boolean,
-    onOpenSettings: () -> Unit,
+    onOpenStudio: () -> Unit,
+    onOpenArena: () -> Unit,
 ) {
     val colors = MrsadTheme.colors
     val type = MrsadTheme.type
-    val isNoir = colors.isNoir
+    val motion = MrsadTheme.motion
     val levelInfo = state.progression?.levelInfo
 
     Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(MrsadTokens.Spacing.xs),
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        colors.background.copy(alpha = 0.98f),
+                        colors.backgroundElevated.copy(alpha = if (collapsed) 0.95f else 0.65f),
+                    ),
+                ),
+            )
+            .padding(
+                horizontal = MrsadTokens.Spacing.md,
+                vertical = if (collapsed) 6.dp else 10.dp,
+            ),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -495,60 +436,119 @@ private fun HomeHeader(
         ) {
             Column(Modifier.weight(1f)) {
                 Text(
-                    "MRSAD",
-                    style = type.display.copy(letterSpacing = 4.sp),
+                    text = "MRSAD",
+                    style = if (collapsed) {
+                        type.title.copy(fontWeight = FontWeight.Bold, letterSpacing = 3.sp)
+                    } else {
+                        type.display.copy(fontSize = 30.sp, lineHeight = 38.sp, letterSpacing = 4.sp)
+                    },
                     color = colors.textPrimary,
                     modifier = Modifier.testTag(MrsadTestTags.HOME_BRAND),
                 )
-                Text(
-                    if (isNoir) "NOIR // زیست‌بوم رشد شناختی و مهارت‌های ذهنی" else "زیست‌بوم رشد شناختی و مهارت‌های فردی",
-                    style = type.caption,
-                    color = colors.textSecondary,
-                )
+                AnimatedVisibility(
+                    visible = !collapsed,
+                    enter = fadeIn(animationSpec = motion.effectsDefault()) +
+                        expandVertically(animationSpec = motion.spatialDefault()),
+                    exit = fadeOut(animationSpec = motion.effectsFast()) +
+                        shrinkVertically(animationSpec = motion.spatialFast()),
+                ) {
+                    Text(
+                        text = "OBSIDIAN SPECTRUM • زیست‌بوم رشد شناختی و مهارت‌های فردی",
+                        style = type.caption,
+                        color = colors.textSecondary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
             }
+
+            if (collapsed && levelInfo != null) {
+                MrsadChip(
+                    text = "سطح ${formatInt(levelInfo.level, persianNumerals)}",
+                    tint = ObsidianSpectrum.Lavender,
+                )
+                Spacer(Modifier.width(MrsadTokens.Spacing.xs))
+            }
+
+            // Brand mark box — never wrapped in a clickable parent so HOME_BRAND_MARK remains directly addressable
             Box(
                 Modifier
-                    .size(48.dp)
-                    .clip(if (isNoir) RoundedCornerShape(2.dp) else RoundedCornerShape(MrsadTokens.Radius.md))
-                    .background(colors.surfaceHigh)
+                    .size(if (collapsed) 38.dp else 46.dp)
+                    .clip(RoundedCornerShape(MrsadTokens.Radius.md))
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(colors.surfaceHigh, colors.surface),
+                        ),
+                    )
                     .border(
                         1.dp,
-                        colors.border,
-                        if (isNoir) RoundedCornerShape(2.dp) else RoundedCornerShape(MrsadTokens.Radius.md),
+                        Brush.verticalGradient(
+                            listOf(
+                                ObsidianSpectrum.BrightBlue.copy(alpha = 0.55f),
+                                ObsidianSpectrum.Lavender.copy(alpha = 0.35f),
+                            ),
+                        ),
+                        RoundedCornerShape(MrsadTokens.Radius.md),
                     ),
                 contentAlignment = Alignment.Center,
             ) {
                 MrsadMarkView(
-                    size = 30.dp,
-                    monochrome = isNoir,
+                    size = if (collapsed) 24.dp else 28.dp,
+                    monochrome = false,
                     modifier = Modifier.testTag(MrsadTestTags.HOME_BRAND_MARK),
                     contentDescription = "MRSAD",
                 )
             }
         }
 
-        if (levelInfo != null) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                MrsadChip(
-                    text = "سطح ${formatInt(levelInfo.level, persianNumerals)} • ${levelInfo.titleFa}",
-                    tint = colors.accent,
-                )
-                Text(
-                    "${formatInt(levelInfo.totalXp, persianNumerals)} XP",
-                    style = type.label,
-                    color = colors.textSecondary,
-                )
+        AnimatedVisibility(
+            visible = !collapsed && levelInfo != null,
+            enter = fadeIn(animationSpec = motion.effectsDefault()) +
+                expandVertically(animationSpec = motion.spatialDefault()),
+            exit = fadeOut(animationSpec = motion.effectsFast()) +
+                shrinkVertically(animationSpec = motion.spatialFast()),
+        ) {
+            if (levelInfo != null) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = MrsadTokens.Spacing.xs),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    MrsadChip(
+                        text = "سطح ${formatInt(levelInfo.level, persianNumerals)} • ${levelInfo.titleFa}",
+                        tint = ObsidianSpectrum.BrightBlue,
+                        onClick = onOpenArena,
+                    )
+                    MrsadChip(
+                        text = "${formatInt(levelInfo.totalXp, persianNumerals)} XP • استودیو تم",
+                        tint = ObsidianSpectrum.Lavender,
+                        onClick = onOpenStudio,
+                    )
+                }
             }
         }
+
+        Box(
+            Modifier
+                .padding(top = if (collapsed) 6.dp else 8.dp)
+                .fillMaxWidth()
+                .height(1.dp)
+                .background(
+                    Brush.horizontalGradient(
+                        listOf(
+                            ObsidianSpectrum.BrightBlue.copy(alpha = 0.45f),
+                            ObsidianSpectrum.Lavender.copy(alpha = 0.45f),
+                        ),
+                    ),
+                ),
+        )
     }
 }
 
 @Composable
-private fun GlassTelemetryWaveHero(
+private fun ObsidianSpectrumHero(
     state: HomeState,
     persianNumerals: Boolean,
 ) {
@@ -559,27 +559,34 @@ private fun GlassTelemetryWaveHero(
             .testTag(MrsadTestTags.HOME_CORE)
             .fillMaxWidth(),
         elevated = true,
+        accent = ObsidianSpectrum.BrightBlue,
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                text = "وضعیت لحظه‌ای • عملکرد روزانه",
-                style = type.caption.copy(fontWeight = FontWeight.SemiBold, letterSpacing = 0.8.sp),
-                color = colors.textSecondary,
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                LiveDot(color = ObsidianSpectrum.Aqua)
+                Text(
+                    text = "عملکرد روزانه • طیف فعالیت زنده",
+                    style = type.caption.copy(fontWeight = FontWeight.SemiBold, letterSpacing = 0.6.sp),
+                    color = colors.textSecondary,
+                )
+            }
             MrsadChip(
-                text = if (state.hasAnyData) "فعال" else "آمادهٔ شروع",
-                tint = colors.textPrimary,
+                text = if (state.hasAnyData) "طیف فعال" else "آمادهٔ شروع",
+                tint = if (state.hasAnyData) ObsidianSpectrum.Aqua else ObsidianSpectrum.BrightBlue,
             )
         }
 
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 4.dp),
+                .padding(vertical = 2.dp),
             verticalAlignment = Alignment.Bottom,
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
@@ -595,56 +602,77 @@ private fun GlassTelemetryWaveHero(
                     color = colors.textSecondary,
                 )
             }
-            Text(
-                text = if (state.hasAnyData) "موج فعالیت هفتگی" else "در انتظار اولین تمرین",
-                style = type.caption,
-                color = colors.textMuted,
-            )
+            Column(horizontalAlignment = Alignment.End) {
+                Text(
+                    text = if (state.hasAnyData) "توازن ۴ ستون شناختی" else "در انتظار اولین تمرین",
+                    style = type.caption,
+                    color = ObsidianSpectrum.Lavender,
+                )
+                Text(
+                    text = "تایپ • خوانش • چشم • ذهن",
+                    style = type.caption,
+                    color = colors.textMuted,
+                )
+            }
         }
 
-        MrsadProgressBar(progress = state.todayProgress, height = 6.dp)
+        MrsadProgressBar(
+            progress = state.todayProgress,
+            height = 6.dp,
+            tint = ObsidianSpectrum.BrightBlue,
+        )
 
-        // Luminous Monochrome Activity Wave
-        GlassActivityWave(
+        // Multi-Spectral Activity Wave
+        ObsidianSpectrumWave(
             energy = state.energy,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(64.dp),
+                .height(66.dp),
         )
 
-        MrsadDivider()
-
-        Row(horizontalArrangement = Arrangement.spacedBy(MrsadTokens.Spacing.xs)) {
+        // Unified Daily Performance Bar inside Hero
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(MrsadTokens.Radius.md))
+                .background(colors.backgroundElevated)
+                .border(1.dp, colors.border, RoundedCornerShape(MrsadTokens.Radius.md))
+                .padding(vertical = 8.dp, horizontal = 4.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+        ) {
             StatCell(
                 modifier = Modifier.weight(1f),
                 value = formatInt(state.todayMinutes, persianNumerals),
                 label = "دقیقه امروز",
                 icon = MrsadIcons.Focus,
+                accent = ObsidianSpectrum.Aqua,
             )
             StatCell(
                 modifier = Modifier.weight(1f),
                 value = formatInt(state.todaySessions, persianNumerals),
                 label = "تمرین امروز",
                 icon = MrsadIcons.Trophy,
+                accent = ObsidianSpectrum.Lavender,
             )
             StatCell(
                 modifier = Modifier.weight(1f),
                 value = formatInt(state.streakDays, persianNumerals),
                 label = "روز پیوسته",
                 icon = MrsadIcons.Flame,
+                accent = ObsidianSpectrum.Pink,
             )
         }
     }
 }
 
 @Composable
-private fun GlassActivityWave(
+private fun ObsidianSpectrumWave(
     energy: Float,
     modifier: Modifier = Modifier,
 ) {
-    val colors = MrsadTheme.colors
     val motion = MrsadTheme.motion
-    val wavePath = remember { Path() }
+    val primaryPath = remember { Path() }
+    val secondaryPath = remember { Path() }
     val fillPath = remember { Path() }
 
     val animate = !MrsadTestHooks.isDeterministic &&
@@ -652,12 +680,12 @@ private fun GlassActivityWave(
         motion.quality != GraphicsQuality.PERFORMANCE
 
     val phase = if (animate) {
-        val transition = rememberInfiniteTransition(label = "glass_wave")
+        val transition = rememberInfiniteTransition(label = "spectrum_wave")
         val p by transition.animateFloat(
             initialValue = 0f,
             targetValue = (2.0 * PI).toFloat(),
             animationSpec = infiniteRepeatable(
-                animation = tween(durationMillis = 5600, easing = LinearEasing),
+                animation = tween(durationMillis = 5400, easing = LinearEasing),
                 repeatMode = RepeatMode.Restart,
             ),
             label = "wave_phase",
@@ -665,6 +693,18 @@ private fun GlassActivityWave(
         p
     } else {
         0.95f
+    }
+
+    val nodeSpectrum = remember {
+        listOf(
+            ObsidianSpectrum.BrightBlue,
+            ObsidianSpectrum.Lavender,
+            ObsidianSpectrum.Aqua,
+            ObsidianSpectrum.Pink,
+            ObsidianSpectrum.BrightBlue,
+            ObsidianSpectrum.Lavender,
+            ObsidianSpectrum.Aqua,
+        )
     }
 
     Canvas(modifier = modifier) {
@@ -675,57 +715,74 @@ private fun GlassActivityWave(
         val amp = h * (0.20f + 0.14f * energy.coerceIn(0f, 1f))
         val steps = 28
 
-        wavePath.reset()
+        primaryPath.reset()
+        secondaryPath.reset()
         fillPath.reset()
 
         for (i in 0..steps) {
             val t = i.toFloat() / steps
             val x = t * w
-            val y = midY - sin(t * PI.toFloat() * 2.4f + phase) * amp *
-                (0.55f + 0.45f * sin(t * PI.toFloat()))
+            val envelope = 0.55f + 0.45f * sin(t * PI.toFloat())
+            val y1 = midY - sin(t * PI.toFloat() * 2.4f + phase) * amp * envelope
+            val y2 = midY - sin(t * PI.toFloat() * 2.0f - phase * 0.8f + 0.9f) * (amp * 0.68f) * envelope
             if (i == 0) {
-                wavePath.moveTo(x, y)
+                primaryPath.moveTo(x, y1)
+                secondaryPath.moveTo(x, y2)
                 fillPath.moveTo(x, h)
-                fillPath.lineTo(x, y)
+                fillPath.lineTo(x, y1)
             } else {
-                wavePath.lineTo(x, y)
-                fillPath.lineTo(x, y)
+                primaryPath.lineTo(x, y1)
+                secondaryPath.lineTo(x, y2)
+                fillPath.lineTo(x, y1)
             }
         }
         fillPath.lineTo(w, h)
         fillPath.close()
 
-        // Subtle frosted monochrome glow under the wave (strictly 2 stops)
+        // 2-stop spectral glow under primary curve
         drawPath(
             path = fillPath,
             brush = Brush.verticalGradient(
                 colors = listOf(
-                    Color.White.copy(alpha = 0.18f),
+                    ObsidianSpectrum.ElectricBlue.copy(alpha = 0.28f),
                     Color.Transparent,
                 ),
             ),
         )
 
-        // Crisp luminous white wave curve
+        // Secondary harmonic Lavender curve
         drawPath(
-            path = wavePath,
-            color = colors.textPrimary.copy(alpha = 0.88f),
-            style = Stroke(width = 1.8.dp.toPx(), cap = StrokeCap.Round),
+            path = secondaryPath,
+            color = ObsidianSpectrum.Lavender.copy(alpha = 0.52f),
+            style = Stroke(width = 1.4.dp.toPx(), cap = StrokeCap.Round),
         )
 
-        // 7 subtle daily pulse nodes along the wave
+        // Primary Bright Blue -> Lavender spectral curve
+        drawPath(
+            path = primaryPath,
+            brush = Brush.horizontalGradient(
+                colors = listOf(
+                    ObsidianSpectrum.BrightBlue,
+                    ObsidianSpectrum.Pink,
+                ),
+            ),
+            style = Stroke(width = 2.0.dp.toPx(), cap = StrokeCap.Round),
+        )
+
+        // 7 daily spectral nodes along the wave
         for (d in 0..6) {
             val t = (d + 0.5f) / 7f
             val x = t * w
             val y = midY - sin(t * PI.toFloat() * 2.4f + phase) * amp *
                 (0.55f + 0.45f * sin(t * PI.toFloat()))
+            val nodeColor = nodeSpectrum[d]
             drawCircle(
-                color = Color.White.copy(alpha = 0.25f),
-                radius = 4.5.dp.toPx(),
+                color = nodeColor.copy(alpha = 0.32f),
+                radius = 5.dp.toPx(),
                 center = Offset(x, y),
             )
             drawCircle(
-                color = colors.textPrimary,
+                color = ObsidianSpectrum.SoftWhite,
                 radius = 2.2.dp.toPx(),
                 center = Offset(x, y),
             )
@@ -740,12 +797,14 @@ private fun PillarSculptureCard(
     title: String,
     subtitle: String,
     sculptureType: ModuleSculptureType,
+    spectralAccent: Color,
     onClick: () -> Unit,
 ) {
     val colors = MrsadTheme.colors
     val type = MrsadTheme.type
     MrsadSurface(
         modifier = modifier,
+        accent = spectralAccent,
         onClick = onClick,
     ) {
         Row(
@@ -753,14 +812,13 @@ private fun PillarSculptureCard(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                indexCode,
-                style = type.caption.copy(fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp),
-                color = colors.textMuted,
+            MrsadChip(
+                text = indexCode,
+                tint = spectralAccent,
             )
             ModuleSculpture3D(
                 type = sculptureType,
-                modifier = Modifier.size(64.dp),
+                modifier = Modifier.size(58.dp),
             )
         }
         Text(
@@ -774,6 +832,7 @@ private fun PillarSculptureCard(
             style = type.caption,
             color = colors.textSecondary,
             maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
         )
     }
 }
@@ -783,19 +842,19 @@ private fun StatCell(
     value: String,
     label: String,
     icon: List<IconFacet>,
+    accent: Color,
     modifier: Modifier = Modifier,
 ) {
     val colors = MrsadTheme.colors
     val type = MrsadTheme.type
     Column(
         modifier = modifier
-            .clip(RoundedCornerShape(if (colors.isNoir) 2.dp else MrsadTokens.Radius.md))
-            .padding(vertical = MrsadTokens.Spacing.sm, horizontal = 2.dp)
+            .padding(vertical = 4.dp, horizontal = 2.dp)
             .fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(3.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
-        MetalIcon(icon, modifier = Modifier.size(18.dp))
+        MetalIcon(icon, accentOverride = accent, modifier = Modifier.size(18.dp))
         Text(
             value,
             style = type.metric.copy(fontSize = type.headline.fontSize, lineHeight = type.headline.lineHeight),
@@ -806,25 +865,313 @@ private fun StatCell(
 }
 
 @Composable
-private fun ModuleCard(entry: ModuleEntry, onClick: () -> Unit) {
+private fun ModuleBarPill(entry: ModuleEntry, onClick: () -> Unit) {
     val colors = MrsadTheme.colors
     val type = MrsadTheme.type
-    MrsadSurface(
+    val shape = RoundedCornerShape(MrsadTokens.Radius.md)
+    Row(
         modifier = Modifier
             .testTag(MrsadTestTags.homeModule(entry.route))
-            .width(148.dp),
-        shape = if (colors.isNoir) RoundedCornerShape(2.dp) else chamferedShape(),
-        onClick = onClick,
+            .clip(shape)
+            .background(
+                Brush.verticalGradient(
+                    listOf(colors.surfaceHigh, colors.surface),
+                ),
+            )
+            .border(
+                width = 1.dp,
+                color = entry.spectralAccent.copy(alpha = 0.45f),
+                shape = shape,
+            )
+            .clickable(onClick = onClick)
+            .padding(horizontal = MrsadTokens.Spacing.sm, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(MrsadTokens.Spacing.xs),
     ) {
-        MetalIcon(entry.icon, modifier = Modifier.size(24.dp))
-        Spacer(Modifier.height(MrsadTokens.Spacing.xs))
-        Text(
-            entry.code,
-            style = type.caption.copy(fontWeight = FontWeight.Bold, letterSpacing = 2.sp),
-            color = colors.textMuted,
+        MetalIcon(
+            facets = entry.icon,
+            accentOverride = entry.spectralAccent,
+            modifier = Modifier.size(22.dp),
         )
-        Text(entry.title, style = type.title, color = colors.textPrimary)
-        Text(entry.subtitle, style = type.caption, color = colors.textSecondary, maxLines = 1)
+        Column {
+            Text(
+                text = entry.title,
+                style = type.label.copy(fontWeight = FontWeight.SemiBold),
+                color = colors.textPrimary,
+                maxLines = 1,
+            )
+            Text(
+                text = entry.subtitle,
+                style = type.caption,
+                color = colors.textSecondary,
+                maxLines = 1,
+            )
+        }
+    }
+}
+
+@Composable
+private fun DashboardPlanSection(
+    state: HomeState,
+    persianNumerals: Boolean,
+    onNavigate: (String) -> Unit,
+) {
+    val colors = MrsadTheme.colors
+    val type = MrsadTheme.type
+
+    Column(verticalArrangement = Arrangement.spacedBy(MrsadTokens.Spacing.sm)) {
+        MrsadSurface(
+            modifier = Modifier.fillMaxWidth(),
+            accent = ObsidianSpectrum.BrightBlue,
+        ) {
+            SectionHeader(
+                title = "برنامهٔ هوشمند امروز و مأموریت‌ها",
+                actionLabel = "مربی هوشمند",
+                onAction = { onNavigate(Routes.AI) },
+            )
+            if (state.plan.isEmpty()) {
+                Text(
+                    "پس از اولین تمرین، برنامهٔ روزانه بر پایهٔ داده‌های واقعی شما در ۴ ستون مهارت ساخته می‌شود.",
+                    style = type.body,
+                    color = colors.textSecondary,
+                )
+            } else {
+                Text("چیدمان هوشمند بر اساس داده‌های واقعی تمرین شما", style = type.caption, color = colors.textMuted)
+                state.plan.forEach { item ->
+                    PlanRow(
+                        title = item.titleFa,
+                        reason = item.reasonFa,
+                        minutesLabel = "${formatInt(item.minutes, persianNumerals)} دقیقه",
+                        icon = iconFor(item.module),
+                        accent = accentFor(item.module),
+                        onClick = {
+                            when (item.module) {
+                                Module.TYPE -> onNavigate(Routes.TYPE)
+                                Module.READ -> onNavigate(Routes.READ)
+                                Module.EYE -> onNavigate(Routes.EYE)
+                                Module.MIND -> onNavigate(Routes.MIND)
+                                Module.FOCUS -> onNavigate(Routes.FOCUS)
+                            }
+                        },
+                    )
+                }
+            }
+
+            state.progression?.weeklyChallenges?.takeIf { it.isNotEmpty() }?.let { challenges ->
+                MrsadDivider()
+                Text("چالش‌های هفتگی", style = type.label, color = colors.textPrimary)
+                challenges.forEach { ch ->
+                    Column(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
+                        verticalArrangement = Arrangement.spacedBy(3.dp),
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                        ) {
+                            Text(ch.titleFa, style = type.caption, color = colors.textSecondary)
+                            Text(
+                                "${formatInt(ch.current, persianNumerals)} / ${formatInt(ch.target, persianNumerals)} (+${formatInt(ch.rewardXp, persianNumerals)} XP)",
+                                style = type.caption,
+                                color = if (ch.completed) ObsidianSpectrum.Aqua else colors.textMuted,
+                            )
+                        }
+                        MrsadProgressBar(
+                            progress = ch.progressFraction,
+                            height = 5.dp,
+                            tint = if (ch.completed) ObsidianSpectrum.Aqua else ObsidianSpectrum.Lavender,
+                        )
+                    }
+                }
+            }
+        }
+
+        if (!state.hasAnyData) {
+            MrsadSurface(
+                modifier = Modifier.fillMaxWidth(),
+                accent = ObsidianSpectrum.Aqua,
+            ) {
+                Text("شروع سریع", style = type.title, color = colors.textPrimary)
+                Text(
+                    "برای فعال‌سازی نمودارها و آمار واقعی، یک تمرین تایپ ۶۰ ثانیه‌ای انجام دهید.",
+                    style = type.body,
+                    color = colors.textSecondary,
+                )
+                Spacer(Modifier.height(MrsadTokens.Spacing.xxs))
+                MrsadPrimaryButton(
+                    text = "شروع تمرین تایپ",
+                    icon = Icons.Outlined.Keyboard,
+                    onClick = { onNavigate(Routes.TYPE) },
+                    accentColor = ObsidianSpectrum.BrightBlue,
+                    modifier = Modifier
+                        .testTag(MrsadTestTags.HOME_PRIMARY_CTA)
+                        .fillMaxWidth(),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun DashboardTrendsSection(
+    state: HomeState,
+    persianNumerals: Boolean,
+    onNavigate: (String) -> Unit,
+) {
+    val colors = MrsadTheme.colors
+    val type = MrsadTheme.type
+
+    MrsadSurface(
+        modifier = Modifier.fillMaxWidth(),
+        accent = ObsidianSpectrum.Aqua,
+    ) {
+        SectionHeader(
+            title = "نمودار پیشرفت هفتگی و تقویم استمرار",
+            actionLabel = "جزئیات کامل",
+            onAction = { onNavigate(Routes.ANALYTICS) },
+        )
+        SparkLine(
+            values = state.weeklyMinutesSeries,
+            tint = ObsidianSpectrum.Aqua,
+            label = "دقایق تمرین در ۷ روز اخیر",
+        )
+        state.progression?.calendarDays?.takeIf { it.isNotEmpty() }?.let { calendar ->
+            MrsadDivider()
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text("تقویم استمرار ۲۸ روزه", style = type.caption, color = colors.textSecondary)
+                Text(
+                    "${formatInt(calendar.count { it.active }, persianNumerals)} روز فعال",
+                    style = type.caption,
+                    color = ObsidianSpectrum.Aqua,
+                )
+            }
+            StreakCalendarMatrix(days = calendar)
+        }
+    }
+}
+
+@Composable
+private fun DashboardRecordsSection(
+    state: HomeState,
+    persianNumerals: Boolean,
+    onNavigate: (String) -> Unit,
+) {
+    val colors = MrsadTheme.colors
+    val type = MrsadTheme.type
+
+    Column(verticalArrangement = Arrangement.spacedBy(MrsadTokens.Spacing.sm)) {
+        MrsadSurface(
+            modifier = Modifier.fillMaxWidth(),
+            accent = ObsidianSpectrum.Pink,
+        ) {
+            SectionHeader(title = "رکوردهای شخصی")
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = MrsadTokens.Spacing.xxs),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+            ) {
+                RecordCell(
+                    value = state.bestWpm?.let { formatNumber(it.toString(), persianNumerals) },
+                    label = "بهترین سرعت (WPM)",
+                    accent = ObsidianSpectrum.BrightBlue,
+                )
+                RecordCell(
+                    value = state.bestAccuracy?.let { formatPercent(it, persianNumerals, decimals = 1) },
+                    label = "بهترین دقت",
+                    accent = ObsidianSpectrum.Aqua,
+                )
+                RecordCell(
+                    value = formatInt(state.totalSessions, persianNumerals),
+                    label = "کل جلسات تایپ",
+                    accent = ObsidianSpectrum.Pink,
+                )
+            }
+        }
+
+        state.progression?.let { prog ->
+            MrsadSurface(
+                modifier = Modifier.fillMaxWidth(),
+                accent = ObsidianSpectrum.Lavender,
+                onClick = { onNavigate(Routes.ARENA) },
+            ) {
+                SectionHeader(
+                    title = "دستاوردها و نشان‌های مهارتی",
+                    actionLabel = "${formatInt(prog.unlockedCount, persianNumerals)} از ${formatInt(prog.achievements.size, persianNumerals)}",
+                    onAction = { onNavigate(Routes.ARENA) },
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(MrsadTokens.Spacing.xs),
+                ) {
+                    prog.achievements.take(4).forEach { badge ->
+                        val badgeShape = RoundedCornerShape(MrsadTokens.Radius.sm)
+                        Column(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(badgeShape)
+                                .background(
+                                    if (badge.unlocked) {
+                                        ObsidianSpectrum.DeepViolet.copy(alpha = 0.28f)
+                                    } else {
+                                        colors.surfaceHigh.copy(alpha = 0.45f)
+                                    },
+                                )
+                                .border(
+                                    1.dp,
+                                    if (badge.unlocked) ObsidianSpectrum.Lavender else colors.border,
+                                    badgeShape,
+                                )
+                                .padding(vertical = 8.dp, horizontal = 4.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
+                            MetalIcon(
+                                facets = if (badge.unlocked) MrsadIcons.Trophy else MrsadIcons.Target,
+                                accentOverride = if (badge.unlocked) ObsidianSpectrum.Lavender else colors.textMuted,
+                                modifier = Modifier.size(18.dp),
+                            )
+                            Text(
+                                badge.titleFa,
+                                style = type.caption,
+                                color = if (badge.unlocked) colors.textPrimary else colors.textMuted,
+                                textAlign = TextAlign.Center,
+                                maxLines = 1,
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        MrsadSurface(
+            modifier = Modifier.fillMaxWidth(),
+            accent = ObsidianSpectrum.Lavender,
+            onClick = { onNavigate(Routes.STUDIO) },
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                MetalIcon(
+                    MrsadIcons.Studio,
+                    accentOverride = ObsidianSpectrum.Lavender,
+                    modifier = Modifier.size(20.dp),
+                )
+                Spacer(Modifier.width(MrsadTokens.Spacing.xs))
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        "OBSIDIAN SPECTRUM STUDIO",
+                        style = type.label.copy(fontWeight = FontWeight.SemiBold, letterSpacing = 1.sp),
+                        color = colors.textPrimary,
+                    )
+                    Text(
+                        "مدیریت هویت بصری، مقیاس تایپوگرافی و کیفیت رندر",
+                        style = type.caption,
+                        color = colors.textSecondary,
+                    )
+                }
+                Text("استودیو ←", style = type.caption, color = ObsidianSpectrum.Lavender)
+            }
+        }
     }
 }
 
@@ -834,6 +1181,7 @@ private fun PlanRow(
     reason: String,
     minutesLabel: String,
     icon: List<IconFacet>,
+    accent: Color,
     onClick: () -> Unit,
 ) {
     val colors = MrsadTheme.colors
@@ -841,42 +1189,35 @@ private fun PlanRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(if (colors.isNoir) 2.dp else MrsadTokens.Radius.sm))
+            .clip(RoundedCornerShape(MrsadTokens.Radius.sm))
+            .background(colors.backgroundElevated.copy(alpha = 0.65f))
+            .border(1.dp, accent.copy(alpha = 0.28f), RoundedCornerShape(MrsadTokens.Radius.sm))
             .clickable(onClick = onClick)
-            .padding(vertical = 6.dp),
+            .padding(horizontal = MrsadTokens.Spacing.sm, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        MetalIcon(icon, modifier = Modifier.size(18.dp))
+        MetalIcon(icon, accentOverride = accent, modifier = Modifier.size(18.dp))
         Spacer(Modifier.width(MrsadTokens.Spacing.xs))
         Column(Modifier.weight(1f)) {
-            Text(title, style = type.body, color = colors.textPrimary)
+            Text(title, style = type.body.copy(fontWeight = FontWeight.Medium), color = colors.textPrimary)
             Text(reason, style = type.caption, color = colors.textMuted)
         }
-        Text(
-            minutesLabel,
-            style = type.caption,
-            color = colors.textSecondary,
-            modifier = Modifier.padding(horizontal = 4.dp),
-        )
-        Spacer(Modifier.width(MrsadTokens.Spacing.xxs))
-        Text(
-            "شروع",
-            style = type.caption,
-            color = colors.accent,
-            modifier = Modifier.padding(4.dp),
+        MrsadChip(
+            text = minutesLabel,
+            tint = accent,
         )
     }
 }
 
 @Composable
-private fun RecordCell(value: String?, label: String) {
+private fun RecordCell(value: String?, label: String, accent: Color) {
     val colors = MrsadTheme.colors
     val type = MrsadTheme.type
     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(104.dp)) {
         if (value == null) {
             Text("—", style = type.metric.copy(fontSize = type.headline.fontSize), color = colors.textMuted)
         } else {
-            MetricValue(value = value, size = type.headline.fontSize)
+            MetricValue(value = value, size = type.headline.fontSize, accent = accent)
         }
         Text(
             label,

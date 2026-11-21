@@ -1,9 +1,14 @@
 package dev.mrsad.app.ui.components
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -15,6 +20,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -24,14 +30,16 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -41,28 +49,25 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Outline
-import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import dev.mrsad.app.testing.MrsadTestHooks
 import dev.mrsad.app.ui.theme.MrsadTheme
+import dev.mrsad.app.ui.theme.ObsidianSpectrum
 
 /**
- * MRSAD design tokens (spec §6): spacing, radii, elevation and material specs.
- * Feature code must use these — no ad-hoc dp literals for structure.
+ * OBSIDIAN SPECTRUM — Design Tokens & Core Component System (Master Prompt §6 & §13).
  */
 object MrsadTokens {
     object Spacing {
@@ -76,34 +81,18 @@ object MrsadTokens {
     }
 
     object Radius {
-        val sm = 10.dp
+        val sm = 12.dp
         val md = 16.dp
         val lg = 22.dp
         val xl = 28.dp
         val pill = 100.dp
     }
 
-    /**
-     * The minimum size of a touch target.
-     *
-     * Compose gives a control a touch target exactly as big as the control
-     * itself, so a 22dp icon is a 22dp target — far below the 48dp the
-     * Material accessibility guidance asks for. Every interactive element in
-     * the app reserves at least this much in both directions.
-     */
     val TouchTarget = 48.dp
-
-    // Durations, easings and springs do not live here: they are the
-    // Material 3 motion tokens in `ui/theme/Motion.kt`, and every animation
-    // in the app resolves them through `MrsadTheme.motion`.
 }
 
 private val DefaultGlassShape: Shape = RoundedCornerShape(MrsadTokens.Radius.lg)
 
-/**
- * Smooth frosted-glass card shape (22.dp rounded corners).
- * Replaces the legacy polygon chamfer with a clean, minimal glass silhouette.
- */
 fun chamferedShape(
     cut: Dp = 12.dp,
     radius: Dp = MrsadTokens.Radius.lg,
@@ -114,28 +103,16 @@ fun chamferedShape(
 }
 
 /**
- * The core surface material: smoked glass over obsidian.
+ * OBSIDIAN SPECTRUM — Dimensional Glass & Metallic Card Surface (Master Prompt §6).
  *
- * A card is not a rectangle with a border, it is a lit object. The
- * material is built in five layers, from the back to the front:
- *
- *  1. a soft shadow that lifts the card off the page,
- *  2. a vertical gradient, so the card is brighter where the light falls
- *     on it and darker where it does not,
- *  3. a sheen along the top edge,
- *  4. a shade along the bottom edge, where the card rests on something,
- *  5. a hairline that fades out towards the bottom instead of ringing the
- *     card like a fence.
- *
- * The press is a *spatial* movement — the card physically moves — so it
- * uses a spatial spring, and the change of the surface brightness is an
- * *effect*, so it uses an effects spring. The two families are never
- * mixed.
+ * Unified across the entire application so every card shares the same
+ * `#211B2C` / `#181522` -> `#100E18` surface architecture with module-specific
+ * spectral illumination (`accent`).
  */
 @Composable
 fun MrsadSurface(
     modifier: Modifier = Modifier,
-    shape: Shape = if (MrsadTheme.colors.isNoir) RoundedCornerShape(2.dp) else chamferedShape(),
+    shape: Shape = DefaultGlassShape,
     elevated: Boolean = false,
     accent: Color? = null,
     onClick: (() -> Unit)? = null,
@@ -143,12 +120,10 @@ fun MrsadSurface(
 ) {
     val colors = MrsadTheme.colors
     val motion = MrsadTheme.motion
-    val isNoir = colors.isNoir
-    val surfaceColor = if (elevated) colors.surfaceHigh else colors.surface
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
     val scale by animateFloatAsState(
-        targetValue = if (pressed) (if (isNoir) 0.994f else 0.985f) else 1f,
+        targetValue = if (pressed) 0.985f else 1f,
         animationSpec = motion.spatialFast(),
         label = "surfacePress",
     )
@@ -158,78 +133,47 @@ fun MrsadSurface(
         label = "surfaceHighlight",
     )
 
-    val effectiveShape = if (isNoir) RoundedCornerShape(12.dp) else shape
-
-    if (isNoir) {
-        Column(
-            modifier = modifier
-                .graphicsLayer { scaleX = scale; scaleY = scale }
-                .clip(effectiveShape)
-                .background(surfaceColor)
-                .border(
-                    width = 1.dp,
-                    color = accent ?: if (elevated) colors.borderStrong else colors.border,
-                    shape = effectiveShape,
-                )
-                .then(
-                    if (onClick != null) {
-                        Modifier.clickable(
-                            interactionSource = interaction,
-                            indication = ripple(color = colors.textPrimary),
-                            role = Role.Button,
-                            onClick = onClick,
-                        )
-                    } else {
-                        Modifier
-                    },
-                )
-                .padding(MrsadTokens.Spacing.md),
-            verticalArrangement = Arrangement.spacedBy(MrsadTokens.Spacing.xs),
-            content = content,
-        )
-        return
-    }
+    val topSurface = if (elevated) colors.surfaceHigh else colors.surface
+    val bottomSurface = colors.backgroundElevated
+    val spectralGlow = accent ?: colors.accent
 
     Column(
         modifier = modifier
             .graphicsLayer { scaleX = scale; scaleY = scale }
-            .clip(effectiveShape)
+            .clip(shape)
             .background(
                 Brush.verticalGradient(
-                    listOf(
-                        if (elevated) Color(0xFF1A1A20) else Color(0xFF131317),
-                        Color(0xFF09090C),
-                    ),
+                    colors = listOf(topSurface, bottomSurface),
                 ),
             )
             .drawBehind {
-                // Frosted glass top inner reflection
+                // Controlled spectral + glass reflection along the top edge
                 drawRect(
                     brush = Brush.verticalGradient(
-                        listOf(
-                            Color.White.copy(alpha = 0.11f + 0.08f * highlight),
+                        colors = listOf(
+                            spectralGlow.copy(alpha = (if (accent != null) 0.16f else 0.09f) + 0.08f * highlight),
                             Color.Transparent,
                         ),
                         startY = 0f,
-                        endY = 76f,
+                        endY = 92f,
                     ),
                 )
             }
             .border(
                 width = 1.dp,
                 brush = Brush.verticalGradient(
-                    listOf(
-                        (accent ?: Color.White).copy(alpha = if (elevated) 0.36f else 0.26f),
-                        Color.White.copy(alpha = 0.06f),
+                    colors = listOf(
+                        (accent ?: colors.borderStrong).copy(alpha = if (elevated || accent != null) 0.62f else 0.42f),
+                        colors.border.copy(alpha = 0.55f),
                     ),
                 ),
-                shape = effectiveShape,
+                shape = shape,
             )
             .then(
                 if (onClick != null) {
                     Modifier.clickable(
                         interactionSource = interaction,
-                        indication = ripple(color = colors.metalLight),
+                        indication = ripple(color = spectralGlow),
                         role = Role.Button,
                         onClick = onClick,
                     )
@@ -244,16 +188,258 @@ fun MrsadSurface(
 }
 
 /**
- * The entrance of a screen.
+ * OBSIDIAN SPECTRUM — Auto-Collapsing Top Bar (`نوار بالای جمع‌شوندهٔ خودکار`).
  *
- * Content that simply appears reads as a glitch; it arrives instead. One
- * animation drives the whole screen and the pieces of it arrive one after
- * the other, so the screen assembles itself instead of blinking into
- * existence.
- *
- * The progress belongs to the *screen*, not to the pieces: scrolling a
- * piece out of the viewport and back does not replay its entrance.
+ * Automatically collapses its subtitle and expanded footer row when the user
+ * scrolls down (`collapsed == true`), and smoothly expands back when the user
+ * scrolls up (`collapsed == false`).
  */
+@Composable
+fun ObsidianCollapsingTopBar(
+    title: String,
+    modifier: Modifier = Modifier,
+    subtitle: String? = null,
+    collapsed: Boolean = false,
+    spectralColor: Color = MrsadTheme.colors.accent,
+    onBack: (() -> Unit)? = null,
+    leading: (@Composable () -> Unit)? = null,
+    trailing: (@Composable RowScope.() -> Unit)? = null,
+    expandedFooter: (@Composable () -> Unit)? = null,
+) {
+    val colors = MrsadTheme.colors
+    val type = MrsadTheme.type
+    val motion = MrsadTheme.motion
+
+    val collapseFraction by animateFloatAsState(
+        targetValue = if (collapsed) 1f else 0f,
+        animationSpec = motion.spatialDefault(),
+        label = "topBarCollapse",
+    )
+
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        colors.background.copy(alpha = 0.96f),
+                        colors.backgroundElevated.copy(alpha = 0.88f * collapseFraction),
+                    ),
+                ),
+            )
+            .padding(
+                horizontal = MrsadTokens.Spacing.md,
+                vertical = if (collapsed) 6.dp else 10.dp,
+            ),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            if (onBack != null) {
+                Box(
+                    Modifier
+                        .size(MrsadTokens.TouchTarget)
+                        .clip(RoundedCornerShape(MrsadTokens.Radius.sm))
+                        .background(colors.surface)
+                        .border(1.dp, colors.border, RoundedCornerShape(MrsadTokens.Radius.sm))
+                        .clickable(role = Role.Button, onClick = onBack),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        Icons.AutoMirrored.Outlined.ArrowBack,
+                        contentDescription = "بازگشت",
+                        tint = colors.textPrimary,
+                    )
+                }
+                Spacer(Modifier.width(MrsadTokens.Spacing.xs))
+            }
+
+            if (leading != null) {
+                leading()
+                Spacer(Modifier.width(MrsadTokens.Spacing.xs))
+            }
+
+            Column(Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = if (collapsed) {
+                        type.title.copy(fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                    } else {
+                        type.headline.copy(fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
+                    },
+                    color = colors.textPrimary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                AnimatedVisibility(
+                    visible = !collapsed && subtitle != null,
+                    enter = fadeIn(animationSpec = motion.effectsDefault()) +
+                        expandVertically(animationSpec = motion.spatialDefault()),
+                    exit = fadeOut(animationSpec = motion.effectsFast()) +
+                        shrinkVertically(animationSpec = motion.spatialFast()),
+                ) {
+                    if (subtitle != null) {
+                        Text(
+                            text = subtitle,
+                            style = type.caption,
+                            color = colors.textSecondary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                }
+            }
+
+            if (trailing != null) {
+                Spacer(Modifier.width(MrsadTokens.Spacing.xs))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(MrsadTokens.Spacing.xxs),
+                    content = trailing,
+                )
+            }
+        }
+
+        AnimatedVisibility(
+            visible = !collapsed && expandedFooter != null,
+            enter = fadeIn(animationSpec = motion.effectsDefault()) +
+                expandVertically(animationSpec = motion.spatialDefault()),
+            exit = fadeOut(animationSpec = motion.effectsFast()) +
+                shrinkVertically(animationSpec = motion.spatialFast()),
+        ) {
+            Column {
+                Spacer(Modifier.height(MrsadTokens.Spacing.xs))
+                expandedFooter?.invoke()
+            }
+        }
+
+        // Subtle bottom spectral divider line when collapsed or pinned
+        Box(
+            Modifier
+                .padding(top = if (collapsed) 6.dp else 8.dp)
+                .fillMaxWidth()
+                .height(1.dp)
+                .background(
+                    Brush.horizontalGradient(
+                        colors = listOf(
+                            spectralColor.copy(alpha = 0.42f),
+                            colors.border.copy(alpha = 0.35f),
+                        ),
+                    ),
+                ),
+        )
+    }
+}
+
+/**
+ * OBSIDIAN SPECTRUM — Unified Segmented Section Bar (`نوار بخش‌های جداگانه`).
+ *
+ * Groups separate functional sections or options inside a single dimensional
+ * Obsidian bar with an animated active spectral pill.
+ */
+data class SegmentedBarItem(
+    val id: String,
+    val label: String,
+    val accent: Color? = null,
+    val icon: List<IconFacet>? = null,
+)
+
+@Composable
+fun ObsidianSegmentedBar(
+    items: List<SegmentedBarItem>,
+    selectedId: String,
+    onSelect: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val colors = MrsadTheme.colors
+    val type = MrsadTheme.type
+    val motion = MrsadTheme.motion
+    val barShape = RoundedCornerShape(MrsadTokens.Radius.md)
+    val itemShape = RoundedCornerShape(MrsadTokens.Radius.sm)
+
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(barShape)
+            .background(colors.backgroundElevated)
+            .border(1.dp, colors.border, barShape)
+            .padding(4.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        items.forEach { item ->
+            val selected = item.id == selectedId
+            val itemAccent = item.accent ?: colors.accent
+            val bgAlpha by animateFloatAsState(
+                targetValue = if (selected) 1f else 0f,
+                animationSpec = motion.spatialDefault(),
+                label = "segBg_${item.id}",
+            )
+            val textColor by animateColorAsState(
+                targetValue = if (selected) colors.textPrimary else colors.textSecondary,
+                animationSpec = motion.effectsDefault(),
+                label = "segText_${item.id}",
+            )
+
+            Row(
+                modifier = Modifier
+                    .weight(1f)
+                    .heightIn(min = 42.dp)
+                    .clip(itemShape)
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                colors.surfaceHigh.copy(alpha = bgAlpha),
+                                colors.surface.copy(alpha = bgAlpha),
+                            ),
+                        ),
+                    )
+                    .then(
+                        if (selected) {
+                            Modifier.border(
+                                width = 1.dp,
+                                brush = Brush.horizontalGradient(
+                                    colors = listOf(
+                                        itemAccent.copy(alpha = 0.72f),
+                                        colors.borderStrong.copy(alpha = 0.45f),
+                                    ),
+                                ),
+                                shape = itemShape,
+                            )
+                        } else {
+                            Modifier
+                        },
+                    )
+                    .clickable(role = Role.Tab) { onSelect(item.id) }
+                    .padding(horizontal = 8.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                if (item.icon != null) {
+                    MetalIcon(
+                        facets = item.icon,
+                        accentOverride = itemAccent,
+                        modifier = Modifier.size(16.dp),
+                    )
+                    Spacer(Modifier.width(6.dp))
+                }
+                Text(
+                    text = item.label,
+                    style = type.label.copy(
+                        fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+                    ),
+                    color = textColor,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    textAlign = TextAlign.Center,
+                )
+            }
+        }
+    }
+}
+
 @Composable
 fun rememberRevealProgress(): Animatable<Float, AnimationVector1D> {
     val motion = MrsadTheme.motion
@@ -268,16 +454,6 @@ fun rememberRevealProgress(): Animatable<Float, AnimationVector1D> {
     return progress
 }
 
-/**
- * A piece of content that arrives with the screen.
- *
- * The movement is spatial, so it uses a spatial spring; the fade is an
- * effect. Under reduced motion — and inside instrumentation — the content
- * is simply there.
- *
- * @param progress the entrance of the screen, from [rememberRevealProgress]
- * @param index the place of the piece in the order of the arrival
- */
 @Composable
 fun MrsadReveal(
     progress: Animatable<Float, AnimationVector1D>,
@@ -297,13 +473,10 @@ fun MrsadReveal(
     }
 }
 
-/** How much later each piece of a screen arrives than the one before it. */
 private const val REVEAL_STAGGER = 0.16f
-
-/** How far a piece of content travels while it arrives. */
 private val REVEAL_TRAVEL = 16.dp
 
-/** Large numeric readout (tabular figures, metal gradient text). */
+/** Large numeric readout (tabular figures, futuristic display typography). */
 @Composable
 fun MetricValue(
     value: String,
@@ -349,7 +522,6 @@ fun SectionHeader(
     ) {
         Text(title, style = type.title, color = colors.textPrimary)
         if (actionLabel != null && onAction != null) {
-            // The label stays small, but the tap target is a full 48dp.
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(MrsadTokens.Radius.pill))
@@ -364,7 +536,7 @@ fun SectionHeader(
     }
 }
 
-/** Primary action: metallic fill in OBSIDIAN, pure white architectural slab in NOIR. */
+/** Primary action button with Obsidian Spectrum luminous fill. */
 @Composable
 fun MrsadPrimaryButton(
     text: String,
@@ -373,11 +545,11 @@ fun MrsadPrimaryButton(
     enabled: Boolean = true,
     icon: ImageVector? = null,
     iconContentDescription: String? = null,
+    accentColor: Color? = null,
 ) {
     val colors = MrsadTheme.colors
     val type = MrsadTheme.type
     val motion = MrsadTheme.motion
-    val isNoir = colors.isNoir
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
     val scale by animateFloatAsState(
@@ -391,39 +563,37 @@ fun MrsadPrimaryButton(
         label = "btnSheen",
     )
     val spokenLabel = if (text.isBlank()) iconContentDescription else null
-    val shape = if (isNoir) RoundedCornerShape(2.dp) else RoundedCornerShape(MrsadTokens.Radius.pill)
+    val shape = RoundedCornerShape(MrsadTokens.Radius.pill)
+    val primaryFill = accentColor ?: colors.accent
 
     Row(
         modifier = modifier
             .graphicsLayer { scaleX = scale; scaleY = scale }
-            .then(
-                if (isNoir) Modifier else Modifier.shadow(elevation = 8.dp, shape = shape, clip = false),
-            )
+            .shadow(elevation = 8.dp, shape = shape, clip = false)
             .clip(shape)
             .background(
                 if (enabled) {
-                    if (isNoir) {
-                        Brush.verticalGradient(listOf(colors.textPrimary, colors.textPrimary))
-                    } else {
-                        Brush.verticalGradient(colors.metalGradient)
-                    }
+                    Brush.horizontalGradient(
+                        listOf(
+                            colors.textPrimary,
+                            primaryFill,
+                        ),
+                    )
                 } else {
-                    Brush.verticalGradient(listOf(colors.disabled, colors.disabled))
+                    Brush.horizontalGradient(listOf(colors.disabled, colors.disabled))
                 },
             )
             .drawBehind {
-                if (!isNoir) {
-                    drawRect(
-                        brush = Brush.verticalGradient(
-                            listOf(
-                                Color.White.copy(alpha = 0.22f + 0.18f * sheen),
-                                Color.Transparent,
-                            ),
-                            startY = 0f,
-                            endY = 22f,
+                drawRect(
+                    brush = Brush.verticalGradient(
+                        listOf(
+                            Color.White.copy(alpha = 0.24f + 0.16f * sheen),
+                            Color.Transparent,
                         ),
-                    )
-                }
+                        startY = 0f,
+                        endY = 24f,
+                    ),
+                )
             }
             .heightIn(min = MrsadTokens.TouchTarget)
             .clickable(
@@ -456,7 +626,7 @@ fun MrsadPrimaryButton(
     }
 }
 
-/** Secondary action: outlined silver hairline in OBSIDIAN, sharp 1dp editorial box in NOIR. */
+/** Secondary action button with Obsidian glass fill and precision border. */
 @Composable
 fun MrsadSecondaryButton(
     text: String,
@@ -468,11 +638,12 @@ fun MrsadSecondaryButton(
 ) {
     val colors = MrsadTheme.colors
     val type = MrsadTheme.type
-    val shape = if (colors.isNoir) RoundedCornerShape(2.dp) else RoundedCornerShape(MrsadTokens.Radius.pill)
+    val shape = RoundedCornerShape(MrsadTokens.Radius.pill)
     val spokenLabel = if (text.isBlank()) iconContentDescription else null
     Row(
         modifier = modifier
             .clip(shape)
+            .background(colors.surfaceHigh.copy(alpha = 0.65f))
             .border(1.dp, if (enabled) colors.borderStrong else colors.disabled, shape)
             .heightIn(min = MrsadTokens.TouchTarget)
             .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
@@ -499,7 +670,7 @@ fun MrsadSecondaryButton(
     }
 }
 
-/** Small status chip (metric, tag, streak). */
+/** Small status chip (metric, tag, streak) with spectral border illumination. */
 @Composable
 fun MrsadChip(
     text: String,
@@ -509,13 +680,13 @@ fun MrsadChip(
     onClick: (() -> Unit)? = null,
 ) {
     val colors = MrsadTheme.colors
-    val color = tint ?: colors.textSecondary
-    val shape = if (colors.isNoir) RoundedCornerShape(2.dp) else RoundedCornerShape(MrsadTokens.Radius.pill)
+    val color = tint ?: colors.accent
+    val shape = RoundedCornerShape(MrsadTokens.Radius.pill)
     Row(
         modifier = modifier
             .clip(shape)
-            .background(if (colors.isNoir) colors.backgroundElevated else color.copy(alpha = 0.10f))
-            .border(1.dp, if (colors.isNoir) colors.borderStrong else color.copy(alpha = 0.28f), shape)
+            .background(color.copy(alpha = 0.14f))
+            .border(1.dp, color.copy(alpha = 0.42f), shape)
             .then(
                 if (onClick != null) {
                     Modifier
@@ -530,11 +701,11 @@ fun MrsadChip(
         horizontalArrangement = Arrangement.spacedBy(MrsadTokens.Spacing.xxs),
     ) {
         if (leadingIcon != null) Icon(leadingIcon, null, tint = color, modifier = Modifier.size(14.dp))
-        Text(text, style = MrsadTheme.type.caption.copy(color = color))
+        Text(text, style = MrsadTheme.type.caption.copy(color = colors.textPrimary, fontWeight = FontWeight.Medium))
     }
 }
 
-/** Progress bar: metallic gradient in OBSIDIAN, segmented Swiss tick-bar in NOIR. */
+/** Progress bar with Obsidian Spectrum horizontal gradient illumination. */
 @Composable
 fun MrsadProgressBar(
     progress: Float,
@@ -550,26 +721,13 @@ fun MrsadProgressBar(
         animationSpec = motion.spatialDefault(),
         label = "progress",
     )
-
-    if (colors.isNoir) {
-        val segments = 12
-        val activeSegments = (animated * segments).toInt().coerceIn(0, segments)
-        Row(
-            modifier = modifier
-                .fillMaxWidth()
-                .height(height),
-            horizontalArrangement = Arrangement.spacedBy(3.dp),
-        ) {
-            for (i in 0 until segments) {
-                Box(
-                    Modifier
-                        .weight(1f)
-                        .height(height)
-                        .background(if (i < activeSegments) (tint ?: colors.textPrimary) else colors.border),
-                )
-            }
-        }
-        return
+    val endColor = tint ?: colors.accent
+    val startColor = when (endColor) {
+        ObsidianSpectrum.BrightBlue -> ObsidianSpectrum.ElectricBlue
+        ObsidianSpectrum.Lavender -> ObsidianSpectrum.DeepViolet
+        ObsidianSpectrum.Aqua -> ObsidianSpectrum.Teal
+        ObsidianSpectrum.Pink -> ObsidianSpectrum.Magenta
+        else -> ObsidianSpectrum.ElectricBlue
     }
 
     Box(
@@ -586,14 +744,13 @@ fun MrsadProgressBar(
                 .clip(CircleShape)
                 .background(
                     Brush.horizontalGradient(
-                        listOf((tint ?: colors.metalDark), tint ?: colors.metalLight),
+                        listOf(startColor, endColor),
                     ),
                 ),
         )
     }
 }
 
-/** Empty state — never a broken screen (spec §28). */
 @Composable
 fun EmptyState(
     title: String,
@@ -620,11 +777,11 @@ fun EmptyState(
                     .background(colors.surfaceHigh),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(icon, null, tint = colors.textSecondary, modifier = Modifier.size(24.dp))
+                Icon(icon, null, tint = colors.accent, modifier = Modifier.size(24.dp))
             }
         }
         Text(title, style = type.title, color = colors.textPrimary)
-        Text(body, style = type.body, color = colors.textSecondary, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+        Text(body, style = type.body, color = colors.textSecondary, textAlign = TextAlign.Center)
         if (actionLabel != null && onAction != null) {
             MrsadSecondaryButton(text = actionLabel, onClick = onAction)
         }
@@ -634,21 +791,18 @@ fun EmptyState(
 @Composable
 fun LoadingState(modifier: Modifier = Modifier) {
     val colors = MrsadTheme.colors
-    // An indeterminate spinner animates forever and would keep an instrumented
-    // test from ever reaching idle, so the deterministic mode draws a static
-    // ring instead.
     val deterministic = MrsadTestHooks.isDeterministic
     Box(modifier.fillMaxWidth().padding(MrsadTokens.Spacing.xl), contentAlignment = Alignment.Center) {
         if (deterministic) {
             Canvas(Modifier.size(28.dp)) {
                 drawCircle(
-                    color = colors.metalMid.copy(alpha = 0.35f),
+                    color = colors.accent.copy(alpha = 0.45f),
                     style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2.dp.toPx()),
                 )
             }
         } else {
             CircularProgressIndicator(
-                color = colors.metalMid,
+                color = colors.accent,
                 strokeWidth = 2.dp,
                 modifier = Modifier.size(28.dp),
             )
@@ -669,7 +823,6 @@ fun ErrorState(message: String, onRetry: (() -> Unit)?, modifier: Modifier = Mod
     }
 }
 
-/** Keyboard-focusable metric tile used across Home / Analytics. */
 @Composable
 fun StatTile(
     value: String,
@@ -677,45 +830,34 @@ fun StatTile(
     modifier: Modifier = Modifier,
     tint: Color? = null,
 ) {
-    MrsadSurface(modifier = modifier) {
+    MrsadSurface(modifier = modifier, accent = tint) {
         CompositionLocalProvider(LocalContentColor provides MrsadTheme.colors.textPrimary) {
             MetricValue(value = value, label = label, accent = tint, size = MrsadTheme.type.headline.fontSize)
         }
     }
 }
 
-/** Thin silver divider in OBSIDIAN, full-bleed 1dp architectural rule in NOIR. */
 @Composable
 fun MrsadDivider(modifier: Modifier = Modifier) {
     val colors = MrsadTheme.colors
-    if (colors.isNoir) {
-        Box(
-            modifier
-                .fillMaxWidth()
-                .height(1.dp)
-                .background(colors.border),
-        )
-        return
-    }
     Box(
         modifier
             .fillMaxWidth()
             .height(1.dp)
             .background(
                 Brush.horizontalGradient(
-                    listOf(Color.Transparent, colors.border, Color.Transparent),
+                    listOf(colors.borderStrong.copy(alpha = 0.55f), colors.border.copy(alpha = 0.25f)),
                 ),
             ),
     )
 }
 
-/** Animated equalizer-like activity marker used for "live" states. */
 @Composable
 fun LiveDot(color: Color = MrsadTheme.colors.accent, modifier: Modifier = Modifier) {
     val colors = MrsadTheme.colors
     val motion = MrsadTheme.motion
     val animated = animateColorAsState(
-        targetValue = if (colors.isLight) color else color.copy(alpha = 0.6f),
+        targetValue = if (colors.isLight) color else color.copy(alpha = 0.75f),
         animationSpec = motion.effectsDefault(),
         label = "live",
     )
@@ -726,14 +868,13 @@ fun LiveDot(color: Color = MrsadTheme.colors.accent, modifier: Modifier = Modifi
             .background(animated.value)
             .drawBehind {
                 drawCircle(
-                    color = color.copy(alpha = 0.25f),
+                    color = color.copy(alpha = 0.28f),
                     radius = size.minDimension * 1.6f,
                 )
             }
     )
 }
 
-/** Decorative corner accent used on premium cards (kept cheap: 2 lines). */
 internal fun Modifier.cornerAccent(color: Color): Modifier = drawBehind {
     val stroke = 1.dp.toPx()
     val len = 14.dp.toPx()

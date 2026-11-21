@@ -29,15 +29,15 @@ enum class ThemeVariant(
 ) {
     OBSIDIAN(
         id = "obsidian",
-        labelFa = "OBSIDIAN · ابسیدین",
-        subtitleFa = "لوکس، سه‌بعدی، متالیک و سینمایی",
-        identityEn = "LUXURY · 3D · CINEMATIC",
+        labelFa = "OBSIDIAN · طیف ابسیدین (آبی الکتریک)",
+        subtitleFa = "پایهٔ یکپارچهٔ #090810 با طیف آبی، بنفش، فیروزه‌ای و سرخابی",
+        identityEn = "OBSIDIAN SPECTRUM · ELECTRIC",
     ),
     NOIR(
         id = "noir",
-        labelFa = "NOIR · نوآر",
-        subtitleFa = "مینیمالیسم خالص، ادیتوریال سوئیسی و تک‌رنگ",
-        identityEn = "PURE MINIMALISM · SWISS EDITORIAL",
+        labelFa = "SPECTRUM VIOLET · طیف ابسیدین (بنفش عمیق)",
+        subtitleFa = "پایهٔ یکپارچهٔ #090810 با تأکید لاوندر و کنتراست یکسان",
+        identityEn = "OBSIDIAN SPECTRUM · VIOLET",
     );
 
     companion object {

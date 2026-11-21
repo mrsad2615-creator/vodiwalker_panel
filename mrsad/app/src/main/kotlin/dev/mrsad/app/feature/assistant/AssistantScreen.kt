@@ -16,17 +16,17 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Send
-import androidx.compose.material.icons.outlined.AutoAwesome
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -38,29 +38,25 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import dev.mrsad.app.data.AppContainer
 import dev.mrsad.app.data.settings.MrsadSettings
 import dev.mrsad.app.ui.components.LocalBottomBarClearance
 import dev.mrsad.app.ui.components.MetalIcon
-import dev.mrsad.app.ui.components.MrsadIcons
 import dev.mrsad.app.ui.components.MrsadChip
+import dev.mrsad.app.ui.components.MrsadIcons
 import dev.mrsad.app.ui.components.MrsadPrimaryButton
 import dev.mrsad.app.ui.components.MrsadSurface
 import dev.mrsad.app.ui.components.MrsadTokens
+import dev.mrsad.app.ui.components.ObsidianCollapsingTopBar
 import dev.mrsad.app.ui.theme.AmbientBackground
 import dev.mrsad.app.ui.theme.MrsadTheme
+import dev.mrsad.app.ui.theme.ObsidianSpectrum
 import dev.mrsad.app.ui.theme.PageEnvironment
 
 /**
- * MRSAD AI — AI Atmosphere.
- *
- * A fully offline coaching conversation: the answers are produced by the
- * rule/statistics engine in :core from the user's real data. The screen is
- * explicit that this is a local analytical coach, not an LLM, and it refuses
- * to analyse when data is insufficient.
+ * OBSIDIAN SPECTRUM — MRSAD AI (Master Prompt §12).
  */
 @Composable
 fun AssistantScreen(
@@ -72,37 +68,54 @@ fun AssistantScreen(
     val colors = MrsadTheme.colors
     val type = MrsadTheme.type
     var input by remember { mutableStateOf("") }
+    val listState = rememberLazyListState()
+    val isCollapsed by remember {
+        derivedStateOf {
+            listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 28
+        }
+    }
 
     AmbientBackground(PageEnvironment.AI) {
-        Column(Modifier.fillMaxSize().padding(horizontal = MrsadTokens.Spacing.md)) {
-            Spacer(Modifier.height(MrsadTokens.Spacing.md))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    Modifier
-                        .size(44.dp)
-                        .clip(RoundedCornerShape(MrsadTokens.Radius.md))
-                        .background(colors.accentSoft)
-                        .border(1.dp, colors.border, RoundedCornerShape(MrsadTokens.Radius.md)),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    MetalIcon(MrsadIcons.Assistant, modifier = Modifier.size(22.dp))
-                }
-                Spacer(Modifier.width(MrsadTokens.Spacing.sm))
-                Column(Modifier.weight(1f)) {
-                    Text("MRSAD AI", style = type.headline.copy(letterSpacing = 1.sp), color = colors.textPrimary)
-                    Text("مربی محلی و آفلاین — بدون اینترنت", style = type.caption, color = colors.textSecondary)
-                }
-                MrsadChip(text = "آفلاین", tint = colors.success)
-            }
-            Spacer(Modifier.height(MrsadTokens.Spacing.md))
+        Column(
+            Modifier
+                .fillMaxSize()
+                .padding(bottom = LocalBottomBarClearance.current),
+        ) {
+            ObsidianCollapsingTopBar(
+                title = "MRSAD AI",
+                subtitle = "مربی محلی و آفلاین — بدون نیاز به اینترنت",
+                collapsed = isCollapsed,
+                spectralColor = ObsidianSpectrum.Lavender,
+                leading = {
+                    Box(
+                        Modifier
+                            .size(if (isCollapsed) 36.dp else 44.dp)
+                            .clip(RoundedCornerShape(MrsadTokens.Radius.md))
+                            .background(ObsidianSpectrum.DeepViolet.copy(alpha = 0.28f))
+                            .border(1.dp, ObsidianSpectrum.Lavender.copy(alpha = 0.55f), RoundedCornerShape(MrsadTokens.Radius.md)),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        MetalIcon(
+                            MrsadIcons.Assistant,
+                            accentOverride = ObsidianSpectrum.Lavender,
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
+                },
+                trailing = {
+                    MrsadChip(text = "آفلاین", tint = ObsidianSpectrum.Aqua)
+                },
+            )
 
             LazyColumn(
+                state = listState,
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
-                    .padding(bottom = LocalBottomBarClearance.current),
+                    .padding(horizontal = MrsadTokens.Spacing.md),
                 verticalArrangement = Arrangement.spacedBy(MrsadTokens.Spacing.sm),
             ) {
+                item { Spacer(Modifier.height(MrsadTokens.Spacing.xs)) }
                 item { IntroBubble(state) }
                 if (state.messages.isEmpty()) {
                     item { SuggestionRow(onSend = { viewModel.ask(it, settings.persianNumerals) }) }
@@ -114,7 +127,12 @@ fun AssistantScreen(
                 item { Spacer(Modifier.height(8.dp)) }
             }
 
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = MrsadTokens.Spacing.sm)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = MrsadTokens.Spacing.md, vertical = MrsadTokens.Spacing.sm),
+            ) {
                 TextField(
                     value = input,
                     onValueChange = { input = it },
@@ -122,7 +140,7 @@ fun AssistantScreen(
                     modifier = Modifier
                         .weight(1f)
                         .clip(RoundedCornerShape(MrsadTokens.Radius.lg))
-                        .border(1.dp, colors.border, RoundedCornerShape(MrsadTokens.Radius.lg)),
+                        .border(1.dp, ObsidianSpectrum.Lavender.copy(alpha = 0.45f), RoundedCornerShape(MrsadTokens.Radius.lg)),
                     textStyle = type.body,
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
                     keyboardActions = KeyboardActions(onSend = {
@@ -132,8 +150,8 @@ fun AssistantScreen(
                         }
                     }),
                     colors = TextFieldDefaults.colors(
-                        focusedContainerColor = colors.surface.copy(alpha = 0.8f),
-                        unfocusedContainerColor = colors.surface.copy(alpha = 0.6f),
+                        focusedContainerColor = colors.surfaceHigh,
+                        unfocusedContainerColor = colors.surface,
                         focusedIndicatorColor = Color.Transparent,
                         unfocusedIndicatorColor = Color.Transparent,
                     ),
@@ -143,6 +161,7 @@ fun AssistantScreen(
                 MrsadPrimaryButton(
                     text = "ارسال",
                     icon = Icons.AutoMirrored.Outlined.Send,
+                    accentColor = ObsidianSpectrum.Lavender,
                     onClick = {
                         if (input.isNotBlank()) {
                             viewModel.ask(input.trim(), settings.persianNumerals)
@@ -159,7 +178,10 @@ fun AssistantScreen(
 private fun IntroBubble(state: AssistantUiState) {
     val colors = MrsadTheme.colors
     val type = MrsadTheme.type
-    MrsadSurface(Modifier.fillMaxWidth()) {
+    MrsadSurface(
+        Modifier.fillMaxWidth(),
+        accent = ObsidianSpectrum.Lavender,
+    ) {
         Text("چطور می‌توانم کمک کنم؟", style = type.title, color = colors.textPrimary)
         Text(
             "من تحلیل‌های خودکار مرصاد را از روی داده‌های واقعی تمرین شما می‌سازم — کاملاً روی همین دستگاه. " +
@@ -184,10 +206,10 @@ private fun SuggestionRow(onSend: (String) -> Unit) {
                 Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(MrsadTokens.Radius.pill))
-                    .background(colors.surface.copy(alpha = 0.6f))
-                    .border(1.dp, colors.border, RoundedCornerShape(MrsadTokens.Radius.pill))
+                    .background(colors.surface)
+                    .border(1.dp, ObsidianSpectrum.Lavender.copy(alpha = 0.42f), RoundedCornerShape(MrsadTokens.Radius.pill))
                     .clickable { onSend(suggestion) }
-                    .padding(horizontal = MrsadTokens.Spacing.md, vertical = MrsadTokens.Spacing.xs)
+                    .padding(horizontal = MrsadTokens.Spacing.md, vertical = MrsadTokens.Spacing.xs),
             ) {
                 Text(
                     suggestion,
@@ -212,10 +234,16 @@ private fun MessageBubble(message: Message) {
             Modifier
                 .fillMaxWidth(0.9f)
                 .clip(RoundedCornerShape(MrsadTokens.Radius.md))
-                .background(if (isUser) colors.metalMid.copy(alpha = 0.14f) else colors.surface.copy(alpha = 0.9f))
+                .background(
+                    if (isUser) {
+                        ObsidianSpectrum.DeepViolet.copy(alpha = 0.28f)
+                    } else {
+                        colors.surfaceHigh
+                    },
+                )
                 .border(
                     1.dp,
-                    if (isUser) colors.borderStrong else colors.border,
+                    if (isUser) ObsidianSpectrum.Lavender else colors.border,
                     RoundedCornerShape(MrsadTokens.Radius.md),
                 )
                 .padding(MrsadTokens.Spacing.sm),
@@ -223,9 +251,17 @@ private fun MessageBubble(message: Message) {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 if (!isUser) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        MetalIcon(MrsadIcons.Assistant, modifier = Modifier.size(14.dp))
+                        MetalIcon(
+                            MrsadIcons.Assistant,
+                            accentOverride = ObsidianSpectrum.Lavender,
+                            modifier = Modifier.size(14.dp),
+                        )
                         Spacer(Modifier.width(4.dp))
-                        Text("تحلیل محلی", style = type.caption.copy(fontWeight = FontWeight.SemiBold), color = colors.accent)
+                        Text(
+                            "تحلیل محلی",
+                            style = type.caption.copy(fontWeight = FontWeight.SemiBold),
+                            color = ObsidianSpectrum.Lavender,
+                        )
                     }
                 }
                 Text(message.text, style = type.body, color = colors.textPrimary)

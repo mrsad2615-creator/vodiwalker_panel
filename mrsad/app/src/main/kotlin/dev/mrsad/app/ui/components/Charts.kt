@@ -20,7 +20,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
@@ -30,18 +29,11 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.unit.dp
 import dev.mrsad.app.ui.theme.MrsadTheme
+import dev.mrsad.app.ui.theme.ObsidianSpectrum
 import dev.mrsad.core.progression.ProgressionEngine
 
-/**
- * A point of a spark line: its slot in the window and its height, measured
- * from the bottom of the plot as a fraction between 0 and 1.
- */
 data class SparkPoint(val index: Int, val height: Float)
 
-/**
- * The geometry of a spark line, kept away from the drawing code so it can
- * be tested without a device.
- */
 object SparkGeometry {
 
     fun height(value: Double, values: List<Double?>): Float {
@@ -75,11 +67,7 @@ object SparkGeometry {
 }
 
 /**
- * Dual-System Real-Data SparkLine (Master Prompt §3 & §6):
- *
- * - **OBSIDIAN**: Metallic curve with soft specular area gradient and glowing latest node.
- * - **NOIR**: Monochrome 1.5dp polyline on calibrated Swiss horizontal reference rules
- *   with a sharp square latest-value marker (zero gradient fill).
+ * OBSIDIAN SPECTRUM — Real-Data Spectral SparkLine (Master Prompt §10).
  */
 @Composable
 fun SparkLine(
@@ -90,8 +78,7 @@ fun SparkLine(
 ) {
     val colors = MrsadTheme.colors
     val motion = MrsadTheme.motion
-    val isNoir = colors.isNoir
-    val lineColor = if (isNoir) colors.textPrimary else (tint ?: colors.metalLight)
+    val lineColor = tint ?: ObsidianSpectrum.BrightBlue
     val present = values.filterNotNull()
 
     val reveal = remember { Animatable(0f) }
@@ -131,20 +118,6 @@ fun SparkLine(
             fun xOf(index: Int): Float = index * stepX
             fun yOf(height: Float): Float = size.height - height * size.height
 
-            // In NOIR, draw 3 calibrated horizontal reference rules
-            if (isNoir) {
-                val ruleColor = colors.border.copy(alpha = 0.75f)
-                for (r in 1..3) {
-                    val ry = size.height * (r / 4f)
-                    drawLine(
-                        color = ruleColor,
-                        start = Offset(0f, ry),
-                        end = Offset(size.width, ry),
-                        strokeWidth = 1.dp.toPx(),
-                    )
-                }
-            }
-
             val revealX = size.width * reveal.value.coerceIn(0f, 1f)
             clipRect(right = revealX) {
                 SparkGeometry.runs(values).forEach { run ->
@@ -152,27 +125,25 @@ fun SparkLine(
                         moveTo(xOf(run.first().index), yOf(run.first().height))
                         run.drop(1).forEach { lineTo(xOf(it.index), yOf(it.height)) }
                     }
-                    if (!isNoir) {
-                        val fill = Path().apply {
-                            addPath(path)
-                            lineTo(xOf(run.last().index), size.height)
-                            lineTo(xOf(run.first().index), size.height)
-                            close()
-                        }
-                        drawPath(
-                            fill,
-                            Brush.verticalGradient(
-                                listOf(lineColor.copy(alpha = 0.24f), Color.Transparent),
-                            ),
-                        )
+                    val fill = Path().apply {
+                        addPath(path)
+                        lineTo(xOf(run.last().index), size.height)
+                        lineTo(xOf(run.first().index), size.height)
+                        close()
                     }
+                    drawPath(
+                        fill,
+                        Brush.verticalGradient(
+                            listOf(lineColor.copy(alpha = 0.28f), Color.Transparent),
+                        ),
+                    )
                     drawPath(
                         path = path,
                         color = lineColor,
                         style = Stroke(
-                            width = if (isNoir) 1.5.dp.toPx() else 2.0.dp.toPx(),
-                            cap = if (isNoir) StrokeCap.Square else StrokeCap.Round,
-                            join = if (isNoir) StrokeJoin.Miter else StrokeJoin.Round,
+                            width = 2.2.dp.toPx(),
+                            cap = StrokeCap.Round,
+                            join = StrokeJoin.Round,
                         ),
                     )
                 }
@@ -182,32 +153,22 @@ fun SparkLine(
                     val value = values[lastIndex] ?: 0.0
                     val cx = xOf(lastIndex)
                     val cy = yOf(SparkGeometry.height(value, values))
-                    if (isNoir) {
-                        val boxSize = 5.dp.toPx()
-                        drawRect(
-                            color = lineColor,
-                            topLeft = Offset(cx - boxSize / 2f, cy - boxSize / 2f),
-                            size = Size(boxSize, boxSize),
-                        )
-                    } else {
-                        drawCircle(
-                            color = lineColor.copy(alpha = 0.25f),
-                            radius = 5.5.dp.toPx(),
-                            center = Offset(cx, cy),
-                        )
-                        drawCircle(
-                            color = lineColor,
-                            radius = 2.8.dp.toPx(),
-                            center = Offset(cx, cy),
-                        )
-                    }
+                    drawCircle(
+                        color = lineColor.copy(alpha = 0.30f),
+                        radius = 6.dp.toPx(),
+                        center = Offset(cx, cy),
+                    )
+                    drawCircle(
+                        color = ObsidianSpectrum.SoftWhite,
+                        radius = 2.8.dp.toPx(),
+                        center = Offset(cx, cy),
+                    )
                 }
             }
         }
     }
 }
 
-/** Horizontal bar rows for category comparison (real values). */
 @Composable
 fun BarRow(
     label: String,
@@ -229,18 +190,14 @@ fun BarRow(
         MrsadProgressBar(
             progress = if (maxValue <= 0) 0f else (value / maxValue).toFloat(),
             tint = tint,
-            height = 5.dp,
+            height = 6.dp,
             modifier = Modifier.padding(top = 4.dp),
         )
     }
 }
 
 /**
- * 28-Day Streak & Consistency Matrix (`تقویم استمرار`).
- *
- * In **OBSIDIAN**, active days glow with a metallic silver facet and subtle border.
- * In **NOIR**, active days are crisp monochrome white squares (`#FFFFFF`) inside a
- * `1dp` `#27272A` Swiss matrix grid.
+ * OBSIDIAN SPECTRUM — 28-Day Streak & Consistency Matrix (`تقویم استمرار`).
  */
 @Composable
 fun StreakCalendarMatrix(
@@ -248,8 +205,7 @@ fun StreakCalendarMatrix(
     modifier: Modifier = Modifier,
 ) {
     val colors = MrsadTheme.colors
-    val isNoir = colors.isNoir
-    val shape = if (isNoir) RoundedCornerShape(1.dp) else RoundedCornerShape(5.dp)
+    val shape = RoundedCornerShape(6.dp)
 
     Column(
         modifier = modifier.fillMaxWidth(),
@@ -262,13 +218,13 @@ fun StreakCalendarMatrix(
             ) {
                 week.forEach { cell ->
                     val bgColor = when {
-                        cell.active -> if (isNoir) colors.textPrimary else colors.metalLight
+                        cell.active -> ObsidianSpectrum.ElectricBlue.copy(alpha = 0.55f)
                         cell.isToday -> colors.surfaceHigh
-                        else -> if (isNoir) colors.backgroundElevated else colors.background
+                        else -> colors.backgroundElevated
                     }
                     val borderColor = when {
-                        cell.isToday -> colors.accent
-                        cell.active -> if (isNoir) colors.textPrimary else colors.borderStrong
+                        cell.isToday -> ObsidianSpectrum.Aqua
+                        cell.active -> ObsidianSpectrum.BrightBlue
                         else -> colors.border
                     }
                     Box(

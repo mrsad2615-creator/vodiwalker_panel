@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/icons';
 import type { NavTab } from '@/types/domain';
 import { applySectionAppearance } from '@/lib/sections';
+import { INITIAL_CHROME, resolveScrollChrome, type ScrollChrome } from '@/lib/scrollChrome';
 import { useApp } from '@/context/AppContext';
 import { KairosMarkTile } from '@/components/ui/KairosMark';
 import { APP_VERSION, BUILD_NUMBER } from '@/lib/buildInfo';
@@ -38,6 +39,7 @@ const SECONDARY_TABS: { id: NavTab; label: string; hint: string; icon: typeof La
 export function AppShell({ children }: { children: ReactNode }) {
   const { activeTab, setActiveTab, settings, toasts, dismissToast, focus } = useApp();
   const [moreOpen, setMoreOpen] = useState(false);
+  const [chrome, setChrome] = useState<ScrollChrome>(INITIAL_CHROME);
 
   // Each section paints itself: hue, environment and light position.
   useEffect(() => {
@@ -94,7 +96,31 @@ export function AppShell({ children }: { children: ReactNode }) {
     if (!node) return;
     if (typeof node.scrollTo === 'function') node.scrollTo({ top: 0, behavior: 'auto' });
     else node.scrollTop = 0;
+    setChrome(INITIAL_CHROME);
   }, [activeTab]);
+
+  // The top bar tucks itself away while reading downward and returns on the way
+  // back up. One rAF-throttled listener, pure decision rule, no re-render when
+  // the state is unchanged.
+  useEffect(() => {
+    const node = scrollRef.current;
+    if (!node) return;
+
+    let frame = 0;
+    const onScroll = () => {
+      if (frame) return;
+      frame = window.requestAnimationFrame(() => {
+        frame = 0;
+        setChrome((prev) => resolveScrollChrome(prev, node.scrollTop));
+      });
+    };
+
+    node.addEventListener('scroll', onScroll, { passive: true });
+    return () => {
+      node.removeEventListener('scroll', onScroll);
+      if (frame) window.cancelAnimationFrame(frame);
+    };
+  }, []);
 
   return (
     <div className="kairos-ambient-bg h-full w-full">
@@ -102,7 +128,19 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       {/* Shell owns the viewport; only `.app-scroll` moves. */}
       <div className="app-shell app-safe-frame relative mx-auto w-full max-w-[480px]">
-        <header className="app-safe-header relative z-30 flex shrink-0 items-center justify-between border-b border-[var(--border)] bg-[var(--bg)] px-4 pb-3">
+        <div
+          className="relative z-30 shrink-0 overflow-hidden transition-[grid-template-rows] duration-300 ease-out"
+          style={{ display: 'grid', gridTemplateRows: chrome.hidden ? '0fr' : '1fr' }}
+          aria-hidden={chrome.hidden}
+        >
+        <header
+          className="app-safe-header flex min-h-0 items-center justify-between border-b border-[var(--border)] px-4 pb-3"
+          style={{
+            backgroundColor: 'color-mix(in srgb, var(--bg) 84%, transparent)',
+            backdropFilter: 'blur(14px) saturate(120%)',
+            WebkitBackdropFilter: 'blur(14px) saturate(120%)',
+          }}
+        >
           <button
             type="button"
             onClick={() => handleNav('dashboard')}
@@ -127,6 +165,30 @@ export function AppShell({ children }: { children: ReactNode }) {
             </button>
           )}
         </header>
+        </div>
+
+        {focus.isRunning && activeTab !== 'focus' && (
+          <div
+            className={`pointer-events-none fixed inset-x-0 top-0 z-40 mx-auto flex w-full max-w-[480px] justify-end px-4 transition-opacity duration-200 ${
+              chrome.hidden ? 'opacity-100' : 'opacity-0'
+            }`}
+            style={{ paddingTop: 'calc(var(--safe-top) + 0.5rem)' }}
+          >
+            <button
+              type="button"
+              onClick={() => handleNav('focus')}
+              aria-label="بازگشت به تایمر تمرکز"
+              tabIndex={chrome.hidden ? 0 : -1}
+              className={`pointer-events-auto flex items-center gap-2 rounded-[var(--r-pill)] border border-[var(--border-strong)] px-2.5 py-1 ${
+                chrome.hidden ? '' : 'invisible'
+              }`}
+              style={{ backgroundColor: 'color-mix(in srgb, var(--surface-2) 92%, transparent)' }}
+            >
+              <span className="focus-live-dot h-1.5 w-1.5 rounded-full bg-[var(--accent-fg)]" />
+              <Numeric value={liveFocusDisplay} variant="geo" className="text-[11px] font-medium" />
+            </button>
+          </div>
+        )}
 
         <main ref={scrollRef} className="app-scroll app-safe-content px-4 pt-4">
           {children}

@@ -159,6 +159,11 @@ class Core3D(val ringSegments: Int = 40) {
     /** The average depth of every facet. */
     val faceDepth = FloatArray(faceCount)
 
+    /** Camera-space normal components of every facet for 3D volumetric shading. */
+    val faceNormalX = FloatArray(faceCount)
+    val faceNormalY = FloatArray(faceCount)
+    val faceNormalZ = FloatArray(faceCount)
+
     /** The facets, ordered back to front. */
     val faceOrder = IntArray(faceCount) { it }
 
@@ -300,6 +305,9 @@ class Core3D(val ringSegments: Int = 40) {
             val facing = (1f - nz.coerceIn(0f, 1f))
             faceRim[f] = facing * facing * facing
             faceDepth[f] = (model[a + 2] + model[b + 2] + model[c + 2]) / 3f
+            faceNormalX[f] = nx
+            faceNormalY[f] = ny
+            faceNormalZ[f] = nz
         }
 
         // 4. Sort the facets back to front. Twenty elements are sorted with

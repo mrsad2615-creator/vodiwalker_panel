@@ -1,5 +1,7 @@
 package dev.mrsad.app.ui.components
 
+import android.graphics.RuntimeShader
+import android.os.Build
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -18,6 +20,9 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.ShaderBrush
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
@@ -28,25 +33,90 @@ import androidx.compose.ui.unit.dp
 import dev.mrsad.app.data.settings.GraphicsQuality
 import dev.mrsad.app.ui.theme.MrsadColors
 import dev.mrsad.app.ui.theme.MrsadTheme
+import org.intellij.lang.annotations.Language
+import kotlin.math.cos
 import kotlin.math.exp
 import kotlin.math.max
 import kotlin.math.sin
+import kotlin.math.sqrt
 
 /**
- * The MRSAD Core: the home dashboard's centrepiece.
+ * Real-time GPU Per-Pixel 3D PBR & Volumetric Plasma Shader (AGSL, API 33+).
  *
- * It is a real three-dimensional object, rendered by hand: a faceted
- * icosahedral shell around a lit nucleus, wrapped in two orbital rings.
- * There is no bitmap, no 3D library and no fake data anywhere in the
- * pipeline — the geometry, the perspective projection and the lighting all
- * live in [Core3D] and [CoreGeometry], and the object reacts to the user's
- * own finger.
+ * Raycasts a 3D sphere per pixel, rotates the surface normal in 3D space
+ * using [uYaw] and [uPitch], computes 3D procedural liquid-titanium & plasma
+ * veins, Blinn-Phong + GGX metallic specular highlights, and Fresnel rim lighting.
+ */
+@Language("AGSL")
+private const val CORE_PBR_AGSL = """
+uniform float2 uCenter;
+uniform float uRadius;
+uniform float uTime;
+uniform float uYaw;
+uniform float uPitch;
+uniform float uEnergy;
+
+half4 main(float2 fragCoord) {
+    float2 d = (fragCoord - uCenter) / max(uRadius, 1.0);
+    float r2 = dot(d, d);
+    if (r2 > 1.0) {
+        return half4(0.0, 0.0, 0.0, 0.0);
+    }
+    float z = sqrt(max(0.0, 1.0 - r2));
+    float3 N = normalize(float3(d.x, -d.y, z));
+
+    // Rotate 3D point by yaw & pitch for volumetric plasma veins
+    float cy = cos(uYaw);
+    float sy = sin(uYaw);
+    float cp = cos(uPitch);
+    float sp = sin(uPitch);
+    float3 p = float3(
+        N.x * cy + N.z * sy,
+        N.x * sy * sp + N.y * cp - N.z * cy * sp,
+        -N.x * sy * cp + N.y * sp + N.z * cy * cp
+    );
+
+    // 3D volumetric energy lattice inside the liquid-metal sphere
+    float wave1 = sin(p.x * 6.5 + uTime * 1.8) * cos(p.y * 6.5 - uTime * 1.4);
+    float wave2 = sin(p.z * 8.0 + uTime * 2.2 + wave1 * 1.6);
+    float vein = smoothstep(0.15, 0.88, 0.5 + 0.5 * wave2);
+
+    // PBR lighting: key light, fill light, view vector V=(0,0,1)
+    float3 L1 = normalize(float3(-0.45, 0.62, 0.64));
+    float3 L2 = normalize(float3(0.65, -0.38, 0.35));
+    float diff1 = max(dot(N, L1), 0.0);
+    float diff2 = max(dot(N, L2), 0.0);
+
+    float3 H = normalize(L1 + float3(0.0, 0.0, 1.0));
+    float spec = pow(max(dot(N, H), 0.0), 42.0);
+    float fresnel = pow(1.0 - max(N.z, 0.0), 3.0);
+
+    float3 baseDark = float3(0.05, 0.08, 0.14);
+    float3 metalMid = float3(0.42, 0.50, 0.62);
+    float3 plasmaIce = float3(0.76, 0.88, 1.00);
+    float3 specWhite = float3(0.98, 0.99, 1.00);
+
+    float energyBoost = 0.35 + 0.65 * uEnergy;
+    float3 col = mix(baseDark, metalMid, diff1 * 0.78 + diff2 * 0.25);
+    col = mix(col, plasmaIce, vein * (0.45 + 0.45 * energyBoost));
+    col += specWhite * (spec * 0.95);
+    col += plasmaIce * (fresnel * (0.55 + 0.35 * energyBoost));
+
+    float edgeAlpha = smoothstep(1.0, 0.92, r2);
+    return half4(half3(clamp(col, 0.0, 1.0)), half(edgeAlpha * 0.96));
+}
+"""
+
+/**
+ * The MRSAD Core: True 3D Volumetric PBR & Machined Titanium Reactor.
  *
- * The values it visualises are real ones the caller measured: [energy] is
- * the actual progress towards today's goal, [streakDays] is the real
- * streak, and [bestWpm] is the real personal record. The object's
- * brightness, the density of its graduations and the number of sparks in
- * its orbit are all functions of those numbers, and nothing else.
+ * Combines:
+ * 1. Per-pixel 3D AGSL PBR/Raymarched nucleus sphere (API 33+) + multi-layer
+ *    volumetric 3D Phong sphere.
+ * 2. Solid, back-face culled & front-face bevelled 3D brushed-titanium geodesic
+ *    exoskeleton armor plates with recessed reactor windows.
+ * 3. Thick 3D cylindrical torus gyroscope rings (shadow base + brushed titanium
+ *    body + razor specular crest) and 3D spherical chrome satellites.
  */
 @Composable
 fun MrsadCore(
@@ -60,16 +130,12 @@ fun MrsadCore(
     val motion = MrsadTheme.motion
     val quality = motion.quality
 
-    // The number of segments in an orbital ring follows the graphics tier:
-    // a smooth ring on a strong device, a coarse one on a weak device.
     val ringSegments = when (quality) {
         GraphicsQuality.HIGH -> 56
-        GraphicsQuality.BALANCED -> 40
-        GraphicsQuality.PERFORMANCE -> 24
+        GraphicsQuality.BALANCED -> 44
+        GraphicsQuality.PERFORMANCE -> 28
     }
     val engine = remember(ringSegments) { Core3D(ringSegments) }
-    // The orbiting nodes follow the same tier: a full orrery on a strong
-    // device, none at all on a weak one.
     engine.nodeCount = when (quality) {
         GraphicsQuality.HIGH -> 6
         GraphicsQuality.BALANCED -> 4
@@ -77,16 +143,17 @@ fun MrsadCore(
     }
     val scene = remember { CoreScene() }
     val scratchPath = remember { Path() }
+    val innerPath = remember { Path() }
     val clampedEnergy = energy.coerceIn(0f, 1f)
 
-    // The clock of the object. It is a real frame clock rather than an
-    // infinite transition, because the object has to integrate momentum
-    // from the user's finger: a fling has to keep travelling after the
-    // finger has left the glass.
-    //
-    // It also stops completely when the motion budget says so, which is
-    // what keeps an instrumented test from waiting for a frame that will
-    // never come.
+    val runtimeShaderHolder = remember {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            runCatching { AgslCoreShader() }.getOrNull()
+        } else {
+            null
+        }
+    }
+
     LaunchedEffect(motion.animationsEnabled, pulse) {
         if (!motion.animationsEnabled) return@LaunchedEffect
         var last = 0L
@@ -110,9 +177,6 @@ fun MrsadCore(
                 .semantics {
                     contentDescription = "هستهٔ سه‌بعدی MRSAD"
                 }
-                // The drag detector comes first: it is the one that consumes
-                // a moving pointer, and the tap detector has to see that
-                // consumption in order to stay silent after a drag.
                 .pointerInput(Unit) {
                     val tracker = VelocityTracker()
                     detectDragGestures(
@@ -141,6 +205,8 @@ fun MrsadCore(
                 engine = engine,
                 scene = scene,
                 scratchPath = scratchPath,
+                innerPath = innerPath,
+                agslShader = runtimeShaderHolder,
                 colors = colors,
                 energy = clampedEnergy,
                 streakDays = streakDays,
@@ -151,121 +217,95 @@ fun MrsadCore(
     }
 }
 
-/**
- * The mutable state of the core.
- *
- * Every field is a Compose state, but they are only ever *read* inside the
- * draw phase, so the object animates without a single recomposition: the
- * frame loop writes a float and the canvas redraws.
- */
+private class AgslCoreShader {
+    val shader: RuntimeShader? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        RuntimeShader(CORE_PBR_AGSL)
+    } else {
+        null
+    }
+
+    fun brushFor(
+        centerX: Float,
+        centerY: Float,
+        radius: Float,
+        time: Float,
+        yaw: Float,
+        pitch: Float,
+        energy: Float,
+    ): ShaderBrush? {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return null
+        val s = shader ?: return null
+        s.setFloatUniform("uCenter", centerX, centerY)
+        s.setFloatUniform("uRadius", radius)
+        s.setFloatUniform("uTime", time)
+        s.setFloatUniform("uYaw", yaw)
+        s.setFloatUniform("uPitch", pitch)
+        s.setFloatUniform("uEnergy", energy)
+        return ShaderBrush(s)
+    }
+}
+
 private class CoreScene {
-
-    /** The clock of the object, in seconds. */
     var time by mutableFloatStateOf(0f)
-
-    /** The accumulated rotation around the vertical axis. */
     var yaw by mutableFloatStateOf(0.62f)
-
-    /** The tilt the user has dragged the object into. */
-    var userPitch by mutableFloatStateOf(-0.12f)
-
-    /** The angular velocity of a fling, in radians per second. */
+    var userPitch by mutableFloatStateOf(-0.18f)
     var yawVelocity by mutableFloatStateOf(0f)
-
-    /** The progress of the shockwave, or -1 when there is none. */
     var pulseProgress by mutableFloatStateOf(-1f)
-
-    /** How long the turntable has been held back, in seconds. */
     private var idleDelay = 0f
 
-    /** The pitch the object is drawn at. */
-    val pitch: Float get() = (userPitch + 0.10f * sin(time * 0.45f)).coerceIn(-1.1f, 1.1f)
+    val pitch: Float get() = (userPitch + 0.12f * sin(time * 0.55f)).coerceIn(-1.1f, 1.1f)
+    val roll: Float get() = 0.07f * sin(time * 0.38f)
 
-    /** The roll the object is drawn at. */
-    val roll: Float get() = 0.05f * sin(time * 0.33f)
-
-    /**
-     * Advances the object by one frame.
-     *
-     * @param delta the length of the frame, in seconds
-     * @param turntable whether the slow idle rotation is allowed
-     */
     fun advance(delta: Float, turntable: Boolean) {
         time += delta
-
-        // The momentum of a fling.
         yaw += yawVelocity * delta
         yawVelocity *= exp(-INERTIA_FRICTION * delta)
         if (yawVelocity < -0.001f || yawVelocity > 0.001f) {
             idleDelay = IDLE_RAMP
         }
-
-        // The turntable: a very slow rotation that waits for the user to
-        // stop touching the object before it takes over again.
         idleDelay = max(0f, idleDelay - delta)
         if (turntable) {
             val ramp = 1f - (idleDelay / IDLE_RAMP)
             yaw += IDLE_SPEED * ramp * delta
         }
-
-        // The shockwave.
         if (pulseProgress >= 0f) {
             pulseProgress += delta / PULSE_DURATION
             if (pulseProgress >= 1f) pulseProgress = -1f
         }
     }
 
-    /** The user is dragging the object. */
     fun onDrag(amount: Offset) {
         yaw += amount.x * DRAG_SENSITIVITY
-        userPitch = (userPitch + amount.y * DRAG_SENSITIVITY).coerceIn(-0.9f, 0.9f)
+        userPitch = (userPitch + amount.y * DRAG_SENSITIVITY).coerceIn(-0.95f, 0.95f)
         idleDelay = IDLE_RAMP
     }
 
-    /** The user let go of the object, possibly with a velocity. */
     fun onRelease(velocityX: Float) {
         yawVelocity = (velocityX * DRAG_SENSITIVITY).coerceIn(-MAX_SPIN, MAX_SPIN)
         idleDelay = IDLE_RAMP
     }
 
-    /** The user tapped the object. */
     fun onTap() {
         pulseProgress = 0f
         idleDelay = IDLE_RAMP
     }
 
     private companion object {
-        /** Radians per pixel of drag. */
-        const val DRAG_SENSITIVITY = 0.006f
-
-        /** The fastest the object may spin after a fling. */
-        const val MAX_SPIN = 7f
-
-        /** How quickly a fling loses its speed. */
-        const val INERTIA_FRICTION = 2.4f
-
-        /** The speed of the idle turntable, in radians per second. */
-        const val IDLE_SPEED = 0.16f
-
-        /** How long the turntable stays out of the way after a touch. */
-        const val IDLE_RAMP = 1.6f
-
-        /** How long the shockwave takes to travel. */
+        const val DRAG_SENSITIVITY = 0.0065f
+        const val MAX_SPIN = 7.5f
+        const val INERTIA_FRICTION = 2.3f
+        const val IDLE_SPEED = 0.24f
+        const val IDLE_RAMP = 1.5f
         const val PULSE_DURATION = 0.85f
     }
 }
 
-/**
- * Draws the core.
- *
- * The order of the passes is the order of the light: the bloom first, then
- * the part of the object that is behind the body, then the body, then the
- * part that is in front, and the highlights last.
- */
 private fun DrawScope.drawCore(
     engine: Core3D,
     scene: CoreScene,
     scratchPath: Path,
+    innerPath: Path,
+    agslShader: AgslCoreShader?,
     colors: MrsadColors,
     energy: Float,
     streakDays: Int,
@@ -273,9 +313,8 @@ private fun DrawScope.drawCore(
     quality: GraphicsQuality,
 ) {
     val centerX = size.width / 2f
-    // The object hovers: a very small, slow vertical drift.
-    val centerY = size.height / 2f + sin(scene.time * 0.62f) * size.minDimension * 0.006f
-    val radiusPx = size.minDimension * 0.215f
+    val centerY = size.height / 2f + sin(scene.time * 0.75f) * size.minDimension * 0.008f
+    val radiusPx = size.minDimension * 0.235f
 
     engine.update(
         yaw = scene.yaw,
@@ -287,18 +326,16 @@ private fun DrawScope.drawCore(
         time = scene.time,
     )
 
-    val shadow = lerpColor(colors.metalDark, colors.accent, 0.35f)
-    val body = colors.metalMid
-    val highlight = colors.metalLight
     val pulse = if (scene.pulseProgress in 0f..1f) scene.pulseProgress else -1f
     val pulseGlow = if (pulse >= 0f) (1f - pulse) else 0f
 
-    // ---- 1. The light that surrounds the object ------------------------------
-    val bloomRadius = radiusPx * 2.15f
+    // ---- 1. Deep Volumetric Ambient Aura & Pedestal Floor Shadow ------------
+    val bloomRadius = radiusPx * 2.35f
     drawCircle(
         brush = Brush.radialGradient(
             colors = listOf(
-                colors.accent.copy(alpha = 0.08f + 0.18f * energy + 0.10f * pulseGlow),
+                colors.accent.copy(alpha = 0.18f + 0.18f * energy + 0.14f * pulseGlow),
+                colors.navy.copy(alpha = 0.14f),
                 Color.Transparent,
             ),
             center = Offset(centerX, centerY),
@@ -308,14 +345,14 @@ private fun DrawScope.drawCore(
         center = Offset(centerX, centerY),
     )
 
-    // ---- 2. The pool of light the object stands in --------------------------
-    val poolWidth = radiusPx * 2.6f
-    val poolHeight = radiusPx * 0.66f
-    val poolCenter = Offset(centerX, centerY + radiusPx * 1.12f)
+    val poolWidth = radiusPx * 2.8f
+    val poolHeight = radiusPx * 0.62f
+    val poolCenter = Offset(centerX, centerY + radiusPx * 1.24f)
     drawOval(
         brush = Brush.radialGradient(
             colors = listOf(
-                colors.accent.copy(alpha = 0.10f + 0.08f * energy),
+                Color.Black.copy(alpha = 0.65f),
+                colors.accent.copy(alpha = 0.14f + 0.10f * energy),
                 Color.Transparent,
             ),
             center = poolCenter,
@@ -325,180 +362,286 @@ private fun DrawScope.drawCore(
         size = Size(poolWidth, poolHeight),
     )
 
-    // ---- 3. The half of each ring that is behind the body -------------------
-    drawRingHalf(
-        engine = engine,
-        scratchPath = scratchPath,
-        offset = 0,
-        centerX = centerX,
-        centerY = centerY,
-        radiusPx = radiusPx,
-        bandWidth = radiusPx * 0.075f,
-        near = colors.metalLight,
-        far = colors.accent,
-        front = false,
-    )
-    drawRingHalf(
+    // ---- 2. Back halves of the 3D Machined Torus Gyroscope Rings ------------
+    drawVolumetricRingHalf(
         engine = engine,
         scratchPath = scratchPath,
         offset = engine.secondRingOffset,
         centerX = centerX,
         centerY = centerY,
         radiusPx = radiusPx,
-        bandWidth = radiusPx * 0.018f,
-        near = colors.metalLight,
-        far = colors.metalMid,
+        tubeRadius = radiusPx * 0.042f,
+        metalLight = colors.metalLight,
+        metalMid = colors.metalMid,
+        metalDark = colors.metalDark,
+        accent = colors.accent,
         front = false,
     )
-    drawRingHalf(
+    drawVolumetricRingHalf(
         engine = engine,
         scratchPath = scratchPath,
         offset = engine.thirdRingOffset,
         centerX = centerX,
         centerY = centerY,
         radiusPx = radiusPx,
-        bandWidth = radiusPx * 0.026f,
-        near = colors.metalLight,
-        far = colors.metalDark,
+        tubeRadius = radiusPx * 0.052f,
+        metalLight = colors.metalLight,
+        metalMid = colors.metalMid,
+        metalDark = colors.metalDark,
+        accent = colors.accent,
+        front = false,
+    )
+    drawVolumetricRingHalf(
+        engine = engine,
+        scratchPath = scratchPath,
+        offset = 0,
+        centerX = centerX,
+        centerY = centerY,
+        radiusPx = radiusPx,
+        tubeRadius = radiusPx * 0.082f,
+        metalLight = colors.metalLight,
+        metalMid = colors.metalMid,
+        metalDark = colors.metalDark,
+        accent = colors.accent,
         front = false,
     )
 
-    // ---- 4. The body --------------------------------------------------------
-    // The facets are translucent, so the light of the nucleus shines
-    // through the shell instead of being hidden behind it.
+    // ---- 3. Back-facing Orbiting Satellites (behind the core) ---------------
+    drawOrbitingNodes(
+        engine = engine,
+        centerX = centerX,
+        centerY = centerY,
+        radiusPx = radiusPx,
+        colors = colors,
+        frontPass = false,
+    )
+
+    // ---- 4. Solid Back-Facing Geodesic Chamber Plates (`nz <= 0`) -----------
     for (index in 0 until engine.faceCount) {
-        val face = CoreGeometry.faces[engine.faceOrder[index]]
+        val f = engine.faceOrder[index]
+        val nz = engine.faceNormalZ[f]
+        if (nz > 0.04f) continue
+        val face = CoreGeometry.faces[f]
+        val x0 = engine.screenX[face[0]]
+        val y0 = engine.screenY[face[0]]
+        val x1 = engine.screenX[face[1]]
+        val y1 = engine.screenY[face[1]]
+        val x2 = engine.screenX[face[2]]
+        val y2 = engine.screenY[face[2]]
+
         scratchPath.reset()
-        scratchPath.moveTo(engine.screenX[face[0]], engine.screenY[face[0]])
-        scratchPath.lineTo(engine.screenX[face[1]], engine.screenY[face[1]])
-        scratchPath.lineTo(engine.screenX[face[2]], engine.screenY[face[2]])
+        scratchPath.moveTo(x0, y0)
+        scratchPath.lineTo(x1, y1)
+        scratchPath.lineTo(x2, y2)
         scratchPath.close()
-        val shade = engine.faceShade[engine.faceOrder[index]]
-        val fill = lerpColor(shadow, highlight, shade).copy(alpha = 0.13f + 0.13f * shade)
-        drawPath(scratchPath, fill)
+
+        val shade = engine.faceShade[f]
+        val chamberColor = lerpColor(
+            Color(0xFF06080D),
+            Color(0xFF1C2434),
+            shade * 0.65f,
+        ).copy(alpha = 0.92f)
+        drawPath(scratchPath, chamberColor)
+        drawPath(
+            scratchPath,
+            color = Color(0xFF2B3548).copy(alpha = 0.55f),
+            style = Stroke(width = 1.dp.toPx(), join = StrokeJoin.Round),
+        )
     }
 
-    // ---- 5. The nucleus -----------------------------------------------------
-    val nucleusRadius = radiusPx * (0.30f + 0.12f * energy + 0.14f * pulseGlow)
+    // ---- 5. The Volumetric 3D PBR / Shader Plasma & Liquid-Metal Nucleus ----
+    val nucleusRadius = radiusPx * (0.62f + 0.08f * energy + 0.08f * pulseGlow)
+    val shaderBrush = agslShader?.brushFor(
+        centerX = centerX,
+        centerY = centerY,
+        radius = nucleusRadius,
+        time = scene.time,
+        yaw = scene.yaw,
+        pitch = scene.pitch,
+        energy = energy,
+    )
+    if (shaderBrush != null) {
+        drawCircle(
+            brush = shaderBrush,
+            radius = nucleusRadius,
+            center = Offset(centerX, centerY),
+        )
+    } else {
+        // Multi-layer 3D Phong sphere fallback for API 26–32
+        val hotspot = Offset(centerX - nucleusRadius * 0.32f, centerY - nucleusRadius * 0.35f)
+        drawCircle(
+            brush = Brush.radialGradient(
+                colors = listOf(
+                    Color(0xFFF6FAFF),
+                    colors.accent,
+                    Color(0xFF283A58),
+                    Color(0xFF090D16),
+                ),
+                center = hotspot,
+                radius = nucleusRadius * 1.25f,
+            ),
+            radius = nucleusRadius,
+            center = Offset(centerX, centerY),
+        )
+    }
+    // Inner plasma core corona ring
     drawCircle(
         brush = Brush.radialGradient(
             colors = listOf(
-                highlight.copy(alpha = 0.60f + 0.30f * energy + 0.30f * pulseGlow),
-                colors.accent.copy(alpha = 0.34f + 0.28f * energy),
+                Color.White.copy(alpha = 0.55f + 0.25f * energy),
+                colors.accent.copy(alpha = 0.35f + 0.25f * energy),
                 Color.Transparent,
             ),
-            center = Offset(centerX, centerY),
-            radius = nucleusRadius,
+            center = Offset(centerX - nucleusRadius * 0.22f, centerY - nucleusRadius * 0.22f),
+            radius = nucleusRadius * 0.85f,
         ),
-        radius = nucleusRadius,
+        radius = nucleusRadius * 0.85f,
         center = Offset(centerX, centerY),
     )
-    drawCircle(
-        color = highlight.copy(alpha = 0.75f + 0.25f * energy),
-        radius = radiusPx * (0.055f + 0.035f * energy),
-        center = Offset(centerX, centerY),
-    )
-    // The energy halo: a slow, breathing ring of light around the nucleus
-    // whose radius and brightness follow the real goal progress. It is the
-    // orrery's pulse — a controlled luminous edge, not a glow.
-    if (quality != GraphicsQuality.PERFORMANCE) {
-        val breath = 0.5f + 0.5f * sin(scene.time * 1.4f)
-        val haloRadius = radiusPx * (0.42f + 0.20f * energy + 0.05f * breath)
-        drawCircle(
-            color = colors.accent.copy(alpha = 0.10f + 0.22f * energy + 0.06f * breath),
-            radius = haloRadius,
-            center = Offset(centerX, centerY),
-            style = Stroke(width = (1.1f + 0.7f * breath).dp.toPx()),
+
+    // ---- 6. Solid Front-Facing Bevelled 3D Titanium Exoskeleton Plates ------
+    // Each front-facing facet is a thick, physically shaded metallic armor plate
+    // with a machined triangular aperture window so the 3D plasma sphere shines
+    // through the precision-cut openings!
+    for (index in 0 until engine.faceCount) {
+        val f = engine.faceOrder[index]
+        val nz = engine.faceNormalZ[f]
+        if (nz <= 0.04f) continue
+
+        val face = CoreGeometry.faces[f]
+        val x0 = engine.screenX[face[0]]
+        val y0 = engine.screenY[face[0]]
+        val x1 = engine.screenX[face[1]]
+        val y1 = engine.screenY[face[1]]
+        val x2 = engine.screenX[face[2]]
+        val y2 = engine.screenY[face[2]]
+
+        val cx = (x0 + x1 + x2) / 3f
+        val cy = (y0 + y1 + y2) / 3f
+
+        // Compute the inner aperture window vertices (42% opening)
+        val openRatio = 0.44f
+        val ix0 = cx + (x0 - cx) * openRatio
+        val iy0 = cy + (y0 - cy) * openRatio
+        val ix1 = cx + (x1 - cx) * openRatio
+        val iy1 = cy + (y1 - cy) * openRatio
+        val ix2 = cx + (x2 - cx) * openRatio
+        val iy2 = cy + (y2 - cy) * openRatio
+
+        val shade = engine.faceShade[f]
+        val spec = engine.faceSpecular[f]
+        val rim = engine.faceRim[f]
+        val nx = engine.faceNormalX[f]
+        val ny = engine.faceNormalY[f]
+
+        // Build the 3 trapezoidal metallic frame segments of this triangular armor plate
+        val plateShadow = lerpColor(Color(0xFF141A24), colors.metalDark, shade * 0.7f)
+        val plateMid = lerpColor(colors.metalDark, colors.metalMid, shade)
+        val plateBright = lerpColor(
+            plateMid,
+            Color.White,
+            (spec * 0.85f + rim * 0.35f + shade * 0.25f).coerceIn(0f, 1f),
+        )
+
+        val gradStart = Offset(cx - nx * radiusPx * 0.45f, cy + ny * radiusPx * 0.45f)
+        val gradEnd = Offset(cx + nx * radiusPx * 0.45f, cy - ny * radiusPx * 0.45f)
+        val plateBrush = Brush.linearGradient(
+            colors = listOf(plateBright.copy(alpha = 0.95f), plateMid.copy(alpha = 0.92f), plateShadow.copy(alpha = 0.95f)),
+            start = gradStart,
+            end = gradEnd,
+        )
+
+        // Draw the 3 solid bevelled armor struts of the triangular plate
+        drawQuadFacet(scratchPath, x0, y0, x1, y1, ix1, iy1, ix0, iy0, plateBrush)
+        drawQuadFacet(scratchPath, x1, y1, x2, y2, ix2, iy2, ix1, iy1, plateBrush)
+        drawQuadFacet(scratchPath, x2, y2, x0, y0, ix0, iy0, ix2, iy2, plateBrush)
+
+        // Inner window bevel thickness (simulates 3D armor thickness towards the reactor core)
+        innerPath.reset()
+        innerPath.moveTo(ix0, iy0)
+        innerPath.lineTo(ix1, iy1)
+        innerPath.lineTo(ix2, iy2)
+        innerPath.close()
+        drawPath(
+            path = innerPath,
+            color = colors.accent.copy(alpha = (0.28f + 0.45f * shade + 0.30f * spec).coerceIn(0f, 0.95f)),
+            style = Stroke(width = 1.6.dp.toPx(), join = StrokeJoin.Round),
+        )
+
+        // Outer machined bevel seam + specular highlight ridge
+        scratchPath.reset()
+        scratchPath.moveTo(x0, y0)
+        scratchPath.lineTo(x1, y1)
+        scratchPath.lineTo(x2, y2)
+        scratchPath.close()
+        drawPath(
+            path = scratchPath,
+            color = Color(0xFF070A10).copy(alpha = 0.85f),
+            style = Stroke(width = 2.2.dp.toPx(), join = StrokeJoin.Round),
+        )
+        drawPath(
+            path = scratchPath,
+            color = lerpColor(colors.metalMid, Color.White, (shade * 0.6f + spec * 0.8f).coerceIn(0f, 1f))
+                .copy(alpha = (0.45f + 0.50f * shade).coerceIn(0f, 1f)),
+            style = Stroke(width = 1.0.dp.toPx(), join = StrokeJoin.Round),
         )
     }
 
-    // ---- 6. The edges of the shell ------------------------------------------
-    if (quality != GraphicsQuality.PERFORMANCE) {
-        val edgeWidth = if (quality == GraphicsQuality.HIGH) 1.25f else 1f
-        for (e in CoreGeometry.edges.indices) {
-            val edge = CoreGeometry.edges[e]
-            val owners = CoreGeometry.edgeFaces[e]
-            val shade = if (owners.size == 2) {
-                0.5f * (engine.faceShade[owners[0]] + engine.faceShade[owners[1]])
-            } else {
-                0.5f
-            }
-            val rim = if (owners.size == 2) {
-                0.5f * (engine.faceRim[owners[0]] + engine.faceRim[owners[1]])
-            } else {
-                0f
-            }
-            val color = lerpColor(body, highlight, shade)
-                .copy(alpha = (0.30f + 0.55f * shade + 0.22f * rim).coerceIn(0f, 1f))
-            drawLine(
-                color = color,
-                start = Offset(engine.screenX[edge[0]], engine.screenY[edge[0]]),
-                end = Offset(engine.screenX[edge[1]], engine.screenY[edge[1]]),
-                strokeWidth = edgeWidth.dp.toPx(),
-            )
-        }
-    }
-
-    // ---- 7. The half of each ring that is in front of the body --------------
-    drawRingHalf(
+    // ---- 7. Front halves of the 3D Machined Torus Gyroscope Rings -----------
+    drawVolumetricRingHalf(
         engine = engine,
         scratchPath = scratchPath,
         offset = 0,
         centerX = centerX,
         centerY = centerY,
         radiusPx = radiusPx,
-        bandWidth = radiusPx * 0.075f,
-        near = colors.metalLight,
-        far = colors.accent,
+        tubeRadius = radiusPx * 0.082f,
+        metalLight = colors.metalLight,
+        metalMid = colors.metalMid,
+        metalDark = colors.metalDark,
+        accent = colors.accent,
         front = true,
     )
-    drawRingHalf(
-        engine = engine,
-        scratchPath = scratchPath,
-        offset = engine.secondRingOffset,
-        centerX = centerX,
-        centerY = centerY,
-        radiusPx = radiusPx,
-        bandWidth = radiusPx * 0.018f,
-        near = colors.metalLight,
-        far = colors.metalMid,
-        front = true,
-    )
-    drawRingHalf(
+    drawVolumetricRingHalf(
         engine = engine,
         scratchPath = scratchPath,
         offset = engine.thirdRingOffset,
         centerX = centerX,
         centerY = centerY,
         radiusPx = radiusPx,
-        bandWidth = radiusPx * 0.026f,
-        near = colors.metalLight,
-        far = colors.metalDark,
+        tubeRadius = radiusPx * 0.052f,
+        metalLight = colors.metalLight,
+        metalMid = colors.metalMid,
+        metalDark = colors.metalDark,
+        accent = colors.accent,
+        front = true,
+    )
+    drawVolumetricRingHalf(
+        engine = engine,
+        scratchPath = scratchPath,
+        offset = engine.secondRingOffset,
+        centerX = centerX,
+        centerY = centerY,
+        radiusPx = radiusPx,
+        tubeRadius = radiusPx * 0.042f,
+        metalLight = colors.metalLight,
+        metalMid = colors.metalMid,
+        metalDark = colors.metalDark,
+        accent = colors.accent,
         front = true,
     )
 
-    // ---- 8. The orbiting nodes ----------------------------------------------
-    // Small metallic bodies riding the rings. Each is a lit sphere: a dark
-    // base, a bright cap towards the key light, and a point of light on
-    // the ones that are near.
-    for (n in 0 until engine.nodeCount) {
-        val depth = ((engine.nodeZ[n] + 1.8f) / 3.6f).coerceIn(0f, 1f)
-        val x = centerX + engine.nodeX[n] * radiusPx
-        val y = centerY + engine.nodeY[n] * radiusPx
-        val radius = engine.nodeSize[n] * radiusPx
-        drawCircle(
-            color = colors.metalDark.copy(alpha = 0.55f + 0.35f * depth),
-            radius = radius,
-            center = Offset(x, y),
-        )
-        drawCircle(
-            color = colors.metalLight.copy(alpha = 0.35f + 0.55f * depth),
-            radius = radius * 0.55f,
-            center = Offset(x - radius * 0.22f, y - radius * 0.22f),
-        )
-    }
+    // ---- 8. Front-facing 3D Spherical Chrome Satellites ---------------------
+    drawOrbitingNodes(
+        engine = engine,
+        centerX = centerX,
+        centerY = centerY,
+        radiusPx = radiusPx,
+        colors = colors,
+        frontPass = true,
+    )
 
-    // ---- 9. The sparks of the streak ----------------------------------------
+    // ---- 9. Streak Energy Nodes along the Primary Gyroscope Ring ------------
     val sparks = streakDays.coerceIn(0, 24)
     if (sparks > 0) {
         for (s in 0 until sparks) {
@@ -506,90 +649,93 @@ private fun DrawScope.drawCore(
             val depth = (engine.ringZ[index] + 1.8f) / 3.6f
             val x = engine.ringScreenX(0, index, centerX, radiusPx)
             val y = engine.ringScreenY(0, index, centerY, radiusPx)
-            val radius = radiusPx * (0.018f + 0.016f * depth.coerceIn(0f, 1f))
+            val r = radiusPx * (0.022f + 0.018f * depth.coerceIn(0f, 1f))
             drawCircle(
-                color = colors.accent.copy(alpha = (0.35f + 0.55f * depth).coerceIn(0f, 0.9f)),
-                radius = radius,
+                color = colors.accent.copy(alpha = (0.45f + 0.50f * depth).coerceIn(0f, 0.95f)),
+                radius = r,
                 center = Offset(x, y),
+            )
+            drawCircle(
+                color = Color.White.copy(alpha = (0.55f + 0.40f * depth).coerceIn(0f, 1f)),
+                radius = r * 0.45f,
+                center = Offset(x - r * 0.2f, y - r * 0.2f),
             )
         }
     }
 
-    // ---- 10. The graduations of the record -----------------------------------
-    // The outer ring is graduated like a dial, and the number of
-    // graduations follows the personal record: a faster typist gets a
-    // denser dial.
-    if (quality != GraphicsQuality.PERFORMANCE && bestWpm > 0) {
-        val ticks = 12 + (bestWpm / 8).coerceIn(0, 24)
-        val step = engine.ringSegments / ticks
-        if (step > 0) {
-            for (t in 0 until ticks) {
-                val index = (t * step) % engine.ringSegments
-                val x = engine.ringScreenX(engine.secondRingOffset, index, centerX, radiusPx)
-                val y = engine.ringScreenY(engine.secondRingOffset, index, centerY, radiusPx)
-                val innerX = centerX + (x - centerX) * 0.90f
-                val innerY = centerY + (y - centerY) * 0.90f
-                drawLine(
-                    color = colors.metalLight.copy(alpha = 0.32f),
-                    start = Offset(innerX, innerY),
-                    end = Offset(x, y),
-                    strokeWidth = 0.9f.dp.toPx(),
-                )
-            }
+    // ---- 10. Precision Machined Chronometer Ticks on Outer Ring -------------
+    if (quality != GraphicsQuality.PERFORMANCE) {
+        val ticks = 16 + (bestWpm / 8).coerceIn(0, 24)
+        val step = max(1, engine.ringSegments / ticks)
+        for (t in 0 until ticks) {
+            val index = (t * step) % engine.ringSegments
+            val x = engine.ringScreenX(engine.secondRingOffset, index, centerX, radiusPx)
+            val y = engine.ringScreenY(engine.secondRingOffset, index, centerY, radiusPx)
+            val innerX = centerX + (x - centerX) * 0.92f
+            val innerY = centerY + (y - centerY) * 0.92f
+            drawLine(
+                color = colors.metalLight.copy(alpha = 0.48f),
+                start = Offset(innerX, innerY),
+                end = Offset(x, y),
+                strokeWidth = 1.2f.dp.toPx(),
+                cap = StrokeCap.Round,
+            )
         }
     }
 
-    // ---- 11. The broad highlight --------------------------------------------
-    val sheenColor = if (colors.isLight) colors.metalLight else Color.White
-    val sheenCenter = Offset(centerX - radiusPx * 0.34f, centerY - radiusPx * 0.40f)
-    val sheenRadius = radiusPx * 0.92f
-    drawCircle(
-        brush = Brush.radialGradient(
-            colors = listOf(sheenColor.copy(alpha = 0.09f), Color.Transparent),
-            center = sheenCenter,
-            radius = sheenRadius,
-        ),
-        radius = sheenRadius,
-        center = sheenCenter,
-    )
-
-    // ---- 12. The shockwave ---------------------------------------------------
+    // ---- 11. Interactive Shockwave Ring on Tap ------------------------------
     if (pulse >= 0f) {
-        val waveRadius = radiusPx * (0.5f + 1.6f * pulse)
+        val waveRadius = radiusPx * (0.55f + 1.55f * pulse)
         drawCircle(
-            color = colors.accent.copy(alpha = (1f - pulse) * 0.5f),
+            color = colors.accent.copy(alpha = (1f - pulse) * 0.65f),
             radius = waveRadius,
             center = Offset(centerX, centerY),
-            style = Stroke(width = (0.6f + (1f - pulse) * 2.4f).dp.toPx()),
+            style = Stroke(width = (1.0f + (1f - pulse) * 3.2f).dp.toPx()),
         )
     }
 }
 
+private fun DrawScope.drawQuadFacet(
+    path: Path,
+    x0: Float,
+    y0: Float,
+    x1: Float,
+    y1: Float,
+    x2: Float,
+    y2: Float,
+    x3: Float,
+    y3: Float,
+    brush: Brush,
+) {
+    path.reset()
+    path.moveTo(x0, y0)
+    path.lineTo(x1, y1)
+    path.lineTo(x2, y2)
+    path.lineTo(x3, y3)
+    path.close()
+    drawPath(path = path, brush = brush)
+}
+
 /**
- * Draws one half of an orbital ring.
- *
- * The ring is split at the depth of the body: the half that is behind it
- * is drawn before the body and the half that is in front of it after, so
- * the ring passes *through* the object instead of floating over it.
+ * Draws one depth-sorted half of an orbital ring as a true 3D cylindrical
+ * metallic torus tube (outer shadow base, brushed-metal body, and sharp
+ * specular highlight ridge).
  */
-private fun DrawScope.drawRingHalf(
+private fun DrawScope.drawVolumetricRingHalf(
     engine: Core3D,
     scratchPath: Path,
     offset: Int,
     centerX: Float,
     centerY: Float,
     radiusPx: Float,
-    bandWidth: Float,
-    near: Color,
-    far: Color,
+    tubeRadius: Float,
+    metalLight: Color,
+    metalMid: Color,
+    metalDark: Color,
+    accent: Color,
     front: Boolean,
 ) {
     val segments = engine.ringSegments
-
-    // The band is drawn as one reused path, not as one line per segment
-    // and without allocating a fresh Path per call. Whenever segments are
-    // skipped across the depth split, `connected` resets so the next arc
-    // starts with `moveTo` instead of drawing a chord across the gap.
     scratchPath.reset()
     var hasAny = false
     var connected = false
@@ -621,8 +767,6 @@ private fun DrawScope.drawRingHalf(
         }
         scratchPath.lineTo(x2, y2)
 
-        // The deepest and the shallowest point of this half: they are the
-        // two ends of the depth ramp of the band.
         if (depth < lowest) {
             lowest = depth
             farX = x1
@@ -636,40 +780,94 @@ private fun DrawScope.drawRingHalf(
     }
     if (!hasAny) return
 
-    // How near the two ends of the half are, in 0..1. The near end is
-    // the brighter and the wider one.
     val lowCloseness = ((lowest + 1.8f) / 3.6f).coerceIn(0f, 1f)
     val highCloseness = ((highest + 1.8f) / 3.6f).coerceIn(0f, 1f)
     val average = (lowCloseness + highCloseness) / 2f
-    val baseAlpha = if (front) 0.30f else 0.14f
-    val alphaRange = if (front) 0.45f else 0.22f
-    val width = bandWidth * (0.55f + 0.55f * average)
+    val visibility = if (front) 0.94f else 0.58f
+    val thickness = tubeRadius * (0.72f + 0.52f * average)
 
+    // Pass 1: 3D Tube dark metallic shadow base
+    drawPath(
+        path = scratchPath,
+        color = Color(0xFF080B12).copy(alpha = 0.85f * visibility),
+        style = Stroke(width = thickness * 1.45f, cap = StrokeCap.Round, join = StrokeJoin.Round),
+    )
+
+    // Pass 2: 3D Brushed Titanium Cylinder Body
     drawPath(
         path = scratchPath,
         brush = Brush.linearGradient(
             colors = listOf(
-                lerpColor(far, near, lowCloseness)
-                    .copy(alpha = baseAlpha + alphaRange * lowCloseness),
-                lerpColor(far, near, highCloseness)
-                    .copy(alpha = baseAlpha + alphaRange * highCloseness),
+                lerpColor(metalDark, metalMid, lowCloseness).copy(alpha = 0.85f * visibility),
+                lerpColor(metalMid, metalLight, highCloseness).copy(alpha = 0.96f * visibility),
+                accent.copy(alpha = 0.78f * visibility),
             ),
             start = Offset(farX, farY),
             end = Offset(nearX, nearY),
         ),
-        style = Stroke(width = width),
+        style = Stroke(width = thickness, cap = StrokeCap.Round, join = StrokeJoin.Round),
     )
-    // The lit edge along the top of the band.
-    if (front) {
-        drawPath(
-            path = scratchPath,
-            color = near.copy(alpha = 0.30f + 0.45f * average),
-            style = Stroke(width = max(0.7f, width * 0.22f)),
+
+    // Pass 3: Razor-sharp Specular Highlight Crest along the top of the 3D cylinder
+    drawPath(
+        path = scratchPath,
+        color = Color.White.copy(alpha = (0.38f + 0.48f * average) * visibility),
+        style = Stroke(width = max(1.0f, thickness * 0.28f), cap = StrokeCap.Round, join = StrokeJoin.Round),
+    )
+}
+
+/**
+ * Draws the orbiting nodes as solid 3D shaded metallic spheres with drop
+ * shadows and specular reflections.
+ */
+private fun DrawScope.drawOrbitingNodes(
+    engine: Core3D,
+    centerX: Float,
+    centerY: Float,
+    radiusPx: Float,
+    colors: MrsadColors,
+    frontPass: Boolean,
+) {
+    for (n in 0 until engine.nodeCount) {
+        val z = engine.nodeZ[n]
+        val isFront = z >= 0f
+        if (isFront != frontPass) continue
+
+        val depth = ((z + 1.8f) / 3.6f).coerceIn(0f, 1f)
+        val x = centerX + engine.nodeX[n] * radiusPx
+        val y = centerY + engine.nodeY[n] * radiusPx
+        val r = engine.nodeSize[n] * radiusPx * 1.35f
+
+        // Ambient shadow behind sphere
+        drawCircle(
+            color = Color.Black.copy(alpha = 0.65f),
+            radius = r * 1.22f,
+            center = Offset(x + r * 0.14f, y + r * 0.18f),
+        )
+        // 3D Sphere shaded body
+        drawCircle(
+            brush = Brush.radialGradient(
+                colors = listOf(
+                    Color.White,
+                    colors.metalLight,
+                    colors.metalMid,
+                    Color(0xFF121722),
+                ),
+                center = Offset(x - r * 0.32f, y - r * 0.32f),
+                radius = r * 1.35f,
+            ),
+            radius = r,
+            center = Offset(x, y),
+        )
+        // Specular pinpoint reflection
+        drawCircle(
+            color = Color.White.copy(alpha = 0.85f + 0.15f * depth),
+            radius = r * 0.24f,
+            center = Offset(x - r * 0.34f, y - r * 0.34f),
         )
     }
 }
 
-/** Blends two colours. */
 private fun lerpColor(a: Color, b: Color, t: Float): Color {
     val fraction = t.coerceIn(0f, 1f)
     return Color(

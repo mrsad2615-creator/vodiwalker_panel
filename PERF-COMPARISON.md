@@ -5,7 +5,7 @@ driven by the same script, several times each. The frame numbers come
 from the platform's own `FrameMetrics`, and the CPU and memory numbers
 from the process itself.
 
-- baseline: 6 runs
+- baseline: 5 runs
 - redesign: 6 runs
 
 The number of each column is the middle of the runs. The verdict says
@@ -19,42 +19,42 @@ application.
 
 | metric | baseline | redesign | change |
 | --- | --- | --- | --- |
-| frames | 523 | 452 | -13.6% worse |
-| mean frame (ms) | 29.5 | 53 | +79.7% worse |
-| p50 frame (ms) | 21 | 50 | +138.1% worse |
-| p90 frame (ms) | 37 | 67 | +81.1% worse |
-| p95 frame (ms) | 50 | 67.5 | +35.0% worse |
-| p99 frame (ms) | 129.5 | 150 | +15.8% worse |
-| worst frame (ms) | 150 | 183.5 | +22.3% inside the spread |
+| frames | 518 | 509 | -1.7% inside the spread |
+| mean frame (ms) | 34 | 40.5 | +19.1% worse |
+| p50 frame (ms) | 36 | 35.5 | -1.4% inside the spread |
+| p90 frame (ms) | 38 | 50 | +31.6% inside the spread |
+| p95 frame (ms) | 50 | 51.5 | +3.0% inside the spread |
+| p99 frame (ms) | 133 | 150 | +12.8% inside the spread |
+| worst frame (ms) | 150 | 169 | +12.7% inside the spread |
 | jank (%) | 100 | 100 | +0.0% inside the spread |
 
 ## Frames, per phase
 
 | phase | metric | baseline | redesign | change |
 | --- | --- | --- | --- | --- |
-| idle | idle (the object turns on its own) · p50 (ms) | 23 | 50 | +117.4% worse |
-| idle | idle (the object turns on its own) · p95 (ms) | 47.5 | 67 | +41.1% worse |
+| idle | idle (the object turns on its own) · p50 (ms) | 36 | 35 | -2.8% inside the spread |
+| idle | idle (the object turns on its own) · p95 (ms) | 49 | 50 | +2.0% inside the spread |
 | idle | idle (the object turns on its own) · jank (%) | 100 | 100 | +0.0% inside the spread |
-| scroll | scroll · p50 (ms) | 27 | 51 | +88.9% worse |
-| scroll | scroll · p95 (ms) | 50 | 133.5 | +167.0% worse |
+| scroll | scroll · p50 (ms) | 36 | 43.5 | +20.8% inside the spread |
+| scroll | scroll · p95 (ms) | 52 | 145.5 | +179.8% inside the spread |
 | scroll | scroll · jank (%) | 100 | 100 | +0.0% inside the spread |
-| touch | touch (the object under the finger) · p50 (ms) | 36 | 50 | +38.9% worse |
-| touch | touch (the object under the finger) · p95 (ms) | 37.5 | 67 | +78.7% worse |
+| touch | touch (the object under the finger) · p50 (ms) | 20 | 38.5 | +92.5% inside the spread |
+| touch | touch (the object under the finger) · p95 (ms) | 42 | 50 | +19.0% inside the spread |
 | touch | touch (the object under the finger) · jank (%) | 100 | 100 | +0.0% inside the spread |
-| navigate | navigate · p50 (ms) | 20 | 50 | +150.0% worse |
-| navigate | navigate · p95 (ms) | 36 | 67 | +86.1% worse |
+| navigate | navigate · p50 (ms) | 20 | 33.5 | +67.5% worse |
+| navigate | navigate · p95 (ms) | 31 | 50 | +61.3% worse |
 | navigate | navigate · jank (%) | 100 | 100 | +0.0% inside the spread |
 
 ## The process
 
 | metric | baseline | redesign | change |
 | --- | --- | --- | --- |
-| CPU time (ms) | 7119.5 | 8991 | +26.3% worse |
-| CPU load (%) | 78.5 | 98 | +24.8% worse |
-| PSS at the end (kB) | 170870 | 171859 | +0.6% same |
-| PSS growth (kB) | 495 | -592 | -219.6% inside the spread |
-| Java heap in use (kB) | 8829 | 9678 | +9.6% worse |
-| native heap (kB) | 19239 | 19774 | +2.8% worse |
+| CPU time (ms) | 6949 | 8210.5 | +18.2% worse |
+| CPU load (%) | 77 | 91 | +18.2% worse |
+| PSS at the end (kB) | 170679 | 168943 | -1.0% inside the spread |
+| PSS growth (kB) | -4870 | -8280 | +70.0% inside the spread |
+| Java heap in use (kB) | 8866 | 7550 | -14.8% inside the spread |
+| native heap (kB) | 19308 | 18794 | -2.7% inside the spread |
 
 ## The spread of the runs
 
@@ -63,11 +63,11 @@ difference that is smaller than this is not a difference.
 
 | metric | baseline | redesign |
 | --- | --- | --- |
-| p50 frame (ms) | 20–36 | 50–50 |
-| p95 frame (ms) | 33–50 | 67–83 |
-| worst frame (ms) | 136–186 | 167–233 |
-| CPU load (%) | 69–79 | 96–98 |
-| PSS at the end (kB) | 167777–171143 | 171287–172481 |
+| p50 frame (ms) | 20–36 | 33–47 |
+| p95 frame (ms) | 36–67 | 50–53 |
+| worst frame (ms) | 134–187 | 150–186 |
+| CPU load (%) | 70–77 | 88–94 |
+| PSS at the end (kB) | 169308–172289 | 168357–170346 |
 
 ## The frame budget
 

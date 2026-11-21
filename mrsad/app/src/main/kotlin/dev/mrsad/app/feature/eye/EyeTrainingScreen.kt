@@ -730,8 +730,13 @@ private fun EyeResultPanel(
                 )
             }
 
+            val summaryFeedback = when {
+                report.accuracyPercent >= 85 -> "عملکرد عالی! دقت هدف‌گیری شما در این سطح بالای ۸۵٪ بود؛ می‌توانید سرعت یا دشواری را یک پله افزایش دهید."
+                report.accuracyPercent >= 65 -> "عملکرد متعادل. برای تثبیت هماهنگی چشم و توجه دیداری، یک نوبت دیگر در همین سطح تمرین کنید."
+                else -> "پیشنهاد علمی: سرعت محرک را یک سطح کاهش دهید و روی دقت ضربه در مرکز هدف تمرکز کنید."
+            }
             Text(
-                report.feedbackFa,
+                summaryFeedback,
                 style = type.body,
                 color = colors.textSecondary,
                 textAlign = TextAlign.Start,

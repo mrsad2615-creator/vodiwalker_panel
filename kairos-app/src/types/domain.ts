@@ -173,6 +173,8 @@ export interface UserSettings {
   accentColor: string;
   backgroundId: BackgroundId;
   motionLevel: MotionLevel;
+  /** Each section derives its own hue + environment from the accent. */
+  sectionIdentityEnabled: boolean;
   displayName: string;
   dailyFocusGoalMinutes: number;
   dailyTaskGoal: number;

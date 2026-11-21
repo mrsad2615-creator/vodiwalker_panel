@@ -11,6 +11,7 @@ import {
   Timer,
 } from '@/components/ui/icons';
 import type { NavTab } from '@/types/domain';
+import { applySectionAppearance } from '@/lib/sections';
 import { useApp } from '@/context/AppContext';
 import { KairosMarkTile } from '@/components/ui/KairosMark';
 import { APP_VERSION, BUILD_NUMBER } from '@/lib/buildInfo';
@@ -37,6 +38,19 @@ const SECONDARY_TABS: { id: NavTab; label: string; hint: string; icon: typeof La
 export function AppShell({ children }: { children: ReactNode }) {
   const { activeTab, setActiveTab, settings, toasts, dismissToast, focus } = useApp();
   const [moreOpen, setMoreOpen] = useState(false);
+
+  // Each section paints itself: hue, environment and light position.
+  useEffect(() => {
+    applySectionAppearance(
+      {
+        accent: settings.accentColor,
+        backgroundId: settings.backgroundId,
+        motionLevel: settings.motionLevel,
+      },
+      activeTab,
+      settings.sectionIdentityEnabled !== false
+    );
+  }, [activeTab, settings.accentColor, settings.backgroundId, settings.motionLevel, settings.sectionIdentityEnabled]);
 
   const handleNav = (tab: NavTab) => {
     setMoreOpen(false);

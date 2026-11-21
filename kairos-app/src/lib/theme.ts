@@ -222,6 +222,32 @@ export function deriveAccent(input: string): DerivedAccent {
   };
 }
 
+/**
+ * Rotates an accent's hue in OKLCH while keeping its lightness and as much
+ * chroma as the sRGB gamut allows. This is how each section gets its own colour
+ * family *relative to the user's accent* — pick teal and Analytics still sits a
+ * different hue from Home, instead of the whole identity collapsing to one tint.
+ */
+export function rotateHue(hex: string, degrees: number): string {
+  const base = hexToOklch(hex);
+  const target = ((base.h + degrees) % 360 + 360) % 360;
+
+  let chroma = base.c;
+  let candidate = oklchToHex({ l: base.l, c: chroma, h: target });
+
+  // Out-of-gamut colours get clamped per channel, which drags the hue. Reduce
+  // chroma until the round-trip lands on the hue we actually asked for.
+  for (let i = 0; i < 24; i += 1) {
+    const back = hexToOklch(candidate);
+    const drift = Math.min(Math.abs(back.h - target), 360 - Math.abs(back.h - target));
+    if (drift < 2.5) break;
+    chroma *= 0.92;
+    candidate = oklchToHex({ l: base.l, c: chroma, h: target });
+  }
+
+  return candidate;
+}
+
 /* ---------------------------------------------------------------------------
    Appearance state (persisted + cached for a flash-free boot)
    --------------------------------------------------------------------------- */

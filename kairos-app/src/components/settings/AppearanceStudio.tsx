@@ -55,6 +55,8 @@ export function AppearanceStudio() {
     setBackgroundId(persisted.backgroundId);
   }, [persisted.accent, persisted.motionLevel, persisted.backgroundId]);
 
+  const sectionIdentity = settings.sectionIdentityEnabled !== false;
+
   const derived = useMemo(() => deriveAccent(accent), [accent]);
   const onInk = contrastRatio(derived.fg, '#0A0A0C');
   const onFill = contrastRatio(derived.on, derived.accent);
@@ -255,9 +257,53 @@ export function AppearanceStudio() {
         <span className="num-geo">{onInk.toFixed(1)}:1</span> است (حد استاندارد ۴٫۵:۱).
       </p>
 
+      {/* ---------- Section identity: every room has its own light ---------- */}
+      <div className="flex items-center justify-between gap-3 border-y border-[var(--border)] py-2.5">
+        <div className="min-w-0">
+          <p className="text-[11px] font-semibold text-[var(--text-2)]">هویت اختصاصی بخش‌ها</p>
+          <p className="mt-0.5 text-[9px] leading-4 text-[var(--text-3)]">
+            {sectionIdentity
+              ? 'هر بخش خانوادهٔ رنگ، منبع نور و محیط خودش را دارد.'
+              : 'همهٔ بخش‌ها با یک رنگ و یک محیط نمایش داده می‌شوند.'}
+          </p>
+        </div>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={sectionIdentity}
+          aria-label="هویت اختصاصی بخش‌ها"
+          onClick={() => {
+            const next = !sectionIdentity;
+            void updateSettings({ sectionIdentityEnabled: next });
+            void triggerHaptic(next ? 'success' : 'light', settings.hapticsEnabled);
+            pushToast({
+              title: next ? 'هویت بخش‌ها فعال شد' : 'هویت بخش‌ها خاموش شد',
+              tone: 'default',
+            });
+          }}
+          className="relative h-6 w-11 shrink-0 rounded-full border transition-colors"
+          style={{
+            borderColor: sectionIdentity ? 'var(--accent)' : 'var(--border-strong)',
+            background: sectionIdentity
+              ? 'color-mix(in srgb, var(--accent) 55%, transparent)'
+              : 'var(--surface-1)',
+          }}
+        >
+          <span
+            className="absolute top-1/2 h-4 w-4 -translate-y-1/2 rounded-full bg-[var(--text)] transition-[inset-inline-start] duration-200"
+            style={{ insetInlineStart: sectionIdentity ? 'calc(100% - 1.25rem)' : '0.125rem' }}
+          />
+        </button>
+      </div>
+
       {/* ---------- Background environments ---------- */}
       <div className="space-y-1.5 pt-1">
-        <p className="text-[11px] font-semibold text-[var(--text-2)]">محیط پس‌زمینه</p>
+        <div className="flex items-baseline justify-between gap-2">
+          <p className="text-[11px] font-semibold text-[var(--text-2)]">محیط پس‌زمینه</p>
+          {sectionIdentity && (
+            <span className="text-[8.5px] text-[var(--text-3)]">محیط پایه؛ هر بخش محیط خودش را دارد</span>
+          )}
+        </div>
         <div className="grid grid-cols-3 gap-1.5">
           {BACKGROUND_PRESETS.map((bg) => {
             const active = bg.id === backgroundId;

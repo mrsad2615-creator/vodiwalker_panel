@@ -1,15 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import {
-  ArrowUpLeft,
-  Check,
-  Clock,
-  Flame,
-  Plus,
-  Sparkles,
-  Target,
-  Timer,
-  AlertCircle,
-} from '@/components/ui/icons';
+import { ArrowUpLeft, Check, Plus, Timer } from '@/components/ui/icons';
 import type { Goal, Habit, Task } from '@/types/domain';
 import {
   clearAllUserData,
@@ -40,11 +30,8 @@ import {
 import { formatDurationShort, PRIORITY_META } from '@/lib/format';
 import { triggerHaptic } from '@/lib/native';
 import { useApp } from '@/context/AppContext';
-import { LuxuryCard } from '@/components/ui/LuxuryCard';
 import { Numeric } from '@/components/ui/Numeric';
-import { ProgressRing } from '@/components/charts/ProgressRing';
 import { HabitIcon } from '@/components/ui/KairosMark';
-import { EmptyState } from '@/components/ui/EmptyState';
 import { GoalModal } from './GoalModal';
 
 export function DashboardPage() {
@@ -158,45 +145,166 @@ export function DashboardPage() {
     void triggerHaptic(next >= goal.targetValue ? 'success' : 'light', settings.hapticsEnabled);
   };
 
+  const taskPct = summary.todayTasksTotal
+    ? Math.round((summary.todayTasksCompleted / summary.todayTasksTotal) * 100)
+    : 0;
+  const habitPct = summary.todayHabitsScheduled
+    ? Math.round((summary.todayHabitsCompleted / summary.todayHabitsScheduled) * 100)
+    : 0;
+  const focusPct = Math.min(
+    100,
+    Math.round((summary.todayFocusMinutes / Math.max(1, summary.focusGoalMinutes)) * 100)
+  );
+
   return (
-    <div className="space-y-5">
-      {/* Greeting & Jalali Date Header */}
-      <section className="flex items-end justify-between pt-1">
-        <div>
-          <p className="text-xs font-medium text-[#9C9CA6]">
-            {getPersianGreeting()}،{' '}
-            <span className="text-[#ECECEF]">{settings.displayName}</span>
-          </p>
-          <h1 className="mt-1 flex items-baseline gap-1.5 text-[1.28rem] font-bold tracking-tight text-[#ECECEF]">
-            <span>{dateInfo.weekday}،</span>
-            <Numeric value={dateInfo.day} variant="geo" className="text-[1.32rem] text-[var(--accent-fg)]" />
-            <span>{dateInfo.month}</span>
-            <Numeric value={dateInfo.year} variant="geo" className="text-sm font-medium text-[#9C9CA6]" />
-          </h1>
+    <div className="space-y-5 pb-2">
+      {/* ── MASTHEAD ────────────────────────────────────────────────────────
+          Home has its own voice: an editorial masthead on a light shaft, not a
+          card. Latin eyebrow in the display serif, Persian greeting in the body
+          face, and the local clock as a live tabular read-out. */}
+      <header
+        className="relative -mx-4 overflow-hidden px-4 pb-4 pt-1"
+        style={{
+          background:
+            'linear-gradient(174deg, color-mix(in srgb, var(--accent) 13%, transparent) 0%, transparent 62%)',
+        }}
+      >
+        <div className="flex items-center justify-between">
+          <span className="font-display-caps text-[8.5px] font-semibold text-[var(--accent-fg)]">
+            KAIROS · TODAY
+          </span>
+          <span className="num-geo text-[11px] tabular-nums text-[var(--text-2)]">{clock}</span>
         </div>
 
-        <div className="flex flex-col items-end">
-          <Numeric
-            value={clock}
-            variant="geo"
-            className="text-lg font-semibold tracking-tight text-[#ECECEF]/90"
-          />
-          <span className="text-[10px] text-[#6B6B75]">زمان محلی</span>
+        <h1 className="mt-2 text-[21px] font-bold leading-snug tracking-tight text-[var(--text)]">
+          {getPersianGreeting()}، {settings.displayName}
+        </h1>
+
+        <div className="mt-1 flex items-center gap-2 text-[11px] text-[var(--text-3)]">
+          <span>{dateInfo.weekday}</span>
+          <span className="h-[3px] w-[3px] rounded-full bg-[var(--text-3)] opacity-60" />
+          <Numeric value={dateInfo.day} variant="geo" className="text-[var(--text-2)]" />
+          <span>{dateInfo.month}</span>
+          <Numeric value={dateInfo.year} variant="geo" className="text-[var(--text-3)]" />
+        </div>
+      </header>
+
+      {/* ── DAY RAIL ────────────────────────────────────────────────────────
+          One band, three hairlines, three real ratios. No second ring, no tile
+          grid: the numbers are the composition. */}
+      <section aria-label="پیشرفت امروز" className="border-y border-[var(--border)] py-4">
+        <div className="flex items-end justify-between gap-4">
+          <div>
+            <span className="font-display-caps text-[8.5px] font-semibold text-[var(--text-3)]">
+              PROGRESS
+            </span>
+            <div className="mt-1 flex items-baseline gap-0.5">
+              <Numeric
+                value={summary.dailyProgressPercent}
+                variant="display"
+                className="text-[2.75rem] font-bold leading-none text-[var(--text)]"
+              />
+              <span className="num-display text-base font-medium text-[var(--text-3)]">%</span>
+            </div>
+            <p className="mt-1 text-[10px] text-[var(--text-3)]">پیشرفت امروز</p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('focus')}
+            className="text-end"
+          >
+            <span className="block text-[9.5px] text-[var(--text-3)]">تمرکز امروز</span>
+            <Numeric
+              value={formatDurationShort(summary.todayFocusMinutes)}
+              className="mt-0.5 block text-[15px] font-semibold text-[var(--accent-fg)]"
+            />
+            <span className="num-geo mt-0.5 block text-[9px] text-[var(--text-3)]">
+              هدف <Numeric value={summary.focusGoalMinutes} variant="geo" /> دقیقه
+            </span>
+          </button>
+        </div>
+
+        <div className="mt-4 grid grid-cols-3 gap-3">
+          {[
+            { label: 'کارها', done: summary.todayTasksCompleted, total: summary.todayTasksTotal, pct: taskPct, tab: 'tasks' as const },
+            { label: 'عادت‌ها', done: summary.todayHabitsCompleted, total: summary.todayHabitsScheduled, pct: habitPct, tab: 'habits' as const },
+            { label: 'تمرکز', done: summary.todayFocusMinutes, total: summary.focusGoalMinutes, pct: focusPct, tab: 'focus' as const },
+          ].map((row) => (
+            <button
+              key={row.label}
+              type="button"
+              onClick={() => setActiveTab(row.tab)}
+              className="group text-start"
+            >
+              <span className="flex items-baseline gap-1">
+                <Numeric
+                  value={row.done}
+                  variant="geo"
+                  className="text-[13px] font-bold text-[var(--text)]"
+                />
+                <span className="num-geo text-[10px] text-[var(--text-3)]">/ {row.total}</span>
+              </span>
+              <span className="mt-1.5 block h-[2px] w-full overflow-hidden rounded-full bg-white/8">
+                <span
+                  className="block h-full rounded-full transition-[width] duration-500"
+                  style={{ width: `${Math.max(row.pct, 2)}%`, background: 'var(--accent-fg)' }}
+                />
+              </span>
+              <span className="mt-1.5 block text-[9.5px] text-[var(--text-3)] group-hover:text-[var(--text-2)]">
+                {row.label}
+              </span>
+            </button>
+          ))}
         </div>
       </section>
 
-      {/* Optional First-Visit Starter Dataset Banner (1-tap clear to empty personal slate) */}
+      {/* ── PRIMARY ACTION ─────────────────────────────────────────────────── */}
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => setActiveTab('focus')}
+          className="btn-royal flex flex-1 items-center justify-between gap-2 rounded-[14px] px-4 py-3"
+        >
+          <span className="flex items-center gap-2 text-[12px] font-semibold">
+            <Timer className="h-4 w-4" strokeWidth={2} />
+            شروع تمرکز
+          </span>
+          <span className="num-geo text-[11px] font-medium opacity-80">
+            <Numeric value={settings.pomodoroFocusMin} variant="geo" /> دقیقه
+          </span>
+        </button>
+        <button
+          type="button"
+          onClick={() => openCreateTask({ defaultDueDate: todayKey })}
+          aria-label="افزودن سریع کار"
+          className="grid h-[42px] w-[42px] place-items-center rounded-[14px] border border-[var(--border-strong)] text-[var(--accent-fg)] transition-colors hover:border-[var(--accent-fg)]/45"
+        >
+          <Plus className="h-4 w-4" strokeWidth={2} />
+        </button>
+      </div>
+
+      {/* ── OVERDUE / SAMPLE NOTICE — hairline rows, not cards ─────────────── */}
+      {summary.overdueCount > 0 && (
+        <button
+          type="button"
+          onClick={() => setActiveTab('tasks')}
+          className="flex w-full items-center justify-between border-s-2 border-[var(--danger)] px-3 py-2 text-start"
+        >
+          <span className="text-[11px] text-[var(--text-2)]">
+            <Numeric value={summary.overdueCount} className="font-semibold text-[#EF9095]" /> وظیفه
+            عقب‌افتاده
+          </span>
+          <ArrowUpLeft className="h-3.5 w-3.5 text-[var(--text-3)]" />
+        </button>
+      )}
+
       {settings.hasSampleData && !settings.sampleBannerDismissed && (
-        <div className="flex items-center justify-between gap-3 rounded-2xl border border-[var(--accent)]/28 bg-[#1C1C21]/55 px-3.5 py-2.5">
-          <div className="min-w-0">
-            <p className="text-[11.5px] font-semibold text-[#ECECEF]">
-              داده‌های نمونه اولیه بارگذاری شده‌اند
-            </p>
-            <p className="mt-0.5 text-[10.5px] text-[#9C9CA6]">
-              تمامی نمودارها واقعی‌اند؛ می‌توانید همین حالا با فضای کاملاً خالی شروع کنید.
-            </p>
-          </div>
-          <div className="flex shrink-0 items-center gap-1.5">
+        <div className="flex items-center justify-between gap-3 border-s-2 border-[var(--accent-fg)]/40 px-3 py-2">
+          <p className="text-[10.5px] leading-4 text-[var(--text-3)]">
+            داده‌های نمونه بارگذاری شده‌اند؛ همهٔ نمودارها واقعی‌اند.
+          </p>
+          <div className="flex shrink-0 items-center gap-1">
             <button
               type="button"
               onClick={async () => {
@@ -207,14 +315,15 @@ export function DashboardPage() {
                   tone: 'success',
                 });
               }}
-              className="rounded-lg border border-[var(--accent-fg)]/25 bg-[#16161A] px-2.5 py-1.5 text-[10.5px] font-medium text-[#ECECEF] hover:border-[var(--accent-fg)]/50"
+              className="rounded-lg border border-[var(--border-strong)] px-2 py-1 text-[10px] font-medium text-[var(--text)]"
             >
               شروع خالی
             </button>
             <button
               type="button"
               onClick={() => updateSettings({ sampleBannerDismissed: true })}
-              className="rounded-lg px-2 py-1.5 text-[10.5px] text-[#9C9CA6] hover:text-[#ECECEF]"
+              aria-label="بستن پیشنهاد"
+              className="px-1.5 py-1 text-[10px] text-[var(--text-3)]"
             >
               بستن
             </button>
@@ -222,464 +331,251 @@ export function DashboardPage() {
         </div>
       )}
 
-      {/* HERO CARD — Daily Mastery Progress & Signature Display Numerals */}
-      <LuxuryCard variant="hero" className="p-5">
-        <div className="flex items-center justify-between gap-4">
-          <div className="min-w-0 flex-1 space-y-2.5">
-            <div className="inline-flex items-center gap-1.5 text-[10.5px] font-medium text-[var(--text-3)]">
-              <Sparkles className="h-3 w-3" />
-              <span>پیشرفت امروز</span>
-            </div>
-
-            <div className="flex items-baseline gap-1">
-              <Numeric
-                value={summary.dailyProgressPercent}
-                variant="display"
-                className="text-[3.25rem] font-bold text-[var(--text)]"
-              />
-              <span className="num-display text-[1.4rem] font-semibold text-[var(--text-2)]">%</span>
-            </div>
-
-            <p className="text-[11px] leading-5 text-[var(--text-3)]">
-              {summary.dailyProgressPercent >= 80
-                ? 'ریتم فوق‌العاده‌ای دارید؛ روز درخشان خود را تثبیت کنید.'
-                : summary.dailyProgressPercent >= 45
-                ? 'در مسیر درست هستید؛ اولویت‌های کلیدی امروز را ببندید.'
-                : summary.todayTasksTotal === 0 && summary.todayHabitsScheduled === 0
-                ? 'امروز هنوز برنامه‌ای ثبت نشده است. اولین گام را بردارید.'
-                : 'شروع قدرتمند با یک جلسه تمرکز کوتاه تفاوت بزرگی می‌سازد.'}
-            </p>
-          </div>
-
-          <ProgressRing percent={summary.dailyProgressPercent} size={108} strokeWidth={8.5}>
-            <Numeric
-              value={`${summary.todayTasksCompleted}/${summary.todayTasksTotal}`}
-              variant="geo"
-              className="text-base font-bold text-[#ECECEF]"
-            />
-            <span className="mt-0.5 text-[9.5px] text-[#9C9CA6]">کار امروز</span>
-          </ProgressRing>
-        </div>
-
-        {/* 3 Core Daily KPI Tiles */}
-        <div className="mt-5 grid grid-cols-3 gap-2.5">
+      {/* ── TASK LEDGER ─────────────────────────────────────────────────────
+          A ledger: rows on hairlines, priority as a 2px rule, time right-aligned.
+          Deliberately not a stack of cards. */}
+      <section>
+        <div className="flex items-baseline justify-between">
+          <h2 className="text-[13px] font-bold text-[var(--text)]">کارهای مهم امروز</h2>
           <button
             type="button"
             onClick={() => setActiveTab('tasks')}
-            className="rounded-[12px] border border-[var(--border)] bg-transparent px-3 py-2.5 text-right transition-colors hover:border-[var(--border-strong)]"
+            className="flex items-center gap-1 text-[10.5px] font-medium text-[var(--accent-fg)]"
           >
-            <span className="block text-[10px] text-[#9C9CA6]">تکمیل‌شده</span>
-            <Numeric
-              value={summary.todayTasksCompleted}
-              variant="display"
-              className="mt-1 text-[1.4rem] font-bold text-[var(--text)]"
-              suffix={
-                <span className="num-geo ml-0.5 text-xs font-medium text-[#6B6B75]">
-                  /{summary.todayTasksTotal}
-                </span>
-              }
-            />
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('habits')}
-            className="rounded-[12px] border border-[var(--border)] bg-transparent px-3 py-2.5 text-right transition-colors hover:border-[var(--border-strong)]"
-          >
-            <span className="block text-[10px] text-[#9C9CA6]">عادت امروز</span>
-            <Numeric
-              value={summary.todayHabitsCompleted}
-              variant="display"
-              className="mt-1 text-[1.4rem] font-bold text-[var(--text)]"
-              suffix={
-                <span className="num-geo ml-0.5 text-xs font-medium text-[#6B6B75]">
-                  /{summary.todayHabitsScheduled}
-                </span>
-              }
-            />
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('focus')}
-            className="rounded-[12px] border border-[var(--border)] bg-transparent px-3 py-2.5 text-right transition-colors hover:border-[var(--border-strong)]"
-          >
-            <span className="block text-[10px] text-[#9C9CA6]">زمان تمرکز</span>
-            <Numeric
-              value={formatDurationShort(summary.todayFocusMinutes)}
-              variant="display"
-              className="mt-1 text-[1.65rem] font-bold text-[#ECECEF]"
-            />
-          </button>
-        </div>
-
-        {/* Quick Actions Row */}
-        <div className="mt-4 flex items-center gap-2.5">
-          <button
-            type="button"
-            onClick={() => openCreateTask({ defaultDueDate: todayKey })}
-            className="btn-royal flex flex-1 items-center justify-center gap-2 rounded-2xl py-3 text-xs font-semibold"
-          >
-            <Plus className="h-4 w-4" />
-            <span>افزودن سریع کار</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('focus')}
-            className="btn-ghost-luxury flex items-center justify-center gap-1.5 rounded-2xl px-4 py-3 text-xs font-medium text-[var(--accent-fg)]"
-          >
-            <Timer className="h-4 w-4" />
-            <span>تمرکز</span>
-          </button>
-        </div>
-      </LuxuryCard>
-
-      {/* Overdue Gentle Notice if any */}
-      {summary.overdueCount > 0 && (
-        <button
-          type="button"
-          onClick={() => setActiveTab('tasks')}
-          className="flex w-full items-center justify-between rounded-2xl border border-[#E5484D]/25 bg-[#1B141D] px-4 py-3 text-right transition hover:border-[#E5484D]/45"
-        >
-          <div className="flex items-center gap-2.5">
-            <AlertCircle className="h-4 w-4 text-[#EF9095]" />
-            <span className="text-xs font-medium text-[#ECECEF]">
-              <Numeric value={summary.overdueCount} className="font-bold text-[#EF9095]" /> وظیفه
-              عقب‌افتاده نیاز به بازبینی دارد
-            </span>
-          </div>
-          <ArrowUpLeft className="h-4 w-4 text-[#9C9CA6]" />
-        </button>
-      )}
-
-      {/* TODAY'S PRIORITY TASKS */}
-      <section className="space-y-2.5">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-bold text-[#ECECEF]">کارهای مهم امروز</h2>
-          <button
-            type="button"
-            onClick={() => setActiveTab('tasks')}
-            className="flex items-center gap-1 text-[11.5px] font-medium text-[var(--accent-fg)] hover:text-[#ECECEF]"
-          >
-            <span>مدیریت همه</span>
-            <ArrowUpLeft className="h-3.5 w-3.5" />
+            همه
+            <ArrowUpLeft className="h-3 w-3" />
           </button>
         </div>
 
         {todayTasks.length === 0 ? (
-          <EmptyState
-            icon={<Check className="h-5 w-5" />}
-            title="وظیفه‌ای برای امروز ثبت نشده است"
-            description="کارهای اولویت‌دار امروز خود را اضافه کنید تا پیشرفت روزانه شما دقیق محاسبه شود."
-            action={
-              <button
-                type="button"
-                onClick={() => openCreateTask({ defaultDueDate: todayKey })}
-                className="btn-royal rounded-xl px-4 py-2 text-xs font-semibold"
-              >
-                افزودن اولین کار امروز
-              </button>
-            }
-          />
+          <p className="mt-2 border-y border-[var(--border)] py-4 text-[11px] text-[var(--text-3)]">
+            برای امروز کاری ثبت نشده است.{' '}
+            <button
+              type="button"
+              onClick={() => openCreateTask({ defaultDueDate: todayKey })}
+              className="font-medium text-[var(--accent-fg)] underline-offset-4 hover:underline"
+            >
+              اولین کار را اضافه کن
+            </button>
+          </p>
         ) : (
-          <div className="space-y-2">
-            {todayTasks.slice(0, 5).map((task) => {
+          <ul className="mt-2 divide-y divide-[var(--border)] border-y border-[var(--border)]">
+            {todayTasks.slice(0, 6).map((task) => {
               const isDone = task.status === 'completed';
               const doneSubs = task.subtasks.filter((s) => s.completed).length;
               return (
-                <LuxuryCard
-                  key={task.id}
-                  className={`flex items-center gap-3 px-3.5 py-3 transition ${
-                    isDone ? 'opacity-65' : 'hover:border-[var(--accent-fg)]/22'
-                  }`}
-                >
+                <li key={task.id} className="flex items-center gap-3 py-2.5">
                   <button
                     type="button"
                     onClick={() => handleToggleTask(task)}
-                    aria-label={isDone ? 'لغو تکمیل' : 'تکمیل وظیفه'}
-                    className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border transition ${
+                    aria-label={isDone ? `بازگرداندن ${task.title}` : `تکمیل ${task.title}`}
+                    aria-pressed={isDone}
+                    className={`grid h-[18px] w-[18px] shrink-0 place-items-center rounded-[5px] border transition-colors ${
                       isDone
-                        ? 'border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-on)] shadow-[0_0_12px_color-mix(in_srgb,var(--accent)_45%,transparent)]'
-                        : 'border-[var(--accent-fg)]/28 bg-[#0E0E11] hover:border-[var(--accent-fg)]'
+                        ? 'border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-on)]'
+                        : 'border-white/20 text-transparent hover:border-[var(--accent-fg)]'
                     }`}
                   >
-                    {isDone && <Check className="h-3.5 w-3.5" strokeWidth={2.6} />}
+                    <Check className="h-3 w-3" strokeWidth={3} />
                   </button>
+
+                  <span
+                    aria-hidden="true"
+                    className="h-[18px] w-[2px] shrink-0 rounded-full"
+                    style={{ background: PRIORITY_META[task.priority].dotColor, opacity: isDone ? 0.3 : 0.9 }}
+                  />
 
                   <button
                     type="button"
                     onClick={() => openEditTask(task)}
-                    className="min-w-0 flex-1 text-right focus:outline-none"
+                    className="min-w-0 flex-1 text-start"
                   >
-                    <p
-                      className={`truncate text-[13px] font-medium ${
-                        isDone ? 'text-[#9C9CA6] line-through' : 'text-[#ECECEF]'
+                    <span
+                      className={`block truncate text-[12.5px] ${
+                        isDone ? 'text-[var(--text-3)] line-through' : 'text-[var(--text)]'
                       }`}
                     >
                       {task.title}
-                    </p>
-                    <div className="mt-1 flex flex-wrap items-center gap-2 text-[10.5px] text-[#9C9CA6]">
-                      <span className="inline-flex items-center gap-1">
-                        <span
-                          className="h-1.5 w-1.5 rounded-full"
-                          style={{ backgroundColor: PRIORITY_META[task.priority].dotColor }}
-                        />
-                        {PRIORITY_META[task.priority].label}
+                    </span>
+                    {(doneSubs > 0 || task.dueTime) && (
+                      <span className="mt-0.5 flex items-center gap-1.5 text-[9.5px] text-[var(--text-3)]">
+                        {task.dueTime && <span className="num-geo">{task.dueTime}</span>}
+                        {doneSubs > 0 && (
+                          <span>
+                            <Numeric value={`${doneSubs}/${task.subtasks.length}`} variant="geo" /> زیرکار
+                          </span>
+                        )}
                       </span>
-                      {task.dueTime && (
-                        <span className="inline-flex items-center gap-1 text-[#9C9CA6]">
-                          <Clock className="h-3 w-3 text-[#6B6B75]" />
-                          <Numeric value={task.dueTime} variant="geo" className="text-[10.5px]" />
-                        </span>
-                      )}
-                      {task.subtasks.length > 0 && (
-                        <span className="text-[var(--accent-fg)]">
-                          زیرکار{' '}
-                          <Numeric
-                            value={`${doneSubs}/${task.subtasks.length}`}
-                            variant="geo"
-                            className="text-[10.5px]"
-                          />
-                        </span>
-                      )}
-                    </div>
+                    )}
                   </button>
-                </LuxuryCard>
+                </li>
               );
             })}
-          </div>
+          </ul>
         )}
       </section>
 
-      {/* TODAY'S HABITS */}
-      <section className="space-y-2.5">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-bold text-[#ECECEF]">عادت‌های امروز</h2>
+      {/* ── HABIT RAIL ──────────────────────────────────────────────────────
+          Horizontal chips: a different gesture from the vertical ledger above,
+          and glanceable with one thumb. */}
+      <section>
+        <div className="flex items-baseline justify-between">
+          <h2 className="text-[13px] font-bold text-[var(--text)]">عادت‌های امروز</h2>
           <button
             type="button"
             onClick={() => setActiveTab('habits')}
-            className="flex items-center gap-1 text-[11.5px] font-medium text-[var(--accent-fg)] hover:text-[#ECECEF]"
+            className="flex items-center gap-1 text-[10.5px] font-medium text-[var(--accent-fg)]"
           >
-            <span>تقویم حرارتی</span>
-            <ArrowUpLeft className="h-3.5 w-3.5" />
+            همه
+            <ArrowUpLeft className="h-3 w-3" />
           </button>
         </div>
 
         {todayHabits.length === 0 ? (
-          <EmptyState
-            icon={<Flame className="h-5 w-5" />}
-            title="عادتی برای امروز برنامه‌ریزی نشده است"
-            description="عادت‌های روزانه یا هفتگی خود را بسازید و روند آن‌ها را در نقشه 365 روزه ببینید."
-            action={
-              <button
-                type="button"
-                onClick={() => setActiveTab('habits')}
-                className="btn-ghost-luxury rounded-xl px-4 py-2 text-xs font-medium text-[var(--accent-fg)]"
-              >
-                ایجاد عادت جدید
-              </button>
-            }
-          />
+          <p className="mt-2 text-[11px] text-[var(--text-3)]">عادتی برای امروز برنامه‌ریزی نشده است.</p>
         ) : (
-          <div className="grid grid-cols-1 gap-2">
+          <div className="no-scrollbar -mx-4 mt-2 flex gap-2 overflow-x-auto px-4 pb-1">
             {todayHabits.map(({ habit, log, stats }) => {
               const isCompleted = log?.status === 'completed';
-              const isPartial = log?.status === 'partial';
               const currentVal = log?.value ?? 0;
-              const pct =
-                habit.targetValue > 0
-                  ? Math.min(100, Math.round((currentVal / habit.targetValue) * 100))
-                  : isCompleted
-                  ? 100
-                  : 0;
-
               return (
-                <LuxuryCard
+                <button
                   key={habit.id}
-                  className="flex items-center justify-between gap-3 px-3.5 py-3"
+                  type="button"
+                  onClick={() => handleQuickHabitAction(habit, currentVal, isCompleted)}
+                  className="flex shrink-0 items-center gap-2.5 rounded-[14px] border px-3 py-2.5 transition-colors"
+                  style={{
+                    borderColor: isCompleted
+                      ? 'color-mix(in srgb, var(--accent-fg) 45%, transparent)'
+                      : 'var(--border)',
+                    background: isCompleted
+                      ? 'color-mix(in srgb, var(--accent) 14%, transparent)'
+                      : 'transparent',
+                  }}
                 >
-                  <div className="flex min-w-0 items-center gap-3">
-                    <div
-                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border"
-                      style={{
-                        backgroundColor: isCompleted
-                          ? 'color-mix(in srgb, var(--accent) 24%, transparent)'
-                          : 'rgba(30, 22, 60, 0.5)',
-                        borderColor: isCompleted
-                          ? 'color-mix(in srgb, var(--accent-fg) 40%, transparent)'
-                          : 'color-mix(in srgb, var(--accent-fg) 10%, transparent)',
-                      }}
-                    >
-                      <HabitIcon name={habit.icon} color={habit.accentColor} className="h-[18px] w-[18px]" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="truncate text-[13px] font-medium text-[#ECECEF]">
-                        {habit.name}
-                      </p>
-                      <div className="mt-1 flex items-center gap-2.5 text-[10.5px] text-[#9C9CA6]">
-                        {habit.trackingMode === 'quantitative' ? (
-                          <span>
-                            <Numeric
-                              value={`${currentVal}/${habit.targetValue}`}
-                              variant="geo"
-                              className="font-semibold text-[var(--accent-fg)]"
-                            />{' '}
-                            {habit.unit}
-                          </span>
-                        ) : (
-                          <span>{isCompleted ? 'تکمیل شد' : 'در انتظار ثبت'}</span>
-                        )}
-                        <span className="inline-flex items-center gap-0.5 text-[#9C9CA6]">
-                          <Flame className="h-3 w-3 text-[var(--accent)]" />
-                          <Numeric value={stats.currentStreak} variant="geo" className="text-[10.5px]" />
-                          <span>d</span>
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => handleQuickHabitAction(habit, currentVal, isCompleted)}
-                    className={`flex h-9 min-w-[68px] items-center justify-center rounded-xl px-3 text-xs font-semibold transition ${
-                      isCompleted
-                        ? 'bg-[var(--accent)] text-[var(--accent-on)] shadow-[0_0_16px_color-mix(in_srgb,var(--accent)_45%,transparent)]'
-                        : isPartial
-                        ? 'border border-[var(--accent)]/50 bg-[#1C1C21] text-[var(--accent-fg)]'
-                        : 'border border-[var(--accent-fg)]/16 bg-[#0E0E11] text-[#9C9CA6] hover:border-[var(--accent-fg)]/40 hover:text-[#ECECEF]'
-                    }`}
+                  <span
+                    className="grid h-6 w-6 place-items-center rounded-full"
+                    style={{
+                      background: isCompleted
+                        ? 'var(--accent)'
+                        : 'color-mix(in srgb, var(--accent-fg) 12%, transparent)',
+                      color: isCompleted ? 'var(--accent-on)' : 'var(--accent-fg)',
+                    }}
                   >
                     {isCompleted ? (
-                      <Check className="h-4 w-4" strokeWidth={2.5} />
-                    ) : habit.trackingMode === 'quantitative' ? (
-                      <Numeric value={`${pct}%`} variant="geo" className="text-xs" />
+                      <Check className="h-3 w-3" strokeWidth={3} />
                     ) : (
-                      <span>ثبت</span>
+                      <HabitIcon name={habit.icon} className="h-3 w-3" color="currentColor" />
                     )}
-                  </button>
-                </LuxuryCard>
+                  </span>
+                  <span className="text-start">
+                    <span className="block max-w-[104px] truncate text-[11px] font-medium text-[var(--text)]">
+                      {habit.name}
+                    </span>
+                    <span className="mt-0.5 flex items-center gap-1 text-[9px] text-[var(--text-3)]">
+                      {habit.trackingMode === 'quantitative' ? (
+                        <span>
+                          <Numeric value={`${currentVal}/${habit.targetValue}`} variant="geo" /> {habit.unit}
+                        </span>
+                      ) : (
+                        <span>{isCompleted ? 'ثبت شد' : 'ثبت نشده'}</span>
+                      )}
+                      <span className="opacity-60">·</span>
+                      <Numeric value={stats.currentStreak} variant="geo" />
+                      <span>روز</span>
+                    </span>
+                  </span>
+                </button>
               );
             })}
           </div>
         )}
       </section>
 
-      {/* ACTIVE GOALS */}
-      <section className="space-y-2.5">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-bold text-[#ECECEF]">اهداف فعال</h2>
+      {/* ── GOALS — two compact meters ─────────────────────────────────────── */}
+      <section>
+        <div className="flex items-baseline justify-between">
+          <h2 className="text-[13px] font-bold text-[var(--text)]">اهداف فعال</h2>
           <button
             type="button"
             onClick={() => setGoalModalState({ open: true, goal: null })}
-            className="flex items-center gap-1 text-[11.5px] font-medium text-[var(--accent-fg)] hover:text-[#ECECEF]"
+            className="flex items-center gap-1 text-[10.5px] font-medium text-[var(--accent-fg)]"
           >
-            <Plus className="h-3.5 w-3.5" />
-            <span>هدف جدید</span>
+            <Plus className="h-3 w-3" />
+            هدف جدید
           </button>
         </div>
 
         {activeGoals.length === 0 ? (
-          <EmptyState
-            icon={<Target className="h-5 w-5" />}
-            title="هدف فعالی ثبت نشده است"
-            description="اهداف فصلی یا سالانه خود را تعریف کنید تا همیشه چشم‌اندازتان روشن بماند."
-            action={
-              <button
-                type="button"
-                onClick={() => setGoalModalState({ open: true, goal: null })}
-                className="btn-ghost-luxury rounded-xl px-4 py-2 text-xs font-medium text-[var(--accent-fg)]"
-              >
-                تعریف هدف جدید
-              </button>
-            }
-          />
+          <p className="mt-2 text-[11px] text-[var(--text-3)]">
+            هدفی تعریف نشده است؛ یک چشم‌انداز فصلی بساز.
+          </p>
         ) : (
-          <div className="space-y-2.5">
-            {activeGoals.map((goal) => {
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            {activeGoals.slice(0, 4).map((goal) => {
               const pct =
                 goal.targetValue > 0
                   ? Math.min(100, Math.round((goal.currentValue / goal.targetValue) * 100))
                   : 0;
               return (
-                <LuxuryCard key={goal.id} className="p-4">
-                  <div className="flex items-start justify-between gap-3">
+                <div
+                  key={goal.id}
+                  className="rounded-[12px] border border-[var(--border)] px-3 py-2.5 transition-colors hover:border-[var(--border-strong)]"
+                >
+                  <div className="flex items-start justify-between gap-1">
                     <button
                       type="button"
                       onClick={() => setGoalModalState({ open: true, goal })}
-                      className="min-w-0 flex-1 text-right focus:outline-none"
+                      className="min-w-0 flex-1 text-start"
                     >
-                      <h3 className="truncate text-[13px] font-semibold text-[#ECECEF]">
+                      <span className="block truncate text-[11px] font-medium text-[var(--text)]">
                         {goal.title}
-                      </h3>
-                      <p className="mt-0.5 text-[11px] text-[#9C9CA6]">
+                      </span>
+                      <span className="mt-0.5 flex items-baseline gap-1">
                         <Numeric
-                          value={`${goal.currentValue} / ${goal.targetValue}`}
-                          variant="geo"
-                          className="font-medium text-[#ECECEF]"
-                        />{' '}
-                        {goal.unit}
-                      </p>
+                          value={pct}
+                          suffix="%"
+                          variant="display"
+                          className="text-[15px] font-bold text-[var(--accent-fg)]"
+                        />
+                        <span className="num-geo text-[9px] text-[var(--text-3)]">
+                          <Numeric value={`${goal.currentValue}/${goal.targetValue}`} variant="geo" />
+                        </span>
+                      </span>
                     </button>
-
-                    <div className="flex items-center gap-2">
-                      <Numeric
-                        value={pct}
-                        suffix="%"
-                        variant="display"
-                        className="text-xl font-bold text-[var(--accent-fg)]"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => handleIncrementGoal(goal)}
-                        aria-label="افزایش پیشرفت هدف"
-                        className="flex h-7 w-7 items-center justify-center rounded-lg border border-[var(--accent-fg)]/20 bg-[#1C1C21] text-[var(--accent-on)] transition hover:bg-[var(--accent)]"
-                      >
-                        <Plus className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleIncrementGoal(goal)}
+                      aria-label={`افزایش پیشرفت ${goal.title}`}
+                      className="grid h-5 w-5 shrink-0 place-items-center rounded-md border border-[var(--accent-fg)]/25 text-[var(--accent-fg)] transition-colors hover:bg-[color-mix(in_srgb,var(--accent)_22%,transparent)]"
+                    >
+                      <Plus className="h-2.5 w-2.5" />
+                    </button>
                   </div>
-
-                  <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-[#0A0A0C]">
-                    <div
-                      className="h-full rounded-full transition-all duration-300"
-                      style={{
-                        width: `${pct}%`,
-                        background: 'var(--accent)',
-                      }}
+                  <span className="mt-1.5 block h-[2px] w-full overflow-hidden rounded-full bg-white/8">
+                    <span
+                      className="block h-full rounded-full"
+                      style={{ width: `${Math.max(pct, 2)}%`, background: 'var(--accent)' }}
                     />
-                  </div>
-                </LuxuryCard>
+                  </span>
+                </div>
               );
             })}
           </div>
         )}
       </section>
 
-      {/* DAILY ACTIVITY SUMMARY & ANALYTICS QUICK-LINK */}
-      <LuxuryCard
-        variant="subtle"
-        className="flex items-center justify-between gap-3 p-4"
+      {/* ── FOOTER LINE ────────────────────────────────────────────────────── */}
+      <button
+        type="button"
+        onClick={() => setActiveTab('analytics')}
+        className="flex w-full items-center justify-between border-t border-[var(--border)] pt-3 text-start"
       >
-        <div>
-          <p className="text-xs font-semibold text-[#ECECEF]">خلاصه فعالیت و گزارش ماهانه</p>
-          <p className="mt-1 text-[11px] leading-5 text-[#9C9CA6]">
-            هدف تمرکز امروز:{' '}
-            <Numeric
-              value={`${summary.todayFocusMinutes}/${summary.focusGoalMinutes}`}
-              variant="geo"
-              className="text-[var(--accent-fg)]"
-            />{' '}
-            دقیقه • مشاهده تحلیل واقعی عملکرد
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={() => setActiveTab('analytics')}
-          className="btn-ghost-luxury shrink-0 rounded-xl px-3.5 py-2 text-xs font-medium text-[var(--accent-fg)]"
-        >
-          گزارش ماه
-        </button>
-      </LuxuryCard>
+        <span className="text-[10.5px] text-[var(--text-3)]">
+          گزارش ماهانه و تحلیل واقعی عملکرد
+        </span>
+        <ArrowUpLeft className="h-3.5 w-3.5 text-[var(--accent-fg)]" />
+      </button>
 
       <GoalModal
         open={goalModalState.open}

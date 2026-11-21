@@ -37,6 +37,7 @@
   --accent-l: 0.5283;
   --accent-c: 0.2341;
   --accent-h: 262.4;
+  --section-light: 50% -12%;
   --danger: #e5484d;
   --danger-soft: rgba(229, 72, 77, 0.12);
   --warn: #c9975c;
@@ -202,7 +203,7 @@ body,
 :root,
 [data-bg='obsidian'] {
   --atmosphere: radial-gradient(
-      120% 62% at 50% -12%,
+      120% 62% at var(--section-light, 50% -12%),
       color-mix(in srgb, var(--accent) 12%, transparent) 0%,
       transparent 68%
     ),
@@ -212,9 +213,9 @@ body,
 
 [data-bg='nebula'] {
   --atmosphere: radial-gradient(
-      70% 45% at 18% 4%,
-      color-mix(in srgb, var(--accent) 22%, transparent) 0%,
-      transparent 62%
+      74% 48% at var(--section-light, 18% 4%),
+      color-mix(in srgb, var(--accent) 26%, transparent) 0%,
+      transparent 64%
     ),
     radial-gradient(60% 40% at 85% 22%, rgba(76, 96, 255, 0.16) 0%, transparent 64%),
     radial-gradient(90% 55% at 50% 106%, rgba(120, 60, 200, 0.18) 0%, transparent 70%);
@@ -246,6 +247,33 @@ body,
   --atmosphere: linear-gradient(180deg, rgba(46, 46, 52, 0.34) 0%, rgba(10, 10, 12, 0) 46%),
     radial-gradient(80% 40% at 50% 110%, rgba(255, 255, 255, 0.05) 0%, transparent 70%);
   --atmosphere-grain: 0.075;
+}
+
+/* ---------------------------------------------------------------------------
+   Section identity. Every tab rotates its accent family and moves the single
+   light source (--section-light, written by applySectionAppearance). Only the
+   local light and the tint move — the type scale and spacing stay constant, so
+   the app still reads as one product.
+   --------------------------------------------------------------------------- */
+
+:root {
+  --section-transition: 420ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.kairos-ambient-bg {
+  transition: opacity var(--section-transition);
+}
+
+[data-section='focus'] .kairos-ambient-bg::after {
+  opacity: 0.9;
+}
+
+[data-section='habits'] .kairos-ambient-bg::after {
+  opacity: 1;
+}
+
+[data-section='settings'] .kairos-ambient-bg::after {
+  opacity: 0.55;
 }
 
 /* ---------------------------------------------------------------------------

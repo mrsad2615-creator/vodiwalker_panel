@@ -42,8 +42,9 @@ import { sectionEyebrow } from '@/lib/sections';
 import { ModalSheet } from '@/components/ui/ModalSheet';
 import { JalaliDatePicker } from '@/components/ui/JalaliDatePicker';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { YearOverview } from './YearOverview';
 
-type CalendarViewMode = 'month' | 'week' | 'day';
+type CalendarViewMode = 'year' | 'month' | 'week' | 'day';
 
 export function CalendarPage() {
   const { openCreateTask, openEditTask, pushToast, settings } = useApp();
@@ -102,6 +103,14 @@ export function CalendarPage() {
     return scheduled.map((habit) => ({ habit, log: logMap.get(habit.id) }));
   }, [activeHabits, habitLogs, selectedDateKey]);
 
+  const focusMinutesByDate = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const session of focusSessions) {
+      map.set(session.dateKey, (map.get(session.dateKey) ?? 0) + session.durationMinutes);
+    }
+    return map;
+  }, [focusSessions]);
+
   const selectedDateFocusMinutes = useMemo(() => {
     return Math.round(
       focusSessions
@@ -118,6 +127,10 @@ export function CalendarPage() {
   const selectedInfo = formatJalaaliFull(selectedDateKey);
 
   const navigatePrev = () => {
+    if (viewMode === 'year') {
+      setViewYear((y) => y - 1);
+      return;
+    }
     if (viewMode === 'month') {
       const s = shiftJalaaliMonth(viewYear, viewMonth, -1);
       setViewYear(s.jy);
@@ -138,6 +151,10 @@ export function CalendarPage() {
   };
 
   const navigateNext = () => {
+    if (viewMode === 'year') {
+      setViewYear((y) => y + 1);
+      return;
+    }
     if (viewMode === 'month') {
       const s = shiftJalaaliMonth(viewYear, viewMonth, 1);
       setViewYear(s.jy);
@@ -194,41 +211,78 @@ export function CalendarPage() {
         }
       />
 
-      {/* View Switcher (Monthly / Weekly / Daily) + Today shortcut */}
-      <div className="flex items-center gap-2">
-        <div className="grid flex-1 grid-cols-3 gap-1 rounded-2xl border border-[var(--accent-fg)]/12 bg-[var(--surface-2)] p-1">
-          {(
-            [
-              { id: 'month', label: 'ماهانه' },
-              { id: 'week', label: 'هفتگی' },
-              { id: 'day', label: 'روزانه' },
-            ] as const
-          ).map((m) => (
+      {/* View switcher — editorial tabs on a rule (same rhythm as Tasks) */}
+      <div className="flex items-center gap-3 border-b border-[var(--border)]">
+        {(
+          [
+            { id: 'year', label: 'سالانه' },
+            { id: 'month', label: 'ماهانه' },
+            { id: 'week', label: 'هفتگی' },
+            { id: 'day', label: 'روزانه' },
+          ] as const
+        ).map((m) => {
+          const active = viewMode === m.id;
+          return (
             <button
               key={m.id}
               type="button"
               onClick={() => setViewMode(m.id)}
-              className={`rounded-xl py-2 text-xs font-medium transition ${
-                viewMode === m.id
-                  ? 'bg-[var(--surface-3)] text-[var(--text)] shadow-[inset_0_1px_0_color-mix(in_srgb,var(--accent-fg)_20%,transparent)]'
-                  : 'text-[var(--text-2)] hover:text-[var(--text)]'
-              }`}
+              aria-pressed={active}
+              className="relative pb-2.5 pt-1"
             >
-              {m.label}
+              <span
+                className={`text-[11.5px] font-semibold transition-colors ${
+                  active ? 'text-[var(--text)]' : 'text-[var(--text-3)] hover:text-[var(--text-2)]'
+                }`}
+              >
+                {m.label}
+              </span>
+              {active && (
+                <span
+                  aria-hidden="true"
+                  className="absolute inset-x-0 -bottom-px h-[2px] rounded-full"
+                  style={{ background: 'var(--accent)' }}
+                />
+              )}
             </button>
-          ))}
-        </div>
+          );
+        })}
 
         <button
           type="button"
           onClick={jumpToToday}
-          className="btn-ghost-luxury rounded-2xl px-3.5 py-2.5 text-xs font-medium text-[var(--accent-fg)]"
+          className="ms-auto mb-1 text-[10.5px] font-medium text-[var(--accent-fg)]"
         >
           امروز
         </button>
       </div>
 
+      {/* YEAR VIEW — the whole Jalali year, twelve full months */}
+      {viewMode === 'year' && (
+        <YearOverview
+          year={viewYear}
+          todayKey={todayKey}
+          selectedDateKey={selectedDateKey}
+          tasksByDate={tasksByDate}
+          habitCountByDate={completedHabitsByDate}
+          focusMinutesByDate={focusMinutesByDate}
+          onShiftYear={(delta) => setViewYear((y) => y + delta)}
+          onPickDate={(dateKey) => {
+            setSelectedDateKey(dateKey);
+            const j = dateKeyToJalaali(dateKey);
+            setViewYear(j.jy);
+            setViewMonth(j.jm);
+            setViewMode('day');
+          }}
+          onPickMonth={(month) => {
+            setViewMonth(month);
+            setViewMode('month');
+          }}
+        />
+      )}
+
       {/* Navigator Bar */}
+      {viewMode !== 'year' && (
       <LuxuryCard className="p-4">
         <div className="mb-3 flex items-center justify-between">
           <button
@@ -373,8 +427,10 @@ export function CalendarPage() {
           </div>
         )}
       </LuxuryCard>
+      )}
 
       {/* SELECTED DAY AGENDA (Tasks + Habits + Reschedule) */}
+      {viewMode !== 'year' && (
       <section className="space-y-3">
         <div className="flex items-center justify-between px-0.5">
           <h2 className="text-xs font-bold text-[var(--text)]">
@@ -534,6 +590,7 @@ export function CalendarPage() {
           </LuxuryCard>
         )}
       </section>
+      )}
 
       {/* Reschedule Bottom Sheet */}
       <ModalSheet

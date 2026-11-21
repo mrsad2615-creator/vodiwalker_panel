@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import type { FocusModeType } from '@/types/domain';
 import type { PomodoroPhase } from '@/context/AppContext';
 import { toEnDigits } from '@/lib/format';
+import { Numeric } from '@/components/ui/Numeric';
 
 interface CinematicFocusTimerProps {
   mode: FocusModeType;
@@ -103,11 +104,15 @@ export function CinematicFocusTimer({
       ? 'استراحت کوتاه'
       : 'استراحت بلند';
 
-  const meta = isBreak
-    ? `تمرکز بعدی · ${toEnDigits(String(Math.max(1, Math.round(nextFocusMinutes))))} دقیقه`
+  // Label and value are separate nodes on purpose: a Persian word inside an
+  // LTR numeric span is what makes a read-out look "jumbled".
+  const metaLabel = isBreak ? 'تمرکز بعدی' : mode === 'pomodoro' ? 'پایان' : 'بدون محدودیت زمان';
+  const metaValue = isBreak
+    ? String(Math.max(1, Math.round(nextFocusMinutes)))
     : mode === 'pomodoro' && remainingSeconds > 0
-    ? `پایان · ${finishClock(remainingSeconds)}`
-    : 'بدون محدودیت زمان';
+    ? finishClock(remainingSeconds)
+    : null;
+  const metaSuffix = isBreak ? 'دقیقه' : null;
 
   const ticks = useMemo(
     () =>
@@ -212,29 +217,46 @@ export function CinematicFocusTimer({
 
       {/* Read-out */}
       <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
-        <span
-          className="font-display-caps text-[9px] font-semibold text-[var(--text-3)]"
-          style={{ letterSpacing: '0.28em' }}
-        >
+        <span className="text-[9.5px] font-semibold leading-none text-[var(--text-3)]">
           {isRunning ? kicker : `متوقف · ${kicker}`}
         </span>
 
         <div
-          className="mt-1 flex items-baseline justify-center text-[var(--text)]"
-          style={{ fontFamily: 'var(--font-numeric)', fontWeight: 500, lineHeight: 1 }}
+          data-testid="timer-readout"
+          className="mt-1 flex flex-row items-baseline justify-center text-[var(--text)]"
+          dir="ltr"
+          style={{
+            fontFamily: 'var(--font-numeric)',
+            fontWeight: 500,
+            lineHeight: 1,
+            unicodeBidi: 'isolate',
+          }}
         >
           {parts.hours && (
             <>
               <Digits value={parts.hours} className="text-[1.6rem] opacity-80" />
-              <span className="mx-[0.08em] text-[1.4rem] text-[var(--text-3)]">:</span>
+              <span className="w-[0.34em] text-center text-[1.4rem] leading-none text-[var(--text-3)]">
+                :
+              </span>
             </>
           )}
           <Digits value={parts.minutes} className={cinemaMode ? 'text-[4.4rem]' : 'text-[3.9rem]'} />
-          <span className="mx-[0.06em] text-[2.6rem] text-[var(--text-3)]">:</span>
+          <span className="w-[0.34em] text-center text-[2.6rem] leading-none text-[var(--text-3)]">
+            :
+          </span>
           <Digits value={parts.seconds} className={cinemaMode ? 'text-[4.4rem]' : 'text-[3.9rem]'} />
         </div>
 
-        <span className="num-geo mt-1.5 text-[10px] tracking-wider text-[var(--text-2)]">{meta}</span>
+        <span className="mt-1.5 flex items-center justify-center gap-1 text-[10px] text-[var(--text-2)]">
+          <span>{metaLabel}</span>
+          {metaValue && (
+            <>
+              <span className="opacity-40">·</span>
+              <Numeric value={metaValue} variant="geo" className="text-[var(--text-2)]" />
+            </>
+          )}
+          {metaSuffix && <span className="text-[9px] text-[var(--text-3)]">{metaSuffix}</span>}
+        </span>
 
         {mode === 'pomodoro' && (
           <div className="mt-3 flex items-center gap-[5px]" aria-hidden="true">

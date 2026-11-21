@@ -43,7 +43,7 @@ class SimilarityDetectorTest {
         val hashes = mapOf(
             1L to 0b00000000L,
             2L to 0b00000001L, // 1 bit away from 1
-            3L to 0xFFFF_FFFF_FFFF_FFFFL, // 64 bits away
+            3L to -1L, // all 64 bits set: 63-64 bits away from 1 and 2
         )
 
         val groups = SimilarityDetector.groupSimilar(hashes, threshold = 6)

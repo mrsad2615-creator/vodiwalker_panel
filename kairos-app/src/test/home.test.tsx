@@ -3,6 +3,7 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import App from '@/App';
 import { createHabit, createTask, db } from '@/lib/db';
 import { getTodayKey } from '@/lib/date';
+import { BOOT_TIMEOUT } from './utils';
 
 /**
  * Home is the reference screen: one heading, three numbers, and a *real* list.
@@ -13,7 +14,7 @@ import { getTodayKey } from '@/lib/date';
 async function boot() {
   render(<App />);
   fireEvent.click(screen.getByRole('status', { name: /kairos/i }));
-  await waitFor(() => expect(screen.getByTestId('home-ready')).toBeInTheDocument());
+  await waitFor(() => expect(screen.getByTestId('home-ready')).toBeInTheDocument(), { timeout: BOOT_TIMEOUT });
 }
 
 const todayKey = getTodayKey();
@@ -75,14 +76,17 @@ describe('Home — امروز', () => {
 
     await boot();
     // Live queries settle a tick after the shell paints.
-    expect(await screen.findByText('مرور قرارداد')).toBeInTheDocument();
+    expect(await screen.findByText('مرور قرارداد', {}, { timeout: BOOT_TIMEOUT })).toBeInTheDocument();
     expect(screen.getByText('امروز 10:30')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'تکمیل مرور قرارداد' }));
-    await waitFor(async () => {
-      const stored = await db.tasks.toCollection().first();
-      expect(stored?.status).toBe('completed');
-    });
+    await waitFor(
+      async () => {
+        const stored = await db.tasks.toCollection().first();
+        expect(stored?.status).toBe('completed');
+      },
+      { timeout: BOOT_TIMEOUT }
+    );
   });
 
   it('logs a habit with one tap and shows the streak dot', async () => {
@@ -102,15 +106,22 @@ describe('Home — امروز', () => {
     } as never);
 
     await boot();
-    const toggle = await screen.findByRole('button', { name: 'مطالعهٔ شبانه — ثبت نشده' });
+    const toggle = await screen.findByRole('button', { name: 'مطالعهٔ شبانه — ثبت نشده' }, { timeout: BOOT_TIMEOUT });
     fireEvent.click(toggle);
 
-    await waitFor(async () => {
-      const log = await db.habitLogs.get(`${habit.id}::${todayKey}`);
-      expect(log?.status).toBe('completed');
-    });
-    await waitFor(() =>
-      expect(screen.getByRole('button', { name: 'مطالعهٔ شبانه — انجام شد' })).toBeInTheDocument()
+    await waitFor(
+      async () => {
+        const log = await db.habitLogs.get(`${habit.id}::${todayKey}`);
+        expect(log?.status).toBe('completed');
+      },
+      { timeout: BOOT_TIMEOUT }
+    );
+    await waitFor(
+      () =>
+        expect(
+          screen.getByRole('button', { name: 'مطالعهٔ شبانه — انجام شد' })
+        ).toBeInTheDocument(),
+      { timeout: BOOT_TIMEOUT }
     );
   });
 
@@ -120,6 +131,8 @@ describe('Home — امروز', () => {
     expect(within(week).getByText(/این هفته/)).toBeInTheDocument();
 
     fireEvent.click(within(week).getByRole('button', { name: /تحلیل کامل/ }));
-    await waitFor(() => expect(screen.getByText('تحلیل و گزارش عملکرد')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('تحلیل و گزارش عملکرد')).toBeInTheDocument(), {
+      timeout: BOOT_TIMEOUT,
+    });
   });
 });

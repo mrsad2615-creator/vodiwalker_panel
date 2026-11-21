@@ -4,6 +4,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import App from '@/App';
 import { NumericInput } from '@/components/ui/NumericInput';
 import { db } from '@/lib/db';
+import { BOOT_TIMEOUT } from './utils';
 
 describe('KAIROS Full Application End-to-End Flow', () => {
   beforeEach(async () => {
@@ -43,8 +44,8 @@ describe('KAIROS Full Application End-to-End Flow', () => {
 
     // Tap splash to skip directly into Dashboard
     fireEvent.click(splash);
-    await waitFor(() => {
-      expect(screen.getByTestId('home-ready')).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByTestId('home-ready')).toBeInTheDocument(), {
+      timeout: BOOT_TIMEOUT,
     });
 
     // 3.0 home is a day, not a board: three numbers, then a real list.

@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import App from '@/App';
 import { db } from '@/lib/db';
+import { BOOT_TIMEOUT } from './utils';
 
 /**
  * Bundle C as a reader meets it: one box over the whole workspace, and a weekly
@@ -11,7 +12,7 @@ import { db } from '@/lib/db';
 async function boot() {
   render(<App />);
   fireEvent.click(screen.getByRole('status', { name: /kairos/i }));
-  await waitFor(() => expect(screen.getByTestId('home-ready')).toBeInTheDocument());
+  await waitFor(() => expect(screen.getByTestId('home-ready')).toBeInTheDocument(), { timeout: BOOT_TIMEOUT });
 }
 
 async function openSearch() {

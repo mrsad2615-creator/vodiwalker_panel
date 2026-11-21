@@ -99,26 +99,20 @@ export function AppShell({ children }: { children: ReactNode }) {
   }, [activeTab]);
 
   // The top bar tucks itself away while reading downward and returns on the way
-  // back up. One rAF-throttled listener, pure decision rule, no re-render when
-  // the state is unchanged.
+  // back up. The decision is pure and returns the previous object whenever
+  // nothing changed, so the common case costs no render — and no rAF is needed,
+  // which means a throttled or suspended frame (background tab, cold WebView)
+  // can never leave the bar stuck open.
   useEffect(() => {
     const node = scrollRef.current;
     if (!node) return;
 
-    let frame = 0;
     const onScroll = () => {
-      if (frame) return;
-      frame = window.requestAnimationFrame(() => {
-        frame = 0;
-        setChrome((prev) => resolveScrollChrome(prev, node.scrollTop));
-      });
+      setChrome((prev) => resolveScrollChrome(prev, node.scrollTop));
     };
 
     node.addEventListener('scroll', onScroll, { passive: true });
-    return () => {
-      node.removeEventListener('scroll', onScroll);
-      if (frame) window.cancelAnimationFrame(frame);
-    };
+    return () => node.removeEventListener('scroll', onScroll);
   }, []);
 
   return (

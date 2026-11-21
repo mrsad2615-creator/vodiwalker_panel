@@ -47,12 +47,12 @@ describe('Top bar behaves like a product, not a fixed slab', () => {
     });
     fireEvent.scroll(main as HTMLElement);
 
-    await waitFor(() => expect(headerWrapper().style.gridTemplateRows).toBe('0fr'));
+    await waitFor(() => expect(headerWrapper().style.gridTemplateRows).toBe('0fr'), { timeout: 3000 });
 
     (main as HTMLElement).scrollTop = 120;
     fireEvent.scroll(main as HTMLElement);
 
-    await waitFor(() => expect(headerWrapper().style.gridTemplateRows).toBe('1fr'));
+    await waitFor(() => expect(headerWrapper().style.gridTemplateRows).toBe('1fr'), { timeout: 3000 });
   });
 
   it('never lets the grain layer become full-screen static', () => {

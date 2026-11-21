@@ -20,22 +20,25 @@ class MainActivity : ComponentActivity() {
         registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        enableEdgeToEdge()
+        // `super` first: enableEdgeToEdge() reaches for the window and the
+        // decor view, which do not exist until the activity has been created.
         super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
 
         container = AppContainer(this)
 
-        // Ask for media access once, up front. On a device where the user has
-        // already granted it this is a no-op and never shows a dialog.
+        // Ask for media access once. On a device where it is already granted
+        // this never shows a dialog.
         if (!MediaPermissions.canReadAnything(this)) {
-            permissionLauncher.launch(MediaPermissions.required)
+            runCatching { permissionLauncher.launch(MediaPermissions.required) }
         }
 
         setContent {
             HgTheme {
-                // Edge-to-edge means the app draws the status bar background
-                // itself, so the system bar icons must be dark on a white page.
-                WindowCompat.getInsetsController(window, window.decorView).isAppearanceLightStatusBars = true
+                // Edge-to-edge means the app paints behind the status bar, so
+                // the system bar icons must be dark on the light background.
+                WindowCompat.getInsetsController(window, window.decorView)
+                    .isAppearanceLightStatusBars = true
                 val appContainer = remember { container }
                 HGalleryApp(container = appContainer)
             }

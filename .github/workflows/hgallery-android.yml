@@ -171,9 +171,11 @@ jobs:
           fi
           git config user.name "hgallery-ci"
           git config user.email "ci@users.noreply.github.com"
+          rm -rf hgallery/evidence
           mkdir -p hgallery/evidence
-          find hgallery/ui-shots -name '*.png' -exec cp {} hgallery/evidence/ ';' 
-          git add hgallery/evidence
+          cp hgallery/ui-shots/*.png hgallery/evidence/ 2>/dev/null || true
+          cp hgallery/ui-shots/diag/*.txt hgallery/evidence/ 2>/dev/null || true
+          git add -A hgallery/evidence
           if git diff --cached --quiet; then
             echo "screenshots unchanged"
             exit 0

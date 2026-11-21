@@ -31,8 +31,10 @@ public class ChronoPlugin extends Plugin {
     @Nullable
     private BroadcastReceiver controlReceiver;
 
+    // `Plugin.load()` is public in Capacitor's API; overriding it with `protected`
+    // is a compile error ("weaker access privileges").
     @Override
-    protected void load() {
+    public void load() {
         controlReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {

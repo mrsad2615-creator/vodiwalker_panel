@@ -21,9 +21,13 @@ import { useApp } from '@/context/AppContext';
 import { Numeric } from '@/components/ui/Numeric';
 import { NumericInput } from '@/components/ui/NumericInput';
 import { CinematicFocusTimer } from '@/components/focus/CinematicFocusTimer';
+import { ChronoTimeline } from '@/components/focus/ChronoTimeline';
 import { SoundStudio } from '@/components/focus/SoundStudio';
 import { SOUND_PROFILES } from '@/lib/audio/layers';
 import { requestSound } from '@/lib/audio/commands';
+import { CHRONO_MODES } from '@/lib/chrono/plan';
+import { chronoConfigFromSettings, modeHint, modeLabel } from '@/lib/chrono/config';
+import { phaseDurationSeconds, segmentProgress } from '@/lib/focusTimer';
 
 const PRESET_DURATIONS = [15, 25, 45, 60, 90] as const;
 
@@ -33,6 +37,9 @@ export function FocusPage() {
     focus,
     setFocusMode,
     setFocusDurations,
+    setChronoConfig,
+    seekFocusSegment,
+    setAutoAdvance,
     setFocusLinkedTask,
     startOrResumeFocus,
     pauseFocus,
@@ -81,23 +88,22 @@ export function FocusPage() {
   const dailyGoalMin = Math.max(15, settings.dailyFocusGoalMinutes || 120);
   const dailyGoalPercent = Math.min(100, Math.round((todayTotalMin / dailyGoalMin) * 100));
 
-  const totalPhaseSeconds =
-    focus.phase === 'focus'
-      ? focus.focusMinutes * 60
-      : focus.phase === 'short_break'
-      ? focus.shortBreakMinutes * 60
-      : focus.longBreakMinutes * 60;
+  const plan = focus.plan ?? [];
+  const chronoConfig = chronoConfigFromSettings(settings);
+  const totalPhaseSeconds = phaseDurationSeconds(focus);
 
-  const progressPercent =
-    focus.mode === 'pomodoro'
-      ? Math.max(
-          0,
-          Math.min(
-            100,
-            ((totalPhaseSeconds - focus.remainingSeconds) / Math.max(1, totalPhaseSeconds)) * 100
-          )
-        )
-      : Math.min(100, ((focus.elapsedSeconds % 3600) / 3600) * 100);
+  // Every mode is a plan now, so progress is simply "how far into this segment".
+  // The open stopwatch has no total, so it sweeps an hour and wraps — it is a
+  // clock face, not a countdown.
+  const progressPercent = Math.max(
+    0,
+    Math.min(
+      100,
+      totalPhaseSeconds > 0
+        ? segmentProgress(focus, focus.remainingSeconds) * 100
+        : ((focus.elapsedSeconds % 3600) / 3600) * 100
+    )
+  );
 
   const adjustFocusMinutes = (delta: number) => {
     const next = Math.max(5, Math.min(180, focus.focusMinutes + delta));
@@ -318,14 +324,10 @@ export function FocusPage() {
       </header>
 
       {/* ── MODE LINE ────────────────────────────────────────────────────────
-          Two modes as editorial tabs on a rule — no segmented pill. */}
-      <div className="flex items-center gap-5 border-b border-[var(--border)]">
-        {(
-          [
-            { id: 'pomodoro', label: 'پومودورو', hint: `${focus.focusMinutes}/${focus.shortBreakMinutes}` },
-            { id: 'free', label: 'تایمر آزاد', hint: 'بی‌پایان' },
-          ] as const
-        ).map((mode) => {
+          Four modes as editorial tabs on a rule — no segmented pill. The hint is
+          the actual configuration, so switching mode never hides a number. */}
+      <div className="flex items-center gap-4 overflow-x-auto border-b border-[var(--border)] pb-0">
+        {CHRONO_MODES.map((mode) => {
           const active = focus.mode === mode.id;
           return (
             <button
@@ -333,7 +335,8 @@ export function FocusPage() {
               type="button"
               onClick={() => setFocusMode(mode.id)}
               aria-pressed={active}
-              className="relative flex items-baseline gap-1.5 pb-2 pt-0.5"
+              title={mode.hint}
+              className="relative flex shrink-0 items-baseline gap-1.5 pb-2 pt-0.5"
             >
               <span
                 className={`text-[12px] font-semibold transition-colors ${
@@ -342,7 +345,9 @@ export function FocusPage() {
               >
                 {mode.label}
               </span>
-              <span className="num-geo text-[8.5px] text-[var(--text-3)]">{mode.hint}</span>
+              <span className="num-geo text-[8.5px] text-[var(--text-3)]">
+                {modeHint(mode.id, chronoConfig)}
+              </span>
               {active && (
                 <span
                   aria-hidden="true"
@@ -355,14 +360,70 @@ export function FocusPage() {
         })}
       </div>
 
-      {/* ── CUSTOM DURATIONS — a quiet strip, never a card ─────────────────── */}
-      {showCustomConfig && focus.mode === 'pomodoro' && (
+      {/* ── THE PLAN ────────────────────────────────────────────────────────
+          What the session actually is: every segment, what is done, what runs now. */}
+      <ChronoTimeline
+        plan={plan}
+        segmentIndex={focus.segmentIndex ?? 0}
+        remainingSeconds={focus.remainingSeconds}
+        running={focus.isRunning}
+        onSeek={seekFocusSegment}
+      />
+
+      {/* ── CONTINUITY ──────────────────────────────────────────────────────
+          One switch, one meaning: does the clock walk into the next segment on its
+          own, or wait for a tap? Stored with the rest of the settings. */}
+      <div className="flex items-center justify-between border-b border-[var(--border)] pb-2.5">
+        <div className="min-w-0 pr-3">
+          <p className="text-[11px] font-medium text-[var(--text-2)]">ادامهٔ خودکار</p>
+          <p className="mt-0.5 text-[9.5px] leading-relaxed text-[var(--text-3)]">
+            {focus.autoAdvance
+              ? 'بدون توقف از تمرکز به استراحت و برعکس می‌رود.'
+              : 'در پایان هر بخش می‌ایستد تا خودتان شروع کنید.'}
+          </p>
+        </div>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={focus.autoAdvance === true}
+          aria-label="ادامهٔ خودکار بخش‌ها"
+          onClick={() => setAutoAdvance(!focus.autoAdvance)}
+          className={`relative h-5 w-9 shrink-0 rounded-full border transition-colors ${
+            focus.autoAdvance
+              ? 'border-[var(--accent)] bg-[color-mix(in_srgb,var(--accent)_55%,transparent)]'
+              : 'border-[var(--border)] bg-[var(--surface-2)]'
+          }`}
+        >
+          <span
+            aria-hidden="true"
+            className="absolute top-0.5 h-3.5 w-3.5 rounded-full bg-[var(--text)] transition-all"
+            style={{ left: focus.autoAdvance ? '1.15rem' : '0.15rem' }}
+          />
+        </button>
+      </div>
+
+      {/* ── CUSTOM DURATIONS — a quiet strip, never a card ───────────────────
+          The fields follow the mode: a pomodoro has breaks, a deep-work plan has
+          blocks, a countdown has one number. Showing all of them at once is how
+          a config panel becomes a form. */}
+      {showCustomConfig && focus.mode !== 'free' && (
         <div className="grid grid-cols-3 gap-2 border-b border-[var(--border)] pb-3">
-          {[
-            { label: 'تمرکز', value: focus.focusMinutes, min: 1, max: 180, fallback: 25, apply: (v: number) => setFocusDurations(v, focus.shortBreakMinutes, focus.longBreakMinutes), persist: (v: number) => updateSettings({ pomodoroFocusMin: v }) },
-            { label: 'استراحت کوتاه', value: focus.shortBreakMinutes, min: 1, max: 45, fallback: 5, apply: (v: number) => setFocusDurations(focus.focusMinutes, v, focus.longBreakMinutes), persist: (v: number) => updateSettings({ pomodoroShortBreakMin: v }) },
-            { label: 'استراحت بلند', value: focus.longBreakMinutes, min: 5, max: 60, fallback: 15, apply: (v: number) => setFocusDurations(focus.focusMinutes, focus.shortBreakMinutes, v), persist: (v: number) => updateSettings({ pomodoroLongBreakMin: v }) },
-          ].map((field) => (
+          {(focus.mode === 'pomodoro'
+            ? [
+                { label: 'تمرکز', value: focus.focusMinutes, min: 1, max: 180, fallback: 25, patch: (v: number) => ({ focusMinutes: v }) },
+                { label: 'استراحت کوتاه', value: focus.shortBreakMinutes, min: 1, max: 45, fallback: 5, patch: (v: number) => ({ shortBreakMinutes: v }) },
+                { label: 'استراحت بلند', value: focus.longBreakMinutes, min: 5, max: 60, fallback: 15, patch: (v: number) => ({ longBreakMinutes: v }) },
+              ]
+            : focus.mode === 'interval'
+            ? [
+                { label: 'تعداد بلوک', value: chronoConfig.blocks, min: 1, max: 12, fallback: 4, patch: (v: number) => ({ blocks: v }) },
+                { label: 'دقیقهٔ بلوک', value: chronoConfig.blockMinutes, min: 5, max: 180, fallback: 45, patch: (v: number) => ({ blockMinutes: v }) },
+                { label: 'استراحت', value: chronoConfig.restMinutes, min: 1, max: 45, fallback: 10, patch: (v: number) => ({ restMinutes: v }) },
+              ]
+            : [
+                { label: 'دقیقهٔ شمارش', value: chronoConfig.countdownMinutes, min: 1, max: 240, fallback: 30, patch: (v: number) => ({ countdownMinutes: v }) },
+              ]
+          ).map((field) => (
             <div key={field.label}>
               <label className="mb-1 block text-[9.5px] text-[var(--text-3)]">{field.label}</label>
               <NumericInput
@@ -370,10 +431,7 @@ export function FocusPage() {
                 max={field.max}
                 fallback={field.fallback}
                 value={field.value}
-                onChange={(v) => {
-                  field.apply(v);
-                  void field.persist(v);
-                }}
+                onChange={(v) => setChronoConfig(field.patch(v))}
                 className="luxury-input num-geo py-1.5 text-center text-xs"
               />
             </div>
@@ -494,7 +552,7 @@ export function FocusPage() {
             )}
           </button>
 
-          {focus.mode === 'pomodoro' ? (
+          {focus.mode !== 'free' ? (
             <button
               type="button"
               onClick={skipPomodoroPhase}
@@ -599,11 +657,10 @@ export function FocusPage() {
                 />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[11.5px] text-[var(--text)]">
-                    {s.taskTitleSnapshot ||
-                      (s.mode === 'pomodoro' ? 'جلسهٔ پومودورو' : 'تمرکز آزاد')}
+                    {s.taskTitleSnapshot || `جلسهٔ ${modeLabel(s.mode)}`}
                   </p>
                   <p className="mt-0.5 text-[9.5px] text-[var(--text-3)]">
-                    {formatJalaaliShort(s.dateKey)} · {s.mode === 'pomodoro' ? 'پومودورو' : 'آزاد'}
+                    {formatJalaaliShort(s.dateKey)} · {modeLabel(s.mode)}
                   </p>
                 </div>
                 <Numeric

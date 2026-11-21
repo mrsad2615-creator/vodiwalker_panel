@@ -17,7 +17,7 @@ import type {
   UserSettings,
 } from '@/types/domain';
 import { Capacitor } from '@capacitor/core';
-import { ensureSettings, recordFocusSession } from '@/lib/db';
+import { ensureSettings, recordFocusSession, updateSettings } from '@/lib/db';
 import { useSettings, useTasks } from '@/lib/queries';
 import { getTodayKey } from '@/lib/date';
 import { applyAppearance, cacheAppearance, normalizeAppearance } from '@/lib/theme';
@@ -33,12 +33,28 @@ import {
 } from '@/lib/notifications';
 import { seedStarterWorkspaceIfEmpty } from '@/lib/seed';
 import {
-  focusSecondsNow,
   pauseClock,
+  resolvePlan,
+  seekSegment,
   startClock,
   tickClock,
+  totalFocusSeconds,
   type FocusClockState,
 } from '@/lib/focusTimer';
+import { buildPlan, type ChronoConfig, type ChronoMode } from '@/lib/chrono/plan';
+import { chronoConfigFromSettings, planForMode } from '@/lib/chrono/config';
+import {
+  clearActiveRun,
+  hasProgress,
+  loadActiveRun,
+  saveActiveRun,
+} from '@/lib/chrono/persistence';
+import {
+  mirrorChronoRun,
+  onChronoControl,
+  startChronoNotification,
+  stopChronoNotification,
+} from '@/lib/chrono/native';
 
 export type PomodoroPhase = 'focus' | 'short_break' | 'long_break';
 
@@ -50,6 +66,33 @@ export interface TaskModalRequest {
 }
 
 export type FocusState = FocusClockState;
+
+/** A session positioned at the first segment of its plan, paused. */
+export function freshFocusState(mode: FocusModeType, config: ChronoConfig): FocusState {
+  const plan = buildPlan(mode as ChronoMode, config);
+  const first = plan[0];
+  return {
+    mode,
+    phase: 'focus',
+    isRunning: false,
+    focusMinutes: config.focusMinutes,
+    shortBreakMinutes: config.shortBreakMinutes,
+    longBreakMinutes: config.longBreakMinutes,
+    remainingSeconds: first.seconds,
+    elapsedSeconds: 0,
+    completedCycles: 0,
+    linkedTaskId: null,
+    sessionStartedAt: null,
+    anchorMs: null,
+    anchorRemaining: first.seconds,
+    anchorElapsed: 0,
+    plan,
+    segmentIndex: 0,
+    autoAdvance: false,
+    accruedFocusSeconds: 0,
+    finished: false,
+  };
+}
 
 interface AppContextValue {
   ready: boolean;
@@ -70,6 +113,12 @@ interface AppContextValue {
   focus: FocusState;
   setFocusMode: (mode: FocusModeType) => void;
   setFocusDurations: (focusMin: number, shortMin: number, longMin: number) => void;
+  /** Chrono Core: patch the interval/countdown defaults and rebuild the plan. */
+  setChronoConfig: (patch: Partial<ChronoConfig>) => void;
+  /** Chrono Core: jump to a plan segment (paused at its start). */
+  seekFocusSegment: (index: number) => void;
+  /** Chrono Core: run straight through the plan or stop at every boundary. */
+  setAutoAdvance: (value: boolean) => void;
   setFocusLinkedTask: (taskId: string | null) => void;
   startOrResumeFocus: () => void;
   pauseFocus: () => void;
@@ -90,22 +139,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const allTasks = useTasks();
   const firedRemindersRef = useRef<Set<string>>(new Set());
 
-  const [focus, setFocus] = useState<FocusState>({
-    mode: 'pomodoro',
-    phase: 'focus',
-    isRunning: false,
-    focusMinutes: 25,
-    shortBreakMinutes: 5,
-    longBreakMinutes: 15,
-    remainingSeconds: 25 * 60,
-    elapsedSeconds: 0,
-    completedCycles: 0,
-    linkedTaskId: null,
-    sessionStartedAt: null,
-    anchorMs: null,
-    anchorRemaining: 25 * 60,
-    anchorElapsed: 0,
-  });
+  const [focus, setFocus] = useState<FocusState>(() =>
+    freshFocusState('pomodoro', {
+      focusMinutes: 25,
+      shortBreakMinutes: 5,
+      longBreakMinutes: 15,
+      cyclesBeforeLong: 4,
+      blocks: 4,
+      blockMinutes: 45,
+      restMinutes: 10,
+      countdownMinutes: 30,
+    })
+  );
 
   const pushToast = useCallback((toast: Omit<ToastMessage, 'id'>) => {
     const id = createId('tst');
@@ -127,16 +172,31 @@ export function AppProvider({ children }: { children: ReactNode }) {
         await initNativeShell();
         await seedStarterWorkspaceIfEmpty();
         const s = await ensureSettings();
-        if (active) {
+        const config = chronoConfigFromSettings(s);
+
+        // Chrono Core: a session that was running when Android killed the app is
+        // rebuilt from disk with its anchors intact. The very next tick catches up
+        // on everything that happened while the page was gone.
+        const restored = await loadActiveRun();
+        if (!active) return;
+
+        if (restored && hasProgress(restored)) {
+          setFocus({
+            ...restored,
+            focusMinutes: config.focusMinutes,
+            shortBreakMinutes: config.shortBreakMinutes,
+            longBreakMinutes: config.longBreakMinutes,
+            autoAdvance: restored.autoAdvance || s.autoAdvance,
+            plan: restored.plan && restored.plan.length > 0 ? restored.plan : planForMode('pomodoro', config),
+          });
+        } else {
           setFocus((prev) => ({
-            ...prev,
-            focusMinutes: s.pomodoroFocusMin,
-            shortBreakMinutes: s.pomodoroShortBreakMin,
-            longBreakMinutes: s.pomodoroLongBreakMin,
-            remainingSeconds: s.pomodoroFocusMin * 60,
+            ...freshFocusState(prev.mode === 'free' ? 'free' : 'pomodoro', config),
+            linkedTaskId: prev.linkedTaskId,
+            autoAdvance: s.autoAdvance,
           }));
-          setReady(true);
         }
+        setReady(true);
       } catch {
         if (active) setReady(true);
       }
@@ -337,35 +397,79 @@ export function AppProvider({ children }: { children: ReactNode }) {
     };
   }, [focus.isRunning, syncFocusClock]);
 
+  /**
+   * Switches mode by *rebuilding the plan*, never by patching a few fields: the
+   * segment list is the session, so replacing it wholesale is what guarantees no
+   * half-pomodoro, half-interval state can survive a tap.
+   */
   const setFocusMode = useCallback((mode: FocusModeType) => {
+    const config = chronoConfigFromSettings(settingsRef.current);
     setFocus((prev) => ({
-      ...prev,
-      mode,
-      isRunning: false,
-      phase: 'focus',
-      remainingSeconds: prev.focusMinutes * 60,
-      elapsedSeconds: 0,
-      sessionStartedAt: null,
-      anchorMs: null,
-      anchorRemaining: prev.focusMinutes * 60,
-      anchorElapsed: 0,
+      ...freshFocusState(mode, config),
+      linkedTaskId: prev.linkedTaskId,
+      autoAdvance: prev.autoAdvance,
     }));
+    void clearActiveRun();
+    void stopChronoNotification();
+  }, []);
+
+  const setChronoConfig = useCallback((patch: Partial<ChronoConfig>) => {
+    const settingsPatch: Record<string, number> = {};
+    if (patch.focusMinutes !== undefined) settingsPatch.pomodoroFocusMin = patch.focusMinutes;
+    if (patch.shortBreakMinutes !== undefined) settingsPatch.pomodoroShortBreakMin = patch.shortBreakMinutes;
+    if (patch.longBreakMinutes !== undefined) settingsPatch.pomodoroLongBreakMin = patch.longBreakMinutes;
+    if (patch.cyclesBeforeLong !== undefined) settingsPatch.pomodoroCyclesBeforeLong = patch.cyclesBeforeLong;
+    if (patch.blocks !== undefined) settingsPatch.intervalBlocks = patch.blocks;
+    if (patch.blockMinutes !== undefined) settingsPatch.intervalBlockMin = patch.blockMinutes;
+    if (patch.restMinutes !== undefined) settingsPatch.intervalRestMin = patch.restMinutes;
+    if (patch.countdownMinutes !== undefined) settingsPatch.countdownMin = patch.countdownMinutes;
+
+    const merged: UserSettings = { ...settingsRef.current, ...settingsPatch };
+    settingsRef.current = merged;
+    void updateSettings(settingsPatch);
+
+    const config = chronoConfigFromSettings(merged);
+    setFocus((prev) => ({
+      ...freshFocusState(prev.mode, config),
+      linkedTaskId: prev.linkedTaskId,
+      autoAdvance: prev.autoAdvance,
+    }));
+    void clearActiveRun();
+    void stopChronoNotification();
+  }, []);
+
+  const seekFocusSegment = useCallback((index: number) => {
+    setFocus((prev) => {
+      const base = prev.isRunning ? pauseClock(prev, Date.now()) : prev;
+      return seekSegment(base, index, settingsRef.current.pomodoroCyclesBeforeLong);
+    });
+  }, []);
+
+  const setAutoAdvance = useCallback((value: boolean) => {
+    setFocus((prev) => ({ ...prev, autoAdvance: value }));
+    void updateSettings({ autoAdvance: value });
   }, []);
 
   const setFocusDurations = useCallback(
     (focusMin: number, shortMin: number, longMin: number) => {
       setFocus((prev) => {
-        const nextRemaining =
-          prev.phase === 'focus'
-            ? focusMin * 60
-            : prev.phase === 'short_break'
-            ? shortMin * 60
-            : longMin * 60;
+        const config = {
+          ...chronoConfigFromSettings(settingsRef.current),
+          focusMinutes: focusMin,
+          shortBreakMinutes: shortMin,
+          longBreakMinutes: longMin,
+        };
+        const plan = buildPlan(prev.mode as ChronoMode, config);
+        const index = Math.min(plan.length - 1, Math.max(0, prev.segmentIndex ?? 0));
+        const segment = plan[index];
+        const nextRemaining = segment.seconds;
         return {
           ...prev,
           focusMinutes: focusMin,
           shortBreakMinutes: shortMin,
           longBreakMinutes: longMin,
+          plan,
+          segmentIndex: index,
           remainingSeconds: prev.isRunning ? prev.remainingSeconds : nextRemaining,
           // Re-anchor so a duration change made while paused is what the clock
           // counts down from.
@@ -392,23 +496,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const resetFocus = useCallback(() => {
     setFocus((prev) => {
-      const nextRemaining =
-        prev.phase === 'focus'
-          ? prev.focusMinutes * 60
-          : prev.phase === 'short_break'
-          ? prev.shortBreakMinutes * 60
-          : prev.longBreakMinutes * 60;
+      const config = chronoConfigFromSettings(settingsRef.current);
       return {
-        ...prev,
-        isRunning: false,
-        remainingSeconds: nextRemaining,
-        elapsedSeconds: 0,
-        sessionStartedAt: null,
-        anchorMs: null,
-        anchorRemaining: nextRemaining,
-        anchorElapsed: 0,
+        ...freshFocusState(prev.mode, config),
+        linkedTaskId: prev.linkedTaskId,
+        autoAdvance: prev.autoAdvance,
       };
     });
+    void clearActiveRun();
+    void stopChronoNotification();
   }, []);
 
   const finishAndSaveFocus = useCallback(async () => {
@@ -418,8 +514,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
       return;
     }
     // Read the live value: the anchor may be several seconds ahead of the last
-    // rendered state (the UI only re-renders once per second).
-    const liveElapsed = focusSecondsNow(snap, Date.now());
+    // rendered state (the UI only re-renders once per second). A plan session
+    // banks every focus segment it has passed plus the part of the current one —
+    // finishing during the third block must not report "0 minutes focused".
+    const liveElapsed = totalFocusSeconds(
+      snap,
+      Date.now(),
+      settingsRef.current.pomodoroCyclesBeforeLong
+    );
     if (liveElapsed < 60) {
       pushToast({
         title: 'حداقل 1 دقیقه تمرکز نیاز است',
@@ -445,37 +547,80 @@ export function AppProvider({ children }: { children: ReactNode }) {
         tone: 'success',
       });
     }
+    await clearActiveRun();
+    void stopChronoNotification();
     setFocus((prev) => ({
-      ...prev,
-      isRunning: false,
-      phase: 'focus',
-      remainingSeconds: prev.focusMinutes * 60,
-      elapsedSeconds: 0,
-      sessionStartedAt: null,
-      anchorMs: null,
-      anchorRemaining: prev.focusMinutes * 60,
-      anchorElapsed: 0,
+      ...freshFocusState(prev.mode, chronoConfigFromSettings(settingsRef.current)),
+      linkedTaskId: prev.linkedTaskId,
+      autoAdvance: prev.autoAdvance,
     }));
   }, [focus, commitFocusRecord, pushToast, resetFocus]);
 
+  /**
+   * Advances past the current segment. In a cyclic plan (pomodoro) it wraps to the
+   * first segment; in a finite plan (interval, countdown) it stops on the last one
+   * so a skip can never invent work that was not planned.
+   */
   const skipPomodoroPhase = useCallback(() => {
     setFocus((prev) => {
-      const nextPhase: PomodoroPhase = prev.phase === 'focus' ? 'short_break' : 'focus';
-      const nextRemaining =
-        nextPhase === 'focus' ? prev.focusMinutes * 60 : prev.shortBreakMinutes * 60;
-      return {
-        ...prev,
-        isRunning: false,
-        phase: nextPhase,
-        remainingSeconds: nextRemaining,
-        anchorMs: null,
-        anchorRemaining: nextRemaining,
-        anchorElapsed: 0,
-        elapsedSeconds: 0,
-        sessionStartedAt: null,
-      };
+      const plan = resolvePlan(prev, settingsRef.current.pomodoroCyclesBeforeLong);
+      if (plan.length === 0) return prev;
+      const current = Math.min(plan.length - 1, Math.max(0, prev.segmentIndex ?? 0));
+      const cyclic = prev.mode === 'pomodoro';
+      const next = current + 1 >= plan.length ? (cyclic ? 0 : plan.length - 1) : current + 1;
+      return seekSegment(prev, next, settingsRef.current.pomodoroCyclesBeforeLong);
     });
   }, []);
+
+  // ── Chrono Core: durability ───────────────────────────────────────────────
+  // The session is written to IndexedDB on every structural change and once every
+  // 15 s while it runs. Writing per second would be noise; writing never is how a
+  // 45-minute block disappears when Android reclaims the app.
+  useEffect(() => {
+    if (!ready) return;
+    void saveActiveRun(focus);
+    if (!focus.isRunning) return;
+    const id = window.setInterval(() => {
+      void saveActiveRun(focusRef.current);
+    }, 15_000);
+    return () => window.clearInterval(id);
+  }, [ready, focus]);
+
+  // ── Chrono Core: notification mirror ──────────────────────────────────────
+  // Only structural moments are pushed: the shade counts down on its own.
+  useEffect(() => {
+    if (!ready) return;
+    if (focus.isRunning) {
+      void startChronoNotification(focus);
+      return;
+    }
+    if (hasProgress(focus)) void mirrorChronoRun(focus);
+    else void stopChronoNotification();
+    // Deliberately keyed on shape, not on the per-second countdown.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, focus.isRunning, focus.segmentIndex, focus.mode]);
+
+  // ── Chrono Core: controls from the notification shade ─────────────────────
+  useEffect(() => {
+    let dispose: () => void = () => {};
+    let cancelled = false;
+    void onChronoControl((action) => {
+      const current = focusRef.current;
+      if (action === 'stop') {
+        void finishAndSaveFocus();
+        return;
+      }
+      if (action === 'pause' && current.isRunning) pauseFocus();
+      if (action === 'resume' && !current.isRunning) startOrResumeFocus();
+    }).then((cleanup) => {
+      if (cancelled) cleanup();
+      else dispose = cleanup;
+    });
+    return () => {
+      cancelled = true;
+      dispose();
+    };
+  }, [finishAndSaveFocus, pauseFocus, startOrResumeFocus]);
 
   const openCreateTask = useCallback(
     (opts?: { defaultDueDate?: string | null; defaultQuadrant?: EisenhowerQuadrant }) => {
@@ -513,6 +658,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       focus,
       setFocusMode,
       setFocusDurations,
+      setChronoConfig,
+      seekFocusSegment,
+      setAutoAdvance,
       setFocusLinkedTask,
       startOrResumeFocus,
       pauseFocus,
@@ -534,6 +682,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       focus,
       setFocusMode,
       setFocusDurations,
+      setChronoConfig,
+      seekFocusSegment,
+      setAutoAdvance,
       setFocusLinkedTask,
       startOrResumeFocus,
       pauseFocus,

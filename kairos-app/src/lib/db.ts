@@ -1,6 +1,9 @@
 import Dexie, { type Table } from 'dexie';
 import { DEFAULT_APPEARANCE } from '@/lib/theme';
+import type { ClockSegment } from '@/lib/chrono/plan';
+import type { PomodoroPhase } from '@/lib/focusTimer';
 import type {
+  FocusModeType,
   FocusSession,
   Goal,
   Habit,
@@ -27,6 +30,11 @@ export const DEFAULT_SETTINGS: UserSettings = {
   pomodoroShortBreakMin: 5,
   pomodoroLongBreakMin: 15,
   pomodoroCyclesBeforeLong: 4,
+  intervalBlocks: 4,
+  intervalBlockMin: 45,
+  intervalRestMin: 10,
+  countdownMin: 30,
+  autoAdvance: false,
   notificationsEnabled: true,
   soundEnabled: true,
   hapticsEnabled: true,
@@ -42,6 +50,8 @@ class KairosDatabase extends Dexie {
   focusSessions!: Table<FocusSession, string>;
   goals!: Table<Goal, string>;
   settings!: Table<UserSettings, string>;
+  /** Exactly one row (`id: 'active'`): the session that is not finished yet. */
+  activeRun!: Table<ActiveRunRecord, string>;
 
   constructor() {
     super('KairosLuxuryProductivityDB');
@@ -53,10 +63,42 @@ class KairosDatabase extends Dexie {
       goals: 'id, completed, category, deadline',
       settings: 'id',
     });
+
+    // v2 — Chrono Core. The running session is written to disk so closing the
+    // app (or Android killing the WebView) no longer erases a 40-minute focus
+    // block. Only the one row is kept; history still lives in `focusSessions`.
+    this.version(2).stores({
+      activeRun: 'id, updatedAt',
+    });
   }
 }
 
 export const db = new KairosDatabase();
+
+/**
+ * A saved Chrono session. Kept deliberately close to the clock state so restoring
+ * is a copy, not a translation — every field the arithmetic needs is here.
+ */
+export interface ActiveRunRecord {
+  id: 'active';
+  mode: FocusModeType;
+  plan: ClockSegment[];
+  segmentIndex: number;
+  phase: PomodoroPhase;
+  isRunning: boolean;
+  remainingSeconds: number;
+  elapsedSeconds: number;
+  /** Epoch ms. `null` while paused. */
+  anchorMs: number | null;
+  anchorRemaining: number;
+  anchorElapsed: number;
+  completedCycles: number;
+  accruedFocusSeconds: number;
+  autoAdvance: boolean;
+  linkedTaskId: string | null;
+  sessionStartedAt: string | null;
+  updatedAt: string;
+}
 
 export function makeHabitLogId(habitId: string, dateKey: string): string {
   return `${habitId}::${dateKey}`;
@@ -65,16 +107,14 @@ export function makeHabitLogId(habitId: string, dateKey: string): string {
 export async function ensureSettings(): Promise<UserSettings> {
   const existing = await db.settings.get('default');
   if (existing) {
-    // Backfill fields added after the row was first written (1.4.0 appearance).
+    // Backfill every field added after the row was first written (1.4.0
+    // appearance, 1.6.0 home mode, 1.8.0 Chrono Core). A field-by-field check
+    // beats a hand-maintained list: the list is what kept getting forgotten.
     const merged: UserSettings = { ...DEFAULT_SETTINGS, ...existing, id: 'default' };
-    if (
-      merged.accentColor !== existing.accentColor ||
-      merged.backgroundId !== existing.backgroundId ||
-      merged.motionLevel !== existing.motionLevel ||
-      merged.homeMode !== existing.homeMode
-    ) {
-      await db.settings.put(merged);
-    }
+    const missing = (Object.keys(DEFAULT_SETTINGS) as (keyof UserSettings)[]).some(
+      (key) => existing[key] === undefined
+    );
+    if (missing) await db.settings.put(merged);
     return merged;
   }
   const fresh: UserSettings = { ...DEFAULT_SETTINGS, updatedAt: new Date().toISOString() };

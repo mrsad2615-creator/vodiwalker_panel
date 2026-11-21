@@ -136,7 +136,12 @@ export interface HabitLog {
   updatedAt: string;
 }
 
-export type FocusModeType = 'pomodoro' | 'free';
+/**
+ * Chrono Core modes. `pomodoro` and `free` are the 1.x pair; `interval` (deep-work
+ * blocks) and `countdown` (one fixed stretch) arrived in 1.8.0. Records written by
+ * older builds stay readable because the union only grew.
+ */
+export type FocusModeType = 'pomodoro' | 'free' | 'interval' | 'countdown';
 
 export interface FocusSession {
   id: string;
@@ -185,6 +190,14 @@ export interface UserSettings {
   pomodoroShortBreakMin: number;
   pomodoroLongBreakMin: number;
   pomodoroCyclesBeforeLong: number;
+  /** Chrono Core: interval-mode defaults. */
+  intervalBlocks: number;
+  intervalBlockMin: number;
+  intervalRestMin: number;
+  /** Chrono Core: countdown-mode default. */
+  countdownMin: number;
+  /** Chrono Core: walk into the next segment without a tap. */
+  autoAdvance: boolean;
   notificationsEnabled: boolean;
   soundEnabled: boolean;
   hapticsEnabled: boolean;

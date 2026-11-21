@@ -36,6 +36,8 @@ public class MainActivity extends BridgeActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        // Registered before super.onCreate so the bridge picks it up during init.
+        registerPlugin(ChronoPlugin.class);
         super.onCreate(savedInstanceState);
 
         Window window = getWindow();

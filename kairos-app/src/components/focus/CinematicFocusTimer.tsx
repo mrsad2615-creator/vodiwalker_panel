@@ -93,7 +93,7 @@ export function CinematicFocusTimer({
 
   const shown = mode === 'pomodoro' ? remainingSeconds : elapsedSeconds;
   const parts = splitParts(shown);
-  const isBreak = mode === 'pomodoro' && phase !== 'focus';
+  const isBreak = mode !== 'free' && phase !== 'focus';
 
   const kicker =
     mode === 'free'

@@ -17,6 +17,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
@@ -604,6 +605,36 @@ fun MrsadSecondaryButton(
     }
 }
 
+/**
+ * Fixed-dimension precision container for 3D sculptures and vector icons in
+ * RTL card headers and list rows. Ensures icons always stand in a consistent
+ * 48dp (or custom size) right-aligned frame without crowding adjacent text.
+ */
+@Composable
+fun ObsidianIconBox(
+    modifier: Modifier = Modifier,
+    size: Dp = 48.dp,
+    accent: Color = MrsadTheme.colors.accent,
+    elevated: Boolean = false,
+    content: @Composable BoxScope.() -> Unit,
+) {
+    val colors = MrsadTheme.colors
+    val shape = RoundedCornerShape(MrsadTokens.Radius.md)
+    Box(
+        modifier = modifier
+            .size(size)
+            .clip(shape)
+            .background(if (elevated) colors.surfaceHigh else colors.backgroundElevated)
+            .border(
+                width = 1.dp,
+                color = accent.copy(alpha = 0.45f),
+                shape = shape,
+            ),
+        contentAlignment = Alignment.Center,
+        content = content,
+    )
+}
+
 /** Small status chip (metric, tag, streak) with spectral border illumination. */
 @Composable
 fun MrsadChip(
@@ -611,6 +642,7 @@ fun MrsadChip(
     modifier: Modifier = Modifier,
     tint: Color? = null,
     leadingIcon: ImageVector? = null,
+    compact: Boolean = false,
     onClick: (() -> Unit)? = null,
 ) {
     val colors = MrsadTheme.colors
@@ -624,18 +656,26 @@ fun MrsadChip(
             .then(
                 if (onClick != null) {
                     Modifier
-                        .heightIn(min = MrsadTokens.TouchTarget)
+                        .heightIn(min = if (compact) 36.dp else MrsadTokens.TouchTarget)
                         .clickable(onClick = onClick)
                 } else {
                     Modifier
                 },
             )
-            .padding(horizontal = MrsadTokens.Spacing.sm, vertical = 5.dp),
+            .padding(
+                horizontal = if (compact) 8.dp else MrsadTokens.Spacing.sm,
+                vertical = if (compact) 3.dp else 5.dp,
+            ),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(MrsadTokens.Spacing.xxs),
     ) {
-        if (leadingIcon != null) Icon(leadingIcon, null, tint = color, modifier = Modifier.size(14.dp))
-        Text(text, style = MrsadTheme.type.caption.copy(color = colors.textPrimary, fontWeight = FontWeight.Medium))
+        if (leadingIcon != null) Icon(leadingIcon, null, tint = color, modifier = Modifier.size(if (compact) 12.dp else 14.dp))
+        Text(
+            text = text,
+            style = MrsadTheme.type.caption.copy(color = colors.textPrimary, fontWeight = FontWeight.Medium),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
 

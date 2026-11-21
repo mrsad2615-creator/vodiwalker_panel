@@ -24,10 +24,14 @@ enum class TypePhase { SETUP, RUNNING, PAUSED, FINISHED }
 data class TypeUiState(
     val phase: TypePhase = TypePhase.SETUP,
     val usePersian: Boolean = true,
+    val selectedLevelFilter: Int = 0,
     val selectedTextId: String? = null,
     val selectedDurationSeconds: Int = 60,
     val targetText: String = "",
     val title: String = "",
+    val categoryFa: String = "",
+    val textLevel: Int = 1,
+    val targetWpm: Int = 35,
     val typedPrefixLength: Int = 0,
     val expectedChar: Char? = null,
     val liveWpm: Double = 0.0,
@@ -74,8 +78,18 @@ class TypeViewModel(private val container: AppContainer) : ViewModel() {
 
     fun setLanguage(persian: Boolean) {
         if (_state.value.isActive) return
-        _state.update { it.copy(usePersian = persian) }
+        _state.update { it.copy(usePersian = persian, selectedLevelFilter = 0) }
         chooseText(TypeTexts.dailyPick(persian, MrsadClock.todayIso()))
+    }
+
+    fun setLevelFilter(level: Int) {
+        if (_state.value.isActive) return
+        val clamped = level.coerceIn(0, 5)
+        _state.update { it.copy(selectedLevelFilter = clamped) }
+        val filtered = TypeTexts.forLanguage(_state.value.usePersian, clamped)
+        if (filtered.isNotEmpty() && filtered.none { it.id == _state.value.selectedTextId }) {
+            chooseText(filtered.first())
+        }
     }
 
     fun setDuration(seconds: Int) {
@@ -98,6 +112,9 @@ class TypeViewModel(private val container: AppContainer) : ViewModel() {
                 selectedTextId = text.id,
                 targetText = normalizedTarget,
                 title = text.title,
+                categoryFa = text.categoryFa,
+                textLevel = text.level,
+                targetWpm = text.targetWpm,
                 typedPrefixLength = 0,
                 expectedChar = normalizedTarget.firstOrNull(),
                 liveWpm = 0.0,

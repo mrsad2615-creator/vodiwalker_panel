@@ -1,173 +1,212 @@
 package dev.mrsad.app.feature.type
 
-import dev.mrsad.app.data.settings.GraphicsQuality
+import dev.mrsad.core.random.SplitMix64
+import dev.mrsad.core.text.PersianText
+import dev.mrsad.core.typing.TypingLanguage
 
-/**
- * Curated local training corpus. All texts are original Persian prose written
- * for MRSAD (no copyrighted material) and are selected by measurable criteria,
- * not randomly: a difficulty tier and a focus (letters / words / rhythm).
- */
 data class PracticeText(
     val id: String,
+    val language: TypingLanguage,
+    val level: Int,
     val title: String,
     val body: String,
-    val level: Int, // 1 = easy … 3 = hard
+    val categoryFa: String = "عمومی",
+    val targetWpm: Int = 35,
 )
 
+/**
+ * Authoritative bilingual typing corpus organized across 5 progressive
+ * ergonomic & linguistic difficulty tiers (ISIRI 9147 standard layout for
+ * Persian; ANSI QWERTY for English).
+ */
 object TypeTexts {
 
     val persian: List<PracticeText> = listOf(
         PracticeText(
-            id = "fa-basic-1",
-            title = "آغاز روشن",
+            id = "fa-1",
+            language = TypingLanguage.PERSIAN,
             level = 1,
-            body = "هر تمرین کوچک، یک قدم به جلو است. دست‌ها بر صفحه می‌نشینند و ذهن آرام می‌شود. " +
-                "امروز فقط یک دقیقه تمرین کن و نتیجه را با دیروز مقایسه کن.",
+            categoryFa = "ردیف میانی (Home Row)",
+            targetWpm = 25,
+            title = "تثبیت ردیف میانی و تعادل دو دست",
+            body = "شسیب نمکگ شسیب نمکگ تنفس آرام و استقرار انگشتان روی ردیف میانی کیبورد استاندارد فارسی پایهٔ اصلی سرعت پایدار است. هر کلید را با کمترین جابه‌جایی مچ بزنید و بلافاصله به خانهٔ اصلی بازگردید.",
         ),
         PracticeText(
-            id = "fa-basic-2",
-            title = "ریتم روزانه",
+            id = "fa-2",
+            language = TypingLanguage.PERSIAN,
             level = 1,
-            body = "تمرین روزانه از تمرین طولانی مهم‌تر است. پنج دقیقه در هر روز، در یک ماه یک عادت می‌سازد. " +
-                "سرعت با تکرار می‌آید و دقت با توجه.",
+            categoryFa = "واژگان پایه و ریتم یکنواخت",
+            targetWpm = 30,
+            title = "ریتم پیوسته بدون نگاه به صفحه‌کلید",
+            body = "تمرین روزانه و کوتاه، بسیار مؤثرتر از تمرین‌های سنگین و پراکنده است. حافظهٔ حرکتی زمانی شکل می‌گیرد که چشم فقط به متن روی صفحه نگاه کند و انگشتان مسیر هر حرف را به صورت خودکار پیدا کنند.",
         ),
         PracticeText(
-            id = "fa-mid-1",
-            title = "مسیر یادگیری",
+            id = "fa-3",
+            language = TypingLanguage.PERSIAN,
             level = 2,
-            body = "یادگیری مهارت شبیه ساختن راه است؛ هر قدم که برمی‌داری، مسیر روشن‌تر می‌شود. " +
-                "گاهی سرعت کم می‌شود، اما توقف لازم نیست. کافی است دوباره شروع کنی و به دقتِ خود اعتماد کنی.",
+            categoryFa = "روانشناسی شناختی",
+            targetWpm = 38,
+            title = "معماری توجه و کنترل شناختی",
+            body = "تمرکز عمیق یک مهارت اکتسابی است که با حذف عوامل مزاحم و تمرین آگاهانه تقویت می‌شود. زمانی که ذهن تنها بر یک تکلیف مشخص متمرکز می‌ماند، کیفیت پردازش اطلاعات افزایش یافته و خستگی شناختی به حداقل می‌رسد.",
         ),
         PracticeText(
-            id = "fa-mid-2",
-            title = "تمرکز عمیق",
+            id = "fa-4",
+            language = TypingLanguage.PERSIAN,
             level = 2,
-            body = "تمرکز عمیق زمانی شکل می‌گیرد که حواس‌پرتی را آگاهانه کنار بگذاری. " +
-                "پیش از شروع، هدف را مشخص کن؛ در طول تمرین، فقط به حرکت انگشتان و ریتم جمله‌ها توجه کن. " +
-                "پس از پایان، یک نفس عمیق بکش و نتیجه را ثبت کن.",
+            categoryFa = "علم تمرین و یادگیری حرکتی",
+            targetWpm = 42,
+            title = "تقدم دقت بر سرعت خام",
+            body = "در یادگیری مهارت‌های حرکتی ظریف، دقت همیشه مقدم بر سرعت است. هر خطای تایپی نه تنها زمان اصلاح را تحمیل می‌کند بلکه الگوی عصبی نادرستی را در حافظهٔ عضلانی ثبت می‌نماید؛ پس ابتدا بی‌نقص بنویسید تا سرعت به طور طبیعی رشد کند.",
         ),
         PracticeText(
-            id = "fa-hard-1",
-            title = "نیم‌فاصله و ترکیب‌ها",
+            id = "fa-5",
+            language = TypingLanguage.PERSIAN,
             level = 3,
-            body = "می‌روم، می‌آیم، می‌بینم و بازمی‌گردم؛ نیم‌فاصله‌ها قلب نوشتار فارسی هستند. " +
-                "واژه‌هایی مانند خانه‌ها، کتاب‌ها و دوستانم نشان می‌دهند که پیوستگی حروف، معنا را کامل می‌کند. " +
-                "در تایپ فارسی، دقت در همین جزئیات، تفاوت اصلی است.",
+            categoryFa = "نیم‌فاصله و نگارش معیار",
+            targetWpm = 45,
+            title = "کاربرد دقیق نیم‌فاصله در خط فارسی",
+            body = "رعایت نیم‌فاصله در واژه‌هایی مانند می‌روم، كتاب‌ها، برنامه‌نویسی، آینده‌نگری و پژوهش‌های علمی موجب خوانایی و زیبایی متن فارسی می‌شود. تایپیست حرفه‌ای مرز میان فاصلهٔ کامل و نیم‌فاصله را بدون مکث تشخیص می‌دهد.",
         ),
         PracticeText(
-            id = "fa-hard-2",
-            title = "دقت در جزئیات",
+            id = "fa-6",
+            language = TypingLanguage.PERSIAN,
             level = 3,
-            body = "زبان فارسی با ظرافت‌هایش شناخته می‌شود: ژ و چ و پ و گ، حروفی که در بسیاری از زبان‌ها نیستند. " +
-                "وقتی انگشتان این حروف را می‌شناسند، سرعت بدون از دست رفتن دقت بالا می‌رود. " +
-                "هدف، تایپ بی‌خطا با ریتمی پایدار است.",
+            categoryFa = "مهندسی نرم‌افزار",
+            targetWpm = 48,
+            title = "طراحی سیستم‌های پایدار و کم‌تأخیر",
+            body = "کیفیت یک نرم‌افزار مهندسی‌شده در سادگی معماری، تفکیک دقیق مسئولیت‌ها و پایداری در شرایط مرزی سنجیده می‌شود. کدنویسی تمیز یعنی هر تابع یک وظیفهٔ مشخص را با بیشترین خوانایی و کمترین پیچیدگی پنهان انجام دهد.",
         ),
         PracticeText(
-            id = "fa-basic-3",
-            title = "گام کوچک",
-            level = 1,
-            body = "امروز فقط یک خط بنویس. نه بیشتر، نه کمتر. " +
-                "یک خط که بی‌نقص تمام شود، بیشتر از ده خطِ رهاشده ارزش دارد. " +
-                "فردا دوباره برگرد و همان یک خط را تکرار کن.",
+            id = "fa-7",
+            language = TypingLanguage.PERSIAN,
+            level = 4,
+            categoryFa = "علوم اعصاب و حافظه",
+            targetWpm = 52,
+            title = "انحطاط‌پذیری عصبی و تثبیت مهارت",
+            body = "پژوهش‌های علوم اعصاب نشان می‌دهد که تکرار هدفمند همراه با بازخورد فوری، میلین‌سازی رشته‌های عصبی مرتبط با حرکت انگشتان را تسریع می‌کند. استراحت‌های کوتاه میان نوبت‌های تمرین نیز به مغز فرصت می‌دهد الگوهای حرکتی تازه را تثبیت کند.",
         ),
         PracticeText(
-            id = "fa-mid-3",
-            title = "دقت زیر فشار",
-            level = 2,
-            body = "تایپ سریع وقتی ارزشمند است که زیر فشار هم دقت را نگه دارد. " +
-                "در تمرین‌های زمان‌دار، ذهن به دنبال راه‌های کوتاه می‌گردد و همین‌جاست که چند خطای کوچک ردیف می‌شود. " +
-                "برای همین، اول با سرعت کم شروع کن تا دست‌ها راه را پیدا کنند، بعد فشار را بالا ببر.",
+            id = "fa-8",
+            language = TypingLanguage.PERSIAN,
+            level = 4,
+            categoryFa = "ادبیات و نثر کلاسیک",
+            targetWpm = 55,
+            title = "حکمت عملی و ارزش وقت",
+            body = "آدمی ساختهٔ اندیشه‌ها و عادت‌های پیوستهٔ خویش است؛ آنچه امروز با صبر و دقت می‌کاریم، فردا در قامت مهارت و تسلط آشکار می‌گردد. هیچ دستاورد ماندگاری بی‌رنج تمرین منظم و بازنگری صادقانه در خطاها به دست نیامده است.",
         ),
         PracticeText(
-            id = "fa-hard-3",
-            title = "جمله‌های بلند",
-            level = 3,
-            body = "جملهٔ بلند، آزمون واقعی ریتم است؛ چون ذهن در میانهٔ راه باید پیوند میان دو نیم‌جمله را نگه دارد. " +
-                "هنگام تایپ، نقطهٔ مکث را پیش از رسیدن به آن حدس بزنید و آهسته‌تر از بخش دیگر پیش بروید. " +
-                "اگر نیم‌جملهٔ اول را رها کنید، نیم‌جملهٔ دوم را هم گم می‌کنید.",
+            id = "fa-9",
+            language = TypingLanguage.PERSIAN,
+            level = 5,
+            categoryFa = "حروف کم‌بسامد و ترکیبی",
+            targetWpm = 60,
+            title = "چالش حروف چهارنقطه و زنجیره‌های پیچیده",
+            body = "پژوهشگران ژرف‌اندیش در حوزه‌های زیست‌فناوری، اخترفیزیک و رمزنگاری کوانتومی نیازمند نگارش دقیق واژگان تخصصی، ترکیب‌های چندبخشی و ساختارهای نحوی منسجم با سرعت و دقت بسیار بالا هستند.",
+        ),
+        PracticeText(
+            id = "fa-10",
+            language = TypingLanguage.PERSIAN,
+            level = 5,
+            categoryFa = "آزمون استاندارد استقامت",
+            targetWpm = 65,
+            title = "آزمون جامع سرعت و پایداری تایپ فارسی",
+            body = "تسلط کامل بر تایپ دهانگشتی زمانی محقق می‌شود که جریان اندیشه بدون هیچ مانع مکانیکی از ذهن به صفحه منتقل گردد. در این سطح، هماهنگی چشم و دست به چنان پایداری و روانی می‌رسد که واژه‌های ساده و تخصصی با ریتمی یکسان، بدون خستگی و با دقتی فراتر از نود و هشت درصد ثبت می‌شوند.",
         ),
     )
 
     val english: List<PracticeText> = listOf(
         PracticeText(
-            id = "en-basic-1",
-            title = "Warm up",
+            id = "en-1",
+            language = TypingLanguage.ENGLISH,
             level = 1,
-            body = "Small steps every day build real skill. Sit straight, relax your hands, " +
-                "and let your eyes follow the text instead of the keyboard.",
+            categoryFa = "Home Row Foundation",
+            targetWpm = 30,
+            title = "Home Row Posture and Finger Return",
+            body = "Keep your fingers curved lightly over the home row keys and let your wrists float naturally. Precision on every single keystroke builds reliable muscle memory far faster than rushing through mistakes.",
         ),
         PracticeText(
-            id = "en-basic-2",
-            title = "Home row",
-            level = 1,
-            body = "The home row is where accuracy begins. Place your fingers on the keys, " +
-                "keep your wrists light, and return to the home position after every reach.",
-        ),
-        PracticeText(
-            id = "en-mid-1",
-            title = "Steady rhythm",
+            id = "en-2",
+            language = TypingLanguage.ENGLISH,
             level = 2,
-            body = "Speed is a by-product of accuracy. When your fingers learn the most common " +
-                "letter combinations, whole words begin to flow as single motions.",
+            categoryFa = "Cognitive Ergonomics",
+            targetWpm = 42,
+            title = "Deliberate Practice and Motor Learning",
+            body = "Deliberate practice requires clear goals, immediate feedback, and focused repetition at the edge of your current ability. Smooth rhythm and steady breathing prevent tension in the hands during extended typing sessions.",
         ),
         PracticeText(
-            id = "en-mid-2",
-            title = "Deliberate practice",
-            level = 2,
-            body = "Deliberate practice means working just beyond your comfort zone. " +
-                "Measure what is weak, train that part specifically, and keep the rest of your routine steady.",
-        ),
-        PracticeText(
-            id = "en-hard-1",
-            title = "Punctuation flow",
+            id = "en-3",
+            language = TypingLanguage.ENGLISH,
             level = 3,
-            body = "Punctuation is part of rhythm: commas pause, periods land, and semicolons connect; " +
-                "parentheses quietly hold (extra detail) without breaking the sentence's flow.",
+            categoryFa = "Systems Engineering",
+            targetWpm = 52,
+            title = "Deterministic Architecture and Clean Code",
+            body = "Reliable software systems are built from small, deterministic components whose state transitions can be verified independently. Clear naming and minimal mutable state make complex engineering problems tractable.",
         ),
         PracticeText(
-            id = "en-basic-3",
-            title = "One line",
-            level = 1,
-            body = "Type one clean line today. Not ten lines, not five — one. " +
-                "A single line finished without a mistake is worth more than ten abandoned ones.",
+            id = "en-4",
+            language = TypingLanguage.ENGLISH,
+            level = 4,
+            categoryFa = "Visual Attention & Flow",
+            targetWpm = 60,
+            title = "Look-Ahead Reading in High-Speed Typing",
+            body = "Expert typists read two or three words ahead of their active cursor, buffering upcoming character sequences in working memory so both hands can coordinate alternating keystrokes without hesitation.",
         ),
         PracticeText(
-            id = "en-mid-3",
-            title = "Under pressure",
-            level = 2,
-            body = "Speed only counts when accuracy survives it. " +
-                "In timed drills the mind looks for shortcuts, and that is exactly where small errors line up. " +
-                "Start slower until your hands know the path, then add pressure.",
-        ),
-        PracticeText(
-            id = "en-hard-2",
-            title = "Long sentences",
-            level = 3,
-            body = "A long sentence is the real test of rhythm, because the mind has to hold the join " +
-                "between two halves while the fingers keep moving. " +
-                "Anticipate the break before you reach it and slow down on the way in.",
+            id = "en-5",
+            language = TypingLanguage.ENGLISH,
+            level = 5,
+            categoryFa = "Mastery Benchmark",
+            targetWpm = 70,
+            title = "Full-Spectrum Lexical Endurance Test",
+            body = "Sustaining high throughput across dense technical prose demands balanced finger allocation, minimal corrective backspacing, and unwavering attentional control from the opening word to the final period.",
         ),
     )
 
-    fun forLanguage(usePersian: Boolean): List<PracticeText> = if (usePersian) persian else english
-
-    /** Deterministic daily pick so "today's text" is stable across app restarts. */
-    fun dailyPick(usePersian: Boolean, dateIso: String, level: Int = 0): PracticeText {
-        val pool = forLanguage(usePersian).let { all ->
-            if (level <= 0) all else all.filter { it.level == level }.ifEmpty { all }
-        }
-        val seed = dev.mrsad.core.random.SplitMix64.seedFor("type:$usePersian:$dateIso:$level")
-        val rng = dev.mrsad.core.random.SplitMix64(seed)
-        return pool[rng.nextInt(pool.size)]
+    fun forLanguage(persian: Boolean, levelFilter: Int = 0): List<PracticeText> {
+        val list = if (persian) this.persian else english
+        return if (levelFilter in 1..5) list.filter { it.level == levelFilter } else list
     }
-}
 
-/** Session duration presets, in seconds. */
-val durationPresets = listOf(30, 60, 120, 180)
+    fun dailyPick(usePersian: Boolean, dateIso: String): PracticeText {
+        val list = forLanguage(usePersian)
+        val idx = SplitMix64(SplitMix64.seedFor(dateIso)).nextInt(list.size)
+        return list[idx]
+    }
 
-/** Typing visual quality helper (recommendation for effects budget). */
-fun recommendedCursorGlow(quality: GraphicsQuality): Float = when (quality) {
-    GraphicsQuality.HIGH -> 1f
-    GraphicsQuality.BALANCED -> 0.6f
-    GraphicsQuality.PERFORMANCE -> 0f
+    fun levelLabelFa(level: Int): String = when (level) {
+        1 -> "سطح ۱ • مقدماتی"
+        2 -> "سطح ۲ • پایه"
+        3 -> "سطح ۳ • متوسط"
+        4 -> "سطح ۴ • پیشرفته"
+        else -> "سطح ۵ • استادکار"
+    }
+
+    /**
+     * Returns ergonomic 10-finger touch-typing guidance for the next expected
+     * character according to ISIRI 9147 (Persian) and ANSI QWERTY (English).
+     */
+    fun fingerHintFa(ch: Char?, persian: Boolean): String {
+        if (ch == null) return "تمرین کامل شد"
+        if (ch == ' ') return "انگشت شست • کلید فاصله (Space)"
+        if (ch == PersianText.ZWNJ) return "نیم‌فاصله (Shift + Space یا کلید فاصله)"
+        return if (persian) {
+            when (ch) {
+                'ض', 'ص', 'ش', 'س', 'ظ', 'ط', 'ز' -> "دست چپ • انگشت کوچک / حلقه"
+                'ث', 'ق', 'ی', 'ب', 'ر', 'ذ', 'د' -> "دست چپ • انگشت میانی / اشاره"
+                'ف', 'غ', 'ل', 'ا', 'آ', 'پ', 'و' -> "دست چپ • انگشت اشاره"
+                'ع', 'ه', 'ت', 'ن', 'ئ', 'م' -> "دست راست • انگشت اشاره"
+                'ح', 'خ', 'ک', 'م', 'ة' -> "دست راست • انگشت میانی"
+                'ج', 'چ', 'گ', 'ک', 'ژ' -> "دست راست • انگشت حلقه / کوچک"
+                else -> "نگاه روی متن • ضربهٔ نرم و برگشت به ردیف میانی"
+            }
+        } else {
+            when (ch.lowercaseChar()) {
+                'q', 'a', 'z', 'w', 's', 'x' -> "دست چپ • انگشت کوچک / حلقه"
+                'e', 'd', 'c', 'r', 'f', 'v', 't', 'g', 'b' -> "دست چپ • انگشت میانی / اشاره"
+                'y', 'h', 'n', 'u', 'j', 'm', 'i', 'k' -> "دست راست • انگشت اشاره / میانی"
+                'o', 'l', 'p' -> "دست راست • انگشت حلقه / کوچک"
+                else -> "دست راست • کلید علائم نگارشی"
+            }
+        }
+    }
 }

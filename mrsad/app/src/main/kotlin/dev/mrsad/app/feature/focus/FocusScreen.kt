@@ -56,6 +56,7 @@ import dev.mrsad.app.ui.components.MrsadSecondaryButton
 import dev.mrsad.app.ui.components.MrsadSurface
 import dev.mrsad.app.ui.components.MrsadTokens
 import dev.mrsad.app.ui.components.ObsidianCollapsingTopBar
+import dev.mrsad.app.ui.components.ObsidianIconBox
 import dev.mrsad.app.ui.components.ObsidianSegmentedBar
 import dev.mrsad.app.ui.components.SectionHeader
 import dev.mrsad.app.ui.components.SegmentedBarItem
@@ -92,20 +93,25 @@ fun FocusScreen(
                 .fillMaxSize(),
         ) {
             ObsidianCollapsingTopBar(
-                title = "FOCUS SPACE",
-                subtitle = "تایمر تمرکز عمیق با زمان‌سنج دقیق",
+                title = "فضای تمرکز عمیق",
+                subtitle = "تایمر علمی پومودورو و کار عمیق با ساعت یکنواخت",
                 collapsed = isCollapsed,
                 spectralColor = ObsidianSpectrum.Aqua,
                 onBack = onBack,
                 leading = {
-                    MetalIcon(
-                        MrsadIcons.Focus,
-                        accentOverride = ObsidianSpectrum.Aqua,
-                        modifier = Modifier.size(if (isCollapsed) 24.dp else 30.dp),
-                    )
+                    ObsidianIconBox(
+                        size = if (isCollapsed) 38.dp else 48.dp,
+                        accent = ObsidianSpectrum.Aqua,
+                    ) {
+                        MetalIcon(
+                            MrsadIcons.Focus,
+                            accentOverride = ObsidianSpectrum.Aqua,
+                            modifier = Modifier.size(if (isCollapsed) 20.dp else 24.dp),
+                        )
+                    }
                 },
                 trailing = {
-                    MrsadChip(text = state.phaseLabelFa, tint = ObsidianSpectrum.Aqua)
+                    MrsadChip(text = state.phaseLabelFa, tint = ObsidianSpectrum.Aqua, compact = true)
                 },
             )
 

@@ -48,10 +48,12 @@ data class MrsadBottomBarItem(
 )
 
 private fun spectralForRoute(route: String): Color = when (route) {
+    Routes.HOME -> ObsidianSpectrum.BrightBlue
     Routes.TYPE -> ObsidianSpectrum.BrightBlue
+    Routes.READ -> ObsidianSpectrum.Lavender
+    Routes.EYE -> ObsidianSpectrum.Aqua
     Routes.MIND -> ObsidianSpectrum.Pink
     Routes.ANALYTICS -> ObsidianSpectrum.Aqua
-    Routes.AI -> ObsidianSpectrum.Lavender
     else -> ObsidianSpectrum.BrightBlue
 }
 

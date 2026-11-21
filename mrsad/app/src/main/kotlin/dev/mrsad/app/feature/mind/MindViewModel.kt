@@ -21,27 +21,21 @@ import kotlinx.coroutines.launch
 enum class MindScreenState { LOBBY, PLAYING, RESULT }
 
 enum class MindExercise(val titleFa: String, val subtitleFa: String, val categoryFa: String) {
-    NUMBER_MEMORY("حافظهٔ عددی", "توالی اعداد را به خاطر بسپار", "حافظه"),
-    PATTERN_MEMORY("حافظهٔ بصری", "الگوی خانه‌ها را بازسازی کن", "حافظه"),
-    ATTENTION("توجهٔ انتخابی", "هدف را میان حواس‌پرتی پیدا کن", "توجه"),
-    STROOP("اثر استروپ", "رنگ را از معنی جدا کن", "توجه"),
-    ARITHMETIC("سرعت محاسبه", "در زمان محدود حساب کن", "پردازش"),
-    LOGIC("استدلال منطقی", "الگوی عددی را کامل کن", "منطق"),
-    REACTION("سرعت واکنش", "به‌محض ظهور محرک دیداری ضربه بزن", "واکنش"),
+    NUMBER_MEMORY("حافظهٔ عددی", "توالی ارقام را در حافظهٔ کاری نگه دار و بازنویسی کن", "حافظه"),
+    PATTERN_MEMORY("حافظهٔ فضایی", "الگوی خانه‌های روشن را در شبکه بازسازی کن", "حافظه"),
+    ATTENTION("توجهٔ انتخابی", "همهٔ نمادهای هدف را میان محرک‌های مشابه پیدا کن", "توجه"),
+    STROOP("مهار تداخل استروپ", "رنگ جوهر نوشته را مستقل از معنی کلمه تشخیص بده", "توجه"),
+    ARITHMETIC("سرعت محاسبهٔ ذهنی", "عملیات چهارگانه را در کمترین زمان حل کن", "پردازش"),
+    LOGIC("استدلال و کشف الگو", "قاعدهٔ ریاضی دنباله را کشف و کامل کن", "منطق"),
+    REACTION("سرعت واکنش عصبی", "به‌محض ظهور محرک دیداری با کمترین تأخیر ضربه بزن", "واکنش"),
 }
 
 data class MindUiState(
     val screen: MindScreenState = MindScreenState.LOBBY,
+    val selectedCategoryFilter: String = "ALL",
     val exercise: MindExercise? = null,
-    // adaptive level & history
-    /**
-     * The difficulty ladder of the exercise being played, 0-based.
-     * Each exercise carries its own ladder — see [levels].
-     */
     val level: Int = 0,
-    /** The level the ladder reaches after the round that just finished. */
     val nextLevel: Int = 0,
-    /** Per-exercise difficulty levels, derived from each exercise's own scores. */
     val levels: Map<MindExercise, Int> = emptyMap(),
     val totalSessions: Int = 0,
     val averageScore: Double = 0.0,
@@ -51,6 +45,8 @@ data class MindUiState(
     val questionIndex: Int = 0,
     val questionCount: Int = 5,
     val correctAnswers: Int = 0,
+    val stageScores: List<Double> = emptyList(),
+    val lastStageFeedbackFa: String? = null,
     val roundStartMonotonic: Long = 0L,
     val reactionTimes: List<Long> = emptyList(),
     // number memory
@@ -76,18 +72,12 @@ data class MindUiState(
     val levelUp: Boolean = false,
     val saved: Boolean = false,
 ) {
-    /** The difficulty level of one exercise, 0 when it has never been played. */
     fun levelOf(exercise: MindExercise): Int = levels[exercise] ?: 0
 
-    /** The number of exercises the user has real history for. */
     val practisedExercises: Int get() = levels.size
 
     val progress: Float
-        get() = when (exercise) {
-            MindExercise.NUMBER_MEMORY, MindExercise.PATTERN_MEMORY ->
-                if (screen == MindScreenState.PLAYING) 0.5f else 0f
-            else -> if (questionCount == 0) 0f else questionIndex.toFloat() / questionCount
-        }
+        get() = if (questionCount <= 0) 0f else (questionIndex + 1).toFloat() / questionCount
 
     val stroopItem: MindGenerators.StroopItem? get() = stroopQueue.getOrNull(questionIndex)
     val arithmeticItem: MindGenerators.ArithmeticItem? get() = arithmeticQueue.getOrNull(questionIndex)
@@ -98,16 +88,9 @@ data class MindUiState(
 /**
  * MRSAD MIND controller.
  *
- * Scoring is always "fraction of correct responses", reaction time comes from
- * the monotonic clock, and adaptive level updates follow the ladder in
- * `dev.mrsad.core.mind.MindProgression`: a level moves only after two
- * consecutive strong (≥ 85 %) or two consecutive weak (< 50 %) rounds, and
- * **every exercise carries its own ladder**, so a skill is never dragged up
- * or down by an unrelated one. The level is a pure function of the recorded
- * scores, so it survives a restart unchanged.
- *
- * Every finished session is persisted to the activity log so Home/Analytics/
- * Coach can use real data.
+ * Every exercise runs a multi-trial session (`3..10` stages per session),
+ * records normalized accuracy/reaction scores in `0.0..1.0`, and updates the
+ * per-exercise adaptive difficulty ladder via `MindProgression`.
  */
 class MindViewModel(private val container: AppContainer) : ViewModel() {
 
@@ -115,14 +98,6 @@ class MindViewModel(private val container: AppContainer) : ViewModel() {
     val state: StateFlow<MindUiState> = _state.asStateFlow()
 
     private var sessionSeed: Long = 0L
-
-    /**
-     * The recorded scores of every exercise, oldest first.
-     *
-     * This mirrors what the activity log holds; it is kept in memory so the
-     * ladder can be advanced the moment a round finishes, without waiting
-     * for the database round trip. Nothing here changes what is persisted.
-     */
     private val scoreHistory = LinkedHashMap<MindExercise, MutableList<Double>>()
 
     init {
@@ -135,20 +110,33 @@ class MindViewModel(private val container: AppContainer) : ViewModel() {
                 .recentEvents(System.currentTimeMillis() - 90L * 86_400_000L, 200)
                 .firstValue()
                 .filter { it.module == "MIND" }
-            val avg = if (events.isEmpty()) 0.0 else events.map { it.secondaryMetric }.average()
+            val normalizedSecondary = events.map { ev ->
+                if (ev.secondaryMetric > 1.0) (ev.secondaryMetric / 100.0).coerceIn(0.0, 1.0)
+                else ev.secondaryMetric.coerceIn(0.0, 1.0)
+            }
+            val avg = if (normalizedSecondary.isEmpty()) 0.0 else normalizedSecondary.average()
             val best = events.groupBy { it.payload.substringBefore(';') }
                 .mapNotNull { (name, group) ->
                     val exercise = MindExercise.entries.firstOrNull { it.name == name } ?: return@mapNotNull null
-                    exercise to group.maxOf { it.secondaryMetric }
+                    val maxScore = group.maxOf { ev ->
+                        if (ev.secondaryMetric > 1.0) (ev.secondaryMetric / 100.0).coerceIn(0.0, 1.0)
+                        else ev.secondaryMetric.coerceIn(0.0, 1.0)
+                    }
+                    exercise to maxScore
                 }
                 .toMap()
-            // The DAO returns newest first; the ladder needs oldest first.
+
             val chronological = events.asReversed()
             scoreHistory.clear()
             chronological.forEach { event ->
                 val exercise = MindExercise.entries
                     .firstOrNull { it.name == event.payload.substringBefore(';') } ?: return@forEach
-                scoreHistory.getOrPut(exercise) { mutableListOf() }.add(event.secondaryMetric)
+                val norm = if (event.secondaryMetric > 1.0) {
+                    (event.secondaryMetric / 100.0).coerceIn(0.0, 1.0)
+                } else {
+                    event.secondaryMetric.coerceIn(0.0, 1.0)
+                }
+                scoreHistory.getOrPut(exercise) { mutableListOf() }.add(norm)
             }
             val levels = scoreHistory.mapValues { (_, scores) ->
                 MindProgression.levelFrom(scores)
@@ -167,6 +155,10 @@ class MindViewModel(private val container: AppContainer) : ViewModel() {
         }
     }
 
+    fun setCategoryFilter(category: String) {
+        _state.update { it.copy(selectedCategoryFilter = category) }
+    }
+
     fun openExercise(exercise: MindExercise) {
         sessionSeed = System.currentTimeMillis() xor SplitMix64.seedFor(exercise.name)
         val level = _state.value.levelOf(exercise)
@@ -179,6 +171,8 @@ class MindViewModel(private val container: AppContainer) : ViewModel() {
                 roundCounter = 1,
                 questionIndex = 0,
                 correctAnswers = 0,
+                stageScores = emptyList(),
+                lastStageFeedbackFa = null,
                 selectedCells = emptySet(),
                 entry = "",
                 saved = false,
@@ -202,7 +196,10 @@ class MindViewModel(private val container: AppContainer) : ViewModel() {
                         entry = "",
                         showingStimulus = true,
                         rememberTimer = it.rememberTimer + 1,
-                        questionCount = 1,
+                        questionIndex = 0,
+                        questionCount = 3,
+                        stageScores = emptyList(),
+                        lastStageFeedbackFa = null,
                     )
                 }
             }
@@ -214,7 +211,10 @@ class MindViewModel(private val container: AppContainer) : ViewModel() {
                         selectedCells = emptySet(),
                         showingStimulus = true,
                         rememberTimer = it.rememberTimer + 1,
-                        questionCount = 1,
+                        questionIndex = 0,
+                        questionCount = 3,
+                        stageScores = emptyList(),
+                        lastStageFeedbackFa = null,
                     )
                 }
             }
@@ -226,7 +226,9 @@ class MindViewModel(private val container: AppContainer) : ViewModel() {
                         selectedCells = emptySet(),
                         roundStartMonotonic = SystemClock.elapsedRealtime(),
                         questionIndex = 0,
-                        questionCount = 1,
+                        questionCount = 3,
+                        stageScores = emptyList(),
+                        lastStageFeedbackFa = null,
                     )
                 }
             }
@@ -238,6 +240,7 @@ class MindViewModel(private val container: AppContainer) : ViewModel() {
                         questionIndex = 0,
                         questionCount = count,
                         correctAnswers = 0,
+                        lastStageFeedbackFa = null,
                         roundStartMonotonic = SystemClock.elapsedRealtime(),
                     )
                 }
@@ -250,6 +253,7 @@ class MindViewModel(private val container: AppContainer) : ViewModel() {
                         questionIndex = 0,
                         questionCount = count,
                         correctAnswers = 0,
+                        lastStageFeedbackFa = null,
                         roundStartMonotonic = SystemClock.elapsedRealtime(),
                     )
                 }
@@ -262,6 +266,7 @@ class MindViewModel(private val container: AppContainer) : ViewModel() {
                         questionIndex = 0,
                         questionCount = count,
                         correctAnswers = 0,
+                        lastStageFeedbackFa = null,
                         roundStartMonotonic = SystemClock.elapsedRealtime(),
                     )
                 }
@@ -275,6 +280,7 @@ class MindViewModel(private val container: AppContainer) : ViewModel() {
                         questionCount = count,
                         correctAnswers = 0,
                         reactionSignalArmed = false,
+                        lastStageFeedbackFa = null,
                         rememberTimer = it.rememberTimer + 1,
                         roundStartMonotonic = SystemClock.elapsedRealtime(),
                     )
@@ -283,7 +289,7 @@ class MindViewModel(private val container: AppContainer) : ViewModel() {
         }
     }
 
-    // ---------------- Number memory ----------------
+    // ---------------- Number memory (3 progressive stages) ----------------
 
     fun revealDigits() {
         if (_state.value.exercise != MindExercise.NUMBER_MEMORY) return
@@ -303,17 +309,41 @@ class MindViewModel(private val container: AppContainer) : ViewModel() {
     fun submitNumberMemory() {
         val current = _state.value
         val correct = current.entry == current.digits
-        finishSingleRound(
-            score = if (correct) 1.0 else 0.0,
-            detail = if (correct) {
-                "درست بود! طول توالی: ${current.digits.length} رقم"
-            } else {
-                "توالی درست: ${current.digits} — پاسخ شما: ${current.entry.ifEmpty { "خالی" }}"
-            },
-        )
+        val stageScore = if (correct) 1.0 else 0.0
+        val updatedScores = current.stageScores + stageScore
+        val nextIndex = current.questionIndex + 1
+
+        if (nextIndex < current.questionCount) {
+            val bonusLevel = current.level + if (updatedScores.all { it >= 1.0 }) 1 else 0
+            val nextSeed = sessionSeed + (current.roundCounter * 31L + nextIndex) * 7919L
+            val nextDigits = MindGenerators.digitSpan(nextSeed, bonusLevel)
+            _state.update {
+                it.copy(
+                    questionIndex = nextIndex,
+                    correctAnswers = it.correctAnswers + if (correct) 1 else 0,
+                    stageScores = updatedScores,
+                    digits = nextDigits,
+                    entry = "",
+                    showingStimulus = true,
+                    rememberTimer = it.rememberTimer + 1,
+                    lastStageFeedbackFa = if (correct) {
+                        "مرحلهٔ ${current.questionIndex + 1} درست بود! آمادهٔ مرحلهٔ بعدی شوید"
+                    } else {
+                        "در مرحلهٔ قبل توالی درست ${current.digits} بود — تمرکز روی مرحلهٔ جدید"
+                    },
+                )
+            }
+        } else {
+            val totalCorrect = current.correctAnswers + if (correct) 1 else 0
+            val avgScore = updatedScores.average().coerceIn(0.0, 1.0)
+            finishSingleRound(
+                score = avgScore,
+                detail = "مراحل درست: $totalCorrect از ${current.questionCount} • طول آخرین توالی: ${current.digits.length} رقم",
+            )
+        }
     }
 
-    // ---------------- Pattern memory ----------------
+    // ---------------- Pattern memory (3 progressive stages) ----------------
 
     fun beginPatternRecall() {
         if (_state.value.exercise != MindExercise.PATTERN_MEMORY) return
@@ -335,14 +365,35 @@ class MindViewModel(private val container: AppContainer) : ViewModel() {
         val selection = current.selectedCells
         val hits = selection.count { it in grid.litCells }
         val misses = selection.count { it !in grid.litCells }
-        val score = ((hits - misses).toDouble() / grid.litCells.size).coerceIn(0.0, 1.0)
-        finishSingleRound(
-            score = score,
-            detail = "درست: ${hits} از ${grid.litCells.size} — انتخاب نادرست: $misses",
-        )
+        val stageScore = ((hits - misses).toDouble() / grid.litCells.size).coerceIn(0.0, 1.0)
+        val updatedScores = current.stageScores + stageScore
+        val nextIndex = current.questionIndex + 1
+
+        if (nextIndex < current.questionCount) {
+            val bonusLevel = current.level + if (stageScore >= 1.0) 1 else 0
+            val nextSeed = sessionSeed + (current.roundCounter * 37L + nextIndex) * 7919L
+            val nextGrid = MindGenerators.patternMemory(nextSeed, bonusLevel)
+            _state.update {
+                it.copy(
+                    questionIndex = nextIndex,
+                    stageScores = updatedScores,
+                    patternGrid = nextGrid,
+                    selectedCells = emptySet(),
+                    showingStimulus = true,
+                    rememberTimer = it.rememberTimer + 1,
+                    lastStageFeedbackFa = "مرحلهٔ ${current.questionIndex + 1}: $hits از ${grid.litCells.size} خانه درست (${misses} خطا)",
+                )
+            }
+        } else {
+            val avgScore = updatedScores.average().coerceIn(0.0, 1.0)
+            finishSingleRound(
+                score = avgScore,
+                detail = "میانگین دقت بازسازی الگو در ${current.questionCount} مرحله: ${(avgScore * 100).toInt()}٪",
+            )
+        }
     }
 
-    // ---------------- Attention ----------------
+    // ---------------- Attention (3 progressive stages) ----------------
 
     fun submitAttention() {
         val current = _state.value
@@ -352,11 +403,30 @@ class MindViewModel(private val container: AppContainer) : ViewModel() {
         val falsePositives = selection.size - hits
         val missed = grid.targetIndices.size - hits
         val total = grid.targetIndices.size
-        val score = ((total - missed - falsePositives).toDouble() / total).coerceIn(0.0, 1.0)
-        finishSingleRound(
-            score = score,
-            detail = "درست: $hits از $total — انتخاب اشتباه: $falsePositives",
-        )
+        val stageScore = ((total - missed - falsePositives).toDouble() / total).coerceIn(0.0, 1.0)
+        val updatedScores = current.stageScores + stageScore
+        val nextIndex = current.questionIndex + 1
+
+        if (nextIndex < current.questionCount) {
+            val nextSeed = sessionSeed + (current.roundCounter * 43L + nextIndex) * 7919L
+            val nextGrid = MindGenerators.attentionGrid(nextSeed, current.level + if (stageScore >= 1.0) 1 else 0)
+            _state.update {
+                it.copy(
+                    questionIndex = nextIndex,
+                    stageScores = updatedScores,
+                    attentionGrid = nextGrid,
+                    selectedCells = emptySet(),
+                    roundStartMonotonic = SystemClock.elapsedRealtime(),
+                    lastStageFeedbackFa = "مرحلهٔ ${current.questionIndex + 1}: $hits از $total نماد هدف پیدا شد (${falsePositives} انتخاب نادرست)",
+                )
+            }
+        } else {
+            val avgScore = updatedScores.average().coerceIn(0.0, 1.0)
+            finishSingleRound(
+                score = avgScore,
+                detail = "میانگین توجه انتخابی در ${current.questionCount} مرحله: ${(avgScore * 100).toInt()}٪",
+            )
+        }
     }
 
     // ---------------- Stroop / arithmetic / logic ----------------
@@ -403,25 +473,33 @@ class MindViewModel(private val container: AppContainer) : ViewModel() {
         val current = _state.value
         if (current.exercise != MindExercise.REACTION) return
         if (!current.reactionSignalArmed) {
-            // Early tap before stimulus — counts as a miss with 900ms penalty
-            advanceReaction(correct = false, reactionMillis = 900L)
+            // Early tap before stimulus — counts as a false-start penalty
+            advanceReaction(
+                correct = false,
+                reactionMillis = 700L,
+                feedbackFa = "ضربهٔ زودهنگام! پیش از روشن شدن سیگنال ضربه زدید",
+            )
             return
         }
         val elapsed = (SystemClock.elapsedRealtime() - current.roundStartMonotonic).coerceAtLeast(120L)
-        advanceReaction(correct = elapsed <= 650L, reactionMillis = elapsed)
+        advanceReaction(
+            correct = elapsed <= 650L,
+            reactionMillis = elapsed,
+            feedbackFa = "زمان واکنش مرحلهٔ ${current.questionIndex + 1}: $elapsed میلی‌ثانیه",
+        )
     }
 
-    private fun advanceReaction(correct: Boolean, reactionMillis: Long) {
+    private fun advanceReaction(correct: Boolean, reactionMillis: Long, feedbackFa: String) {
         val current = _state.value
         val nextIndex = current.questionIndex + 1
         val newCorrect = current.correctAnswers + if (correct) 1 else 0
         val reactions = current.reactionTimes + reactionMillis
         if (nextIndex >= current.questionCount) {
             val avgReaction = reactions.average().toLong()
-            val score = MindGenerators.scoreReactionMillis(avgReaction)
+            val normalizedScore = (MindGenerators.scoreReactionMillis(avgReaction) / 100.0).coerceIn(0.0, 1.0)
             finishSingleRound(
-                score = score,
-                detail = "میانگین زمان واکنش: ${avgReaction} میلی‌ثانیه (${newCorrect} از ${current.questionCount} واکنش به‌موقع)",
+                score = normalizedScore,
+                detail = "میانگین زمان واکنش: ${avgReaction} میلی‌ثانیه (${newCorrect} از ${current.questionCount} واکنش معتبر)",
             )
         } else {
             _state.update {
@@ -430,6 +508,7 @@ class MindViewModel(private val container: AppContainer) : ViewModel() {
                     correctAnswers = newCorrect,
                     reactionTimes = reactions,
                     reactionSignalArmed = false,
+                    lastStageFeedbackFa = feedbackFa,
                     rememberTimer = it.rememberTimer + 1,
                 )
             }
@@ -442,11 +521,11 @@ class MindViewModel(private val container: AppContainer) : ViewModel() {
         val newCorrect = current.correctAnswers + if (correct) 1 else 0
         val reactions = current.reactionTimes + reactionMillis
         if (nextIndex >= current.questionCount) {
-            val score = newCorrect.toDouble() / current.questionCount
+            val score = (newCorrect.toDouble() / current.questionCount).coerceIn(0.0, 1.0)
             val avgReaction = reactions.average().toLong()
             finishSingleRound(
                 score = score,
-                detail = "پاسخ درست: $newCorrect از ${current.questionCount} — میانگین زمان پاسخ: ${avgReaction} میلی‌ثانیه",
+                detail = "پاسخ درست: $newCorrect از ${current.questionCount} • میانگین زمان پاسخ: ${avgReaction} میلی‌ثانیه",
             )
         } else {
             _state.update {
@@ -454,6 +533,7 @@ class MindViewModel(private val container: AppContainer) : ViewModel() {
                     questionIndex = nextIndex,
                     correctAnswers = newCorrect,
                     reactionTimes = reactions,
+                    lastStageFeedbackFa = if (correct) "پاسخ درست ثبت شد" else "پاسخ نادرست — به الگوی بعدی دقت کنید",
                     roundStartMonotonic = SystemClock.elapsedRealtime(),
                 )
             }
@@ -463,19 +543,17 @@ class MindViewModel(private val container: AppContainer) : ViewModel() {
     // ---------------- Round lifecycle ----------------
 
     private fun finishSingleRound(score: Double, detail: String) {
+        val normalizedScore = score.coerceIn(0.0, 1.0)
         val current = _state.value
         val exercise = current.exercise
-        val average = if (current.totalSessions == 0) score
-        else (current.averageScore * current.totalSessions + score) / (current.totalSessions + 1)
+        val average = if (current.totalSessions == 0) normalizedScore
+        else (current.averageScore * current.totalSessions + normalizedScore) / (current.totalSessions + 1)
 
-        // The ladder is a pure function of the recorded scores, so the level
-        // after this round is the level the history implies — no hidden
-        // counter that could drift away from what is on disk.
         var newLevels = current.levels
         var nextLevel = current.level
         if (exercise != null) {
             val history = scoreHistory.getOrPut(exercise) { mutableListOf() }
-            history += score
+            history += normalizedScore
             nextLevel = MindProgression.levelFrom(history)
             newLevels = current.levels + (exercise to nextLevel)
         }
@@ -485,7 +563,7 @@ class MindViewModel(private val container: AppContainer) : ViewModel() {
         _state.update {
             it.copy(
                 screen = MindScreenState.RESULT,
-                lastScore = score,
+                lastScore = normalizedScore,
                 resultDetailFa = detail,
                 averageScore = average,
                 totalSessions = current.totalSessions + 1,
@@ -495,12 +573,12 @@ class MindViewModel(private val container: AppContainer) : ViewModel() {
                 levelUp = levelUp,
                 bestScores = it.bestScores.toMutableMap().apply {
                     val ex = it.exercise ?: return@apply
-                    put(ex, maxOf(get(ex) ?: 0.0, score))
+                    put(ex, maxOf(get(ex) ?: 0.0, normalizedScore))
                 },
                 saved = false,
             )
         }
-        persist(score)
+        persist(normalizedScore)
     }
 
     private fun persist(score: Double) {
@@ -520,8 +598,8 @@ class MindViewModel(private val container: AppContainer) : ViewModel() {
                         dateIso = MrsadClock.isoFor(now),
                         finishedAtMillis = now,
                         minutes = minutes,
-                        primaryMetric = score * 100.0,
-                        secondaryMetric = score,
+                        primaryMetric = (score * 100.0).coerceIn(0.0, 100.0),
+                        secondaryMetric = score.coerceIn(0.0, 1.0),
                         payload = exercise.name,
                     )
                 )
@@ -530,7 +608,6 @@ class MindViewModel(private val container: AppContainer) : ViewModel() {
         }
     }
 
-    /** Applies the adaptive level decided by the finished round. */
     fun restartExercise() {
         val current = _state.value
         val exercise = current.exercise ?: return
@@ -542,6 +619,8 @@ class MindViewModel(private val container: AppContainer) : ViewModel() {
                 roundCounter = current.roundCounter + 1,
                 questionIndex = 0,
                 correctAnswers = 0,
+                stageScores = emptyList(),
+                lastStageFeedbackFa = null,
                 reactionTimes = emptyList(),
                 selectedCells = emptySet(),
             )
@@ -556,6 +635,7 @@ class MindViewModel(private val container: AppContainer) : ViewModel() {
                 exercise = null,
                 showingStimulus = false,
                 selectedCells = emptySet(),
+                lastStageFeedbackFa = null,
             )
         }
     }
@@ -563,7 +643,6 @@ class MindViewModel(private val container: AppContainer) : ViewModel() {
     fun abort() {
         backToLobby()
     }
-
 
     class Factory(private val container: AppContainer) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")

@@ -218,9 +218,9 @@ class MrsadSmokeTest {
         val routes = listOf(
             Routes.HOME,
             Routes.TYPE,
+            Routes.READ,
+            Routes.EYE,
             Routes.MIND,
-            Routes.ANALYTICS,
-            Routes.AI,
         )
         val bounds = routes.map { route ->
             composeRule.onAllNodesWithTag(MrsadTestTags.navItem(route))

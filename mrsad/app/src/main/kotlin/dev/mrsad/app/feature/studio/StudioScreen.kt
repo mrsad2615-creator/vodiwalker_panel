@@ -44,6 +44,7 @@ import dev.mrsad.app.ui.components.MrsadIcons
 import dev.mrsad.app.ui.components.MrsadSurface
 import dev.mrsad.app.ui.components.MrsadTokens
 import dev.mrsad.app.ui.components.ObsidianCollapsingTopBar
+import dev.mrsad.app.ui.components.ObsidianIconBox
 import dev.mrsad.app.ui.components.ObsidianSegmentedBar
 import dev.mrsad.app.ui.components.SectionHeader
 import dev.mrsad.app.ui.components.SegmentedBarItem
@@ -62,6 +63,7 @@ import kotlinx.coroutines.launch
 fun StudioScreen(
     container: AppContainer,
     settings: MrsadSettings,
+    onBack: (() -> Unit)? = null,
 ) {
     val colors = MrsadTheme.colors
     val type = MrsadTheme.type
@@ -77,21 +79,28 @@ fun StudioScreen(
                 .padding(bottom = LocalBottomBarClearance.current),
         ) {
             ObsidianCollapsingTopBar(
-                title = "MRSAD STUDIO",
-                subtitle = "سیستم طراحی OBSIDIAN SPECTRUM و پیش‌نمایش طیف ماژول‌ها",
+                title = "استودیو طراحی و نمایش",
+                subtitle = "شخصی‌سازی OBSIDIAN SPECTRUM، تایپوگرافی و کیفیت رندر",
                 collapsed = isCollapsed,
                 spectralColor = ObsidianSpectrum.Lavender,
+                onBack = onBack,
                 leading = {
-                    MetalIcon(
-                        MrsadIcons.Studio,
-                        accentOverride = ObsidianSpectrum.Lavender,
-                        modifier = Modifier.size(if (isCollapsed) 24.dp else 30.dp),
-                    )
+                    ObsidianIconBox(
+                        size = if (isCollapsed) 38.dp else 48.dp,
+                        accent = ObsidianSpectrum.Lavender,
+                    ) {
+                        MetalIcon(
+                            MrsadIcons.Studio,
+                            accentOverride = ObsidianSpectrum.Lavender,
+                            modifier = Modifier.size(if (isCollapsed) 20.dp else 24.dp),
+                        )
+                    }
                 },
                 trailing = {
                     MrsadChip(
-                        text = "OBSIDIAN SPECTRUM",
+                        text = "OBSIDIAN",
                         tint = ObsidianSpectrum.Lavender,
+                        compact = true,
                     )
                 },
             )

@@ -127,11 +127,10 @@ class HomeViewModel(container: AppContainer) : ViewModel() {
         val eyeEvents = events.filter { it.module == "EYE" }
         val mindEvents = events.filter { it.module == "MIND" }
         val focusEvents = events.filter { it.module == "FOCUS" }
-        val aiEvents = events.filter { it.module == "AI" }
 
         val bestReadWpm = readEvents.maxOfOrNull { it.primaryMetric.toInt() }
-        val avgEye = if (eyeEvents.isEmpty()) 0.0 else eyeEvents.map { it.primaryMetric }.average()
-        val avgMind = if (mindEvents.isEmpty()) 0.0 else mindEvents.map { it.primaryMetric }.average()
+        val avgEye = if (eyeEvents.isEmpty()) 0.0 else eyeEvents.map { it.primaryMetric.coerceIn(0.0, 100.0) }.average()
+        val avgMind = if (mindEvents.isEmpty()) 0.0 else mindEvents.map { it.primaryMetric.coerceIn(0.0, 100.0) }.average()
         val totalMinutes = events.sumOf { it.minutes }
 
         val last7Days = AnalyticsMath.lastDays(date, 7)

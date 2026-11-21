@@ -21,12 +21,14 @@ enum class ReadPhase { SETUP, READING, PAUSED, QUIZ, RESULT }
 
 data class ReadUiState(
     val phase: ReadPhase = ReadPhase.SETUP,
+    val selectedLevelFilter: Int = 0,
     val selectedTextId: String = ReadTexts.all.first().id,
-    val wpm: Int = 300,
+    val wpm: Int = 280,
     val wordsPerDisplay: Int = 1,
     val chunkIndex: Int = 0,
     val chunkCount: Int = 0,
     val currentChunkText: String = "",
+    val currentChunkPivotIndex: Int = 0,
     val progress: Float = 0f,
     val questionIndex: Int = 0,
     val answers: List<Int?> = emptyList(),
@@ -42,12 +44,10 @@ data class ReadUiState(
 }
 
 /**
- * RSVP session controller.
+ * RSVP session controller with Optimal Recognition Point (ORP) pivot tracking.
  *
- * Presentation speed is driven by the configured WPM, but the *measured*
- * reading speed always uses elapsed monotonic time with pauses subtracted.
- * Chunk deadlines are absolute, so a slow frame can never speed up or slow
- * down the presentation relative to the configured wpm.
+ * Presentation speed is driven by the configured WPM, while the *measured*
+ * reading speed uses elapsed monotonic time with pauses subtracted.
  */
 class ReadViewModel(private val container: AppContainer) : ViewModel() {
 
@@ -72,9 +72,34 @@ class ReadViewModel(private val container: AppContainer) : ViewModel() {
         _state.update { it.copy(wordsPerDisplay = words.coerceIn(1, 3)) }
     }
 
+    fun setLevelFilter(level: Int) {
+        if (_state.value.phase != ReadPhase.SETUP) return
+        val clamped = level.coerceIn(0, 3)
+        val filtered = ReadTexts.forLevel(clamped)
+        _state.update { current ->
+            val nextSelected = if (filtered.any { it.id == current.selectedTextId }) {
+                current.selectedTextId
+            } else {
+                filtered.firstOrNull()?.id ?: current.selectedTextId
+            }
+            val recommended = ReadTexts.byId(nextSelected).recommendedWpm
+            current.copy(
+                selectedLevelFilter = clamped,
+                selectedTextId = nextSelected,
+                wpm = recommended,
+            )
+        }
+    }
+
     fun selectText(id: String) {
         if (_state.value.phase != ReadPhase.SETUP) return
-        _state.update { it.copy(selectedTextId = id) }
+        val text = ReadTexts.byId(id)
+        _state.update {
+            it.copy(
+                selectedTextId = id,
+                wpm = text.recommendedWpm,
+            )
+        }
     }
 
     fun start() {
@@ -84,12 +109,14 @@ class ReadViewModel(private val container: AppContainer) : ViewModel() {
         chunksShown = 1
         pausedAccumulated = 0L
         sessionStartMonotonic = SystemClock.elapsedRealtime()
+        val first = chunks.first()
         _state.update {
             it.copy(
                 phase = ReadPhase.READING,
                 chunkIndex = 0,
                 chunkCount = chunks.size,
-                currentChunkText = chunks.first().text,
+                currentChunkText = first.text,
+                currentChunkPivotIndex = first.pivotIndex,
                 progress = 1f / chunks.size,
                 questionIndex = 0,
                 answers = emptyList(),
@@ -113,25 +140,52 @@ class ReadViewModel(private val container: AppContainer) : ViewModel() {
         _state.update { it.copy(phase = ReadPhase.READING) }
     }
 
-    /** Absolute-deadline presentation loop; safe against slow frames. */
+    fun stepChunk(delta: Int) {
+        if (chunks.isEmpty()) return
+        val current = _state.value
+        if (current.phase != ReadPhase.READING && current.phase != ReadPhase.PAUSED) return
+        val nextIndex = (current.chunkIndex + delta).coerceIn(0, chunks.lastIndex)
+        val nextChunk = chunks[nextIndex]
+        chunksShown = maxOf(chunksShown, nextIndex + 1)
+        _state.update {
+            it.copy(
+                chunkIndex = nextIndex,
+                currentChunkText = nextChunk.text,
+                currentChunkPivotIndex = nextChunk.pivotIndex,
+                progress = (nextIndex + 1).toFloat() / chunks.size,
+            )
+        }
+    }
+
+    /** Presentation loop with punctuation-aware micro-pauses for natural comprehension. */
     fun runPresentationClock() {
         clockJob?.cancel()
         clockJob = viewModelScope.launch {
             while (_state.value.phase == ReadPhase.READING) {
                 val current = _state.value
                 val chunk = chunks.getOrNull(current.chunkIndex) ?: return@launch
-                delay(ReadingEngine.chunkDurationMillis(current.wpm, chunk.wordCount))
+                val baseDuration = ReadingEngine.chunkDurationMillis(current.wpm, chunk.wordCount)
+                val punctuationBonus = if (chunk.text.endsWith(".") || chunk.text.endsWith("؛") || chunk.text.endsWith("؟")) {
+                    (baseDuration * 0.35).toLong()
+                } else if (chunk.text.endsWith("،")) {
+                    (baseDuration * 0.18).toLong()
+                } else {
+                    0L
+                }
+                delay(baseDuration + punctuationBonus)
                 if (_state.value.phase != ReadPhase.READING) return@launch
                 val next = current.chunkIndex + 1
                 if (next >= chunks.size) {
                     finishReading()
                     return@launch
                 }
-                chunksShown = next + 1
+                chunksShown = maxOf(chunksShown, next + 1)
+                val nextChunk = chunks[next]
                 _state.update {
                     it.copy(
                         chunkIndex = next,
-                        currentChunkText = chunks[next].text,
+                        currentChunkText = nextChunk.text,
+                        currentChunkPivotIndex = nextChunk.pivotIndex,
                         progress = (next + 1).toFloat() / chunks.size,
                     )
                 }
@@ -184,7 +238,7 @@ class ReadViewModel(private val container: AppContainer) : ViewModel() {
         if (current.phase != ReadPhase.QUIZ) return
         if (current.answers.getOrNull(current.questionIndex) == null) return
         if (current.questionIndex < current.questions.lastIndex) {
-            _state.update { it.copy(questionIndex = it.questionIndex + 1) }
+            _state.update { it.copy(questionIndex = current.questionIndex + 1) }
             return
         }
         val result = ReadingEngine.score(current.answers, current.questions)
@@ -229,6 +283,7 @@ class ReadViewModel(private val container: AppContainer) : ViewModel() {
         clockJob?.cancel()
         _state.update {
             ReadUiState(
+                selectedLevelFilter = it.selectedLevelFilter,
                 selectedTextId = it.selectedTextId,
                 wpm = it.wpm,
                 wordsPerDisplay = it.wordsPerDisplay,

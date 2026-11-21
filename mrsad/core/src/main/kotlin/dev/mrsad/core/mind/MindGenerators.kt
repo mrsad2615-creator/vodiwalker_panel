@@ -97,23 +97,62 @@ object MindGenerators {
 
     fun arithmetic(seed: Long, level: Int, count: Int): List<ArithmeticItem> {
         val rng = SplitMix64(seed)
-        return List(count) {
+        return List(count) { idx ->
             val max = (10 + level * 5).coerceAtMost(99)
-            val a = rng.nextInt(2, max)
-            val b = rng.nextInt(2, max)
-            val sum = a + b
-            val offsets = listOf(-3, -2, -1, 1, 2, 3)
-            val wrongs = mutableSetOf<Int>()
-            while (wrongs.size < 3) {
-                val candidate = (sum + offsets[rng.nextInt(offsets.size)]).coerceAtLeast(1)
-                if (candidate != sum) wrongs += candidate
+            val mode = when {
+                level <= 0 -> idx % 2
+                level <= 2 -> idx % 3
+                else -> idx % 4
             }
-            val options = rng.shuffle((wrongs + sum).toList())
+            val (prompt, answer) = when (mode) {
+                0 -> {
+                    val a = rng.nextInt(3, max)
+                    val b = rng.nextInt(2, max)
+                    val faA = dev.mrsad.core.text.PersianText.toPersianDigits(a.toString())
+                    val faB = dev.mrsad.core.text.PersianText.toPersianDigits(b.toString())
+                    "$faA + $faB" to (a + b)
+                }
+                1 -> {
+                    val b = rng.nextInt(2, (max / 2).coerceAtLeast(5))
+                    val a = b + rng.nextInt(3, max)
+                    val faA = dev.mrsad.core.text.PersianText.toPersianDigits(a.toString())
+                    val faB = dev.mrsad.core.text.PersianText.toPersianDigits(b.toString())
+                    "$faA − $faB" to (a - b)
+                }
+                2 -> {
+                    val a = rng.nextInt(2, (6 + level).coerceAtMost(14))
+                    val b = rng.nextInt(2, (6 + level).coerceAtMost(12))
+                    val faA = dev.mrsad.core.text.PersianText.toPersianDigits(a.toString())
+                    val faB = dev.mrsad.core.text.PersianText.toPersianDigits(b.toString())
+                    "$faA × $faB" to (a * b)
+                }
+                else -> {
+                    val a = rng.nextInt(2, 9)
+                    val b = rng.nextInt(2, 8)
+                    val c = rng.nextInt(2, 15)
+                    val faA = dev.mrsad.core.text.PersianText.toPersianDigits(a.toString())
+                    val faB = dev.mrsad.core.text.PersianText.toPersianDigits(b.toString())
+                    val faC = dev.mrsad.core.text.PersianText.toPersianDigits(c.toString())
+                    "($faA × $faB) + $faC" to (a * b + c)
+                }
+            }
+            val offsets = listOf(-4, -3, -2, -1, 1, 2, 3, 4)
+            val wrongs = mutableSetOf<Int>()
+            var guard = 0
+            while (wrongs.size < 3 && guard++ < 64) {
+                val candidate = (answer + offsets[rng.nextInt(offsets.size)]).coerceAtLeast(1)
+                if (candidate != answer) wrongs += candidate
+            }
+            var fallback = 1
+            while (wrongs.size < 3) {
+                val candidate = answer + fallback++
+                if (candidate != answer) wrongs += candidate
+            }
+            val options = rng.shuffle((wrongs + answer).toList())
             ArithmeticItem(
-                promptFa = "${dev.mrsad.core.text.PersianText.toPersianDigits(a.toString())} + " +
-                    dev.mrsad.core.text.PersianText.toPersianDigits(b.toString()),
+                promptFa = prompt,
                 options = options,
-                correctIndex = options.indexOf(sum),
+                correctIndex = options.indexOf(answer),
             )
         }
     }
@@ -128,9 +167,10 @@ object MindGenerators {
             when (rng.nextInt(4)) {
                 0 -> {
                     // Arithmetic progression.
-                    val step = rng.nextInt(2, 3 + level)
+                    val step = rng.nextInt(2, 4 + level)
                     val start = rng.nextInt(1, 12)
-                    buildSequence(rng, List(4 + minOf(level, 3)) { i -> start + step * i }, "عدد بعدی چند است؟")
+                    val len = 5 + minOf(level, 2)
+                    buildSequence(rng, List(len) { i -> start + step * i }, "الگوی افزایشی ثابت را پیدا کن")
                 }
                 1 -> {
                     // Geometric progression with small ratio.
@@ -138,24 +178,24 @@ object MindGenerators {
                     val start = rng.nextInt(1, 4)
                     val values = ArrayList<Int>()
                     var v = start
-                    repeat(4 + minOf(level, 2)) { values += v; v *= ratio }
-                    buildSequence(rng, values.take(5), "الگوی ضربی را پیدا کن")
+                    repeat(5) { values += v; v *= ratio }
+                    buildSequence(rng, values, "الگوی ضربی را پیدا کن")
                 }
                 2 -> {
                     // Alternating additions: +a, +b, +a, +b …
                     val a = rng.nextInt(1, 6)
                     val b = rng.nextInt(1, 6)
-                    var v = rng.nextInt(0, 8)
+                    var v = rng.nextInt(1, 8)
                     val values = ArrayList<Int>()
-                    repeat(5) { i -> values += v; v += if (i % 2 == 0) a else b }
-                    buildSequence(rng, values, "دو الگو یکی‌درمیان تکرار می‌شوند")
+                    repeat(6) { i -> values += v; v += if (i % 2 == 0) a else b }
+                    buildSequence(rng, values, "دو گام افزایشی یکی‌درمیان تکرار می‌شوند")
                 }
                 else -> {
                     // Squares plus offset.
                     val offset = rng.nextInt(0, 4)
-                    val base = rng.nextInt(1, 3 + level)
+                    val base = rng.nextInt(1, 3 + minOf(level, 3))
                     val values = List(5) { i -> (base + i) * (base + i) + offset }
-                    buildSequence(rng, values, "مربع اعداد را بررسی کن")
+                    buildSequence(rng, values, "مربع اعداد متوالی را بررسی کن")
                 }
             }
         }
@@ -165,18 +205,22 @@ object MindGenerators {
         val correctValue: Int get() = options[correctIndex]
     }
 
-    private fun buildSequence(rng: SplitMix64, values: List<Int>, hintFa: String): NumberSequence {
-        val full = values + (values.last() + (values.last() - values.getOrElse(values.size - 2) { values.last() - 1 }))
-        val answer = full.last()
-        val shown = full.dropLast(1).joinToString("، ") {
+    private fun buildSequence(rng: SplitMix64, fullValues: List<Int>, hintFa: String): NumberSequence {
+        val answer = fullValues.last()
+        val shown = fullValues.dropLast(1).joinToString(" ، ") {
             dev.mrsad.core.text.PersianText.toPersianDigits(it.toString())
-        } + "، ؟"
+        } + " ، ؟"
         val wrongs = mutableSetOf<Int>()
         var guard = 0
         while (wrongs.size < 3 && guard++ < 64) {
-            val delta = listOf(-3, -2, -1, 1, 2, 3, 4)[rng.nextInt(7)]
+            val delta = listOf(-4, -3, -2, -1, 1, 2, 3, 4)[rng.nextInt(8)]
             val candidate = answer + delta
             if (candidate != answer && candidate >= 0) wrongs += candidate
+        }
+        var fallback = 1
+        while (wrongs.size < 3) {
+            val candidate = answer + fallback++
+            if (candidate != answer) wrongs += candidate
         }
         val options = rng.shuffle((wrongs + answer).toList())
         return NumberSequence(shown, options, options.indexOf(answer), hintFa)

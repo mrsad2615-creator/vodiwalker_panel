@@ -34,7 +34,6 @@ import androidx.core.view.WindowCompat
 import dev.mrsad.app.data.AppContainer
 import dev.mrsad.app.data.settings.MrsadSettings
 import dev.mrsad.app.feature.analytics.AnalyticsScreen
-import dev.mrsad.app.feature.assistant.AssistantScreen
 import dev.mrsad.app.feature.eye.EyeTrainingScreen
 import dev.mrsad.app.feature.focus.FocusScreen
 import dev.mrsad.app.feature.home.HomeScreen
@@ -53,11 +52,10 @@ import dev.mrsad.app.ui.theme.MrsadTheme
 object Routes {
     const val HOME = "home"
     const val TYPE = "type"
-    const val MIND = "mind"
-    const val ANALYTICS = "analytics"
-    const val AI = "assistant"
     const val READ = "read"
     const val EYE = "eye"
+    const val MIND = "mind"
+    const val ANALYTICS = "analytics"
     const val STUDIO = "studio"
     const val SETTINGS = "settings"
     const val ARENA = "arena"
@@ -75,9 +73,9 @@ private data class BottomDestination(
 private val bottomDestinations = listOf(
     BottomDestination(Routes.HOME, "خانه", MrsadIcons.Home),
     BottomDestination(Routes.TYPE, "تایپ", MrsadIcons.Type),
+    BottomDestination(Routes.READ, "خوانش", MrsadIcons.Read),
+    BottomDestination(Routes.EYE, "چشم", MrsadIcons.Eye),
     BottomDestination(Routes.MIND, "ذهن", MrsadIcons.Mind),
-    BottomDestination(Routes.ANALYTICS, "تحلیل", MrsadIcons.Analytics),
-    BottomDestination(Routes.AI, "دستیار", MrsadIcons.Assistant),
 )
 
 @Composable
@@ -154,10 +152,11 @@ fun MrsadRoot(
                     MindScreen(container = container, settings = settings)
                 }
                 composable(Routes.ANALYTICS) {
-                    AnalyticsScreen(container = container, settings = settings)
-                }
-                composable(Routes.AI) {
-                    AssistantScreen(container = container, settings = settings)
+                    AnalyticsScreen(
+                        container = container,
+                        settings = settings,
+                        onBack = { navController.popBackStack() },
+                    )
                 }
                 composable(Routes.READ) {
                     ReadScreen(container = container, settings = settings)
@@ -166,11 +165,15 @@ fun MrsadRoot(
                     EyeTrainingScreen(
                         container = container,
                         settings = settings,
-                        onBack = { navController.popBackStack() },
+                        onBack = null,
                     )
                 }
                 composable(Routes.STUDIO) {
-                    StudioScreen(container = container, settings = settings)
+                    StudioScreen(
+                        container = container,
+                        settings = settings,
+                        onBack = { navController.popBackStack() },
+                    )
                 }
                 composable(Routes.SETTINGS) {
                     SettingsScreen(
@@ -239,7 +242,12 @@ fun MrsadRoot(
 }
 
 private fun androidx.navigation.NavHostController.navigateToModule(route: String) {
+    val isBottomDestination = bottomDestinations.any { it.route == route }
     navigate(route) {
+        if (isBottomDestination) {
+            popUpTo(graph.findStartDestination().id) { saveState = true }
+            restoreState = true
+        }
         launchSingleTop = true
     }
 }

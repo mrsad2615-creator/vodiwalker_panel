@@ -41,6 +41,7 @@ import dev.mrsad.app.ui.components.MrsadIcons
 import dev.mrsad.app.ui.components.MrsadSurface
 import dev.mrsad.app.ui.components.MrsadTokens
 import dev.mrsad.app.ui.components.ObsidianCollapsingTopBar
+import dev.mrsad.app.ui.components.ObsidianIconBox
 import dev.mrsad.app.ui.components.ObsidianSegmentedBar
 import dev.mrsad.app.ui.components.SectionHeader
 import dev.mrsad.app.ui.components.SegmentedBarItem
@@ -64,6 +65,7 @@ import dev.mrsad.app.ui.theme.formatPercent
 fun AnalyticsScreen(
     container: AppContainer,
     settings: MrsadSettings,
+    onBack: (() -> Unit)? = null,
 ) {
     val viewModel: AnalyticsViewModel = viewModel(key = "analytics", factory = AnalyticsViewModel.Factory(container))
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -81,19 +83,25 @@ fun AnalyticsScreen(
                 .padding(bottom = LocalBottomBarClearance.current),
         ) {
             ObsidianCollapsingTopBar(
-                title = "MRSAD ANALYTICS",
-                subtitle = "تحلیل عملکرد چندبعدی بر داده‌های واقعی",
+                title = "آمار و تحلیل عملکرد",
+                subtitle = "تحلیل چندبعدی بر پایهٔ داده‌های واقعی تمرین",
                 collapsed = isCollapsed,
                 spectralColor = ObsidianSpectrum.Aqua,
+                onBack = onBack,
                 leading = {
-                    MetalIcon(
-                        MrsadIcons.Analytics,
-                        accentOverride = ObsidianSpectrum.Aqua,
-                        modifier = Modifier.size(if (isCollapsed) 26.dp else 32.dp),
-                    )
+                    ObsidianIconBox(
+                        size = if (isCollapsed) 38.dp else 48.dp,
+                        accent = ObsidianSpectrum.Aqua,
+                    ) {
+                        MetalIcon(
+                            MrsadIcons.Analytics,
+                            accentOverride = ObsidianSpectrum.Aqua,
+                            modifier = Modifier.size(if (isCollapsed) 20.dp else 24.dp),
+                        )
+                    }
                 },
                 trailing = {
-                    MrsadChip(text = "۷ روز اخیر", tint = ObsidianSpectrum.Aqua)
+                    MrsadChip(text = "۷ روز اخیر", tint = ObsidianSpectrum.Aqua, compact = true)
                 },
             )
 

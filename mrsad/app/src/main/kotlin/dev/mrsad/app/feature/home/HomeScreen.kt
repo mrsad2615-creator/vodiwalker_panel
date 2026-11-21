@@ -88,6 +88,7 @@ import dev.mrsad.app.ui.components.MrsadProgressBar
 import dev.mrsad.app.ui.components.MrsadReveal
 import dev.mrsad.app.ui.components.MrsadSurface
 import dev.mrsad.app.ui.components.MrsadTokens
+import dev.mrsad.app.ui.components.ObsidianIconBox
 import dev.mrsad.app.ui.components.ObsidianSegmentedBar
 import dev.mrsad.app.ui.components.SectionHeader
 import dev.mrsad.app.ui.components.SegmentedBarItem
@@ -180,7 +181,7 @@ fun HomeScreen(
                             Row(horizontalArrangement = Arrangement.spacedBy(MrsadTokens.Spacing.xs)) {
                                 PillarSculptureCard(
                                     modifier = Modifier.weight(1f),
-                                    indexCode = "01 · TYPE",
+                                    indexCode = "۰۱ · تایپ",
                                     title = "سرعت تایپ",
                                     subtitle = state.bestWpm?.let { "رکورد: ${formatInt(it, settings.persianNumerals)} کلمه/دقیقه" }
                                         ?: "موتور استاندارد WPM",
@@ -190,10 +191,10 @@ fun HomeScreen(
                                 )
                                 PillarSculptureCard(
                                     modifier = Modifier.weight(1f),
-                                    indexCode = "02 · READ",
+                                    indexCode = "۰۲ · خوانش",
                                     title = "تندخوانی و درک",
                                     subtitle = state.bestReadingWpm?.let { "رکورد: ${formatInt(it, settings.persianNumerals)} کلمه/دقیقه" }
-                                        ?: "خوانش هدایت‌شده و RSVP",
+                                        ?: "خوانش کانونی و درک مطلب",
                                     sculptureType = ModuleSculptureType.READING,
                                     spectralAccent = ModulePalettes.Reading.luminous,
                                     onClick = { onNavigate(Routes.READ) },
@@ -202,12 +203,12 @@ fun HomeScreen(
                             Row(horizontalArrangement = Arrangement.spacedBy(MrsadTokens.Spacing.xs)) {
                                 PillarSculptureCard(
                                     modifier = Modifier.weight(1f),
-                                    indexCode = "03 · EYE",
-                                    title = "تمرین چشم",
+                                    indexCode = "۰۳ · چشم",
+                                    title = "ورزش چشم",
                                     subtitle = if (state.eyeSessions > 0) {
-                                        "${formatInt(state.eyeSessions, settings.persianNumerals)} جلسه • چابکی ${formatInt(state.avgEyeScore, settings.persianNumerals)}٪"
+                                        "${formatInt(state.eyeSessions, settings.persianNumerals)} جلسه • دقت ${formatInt(state.avgEyeScore, settings.persianNumerals)}٪"
                                     } else {
-                                        "ساکاد، تعقیب و دید محیطی"
+                                        "ساکاد، تعقیب و جدول شولته"
                                     },
                                     sculptureType = ModuleSculptureType.EYE,
                                     spectralAccent = ModulePalettes.Eye.luminous,
@@ -215,12 +216,12 @@ fun HomeScreen(
                                 )
                                 PillarSculptureCard(
                                     modifier = Modifier.weight(1f),
-                                    indexCode = "04 · MIND",
-                                    title = "تمرین مغز",
+                                    indexCode = "۰۴ · ذهن",
+                                    title = "تمرین ذهن",
                                     subtitle = if (state.mindSessions > 0) {
-                                        "${formatInt(state.mindSessions, settings.persianNumerals)} جلسه • امتیاز ${formatInt(state.avgMindScore, settings.persianNumerals)}"
+                                        "${formatInt(state.mindSessions, settings.persianNumerals)} جلسه • امتیاز ${formatInt(state.avgMindScore, settings.persianNumerals)}٪"
                                     } else {
-                                        "حافظه، تمرکز و سرعت واکنش"
+                                        "حافظه، تمرکز، منطق و واکنش"
                                     },
                                     sculptureType = ModuleSculptureType.BRAIN,
                                     spectralAccent = ModulePalettes.Brain.luminous,
@@ -337,6 +338,7 @@ fun HomeScreen(
                 listState = listState,
                 persianNumerals = settings.persianNumerals,
                 onOpenStudio = { onNavigate(Routes.STUDIO) },
+                onOpenAnalytics = { onNavigate(Routes.ANALYTICS) },
                 onOpenArena = { onNavigate(Routes.ARENA) },
                 modifier = Modifier.align(Alignment.TopCenter),
             )
@@ -355,11 +357,11 @@ private data class ModuleEntry(
 
 private val moduleEntries = listOf(
     ModuleEntry("TYPE", "تایپ", MrsadIcons.Type, Routes.TYPE, "سرعت و دقت", ObsidianSpectrum.BrightBlue),
-    ModuleEntry("READ", "خواندن", MrsadIcons.Read, Routes.READ, "درک مطلب", ObsidianSpectrum.Lavender),
+    ModuleEntry("READ", "خوانش", MrsadIcons.Read, Routes.READ, "تندخوانی و درک", ObsidianSpectrum.Lavender),
     ModuleEntry("EYE", "چشم", MrsadIcons.Eye, Routes.EYE, "مهارت دیداری", ObsidianSpectrum.Aqua),
     ModuleEntry("MIND", "ذهن", MrsadIcons.Mind, Routes.MIND, "تمرین شناختی", ObsidianSpectrum.Pink),
     ModuleEntry("FOCUS", "تمرکز", MrsadIcons.Focus, Routes.FOCUS, "زمان‌سنج عمیق", ObsidianSpectrum.Aqua),
-    ModuleEntry("AI", "دستیار", MrsadIcons.Assistant, Routes.AI, "مربی هوشمند", ObsidianSpectrum.Lavender),
+    ModuleEntry("ANALYTICS", "آمار", MrsadIcons.Analytics, Routes.ANALYTICS, "تحلیل پیشرفت", ObsidianSpectrum.Lavender),
 )
 
 private fun iconFor(module: Module): List<IconFacet> = when (module) {
@@ -390,6 +392,7 @@ private fun HomeAutoCollapsingTopBar(
     listState: androidx.compose.foundation.lazy.LazyListState,
     persianNumerals: Boolean,
     onOpenStudio: () -> Unit,
+    onOpenAnalytics: () -> Unit,
     onOpenArena: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -416,49 +419,10 @@ private fun HomeAutoCollapsingTopBar(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Column(Modifier.weight(1f)) {
-                Text(
-                    text = "MRSAD",
-                    style = if (collapsed) {
-                        type.title.copy(fontWeight = FontWeight.Bold, letterSpacing = 3.sp)
-                    } else {
-                        type.headline.copy(fontSize = 23.sp, lineHeight = 28.sp, letterSpacing = 3.5.sp)
-                    },
-                    color = colors.textPrimary,
-                    modifier = Modifier.testTag(MrsadTestTags.HOME_BRAND),
-                )
-                if (!collapsed) {
-                    Text(
-                        text = "زیست‌بوم رشد شناختی • OBSIDIAN",
-                        style = type.caption,
-                        color = colors.textSecondary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-            }
-
-            if (levelInfo != null) {
-                HeaderCompactPill(
-                    text = "سطح ${formatInt(levelInfo.level, persianNumerals)}",
-                    tint = ObsidianSpectrum.BrightBlue,
-                    onClick = onOpenArena,
-                )
-                Spacer(Modifier.width(6.dp))
-                if (!collapsed) {
-                    HeaderCompactPill(
-                        text = "استودیو",
-                        tint = ObsidianSpectrum.Lavender,
-                        onClick = onOpenStudio,
-                    )
-                    Spacer(Modifier.width(6.dp))
-                }
-            }
-
-            // Brand mark box — never wrapped in a clickable parent so HOME_BRAND_MARK remains directly addressable
+            // Right-most anchor in RTL: Fixed-dimension Brand Mark box (never wrapped in a clickable parent)
             Box(
                 Modifier
-                    .size(if (collapsed) 34.dp else 38.dp)
+                    .size(if (collapsed) 36.dp else 44.dp)
                     .clip(RoundedCornerShape(MrsadTokens.Radius.md))
                     .background(colors.surfaceHigh)
                     .border(
@@ -469,10 +433,58 @@ private fun HomeAutoCollapsingTopBar(
                 contentAlignment = Alignment.Center,
             ) {
                 MrsadMarkView(
-                    size = if (collapsed) 22.dp else 24.dp,
+                    size = if (collapsed) 22.dp else 26.dp,
                     monochrome = false,
                     modifier = Modifier.testTag(MrsadTestTags.HOME_BRAND_MARK),
                     contentDescription = "MRSAD",
+                )
+            }
+
+            Spacer(Modifier.width(MrsadTokens.Spacing.xs))
+
+            // Middle: Brand title and subtitle
+            Column(Modifier.weight(1f)) {
+                Text(
+                    text = "MRSAD",
+                    style = if (collapsed) {
+                        type.title.copy(fontWeight = FontWeight.Bold, letterSpacing = 3.sp)
+                    } else {
+                        type.headline.copy(fontSize = 22.sp, lineHeight = 27.sp, letterSpacing = 3.sp)
+                    },
+                    color = colors.textPrimary,
+                    modifier = Modifier.testTag(MrsadTestTags.HOME_BRAND),
+                )
+                if (!collapsed) {
+                    Text(
+                        text = "زیست‌بوم رشد شناختی • مرصاد",
+                        style = type.caption,
+                        color = colors.textSecondary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+
+            // Left-most in RTL: Status & Quick-Access Pills
+            if (levelInfo != null) {
+                HeaderCompactPill(
+                    text = "سطح ${formatInt(levelInfo.level, persianNumerals)}",
+                    tint = ObsidianSpectrum.BrightBlue,
+                    onClick = onOpenArena,
+                )
+                Spacer(Modifier.width(4.dp))
+            }
+            HeaderCompactPill(
+                text = "آمار",
+                tint = ObsidianSpectrum.Aqua,
+                onClick = onOpenAnalytics,
+            )
+            if (!collapsed) {
+                Spacer(Modifier.width(4.dp))
+                HeaderCompactPill(
+                    text = "استودیو",
+                    tint = ObsidianSpectrum.Lavender,
+                    onClick = onOpenStudio,
                 )
             }
         }
@@ -762,34 +774,35 @@ private fun PillarSculptureCard(
         accent = spectralAccent,
         onClick = onClick,
     ) {
+        // Strict RTL Card Header: 48dp Icon Box on the Right (Start), Status Badge on the Left (End)
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(MrsadTokens.Radius.pill))
-                    .background(spectralAccent.copy(alpha = 0.16f))
-                    .border(1.dp, spectralAccent.copy(alpha = 0.48f), RoundedCornerShape(MrsadTokens.Radius.pill))
-                    .padding(horizontal = 8.dp, vertical = 3.dp),
+            ObsidianIconBox(
+                size = 48.dp,
+                accent = spectralAccent,
+                elevated = true,
             ) {
-                Text(
-                    text = indexCode,
-                    style = type.caption.copy(color = colors.textPrimary, fontWeight = FontWeight.Medium),
-                    maxLines = 1,
+                ModuleSculpture3D(
+                    type = sculptureType,
+                    modifier = Modifier.size(38.dp),
                 )
             }
-            ModuleSculpture3D(
-                type = sculptureType,
-                modifier = Modifier.size(48.dp),
+            MrsadChip(
+                text = indexCode,
+                tint = spectralAccent,
+                compact = true,
             )
         }
+        Spacer(Modifier.height(2.dp))
         Text(
             title,
             style = type.title.copy(fontWeight = FontWeight.Bold),
             color = colors.textPrimary,
             maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
         )
         Text(
             subtitle,
@@ -844,15 +857,20 @@ private fun ModuleBarPill(entry: ModuleEntry, onClick: () -> Unit) {
                 shape = shape,
             )
             .clickable(onClick = onClick)
-            .padding(horizontal = MrsadTokens.Spacing.sm, vertical = 10.dp),
+            .padding(horizontal = MrsadTokens.Spacing.sm, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(MrsadTokens.Spacing.xs),
     ) {
-        MetalIcon(
-            facets = entry.icon,
-            accentOverride = entry.spectralAccent,
-            modifier = Modifier.size(22.dp),
-        )
+        ObsidianIconBox(
+            size = 38.dp,
+            accent = entry.spectralAccent,
+        ) {
+            MetalIcon(
+                facets = entry.icon,
+                accentOverride = entry.spectralAccent,
+                modifier = Modifier.size(20.dp),
+            )
+        }
         Column {
             Text(
                 text = entry.title,
@@ -885,9 +903,9 @@ private fun DashboardPlanSection(
             accent = ObsidianSpectrum.BrightBlue,
         ) {
             SectionHeader(
-                title = "برنامهٔ هوشمند امروز و مأموریت‌ها",
-                actionLabel = "مربی هوشمند",
-                onAction = { onNavigate(Routes.AI) },
+                title = "برنامهٔ تمرین روزانه و مأموریت‌ها",
+                actionLabel = "فضای تمرکز",
+                onAction = { onNavigate(Routes.FOCUS) },
             )
             if (state.plan.isEmpty()) {
                 Text(
@@ -896,7 +914,7 @@ private fun DashboardPlanSection(
                     color = colors.textSecondary,
                 )
             } else {
-                Text("چیدمان هوشمند بر اساس داده‌های واقعی تمرین شما", style = type.caption, color = colors.textMuted)
+                Text("برنامهٔ پیشنهادی بر پایهٔ عملکرد ثبت‌شده در ۴ ستون مهارت", style = type.caption, color = colors.textMuted)
                 state.plan.forEach { item ->
                     PlanRow(
                         title = item.titleFa,
@@ -1111,16 +1129,21 @@ private fun DashboardRecordsSection(
             onClick = { onNavigate(Routes.STUDIO) },
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                MetalIcon(
-                    MrsadIcons.Studio,
-                    accentOverride = ObsidianSpectrum.Lavender,
-                    modifier = Modifier.size(20.dp),
-                )
+                ObsidianIconBox(
+                    size = 48.dp,
+                    accent = ObsidianSpectrum.Lavender,
+                ) {
+                    MetalIcon(
+                        MrsadIcons.Studio,
+                        accentOverride = ObsidianSpectrum.Lavender,
+                        modifier = Modifier.size(22.dp),
+                    )
+                }
                 Spacer(Modifier.width(MrsadTokens.Spacing.xs))
                 Column(Modifier.weight(1f)) {
                     Text(
-                        "OBSIDIAN SPECTRUM STUDIO",
-                        style = type.label.copy(fontWeight = FontWeight.SemiBold, letterSpacing = 1.sp),
+                        "استودیو طراحی و نمایش",
+                        style = type.label.copy(fontWeight = FontWeight.SemiBold),
                         color = colors.textPrimary,
                     )
                     Text(
@@ -1129,7 +1152,11 @@ private fun DashboardRecordsSection(
                         color = colors.textSecondary,
                     )
                 }
-                Text("استودیو ←", style = type.caption, color = ObsidianSpectrum.Lavender)
+                MrsadChip(
+                    text = "ورود",
+                    tint = ObsidianSpectrum.Lavender,
+                    compact = true,
+                )
             }
         }
     }
@@ -1156,15 +1183,22 @@ private fun PlanRow(
             .padding(horizontal = MrsadTokens.Spacing.sm, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        MetalIcon(icon, accentOverride = accent, modifier = Modifier.size(18.dp))
+        ObsidianIconBox(
+            size = 44.dp,
+            accent = accent,
+        ) {
+            MetalIcon(icon, accentOverride = accent, modifier = Modifier.size(20.dp))
+        }
         Spacer(Modifier.width(MrsadTokens.Spacing.xs))
         Column(Modifier.weight(1f)) {
             Text(title, style = type.body.copy(fontWeight = FontWeight.Medium), color = colors.textPrimary)
             Text(reason, style = type.caption, color = colors.textMuted)
         }
+        Spacer(Modifier.width(MrsadTokens.Spacing.xs))
         MrsadChip(
             text = minutesLabel,
             tint = accent,
+            compact = true,
         )
     }
 }

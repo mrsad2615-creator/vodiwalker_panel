@@ -411,23 +411,15 @@ private fun HomeAutoCollapsingTopBar(
 ) {
     val colors = MrsadTheme.colors
     val type = MrsadTheme.type
-    val motion = MrsadTheme.motion
     val levelInfo = state.progression?.levelInfo
 
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        colors.background.copy(alpha = 0.98f),
-                        colors.backgroundElevated.copy(alpha = if (collapsed) 0.95f else 0.65f),
-                    ),
-                ),
-            )
+            .background(colors.background.copy(alpha = 0.96f))
             .padding(
                 horizontal = MrsadTokens.Spacing.md,
-                vertical = if (collapsed) 6.dp else 10.dp,
+                vertical = if (collapsed) 6.dp else 8.dp,
             ),
     ) {
         Row(
@@ -440,20 +432,14 @@ private fun HomeAutoCollapsingTopBar(
                     style = if (collapsed) {
                         type.title.copy(fontWeight = FontWeight.Bold, letterSpacing = 3.sp)
                     } else {
-                        type.display.copy(fontSize = 30.sp, lineHeight = 38.sp, letterSpacing = 4.sp)
+                        type.headline.copy(fontSize = 24.sp, lineHeight = 30.sp, letterSpacing = 3.5.sp)
                     },
                     color = colors.textPrimary,
                     modifier = Modifier.testTag(MrsadTestTags.HOME_BRAND),
                 )
-                AnimatedVisibility(
-                    visible = !collapsed,
-                    enter = fadeIn(animationSpec = motion.effectsDefault()) +
-                        expandVertically(animationSpec = motion.spatialDefault()),
-                    exit = fadeOut(animationSpec = motion.effectsFast()) +
-                        shrinkVertically(animationSpec = motion.spatialFast()),
-                ) {
+                if (!collapsed) {
                     Text(
-                        text = "OBSIDIAN SPECTRUM • زیست‌بوم رشد شناختی و مهارت‌های فردی",
+                        text = "زیست‌بوم رشد شناختی • OBSIDIAN SPECTRUM",
                         style = type.caption,
                         color = colors.textSecondary,
                         maxLines = 1,
@@ -462,38 +448,38 @@ private fun HomeAutoCollapsingTopBar(
                 }
             }
 
-            if (collapsed && levelInfo != null) {
+            if (levelInfo != null) {
                 MrsadChip(
                     text = "سطح ${formatInt(levelInfo.level, persianNumerals)}",
-                    tint = ObsidianSpectrum.Lavender,
+                    tint = ObsidianSpectrum.BrightBlue,
+                    onClick = onOpenArena,
                 )
-                Spacer(Modifier.width(MrsadTokens.Spacing.xs))
+                Spacer(Modifier.width(6.dp))
+                if (!collapsed) {
+                    MrsadChip(
+                        text = "استودیو",
+                        tint = ObsidianSpectrum.Lavender,
+                        onClick = onOpenStudio,
+                    )
+                    Spacer(Modifier.width(6.dp))
+                }
             }
 
             // Brand mark box — never wrapped in a clickable parent so HOME_BRAND_MARK remains directly addressable
             Box(
                 Modifier
-                    .size(if (collapsed) 38.dp else 46.dp)
+                    .size(if (collapsed) 36.dp else 40.dp)
                     .clip(RoundedCornerShape(MrsadTokens.Radius.md))
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(colors.surfaceHigh, colors.surface),
-                        ),
-                    )
+                    .background(colors.surfaceHigh)
                     .border(
                         1.dp,
-                        Brush.verticalGradient(
-                            listOf(
-                                ObsidianSpectrum.BrightBlue.copy(alpha = 0.55f),
-                                ObsidianSpectrum.Lavender.copy(alpha = 0.35f),
-                            ),
-                        ),
+                        ObsidianSpectrum.BrightBlue.copy(alpha = 0.45f),
                         RoundedCornerShape(MrsadTokens.Radius.md),
                     ),
                 contentAlignment = Alignment.Center,
             ) {
                 MrsadMarkView(
-                    size = if (collapsed) 24.dp else 28.dp,
+                    size = if (collapsed) 22.dp else 25.dp,
                     monochrome = false,
                     modifier = Modifier.testTag(MrsadTestTags.HOME_BRAND_MARK),
                     contentDescription = "MRSAD",
@@ -501,48 +487,12 @@ private fun HomeAutoCollapsingTopBar(
             }
         }
 
-        AnimatedVisibility(
-            visible = !collapsed && levelInfo != null,
-            enter = fadeIn(animationSpec = motion.effectsDefault()) +
-                expandVertically(animationSpec = motion.spatialDefault()),
-            exit = fadeOut(animationSpec = motion.effectsFast()) +
-                shrinkVertically(animationSpec = motion.spatialFast()),
-        ) {
-            if (levelInfo != null) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = MrsadTokens.Spacing.xs),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    MrsadChip(
-                        text = "سطح ${formatInt(levelInfo.level, persianNumerals)} • ${levelInfo.titleFa}",
-                        tint = ObsidianSpectrum.BrightBlue,
-                        onClick = onOpenArena,
-                    )
-                    MrsadChip(
-                        text = "${formatInt(levelInfo.totalXp, persianNumerals)} XP • استودیو تم",
-                        tint = ObsidianSpectrum.Lavender,
-                        onClick = onOpenStudio,
-                    )
-                }
-            }
-        }
-
         Box(
             Modifier
-                .padding(top = if (collapsed) 6.dp else 8.dp)
+                .padding(top = 6.dp)
                 .fillMaxWidth()
                 .height(1.dp)
-                .background(
-                    Brush.horizontalGradient(
-                        listOf(
-                            ObsidianSpectrum.BrightBlue.copy(alpha = 0.45f),
-                            ObsidianSpectrum.Lavender.copy(alpha = 0.45f),
-                        ),
-                    ),
-                ),
+                .background(ObsidianSpectrum.BrightBlue.copy(alpha = 0.35f)),
         )
     }
 }
@@ -584,16 +534,14 @@ private fun ObsidianSpectrumHero(
         }
 
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 2.dp),
+            modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.Bottom,
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             Column {
                 Text(
                     text = formatPercent(state.todayProgress * 100.0, persianNumerals),
-                    style = type.display.copy(fontWeight = FontWeight.Bold),
+                    style = type.display.copy(fontSize = 30.sp, lineHeight = 36.sp, fontWeight = FontWeight.Bold),
                     color = colors.textPrimary,
                 )
                 Text(
@@ -618,7 +566,7 @@ private fun ObsidianSpectrumHero(
 
         MrsadProgressBar(
             progress = state.todayProgress,
-            height = 6.dp,
+            height = 5.dp,
             tint = ObsidianSpectrum.BrightBlue,
         )
 
@@ -627,7 +575,7 @@ private fun ObsidianSpectrumHero(
             energy = state.energy,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(66.dp),
+                .height(48.dp),
         )
 
         // Unified Daily Performance Bar inside Hero
@@ -637,7 +585,7 @@ private fun ObsidianSpectrumHero(
                 .clip(RoundedCornerShape(MrsadTokens.Radius.md))
                 .background(colors.backgroundElevated)
                 .border(1.dp, colors.border, RoundedCornerShape(MrsadTokens.Radius.md))
-                .padding(vertical = 8.dp, horizontal = 4.dp),
+                .padding(vertical = 6.dp, horizontal = 4.dp),
             horizontalArrangement = Arrangement.SpaceEvenly,
         ) {
             StatCell(
@@ -685,7 +633,7 @@ private fun ObsidianSpectrumWave(
             initialValue = 0f,
             targetValue = (2.0 * PI).toFloat(),
             animationSpec = infiniteRepeatable(
-                animation = tween(durationMillis = 5400, easing = LinearEasing),
+                animation = tween(durationMillis = 5600, easing = LinearEasing),
                 repeatMode = RepeatMode.Restart,
             ),
             label = "wave_phase",
@@ -713,7 +661,7 @@ private fun ObsidianSpectrumWave(
         val h = size.height
         val midY = h * 0.56f
         val amp = h * (0.20f + 0.14f * energy.coerceIn(0f, 1f))
-        val steps = 28
+        val steps = 24
 
         primaryPath.reset()
         secondaryPath.reset()
@@ -739,37 +687,23 @@ private fun ObsidianSpectrumWave(
         fillPath.lineTo(w, h)
         fillPath.close()
 
-        // 2-stop spectral glow under primary curve
         drawPath(
             path = fillPath,
-            brush = Brush.verticalGradient(
-                colors = listOf(
-                    ObsidianSpectrum.ElectricBlue.copy(alpha = 0.28f),
-                    Color.Transparent,
-                ),
-            ),
+            color = ObsidianSpectrum.ElectricBlue.copy(alpha = 0.14f),
         )
 
-        // Secondary harmonic Lavender curve
         drawPath(
             path = secondaryPath,
             color = ObsidianSpectrum.Lavender.copy(alpha = 0.52f),
             style = Stroke(width = 1.4.dp.toPx(), cap = StrokeCap.Round),
         )
 
-        // Primary Bright Blue -> Lavender spectral curve
         drawPath(
             path = primaryPath,
-            brush = Brush.horizontalGradient(
-                colors = listOf(
-                    ObsidianSpectrum.BrightBlue,
-                    ObsidianSpectrum.Pink,
-                ),
-            ),
-            style = Stroke(width = 2.0.dp.toPx(), cap = StrokeCap.Round),
+            color = ObsidianSpectrum.BrightBlue,
+            style = Stroke(width = 1.9.dp.toPx(), cap = StrokeCap.Round),
         )
 
-        // 7 daily spectral nodes along the wave
         for (d in 0..6) {
             val t = (d + 0.5f) / 7f
             val x = t * w
@@ -777,13 +711,13 @@ private fun ObsidianSpectrumWave(
                 (0.55f + 0.45f * sin(t * PI.toFloat()))
             val nodeColor = nodeSpectrum[d]
             drawCircle(
-                color = nodeColor.copy(alpha = 0.32f),
-                radius = 5.dp.toPx(),
+                color = nodeColor.copy(alpha = 0.36f),
+                radius = 4.6.dp.toPx(),
                 center = Offset(x, y),
             )
             drawCircle(
                 color = ObsidianSpectrum.SoftWhite,
-                radius = 2.2.dp.toPx(),
+                radius = 2.0.dp.toPx(),
                 center = Offset(x, y),
             )
         }
@@ -873,11 +807,7 @@ private fun ModuleBarPill(entry: ModuleEntry, onClick: () -> Unit) {
         modifier = Modifier
             .testTag(MrsadTestTags.homeModule(entry.route))
             .clip(shape)
-            .background(
-                Brush.verticalGradient(
-                    listOf(colors.surfaceHigh, colors.surface),
-                ),
-            )
+            .background(colors.surfaceHigh)
             .border(
                 width = 1.dp,
                 color = entry.spectralAccent.copy(alpha = 0.45f),

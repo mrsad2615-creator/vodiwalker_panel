@@ -41,9 +41,11 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
@@ -51,7 +53,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import dev.mrsad.app.testing.MrsadTestHooks
 import dev.mrsad.app.ui.theme.MrsadTheme
@@ -94,29 +98,68 @@ object MrsadTokens {
     // in the app resolves them through `MrsadTheme.motion`.
 }
 
+private val DefaultChamferedShape: Shape = createChamferedShape(
+    cut = 12.dp,
+    radius = MrsadTokens.Radius.md,
+)
+
 /**
- * A chamfered rectangle: the hybrid geometric corner of the cosmic
- * identity — a rounded corner whose tip is cut at 45 degrees, so the
- * card reads as machined rather than moulded.
+ * Hybrid cosmic corner shape: two opposing corners are softly rounded and
+ * the other two are chamfered at 45 degrees, mirroring cleanly in RTL so
+ * the card reads as machined titanium & smoked glass rather than a generic box.
  */
-@Composable
-fun chamferedShape(cut: Dp = 12.dp): Shape {
-    val cutPx = with(androidx.compose.ui.platform.LocalDensity.current) { cut.toPx() }
-    return androidx.compose.ui.graphics.GenericShape { size, _ ->
-        val c = cutPx.coerceAtMost(size.minDimension / 2f)
+fun chamferedShape(
+    cut: Dp = 12.dp,
+    radius: Dp = MrsadTokens.Radius.md,
+): Shape = if (cut == 12.dp && radius == MrsadTokens.Radius.md) {
+    DefaultChamferedShape
+} else {
+    createChamferedShape(cut, radius)
+}
+
+private fun createChamferedShape(
+    cut: Dp,
+    radius: Dp,
+): Shape = object : Shape {
+    override fun createOutline(
+        size: Size,
+        layoutDirection: LayoutDirection,
+        density: Density,
+    ): Outline {
+        val maxCorner = size.minDimension / 2f
+        val c = with(density) { cut.toPx() }.coerceAtMost(maxCorner)
+        val r = with(density) { radius.toPx() }.coerceAtMost(maxCorner)
         val w = size.width
         val h = size.height
-        Path().apply {
-            moveTo(c, 0f)
-            lineTo(w - c, 0f)
-            lineTo(w, c)
-            lineTo(w, h - c)
-            lineTo(w - c, h)
-            lineTo(c, h)
-            lineTo(0f, h - c)
-            lineTo(0f, c)
-            close()
+        val path = Path().apply {
+            if (layoutDirection == LayoutDirection.Rtl) {
+                // Top-start (top-right) rounded, top-end (top-left) chamfered,
+                // bottom-start (bottom-right) chamfered, bottom-end (bottom-left) rounded.
+                moveTo(c, 0f)
+                lineTo(w - r, 0f)
+                arcTo(Rect(w - 2f * r, 0f, w, 2f * r), 270f, 90f, false)
+                lineTo(w, h - c)
+                lineTo(w - c, h)
+                lineTo(r, h)
+                arcTo(Rect(0f, h - 2f * r, 2f * r, h), 90f, 90f, false)
+                lineTo(0f, c)
+                close()
+            } else {
+                // Top-start (top-left) rounded, top-end (top-right) chamfered,
+                // bottom-end (bottom-right) rounded, bottom-start (bottom-left) chamfered.
+                moveTo(r, 0f)
+                lineTo(w - c, 0f)
+                lineTo(w, c)
+                lineTo(w, h - r)
+                arcTo(Rect(w - 2f * r, h - 2f * r, w, h), 0f, 90f, false)
+                lineTo(c, h)
+                lineTo(0f, h - c)
+                lineTo(0f, r)
+                arcTo(Rect(0f, 0f, 2f * r, 2f * r), 180f, 90f, false)
+                close()
+            }
         }
+        return Outline.Generic(path)
     }
 }
 
@@ -199,8 +242,6 @@ fun MrsadSurface(
                         )
                     )
                 }
-            }
-            .drawBehind {
                 // The sheen along the top edge: the light is above.
                 drawRect(
                     brush = Brush.verticalGradient(

@@ -33,6 +33,21 @@ import { useApp } from '@/context/AppContext';
 import { Numeric } from '@/components/ui/Numeric';
 import { HabitIcon } from '@/components/ui/KairosMark';
 import { Rail, RailRow } from '@/components/ui/Rail';
+import {
+  AnalyticsShowcase,
+  CalendarShowcase,
+  FocusShowcase,
+  HabitsShowcase,
+  TasksShowcase,
+} from './Showcases';
+import {
+  buildDailySeries,
+  compareWindows,
+  habitWeekMatrix,
+  taskBreakdown,
+  upcomingByDay,
+} from '@/lib/homeMetrics';
+import type { HomeMode } from '@/types/domain';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { sectionEyebrow } from '@/lib/sections';
 import { GoalModal } from './GoalModal';
@@ -103,6 +118,41 @@ export function DashboardPage() {
   }, [habits, habitLogs, todayKey]);
 
   const activeGoals = useMemo(() => goals.filter((g) => !g.completed).slice(0, 4), [goals]);
+
+  // ── Board data: arithmetic over the user's own rows, nothing else ──────────
+  const boardMode: HomeMode = settings.homeMode ?? 'cinematic';
+  const series = useMemo(
+    () => buildDailySeries({ focusSessions, tasks, habitLogs }, todayKey, 14),
+    [focusSessions, tasks, habitLogs, todayKey]
+  );
+  const comparison = useMemo(() => compareWindows(series, 7), [series]);
+  const breakdown = useMemo(() => taskBreakdown(tasks), [tasks]);
+  const habitMatrix = useMemo(
+    () => habitWeekMatrix(habits, habitLogs, todayKey, 7),
+    [habits, habitLogs, todayKey]
+  );
+  const upcoming = useMemo(() => upcomingByDay(tasks, todayKey, 5), [tasks, todayKey]);
+  const nextTasks = useMemo(
+    () =>
+      todayTasks
+        .filter((t) => t.status !== 'completed')
+        .slice(0, 3)
+        .map((t) => ({ id: t.id, title: t.title, dueTime: t.dueTime })),
+    [todayTasks]
+  );
+
+  const toggleTaskById = (id: string) => {
+    const task = tasks.find((t) => t.id === id);
+    if (task) void handleToggleTask(task);
+  };
+  const editTaskById = (id: string) => {
+    const task = tasks.find((t) => t.id === id);
+    if (task) openEditTask(task);
+  };
+  const chooseMode = (mode: HomeMode) => {
+    void updateSettings({ homeMode: mode });
+    void triggerHaptic('light', settings.hapticsEnabled);
+  };
 
   const handleToggleTask = async (task: Task) => {
     const nextStatus = task.status === 'completed' ? 'todo' : 'completed';
@@ -194,6 +244,37 @@ export function DashboardPage() {
             </button>
           }
         />
+      </div>
+
+      {/* ── BOARD MODE ─────────────────────────────────────────────────────
+          The first screen is a board, not a fixed page: three honest layouts
+          over the same data. */}
+      <div className="flex items-center gap-1.5">
+        {(
+          [
+            { id: 'cinematic', label: 'سینمایی' },
+            { id: 'compact', label: 'فشرده' },
+            { id: 'detailed', label: 'جزئی' },
+          ] as const
+        ).map((mode) => {
+          const active = boardMode === mode.id;
+          return (
+            <button
+              key={mode.id}
+              type="button"
+              onClick={() => chooseMode(mode.id)}
+              aria-pressed={active}
+              className={`rounded-full border px-2.5 py-1 text-[10px] font-medium transition-colors ${
+                active
+                  ? 'border-[var(--accent-fg)]/60 bg-[color-mix(in_srgb,var(--accent)_18%,transparent)] text-[var(--text)]'
+                  : 'border-[var(--border)] text-[var(--text-3)] hover:text-[var(--text-2)]'
+              }`}
+            >
+              {mode.label}
+            </button>
+          );
+        })}
+        <span className="ms-auto font-display-caps text-[8px] text-[var(--text-3)]">BOARD</span>
       </div>
 
       {/* ── TODAY ─────────────────────────────────────────────────────────── */}
@@ -320,7 +401,74 @@ export function DashboardPage() {
         </div>
       )}
 
+      {/* ── SHOWCASE BOARD ───────────────────────────────────────────────── */}
+      {boardMode === 'compact' ? (
+        <div className="grid grid-cols-2 gap-2">
+          <FocusShowcase
+            dense
+            minutes={summary.todayFocusMinutes}
+            goalMinutes={summary.focusGoalMinutes}
+            series={series}
+            onStart={() => setActiveTab('focus')}
+          />
+          <TasksShowcase
+            dense
+            breakdown={breakdown}
+            nextTasks={nextTasks}
+            onToggle={toggleTaskById}
+            onOpenTask={editTaskById}
+            onOpenAll={() => setActiveTab('tasks')}
+          />
+          <HabitsShowcase
+            dense
+            matrix={habitMatrix}
+            onOpenAll={() => setActiveTab('habits')}
+            onStart={() => setActiveTab('habits')}
+          />
+          <AnalyticsShowcase
+            dense
+            series={series}
+            comparison={comparison}
+            onOpen={() => setActiveTab('analytics')}
+          />
+        </div>
+      ) : (
+        <div className="space-y-2.5">
+          <FocusShowcase
+            minutes={summary.todayFocusMinutes}
+            goalMinutes={summary.focusGoalMinutes}
+            series={series}
+            onStart={() => setActiveTab('focus')}
+          />
+          {boardMode === 'detailed' && (
+            <CalendarShowcase
+              upcoming={upcoming}
+              onOpen={() => setActiveTab('calendar')}
+            />
+          )}
+          <TasksShowcase
+            breakdown={breakdown}
+            nextTasks={nextTasks}
+            onToggle={toggleTaskById}
+            onOpenTask={editTaskById}
+            onOpenAll={() => setActiveTab('tasks')}
+          />
+          <HabitsShowcase
+            matrix={habitMatrix}
+            onOpenAll={() => setActiveTab('habits')}
+            onStart={() => setActiveTab('habits')}
+          />
+          <AnalyticsShowcase
+            series={series}
+            comparison={comparison}
+            onOpen={() => setActiveTab('analytics')}
+          />
+        </div>
+      )}
+
       {/* ── TASKS ─────────────────────────────────────────────────────────── */}
+      {boardMode === 'detailed' && (
+        <>
       <section className="space-y-2">
         <SectionHeader
           size="section"
@@ -578,6 +726,8 @@ export function DashboardPage() {
           <ArrowUpLeft className="h-3.5 w-3.5 text-[var(--accent-fg)]" />
         </RailRow>
       </Rail>
+        </>
+      )}
 
       <GoalModal
         open={goalModalState.open}

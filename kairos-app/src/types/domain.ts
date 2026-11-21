@@ -1,5 +1,7 @@
 import type { BackgroundId, MotionLevel } from '@/lib/theme';
 
+export type HomeMode = 'cinematic' | 'compact' | 'detailed';
+
 export type NavTab =
   | 'dashboard'
   | 'tasks'
@@ -173,6 +175,8 @@ export interface UserSettings {
   accentColor: string;
   backgroundId: BackgroundId;
   motionLevel: MotionLevel;
+  /** Home board layout: cinematic (default), compact grid, detailed. */
+  homeMode: HomeMode;
   /** Each section derives its own hue + environment from the accent. */
   displayName: string;
   dailyFocusGoalMinutes: number;

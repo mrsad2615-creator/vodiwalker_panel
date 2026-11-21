@@ -38,7 +38,9 @@ describe('Top bar behaves like a product, not a fixed slab', () => {
 
     const main = document.querySelector('main');
     expect(main).not.toBeNull();
-    expect(headerWrapper().style.gridTemplateRows).toBe('1fr');
+    expect(headerWrapper().dataset.chrome).toBe('visible');
+    // Hiding must be visual only — any layout change makes the bar bounce.
+    expect(headerWrapper().style.gridTemplateRows).toBe('');
 
     Object.defineProperty(main as HTMLElement, 'scrollTop', {
       value: 260,
@@ -47,12 +49,14 @@ describe('Top bar behaves like a product, not a fixed slab', () => {
     });
     fireEvent.scroll(main as HTMLElement);
 
-    await waitFor(() => expect(headerWrapper().style.gridTemplateRows).toBe('0fr'), { timeout: 3000 });
+    await waitFor(() => expect(headerWrapper().dataset.chrome).toBe('hidden'), { timeout: 3000 });
+    expect(headerWrapper().style.transform).toBe('translateY(-104%)');
 
     (main as HTMLElement).scrollTop = 120;
     fireEvent.scroll(main as HTMLElement);
 
-    await waitFor(() => expect(headerWrapper().style.gridTemplateRows).toBe('1fr'), { timeout: 3000 });
+    await waitFor(() => expect(headerWrapper().dataset.chrome).toBe('visible'), { timeout: 3000 });
+    expect(headerWrapper().style.transform).toBe('translateY(0)');
   });
 
   it('never lets the grain layer become full-screen static', () => {

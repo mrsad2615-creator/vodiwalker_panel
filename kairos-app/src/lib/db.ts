@@ -19,6 +19,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
   accentColor: DEFAULT_APPEARANCE.accent,
   backgroundId: DEFAULT_APPEARANCE.backgroundId,
   motionLevel: DEFAULT_APPEARANCE.motionLevel,
+  homeMode: 'cinematic',
   displayName: 'کاربر کایروس',
   dailyFocusGoalMinutes: 120,
   dailyTaskGoal: 6,
@@ -69,7 +70,8 @@ export async function ensureSettings(): Promise<UserSettings> {
     if (
       merged.accentColor !== existing.accentColor ||
       merged.backgroundId !== existing.backgroundId ||
-      merged.motionLevel !== existing.motionLevel
+      merged.motionLevel !== existing.motionLevel ||
+      merged.homeMode !== existing.homeMode
     ) {
       await db.settings.put(merged);
     }

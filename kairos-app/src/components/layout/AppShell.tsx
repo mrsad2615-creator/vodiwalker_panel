@@ -121,9 +121,14 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       {/* Shell owns the viewport; only `.app-scroll` moves. */}
       <div className="app-shell app-safe-frame relative mx-auto w-full max-w-[480px]">
+        <main ref={scrollRef} className="app-scroll">
+        {/* The bar is sticky and hides by transform only. Toggling layout height
+            (the 1.4.4 approach) shifted the content under the finger, which
+            re-fired scroll events and made the bar bounce up and down. */}
         <div
-          className="relative z-30 shrink-0 overflow-hidden transition-[grid-template-rows] duration-300 ease-out"
-          style={{ display: 'grid', gridTemplateRows: chrome.hidden ? '0fr' : '1fr' }}
+          data-chrome={chrome.hidden ? 'hidden' : 'visible'}
+          className="sticky top-0 z-30 transition-transform duration-300 ease-out"
+          style={{ transform: chrome.hidden ? 'translateY(-104%)' : 'translateY(0)' }}
           aria-hidden={chrome.hidden}
         >
         <header
@@ -183,8 +188,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
         )}
 
-        <main ref={scrollRef} className="app-scroll app-safe-content px-4 pt-4">
-          {children}
+        <div className="app-safe-content px-4 pt-4">{children}</div>
         </main>
 
         <nav

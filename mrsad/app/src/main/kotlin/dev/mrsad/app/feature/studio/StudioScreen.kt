@@ -38,7 +38,6 @@ import dev.mrsad.app.ui.components.MetalIcon
 import dev.mrsad.app.ui.components.ModuleSculpture3D
 import dev.mrsad.app.ui.components.ModuleSculptureType
 import dev.mrsad.app.ui.components.MrsadChip
-import dev.mrsad.app.ui.components.MrsadCore
 import dev.mrsad.app.ui.components.MrsadDivider
 import dev.mrsad.app.ui.components.MrsadIcons
 import dev.mrsad.app.ui.components.MrsadSurface
@@ -99,35 +98,25 @@ fun StudioScreen(
                         Text("پیش‌نمایش زندهٔ سیستم طراحی", style = type.label, color = colors.textSecondary)
                     }
                     MrsadChip(
-                        text = if (isNoir) "NOIR // 2D SWISS" else "OBSIDIAN // 3D SPATIAL",
+                        text = if (isNoir) "NOIR // MONOCHROME" else "OBSIDIAN // OLED GLASS",
                         tint = colors.accent,
                     )
                 }
 
-                if (isNoir) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = MrsadTokens.Spacing.sm),
-                        horizontalArrangement = Arrangement.SpaceEvenly,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        ModuleSculpture3D(type = ModuleSculptureType.TYPING, modifier = Modifier.size(64.dp))
-                        ModuleSculpture3D(type = ModuleSculptureType.READING, modifier = Modifier.size(64.dp))
-                        ModuleSculpture3D(type = ModuleSculptureType.EYE, modifier = Modifier.size(64.dp))
-                        ModuleSculpture3D(type = ModuleSculptureType.BRAIN, modifier = Modifier.size(64.dp))
-                    }
-                } else {
-                    Box(Modifier.fillMaxWidth().height(200.dp)) {
-                        MrsadCore(
-                            energy = 0.65f,
-                            modifier = Modifier.fillMaxSize(),
-                            streakDays = 12,
-                        )
-                    }
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = MrsadTokens.Spacing.sm),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    ModuleSculpture3D(type = ModuleSculptureType.TYPING, modifier = Modifier.size(64.dp))
+                    ModuleSculpture3D(type = ModuleSculptureType.READING, modifier = Modifier.size(64.dp))
+                    ModuleSculpture3D(type = ModuleSculptureType.EYE, modifier = Modifier.size(64.dp))
+                    ModuleSculpture3D(type = ModuleSculptureType.BRAIN, modifier = Modifier.size(64.dp))
                 }
                 Text(
-                    "هر دو تم، دو زبان طراحی کاملاً مستقل هستند؛ تغییر تم کل ساختار کارت‌ها، آیکون‌ها، نمودارها و المان‌های بصری را در لحظه دگرگون می‌کند.",
+                    "طراحی مینیمال بر پایهٔ مشکی مطلق OLED و پنل‌های شیشه‌ای دودی مات با کنتراست بالای سیاه‌وسفید.",
                     style = type.caption,
                     color = colors.textMuted,
                 )

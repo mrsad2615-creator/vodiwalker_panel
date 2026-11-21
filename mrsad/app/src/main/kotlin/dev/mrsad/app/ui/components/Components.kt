@@ -98,69 +98,19 @@ object MrsadTokens {
     // in the app resolves them through `MrsadTheme.motion`.
 }
 
-private val DefaultChamferedShape: Shape = createChamferedShape(
-    cut = 12.dp,
-    radius = MrsadTokens.Radius.md,
-)
+private val DefaultGlassShape: Shape = RoundedCornerShape(MrsadTokens.Radius.lg)
 
 /**
- * Hybrid cosmic corner shape: two opposing corners are softly rounded and
- * the other two are chamfered at 45 degrees, mirroring cleanly in RTL so
- * the card reads as machined titanium & smoked glass rather than a generic box.
+ * Smooth frosted-glass card shape (22.dp rounded corners).
+ * Replaces the legacy polygon chamfer with a clean, minimal glass silhouette.
  */
 fun chamferedShape(
     cut: Dp = 12.dp,
-    radius: Dp = MrsadTokens.Radius.md,
-): Shape = if (cut == 12.dp && radius == MrsadTokens.Radius.md) {
-    DefaultChamferedShape
+    radius: Dp = MrsadTokens.Radius.lg,
+): Shape = if (radius == MrsadTokens.Radius.lg) {
+    DefaultGlassShape
 } else {
-    createChamferedShape(cut, radius)
-}
-
-private fun createChamferedShape(
-    cut: Dp,
-    radius: Dp,
-): Shape = object : Shape {
-    override fun createOutline(
-        size: Size,
-        layoutDirection: LayoutDirection,
-        density: Density,
-    ): Outline {
-        val maxCorner = size.minDimension / 2f
-        val c = with(density) { cut.toPx() }.coerceAtMost(maxCorner)
-        val r = with(density) { radius.toPx() }.coerceAtMost(maxCorner)
-        val w = size.width
-        val h = size.height
-        val path = Path().apply {
-            if (layoutDirection == LayoutDirection.Rtl) {
-                // Top-start (top-right) rounded, top-end (top-left) chamfered,
-                // bottom-start (bottom-right) chamfered, bottom-end (bottom-left) rounded.
-                moveTo(c, 0f)
-                lineTo(w - r, 0f)
-                arcTo(Rect(w - 2f * r, 0f, w, 2f * r), 270f, 90f, false)
-                lineTo(w, h - c)
-                lineTo(w - c, h)
-                lineTo(r, h)
-                arcTo(Rect(0f, h - 2f * r, 2f * r, h), 90f, 90f, false)
-                lineTo(0f, c)
-                close()
-            } else {
-                // Top-start (top-left) rounded, top-end (top-right) chamfered,
-                // bottom-end (bottom-right) rounded, bottom-start (bottom-left) chamfered.
-                moveTo(r, 0f)
-                lineTo(w - c, 0f)
-                lineTo(w, c)
-                lineTo(w, h - r)
-                arcTo(Rect(w - 2f * r, h - 2f * r, w, h), 0f, 90f, false)
-                lineTo(c, h)
-                lineTo(0f, h - c)
-                lineTo(0f, r)
-                arcTo(Rect(0f, 0f, 2f * r, 2f * r), 180f, 90f, false)
-                close()
-            }
-        }
-        return Outline.Generic(path)
-    }
+    RoundedCornerShape(radius)
 }
 
 /**
@@ -208,7 +158,7 @@ fun MrsadSurface(
         label = "surfaceHighlight",
     )
 
-    val effectiveShape = if (isNoir) RoundedCornerShape(2.dp) else shape
+    val effectiveShape = if (isNoir) RoundedCornerShape(12.dp) else shape
 
     if (isNoir) {
         Column(
@@ -243,46 +193,25 @@ fun MrsadSurface(
     Column(
         modifier = modifier
             .graphicsLayer { scaleX = scale; scaleY = scale }
-            .shadow(
-                elevation = 6.dp,
-                shape = effectiveShape,
-                clip = false,
-            )
             .clip(effectiveShape)
             .background(
                 Brush.verticalGradient(
                     listOf(
-                        if (elevated) Color(0xFF1D2432) else surfaceColor.copy(alpha = 0.96f),
-                        Color(0xFF0B0E15),
+                        if (elevated) Color(0xFF1A1A20) else Color(0xFF131317),
+                        Color(0xFF09090C),
                     ),
                 ),
             )
             .drawBehind {
+                // Frosted glass top inner reflection
                 drawRect(
                     brush = Brush.verticalGradient(
                         listOf(
-                            colors.navy.copy(alpha = 0.16f),
+                            Color.White.copy(alpha = 0.11f + 0.08f * highlight),
                             Color.Transparent,
                         ),
                         startY = 0f,
-                        endY = size.height * 0.6f,
-                    ),
-                )
-                drawRect(
-                    brush = Brush.verticalGradient(
-                        listOf(
-                            (accent ?: colors.metalLight).copy(alpha = 0.20f + 0.06f * highlight),
-                            Color.Transparent,
-                        ),
-                        startY = 0f,
-                        endY = 96f,
-                    ),
-                )
-                drawRect(
-                    brush = Brush.verticalGradient(
-                        listOf(Color.Transparent, Color.Black.copy(alpha = 0.38f)),
-                        startY = size.height - 92f,
-                        endY = size.height,
+                        endY = 76f,
                     ),
                 )
             }
@@ -290,8 +219,8 @@ fun MrsadSurface(
                 width = 1.dp,
                 brush = Brush.verticalGradient(
                     listOf(
-                        (accent ?: colors.metalLight).copy(alpha = if (accent != null) 0.56f else 0.48f),
-                        (accent ?: colors.borderStrong).copy(alpha = 0.14f),
+                        (accent ?: Color.White).copy(alpha = if (elevated) 0.36f else 0.26f),
+                        Color.White.copy(alpha = 0.06f),
                     ),
                 ),
                 shape = effectiveShape,

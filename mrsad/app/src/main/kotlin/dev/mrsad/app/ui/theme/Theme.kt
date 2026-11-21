@@ -14,14 +14,14 @@ import dev.mrsad.app.data.settings.ThemeVariant
 import dev.mrsad.app.testing.MrsadTestHooks
 
 /**
- * MRSAD Dual-Theme Semantic Colour System (OBSIDIAN × NOIR).
+ * MRSAD Minimal OLED Black & Monochrome Frosted Glass Colour System.
  *
- * - **THEME 01 — OBSIDIAN**: Luxury / 3D / Premium / Cinematic.
- *   Obsidian Black (`#07080B`), Deep Graphite (`#11151D`), Metallic Silver
- *   (`#E2E7F0` / `#9BA4B4`), Platinum White (`#F3F5F8`), Soft Grey (`#B4BCCB`),
- *   and Controlled Accent Light (`#C8D8EA`). No neon or unrelated rainbow hues.
+ * - **THEME 01 — OBSIDIAN (OLED Frosted Glass Monochrome)**:
+ *   Pure OLED Black (`#000000`), Translucent Dark Glass (`#0D0D10` / `#151519`),
+ *   Pure White (`#FFFFFF`), Luminous Silver (`#D4D4D8`), Neutral Grey (`#9E9EA8`),
+ *   and Pure Monochrome White-Silver Accent (`#F4F4F6`). Zero blue/neon tint.
  *
- * - **THEME 02 — NOIR**: Pure Minimalism / Intelligence / Swiss Editorial / Monochrome.
+ * - **THEME 02 — NOIR (Pure Minimalism / Swiss Editorial Monochrome)**:
  *   Pure Black (`#000000`), Soft Black (`#0A0A0A`), Charcoal (`#121212`),
  *   Pure White (`#FFFFFF`), Silver Grey (`#C4C4CC`), Neutral Grey (`#909098`, `#27272A`).
  */
@@ -55,13 +55,9 @@ data class MrsadColors(
 ) {
     val isNoir: Boolean get() = variant == ThemeVariant.NOIR
     val isObsidian: Boolean get() = variant == ThemeVariant.OBSIDIAN
-    val metalGradient: List<Color> get() = listOf(metalLight, metalMid, metalDark)
+    val metalGradient: List<Color> get() = listOf(metalLight, metalMid)
 }
 
-/**
- * Structural & visual tokens that separate the two independent design systems
- * across cards, icons, 3D sculptures, charts, and navigation (Master Prompt §3).
- */
 @Immutable
 data class MrsadDesignSpec(
     val variant: ThemeVariant,
@@ -76,11 +72,11 @@ data class MrsadDesignSpec(
 private val ObsidianSpec = MrsadDesignSpec(
     variant = ThemeVariant.OBSIDIAN,
     use3DSculptures = true,
-    useChamferedCards = true,
-    useLinearIcons = false,
+    useChamferedCards = false,
+    useLinearIcons = true,
     useFloatingDock = true,
     useSwissGridBackground = false,
-    cardCornerDp = 16f,
+    cardCornerDp = 22f,
 )
 
 private val NoirSpec = MrsadDesignSpec(
@@ -90,55 +86,52 @@ private val NoirSpec = MrsadDesignSpec(
     useLinearIcons = true,
     useFloatingDock = false,
     useSwissGridBackground = true,
-    cardCornerDp = 2f,
+    cardCornerDp = 12f,
 )
 
-// ---- THEME 01: OBSIDIAN (Luxury / 3D / Premium / Cinematic) ----------------
-private val ObsidianBlack = Color(0xFF07080B)
-private val DeepGraphiteLow = Color(0xFF0D1016)
-private val DeepGraphite = Color(0xFF11151D)
-private val DeepGraphiteHigh = Color(0xFF181D27)
-private val PlatinumWhite = Color(0xFFF3F5F8)
-private val MetallicSilverLight = Color(0xFFE2E7F0)
-private val MetallicSilver = Color(0xFFB4BCCB)
-private val SoftGrey = Color(0xFF8C95A6)
-private val BrushedTitaniumDark = Color(0xFF525A68)
-private val AccentColdLight = Color(0xFFC8D8EA)
+// ---- THEME 01: OBSIDIAN (OLED Pitch Black + Monochrome Frosted Glass) ------
+private val OledPitchBlack = Color(0xFF000000)
+private val OledGlassLow = Color(0xFF070709)
+private val OledGlassSurface = Color(0xFF0E0E12)
+private val OledGlassHigh = Color(0xFF16161C)
+private val PureWhite = Color(0xFFFFFFFF)
+private val FrostedSilverLight = Color(0xFFF4F4F6)
+private val FrostedSilver = Color(0xFFD4D4D8)
+private val FrostedMutedGrey = Color(0xFF9E9EA8)
+private val FrostedDarkRim = Color(0xFF52525B)
 
 private val ObsidianColors = MrsadColors(
     variant = ThemeVariant.OBSIDIAN,
-    background = ObsidianBlack,
-    backgroundElevated = DeepGraphiteLow,
-    surface = DeepGraphite,
-    surfaceHigh = DeepGraphiteHigh,
-    glass = Color(0xD911151D),
-    border = Color(0x30C8D8EA),
-    borderStrong = Color(0xFF5E687A),
-    textPrimary = PlatinumWhite,
-    textSecondary = MetallicSilver,
-    textMuted = SoftGrey,
-    metalLight = MetallicSilverLight,
-    metalMid = MetallicSilver,
-    metalDark = BrushedTitaniumDark,
-    navy = DeepGraphiteLow,
-    iceBlue = AccentColdLight,
-    electricBlue = AccentColdLight,
-    violet = MetallicSilver,
-    accent = AccentColdLight,
-    accentSoft = Color(0x24C8D8EA),
-    success = Color(0xFF5CD6A0),
-    warning = Color(0xFFF0B85A),
+    background = OledPitchBlack,
+    backgroundElevated = OledGlassLow,
+    surface = OledGlassSurface,
+    surfaceHigh = OledGlassHigh,
+    glass = Color(0xD90E0E12),
+    border = Color(0x2EFFFFFF),
+    borderStrong = Color(0xFF5A5A64),
+    textPrimary = PureWhite,
+    textSecondary = FrostedSilver,
+    textMuted = FrostedMutedGrey,
+    metalLight = PureWhite,
+    metalMid = FrostedSilver,
+    metalDark = FrostedDarkRim,
+    navy = OledGlassLow,
+    iceBlue = FrostedSilverLight,
+    electricBlue = FrostedSilverLight,
+    violet = FrostedSilver,
+    accent = FrostedSilverLight,
+    accentSoft = Color(0x1FFFFFFF),
+    success = Color(0xFFD4D4D8),
+    warning = Color(0xFFE4E4E7),
     error = Color(0xFFF27474),
-    disabled = Color(0xFF343A46),
+    disabled = Color(0xFF27272A),
     isLight = false,
 )
 
 // ---- THEME 02: NOIR (Pure Minimalism / Swiss Editorial / Monochrome) -------
-private val PureBlack = Color(0xFF000000)
-private val SoftBlack = Color(0xFF0A0A0A)
-private val Charcoal = Color(0xFF121212)
-private val CharcoalHigh = Color(0xFF1A1A1A)
-private val PureWhite = Color(0xFFFFFFFF)
+private val SoftBlack = Color(0xFF080808)
+private val Charcoal = Color(0xFF101012)
+private val CharcoalHigh = Color(0xFF18181B)
 private val SilverGrey = Color(0xFFC4C4CC)
 private val NeutralGreyText = Color(0xFF909098)
 private val NeutralGreyLine = Color(0xFF27272A)
@@ -146,7 +139,7 @@ private val NeutralGreyStrong = Color(0xFF52525B)
 
 private val NoirColors = MrsadColors(
     variant = ThemeVariant.NOIR,
-    background = PureBlack,
+    background = OledPitchBlack,
     backgroundElevated = SoftBlack,
     surface = Charcoal,
     surfaceHigh = CharcoalHigh,
@@ -164,11 +157,11 @@ private val NoirColors = MrsadColors(
     electricBlue = PureWhite,
     violet = SilverGrey,
     accent = PureWhite,
-    accentSoft = Color(0x1FFFFFFF),
-    success = Color(0xFFA8E6CF),
-    warning = Color(0xFFF5D08A),
-    error = Color(0xFFF59898),
-    disabled = Color(0xFF27272A),
+    accentSoft = Color(0x1AFFFFFF),
+    success = PureWhite,
+    warning = SilverGrey,
+    error = Color(0xFFE4E4E7),
+    disabled = NeutralGreyLine,
     isLight = false,
 )
 
@@ -182,50 +175,67 @@ fun specFor(variant: ThemeVariant): MrsadDesignSpec = when (variant) {
     ThemeVariant.NOIR -> NoirSpec
 }
 
-val LocalMrsadColors = staticCompositionLocalOf { ObsidianColors }
-val LocalMrsadSpec = staticCompositionLocalOf { ObsidianSpec }
-val LocalMrsadTypography = staticCompositionLocalOf<MrsadTypography> { MrsadTypography.default }
-val LocalMrsadMotion = staticCompositionLocalOf {
+internal val LocalMrsadColors = staticCompositionLocalOf { ObsidianColors }
+internal val LocalMrsadSpec = staticCompositionLocalOf { ObsidianSpec }
+internal val LocalMrsadTypography = staticCompositionLocalOf { buildMrsadTypography(1.0f) }
+internal val LocalMrsadMotion = staticCompositionLocalOf {
     MrsadMotion(
         animationsEnabled = true,
-        particleCount = 40,
-        animationScale = 1f,
-        quality = GraphicsQuality.BALANCED,
+        reducedMotion = false,
+        deterministic = false,
+        particleCount = 0,
+        quality = GraphicsQuality.HIGH,
     )
 }
 
 object MrsadTheme {
     val colors: MrsadColors
-        @Composable @ReadOnlyComposable get() = LocalMrsadColors.current
+        @Composable
+        @ReadOnlyComposable
+        get() = LocalMrsadColors.current
 
     val spec: MrsadDesignSpec
-        @Composable @ReadOnlyComposable get() = LocalMrsadSpec.current
+        @Composable
+        @ReadOnlyComposable
+        get() = LocalMrsadSpec.current
 
     val type: MrsadTypography
-        @Composable @ReadOnlyComposable get() = LocalMrsadTypography.current
+        @Composable
+        @ReadOnlyComposable
+        get() = LocalMrsadTypography.current
 
     val motion: MrsadMotion
-        @Composable @ReadOnlyComposable get() = LocalMrsadMotion.current
+        @Composable
+        @ReadOnlyComposable
+        get() = LocalMrsadMotion.current
 }
 
 @Composable
-fun MrsadTheme(settings: MrsadSettings, content: @Composable () -> Unit) {
+fun MrsadTheme(
+    settings: MrsadSettings = MrsadSettings(),
+    content: @Composable () -> Unit,
+) {
     val colors = colorsFor(settings.theme)
     val spec = specFor(settings.theme)
-    val typography = MrsadTypography.remember(fontScale = settings.fontScale, readingFont = false)
-    val deterministic = MrsadTestHooks.isDeterministic
-    val motion = MrsadMotion.of(settings, deterministic)
+    val typography = buildMrsadTypography(settings.fontScale)
+    val motion = MrsadMotion.of(
+        settings = settings,
+        deterministic = MrsadTestHooks.isDeterministic,
+    )
 
     val materialScheme = darkColorScheme(
         primary = colors.accent,
         onPrimary = colors.background,
+        secondary = colors.metalMid,
+        onSecondary = colors.background,
+        tertiary = colors.metalLight,
         background = colors.background,
         onBackground = colors.textPrimary,
         surface = colors.surface,
         onSurface = colors.textPrimary,
         surfaceVariant = colors.surfaceHigh,
         onSurfaceVariant = colors.textSecondary,
-        outline = colors.borderStrong,
+        outline = colors.border,
         error = colors.error,
     )
 
@@ -235,6 +245,10 @@ fun MrsadTheme(settings: MrsadSettings, content: @Composable () -> Unit) {
         LocalMrsadTypography provides typography,
         LocalMrsadMotion provides motion,
     ) {
-        MaterialTheme(colorScheme = materialScheme, content = content)
+        MaterialTheme(
+            colorScheme = materialScheme,
+            typography = typography.material,
+            content = content,
+        )
     }
 }

@@ -67,26 +67,23 @@ fun MrsadBottomBar(
     val type = MrsadTheme.type
     val motion = MrsadTheme.motion
     val isNoir = colors.isNoir
-    val shape = if (isNoir) RoundedCornerShape(2.dp) else RoundedCornerShape(MrsadTokens.Radius.xl)
-    val itemShape = if (isNoir) RoundedCornerShape(2.dp) else RoundedCornerShape(MrsadTokens.Radius.pill)
+    val shape = if (isNoir) RoundedCornerShape(14.dp) else RoundedCornerShape(MrsadTokens.Radius.pill)
+    val itemShape = if (isNoir) RoundedCornerShape(10.dp) else RoundedCornerShape(MrsadTokens.Radius.pill)
 
     Row(
         modifier = modifier
             .padding(horizontal = MrsadTokens.Spacing.md, vertical = MrsadTokens.Spacing.sm)
             .fillMaxWidth()
             .testTag(MrsadTestTags.NAV_BAR)
-            .then(
-                if (isNoir) Modifier else Modifier.shadow(elevation = 12.dp, shape = shape, clip = false),
-            )
             .clip(shape)
             .background(
                 if (isNoir) {
-                    Brush.verticalGradient(listOf(colors.background, colors.backgroundElevated))
+                    Brush.verticalGradient(listOf(colors.surface, colors.backgroundElevated))
                 } else {
                     Brush.verticalGradient(
                         listOf(
-                            colors.surfaceHigh.copy(alpha = 0.98f),
-                            colors.surface.copy(alpha = 0.95f),
+                            Color(0xFF18181E),
+                            Color(0xFF0A0A0E),
                         ),
                     )
                 },
@@ -99,8 +96,8 @@ fun MrsadBottomBar(
                 } else {
                     Brush.verticalGradient(
                         listOf(
-                            colors.borderStrong.copy(alpha = 0.44f),
-                            colors.borderStrong.copy(alpha = 0.10f),
+                            Color.White.copy(alpha = 0.32f),
+                            Color.White.copy(alpha = 0.08f),
                         ),
                     )
                 },

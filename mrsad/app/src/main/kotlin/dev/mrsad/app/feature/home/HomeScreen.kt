@@ -2,7 +2,13 @@ package dev.mrsad.app.feature.home
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationVector1D
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -32,6 +38,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
@@ -42,8 +54,10 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import dev.mrsad.app.data.AppContainer
+import dev.mrsad.app.data.settings.GraphicsQuality
 import dev.mrsad.app.data.settings.MrsadSettings
 import dev.mrsad.app.navigation.Routes
+import dev.mrsad.app.testing.MrsadTestHooks
 import dev.mrsad.app.testing.MrsadTestTags
 import dev.mrsad.app.ui.components.IconFacet
 import dev.mrsad.app.ui.components.LocalBottomBarClearance
@@ -52,7 +66,6 @@ import dev.mrsad.app.ui.components.MetricValue
 import dev.mrsad.app.ui.components.ModuleSculpture3D
 import dev.mrsad.app.ui.components.ModuleSculptureType
 import dev.mrsad.app.ui.components.MrsadChip
-import dev.mrsad.app.ui.components.MrsadCore
 import dev.mrsad.app.ui.components.MrsadDivider
 import dev.mrsad.app.ui.components.MrsadIcons
 import dev.mrsad.app.ui.components.MrsadMarkView
@@ -76,6 +89,8 @@ import dev.mrsad.app.ui.theme.formatNumber
 import dev.mrsad.app.ui.theme.formatPercent
 import dev.mrsad.core.coach.Module
 import dev.mrsad.core.progression.ProgressionEngine
+import kotlin.math.PI
+import kotlin.math.sin
 
 /**
  * MRSAD HOME — Dual-System Flagship Command Center (Master Prompt §4):
@@ -130,78 +145,81 @@ fun HomeScreen(
                 }
             }
 
-            // 02: Hero Centerpiece (3D Orrery Core in OBSIDIAN / Editorial Telemetry Slab in NOIR)
+            // 02: Minimal Frosted Glass Typography & Luminous Activity Wave Hero (Core completely removed)
             item {
                 MrsadReveal(reveal, modifier = Modifier.fillMaxWidth(), index = 1) {
-                    if (isNoir) {
-                        NoirHeroTelemetrySlab(
-                            state = state,
-                            persianNumerals = settings.persianNumerals,
-                        )
-                    } else {
-                        ObsidianHeroCore(
-                            state = state,
-                            persianNumerals = settings.persianNumerals,
-                        )
-                    }
+                    GlassTelemetryWaveHero(
+                        state = state,
+                        persianNumerals = settings.persianNumerals,
+                    )
                 }
             }
 
-            // 03: Daily Status & Goal Progress
+            // 03: Four Core Pillars — Minimal Frosted Glass 2×2 Bento Grid + Quick Access Strip
             item {
                 MrsadReveal(reveal, modifier = Modifier.fillMaxWidth(), index = 2) {
-                    MrsadSurface(Modifier.fillMaxWidth()) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Text(
-                                if (isNoir) "02 // وضعیت روزانه و پیشرفت هدف" else "وضعیت روزانه و هدف ۲۵ دقیقه‌ای",
-                                style = type.label.copy(fontWeight = FontWeight.SemiBold),
-                                color = colors.textPrimary,
-                            )
-                            Text(
-                                "${formatPercent(state.todayProgress * 100.0, settings.persianNumerals)} تکمیل",
-                                style = type.caption,
-                                color = colors.accent,
-                            )
-                        }
-                        MrsadProgressBar(progress = state.todayProgress)
-                        Row(horizontalArrangement = Arrangement.spacedBy(MrsadTokens.Spacing.xs)) {
-                            StatCell(
-                                modifier = Modifier.weight(1f),
-                                value = formatInt(state.todayMinutes, settings.persianNumerals),
-                                label = "دقیقه امروز",
-                                icon = MrsadIcons.Focus,
-                            )
-                            StatCell(
-                                modifier = Modifier.weight(1f),
-                                value = formatInt(state.todaySessions, settings.persianNumerals),
-                                label = "تمرین امروز",
-                                icon = MrsadIcons.Trophy,
-                            )
-                            StatCell(
-                                modifier = Modifier.weight(1f),
-                                value = formatInt(state.streakDays, settings.persianNumerals),
-                                label = "روز پیوسته",
-                                icon = MrsadIcons.Flame,
-                            )
-                        }
-                    }
-                }
-            }
-
-            // 04: Quick Access Carousel (Test-tagged HOME_MODULES) + 4 Flagship Pillar Cards with 3D Sculptures
-            item {
-                MrsadReveal(reveal, modifier = Modifier.fillMaxWidth(), index = 3) {
                     SectionHeader(
-                        title = if (isNoir) "03 // چهار ستون مهارت و ماژول‌ها" else "چهار ستون اصلی و ماژول‌ها",
+                        title = if (isNoir) "02 // چهار ستون مهارت و ماژول‌ها" else "چهار ستون اصلی و ماژول‌ها",
                         actionLabel = "تحلیل کامل",
                         onAction = { onNavigate(Routes.ANALYTICS) },
                     )
                 }
             }
+
+            // 2×2 Minimal Frosted Glass Pillar Showcase
+            item {
+                MrsadReveal(reveal, modifier = Modifier.fillMaxWidth(), index = 3) {
+                    Column(verticalArrangement = Arrangement.spacedBy(MrsadTokens.Spacing.xs)) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(MrsadTokens.Spacing.xs)) {
+                            PillarSculptureCard(
+                                modifier = Modifier.weight(1f),
+                                indexCode = "01",
+                                title = "سرعت تایپ",
+                                subtitle = state.bestWpm?.let { "رکورد: ${formatInt(it, settings.persianNumerals)} کلمه/دقیقه" }
+                                    ?: "موتور استاندارد WPM",
+                                sculptureType = ModuleSculptureType.TYPING,
+                                onClick = { onNavigate(Routes.TYPE) },
+                            )
+                            PillarSculptureCard(
+                                modifier = Modifier.weight(1f),
+                                indexCode = "02",
+                                title = "تندخوانی و درک",
+                                subtitle = state.bestReadingWpm?.let { "رکورد: ${formatInt(it, settings.persianNumerals)} کلمه/دقیقه" }
+                                    ?: "خوانش هدایت‌شده و RSVP",
+                                sculptureType = ModuleSculptureType.READING,
+                                onClick = { onNavigate(Routes.READ) },
+                            )
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(MrsadTokens.Spacing.xs)) {
+                            PillarSculptureCard(
+                                modifier = Modifier.weight(1f),
+                                indexCode = "03",
+                                title = "تمرین چشم",
+                                subtitle = if (state.eyeSessions > 0) {
+                                    "${formatInt(state.eyeSessions, settings.persianNumerals)} جلسه • چابکی ${formatInt(state.avgEyeScore, settings.persianNumerals)}٪"
+                                } else {
+                                    "ساکاد، تعقیب و دید محیطی"
+                                },
+                                sculptureType = ModuleSculptureType.EYE,
+                                onClick = { onNavigate(Routes.EYE) },
+                            )
+                            PillarSculptureCard(
+                                modifier = Modifier.weight(1f),
+                                indexCode = "04",
+                                title = "تمرین مغز",
+                                subtitle = if (state.mindSessions > 0) {
+                                    "${formatInt(state.mindSessions, settings.persianNumerals)} جلسه • امتیاز ${formatInt(state.avgMindScore, settings.persianNumerals)}"
+                                } else {
+                                    "حافظه، تمرکز و سرعت واکنش"
+                                },
+                                sculptureType = ModuleSculptureType.BRAIN,
+                                onClick = { onNavigate(Routes.MIND) },
+                            )
+                        }
+                    }
+                }
+            }
+
             item {
                 MrsadReveal(reveal, modifier = Modifier.fillMaxWidth(), index = 4) {
                     LazyRow(
@@ -211,58 +229,6 @@ fun HomeScreen(
                         items(moduleEntries) { entry ->
                             ModuleCard(entry = entry, onClick = { onNavigate(entry.route) })
                         }
-                    }
-                }
-            }
-
-            // 2×2 Flagship Pillar Showcase with Bespoke 3D Objects (OBSIDIAN) / Technical Schematics (NOIR)
-            item {
-                Column(verticalArrangement = Arrangement.spacedBy(MrsadTokens.Spacing.xs)) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(MrsadTokens.Spacing.xs)) {
-                        PillarSculptureCard(
-                            modifier = Modifier.weight(1f),
-                            indexCode = "01",
-                            title = "سرعت تایپ",
-                            subtitle = state.bestWpm?.let { "رکورد: ${formatInt(it, settings.persianNumerals)} کلمه/دقیقه" }
-                                ?: "موتور استاندارد WPM",
-                            sculptureType = ModuleSculptureType.TYPING,
-                            onClick = { onNavigate(Routes.TYPE) },
-                        )
-                        PillarSculptureCard(
-                            modifier = Modifier.weight(1f),
-                            indexCode = "02",
-                            title = "تندخوانی و درک",
-                            subtitle = state.bestReadingWpm?.let { "رکورد: ${formatInt(it, settings.persianNumerals)} کلمه/دقیقه" }
-                                ?: "خوانش هدایت‌شده و RSVP",
-                            sculptureType = ModuleSculptureType.READING,
-                            onClick = { onNavigate(Routes.READ) },
-                        )
-                    }
-                    Row(horizontalArrangement = Arrangement.spacedBy(MrsadTokens.Spacing.xs)) {
-                        PillarSculptureCard(
-                            modifier = Modifier.weight(1f),
-                            indexCode = "03",
-                            title = "تمرین چشم",
-                            subtitle = if (state.eyeSessions > 0) {
-                                "${formatInt(state.eyeSessions, settings.persianNumerals)} جلسه • چابکی ${formatInt(state.avgEyeScore, settings.persianNumerals)}٪"
-                            } else {
-                                "ساکاد، تعقیب و دید محیطی"
-                            },
-                            sculptureType = ModuleSculptureType.EYE,
-                            onClick = { onNavigate(Routes.EYE) },
-                        )
-                        PillarSculptureCard(
-                            modifier = Modifier.weight(1f),
-                            indexCode = "04",
-                            title = "تمرین مغز",
-                            subtitle = if (state.mindSessions > 0) {
-                                "${formatInt(state.mindSessions, settings.persianNumerals)} جلسه • امتیاز ${formatInt(state.avgMindScore, settings.persianNumerals)}"
-                            } else {
-                                "حافظه، تمرکز و سرعت واکنش"
-                            },
-                            sculptureType = ModuleSculptureType.BRAIN,
-                            onClick = { onNavigate(Routes.MIND) },
-                        )
                     }
                 }
             }
@@ -582,56 +548,7 @@ private fun HomeHeader(
 }
 
 @Composable
-private fun ObsidianHeroCore(
-    state: HomeState,
-    persianNumerals: Boolean,
-) {
-    val colors = MrsadTheme.colors
-    val type = MrsadTheme.type
-    Box(
-        Modifier
-            .testTag(MrsadTestTags.HOME_CORE)
-            .fillMaxWidth()
-            .height(300.dp),
-    ) {
-        MrsadCore(
-            energy = state.energy,
-            modifier = Modifier.fillMaxSize(),
-            streakDays = state.streakDays,
-            bestWpm = state.bestWpm ?: 0,
-        )
-        Column(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(bottom = 2.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Text(
-                text = "ORRERY PRIME // 3D CORE",
-                style = type.caption.copy(
-                    fontWeight = FontWeight.SemiBold,
-                    letterSpacing = 2.6.sp,
-                ),
-                color = colors.metalLight,
-            )
-            Text(
-                text = if (state.hasAnyData) "هستهٔ سه‌بعدی فعالیت شما" else "هسته در انتظار اولین تمرین",
-                style = type.caption,
-                color = colors.textMuted,
-            )
-            if (state.hasAnyData) {
-                Text(
-                    text = "${formatPercent(state.todayProgress * 100.0, persianNumerals)} از هدف امروز",
-                    style = type.label,
-                    color = colors.textSecondary,
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun NoirHeroTelemetrySlab(
+private fun GlassTelemetryWaveHero(
     state: HomeState,
     persianNumerals: Boolean,
 ) {
@@ -641,6 +558,7 @@ private fun NoirHeroTelemetrySlab(
         modifier = Modifier
             .testTag(MrsadTestTags.HOME_CORE)
             .fillMaxWidth(),
+        elevated = true,
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -648,40 +566,170 @@ private fun NoirHeroTelemetrySlab(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                "01 // SWISS TELEMETRY INDEX",
-                style = type.caption.copy(fontWeight = FontWeight.Bold, letterSpacing = 1.6.sp),
+                text = "وضعیت لحظه‌ای • عملکرد روزانه",
+                style = type.caption.copy(fontWeight = FontWeight.SemiBold, letterSpacing = 0.8.sp),
                 color = colors.textSecondary,
             )
-            Text(
-                if (state.hasAnyData) "ACTIVE" else "STANDBY",
-                style = type.caption.copy(fontWeight = FontWeight.Bold, letterSpacing = 1.4.sp),
-                color = colors.textPrimary,
+            MrsadChip(
+                text = if (state.hasAnyData) "فعال" else "آمادهٔ شروع",
+                tint = colors.textPrimary,
             )
         }
-        MrsadDivider()
+
         Row(
-            modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
-            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp),
+            verticalAlignment = Alignment.Bottom,
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            Column(Modifier.weight(1f)) {
+            Column {
                 Text(
-                    text = "${formatPercent(state.todayProgress * 100.0, persianNumerals)}",
-                    style = type.display,
+                    text = formatPercent(state.todayProgress * 100.0, persianNumerals),
+                    style = type.display.copy(fontWeight = FontWeight.Bold),
                     color = colors.textPrimary,
                 )
                 Text(
-                    text = if (state.hasAnyData) "نرخ تحقق هدف روزانه (۲۵ دقیقه)" else "هسته در انتظار اولین تمرین",
+                    text = "${formatInt(state.todayMinutes, persianNumerals)} از ${formatInt(25, persianNumerals)} دقیقه هدف روزانه",
                     style = type.caption,
                     color = colors.textSecondary,
                 )
             }
-            ModuleSculpture3D(
-                type = ModuleSculptureType.BRAIN,
-                modifier = Modifier.size(84.dp),
+            Text(
+                text = if (state.hasAnyData) "موج فعالیت هفتگی" else "در انتظار اولین تمرین",
+                style = type.caption,
+                color = colors.textMuted,
             )
         }
-        MrsadProgressBar(progress = state.todayProgress, height = 8.dp)
+
+        MrsadProgressBar(progress = state.todayProgress, height = 6.dp)
+
+        // Luminous Monochrome Activity Wave
+        GlassActivityWave(
+            energy = state.energy,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(64.dp),
+        )
+
+        MrsadDivider()
+
+        Row(horizontalArrangement = Arrangement.spacedBy(MrsadTokens.Spacing.xs)) {
+            StatCell(
+                modifier = Modifier.weight(1f),
+                value = formatInt(state.todayMinutes, persianNumerals),
+                label = "دقیقه امروز",
+                icon = MrsadIcons.Focus,
+            )
+            StatCell(
+                modifier = Modifier.weight(1f),
+                value = formatInt(state.todaySessions, persianNumerals),
+                label = "تمرین امروز",
+                icon = MrsadIcons.Trophy,
+            )
+            StatCell(
+                modifier = Modifier.weight(1f),
+                value = formatInt(state.streakDays, persianNumerals),
+                label = "روز پیوسته",
+                icon = MrsadIcons.Flame,
+            )
+        }
+    }
+}
+
+@Composable
+private fun GlassActivityWave(
+    energy: Float,
+    modifier: Modifier = Modifier,
+) {
+    val colors = MrsadTheme.colors
+    val motion = MrsadTheme.motion
+    val wavePath = remember { Path() }
+    val fillPath = remember { Path() }
+
+    val animate = !MrsadTestHooks.isDeterministic &&
+        motion.animationsEnabled &&
+        motion.quality != GraphicsQuality.PERFORMANCE
+
+    val phase = if (animate) {
+        val transition = rememberInfiniteTransition(label = "glass_wave")
+        val p by transition.animateFloat(
+            initialValue = 0f,
+            targetValue = (2.0 * PI).toFloat(),
+            animationSpec = infiniteRepeatable(
+                animation = tween(durationMillis = 5600, easing = LinearEasing),
+                repeatMode = RepeatMode.Restart,
+            ),
+            label = "wave_phase",
+        )
+        p
+    } else {
+        0.95f
+    }
+
+    Canvas(modifier = modifier) {
+        if (size.width <= 4f || size.height <= 4f) return@Canvas
+        val w = size.width
+        val h = size.height
+        val midY = h * 0.56f
+        val amp = h * (0.20f + 0.14f * energy.coerceIn(0f, 1f))
+        val steps = 28
+
+        wavePath.reset()
+        fillPath.reset()
+
+        for (i in 0..steps) {
+            val t = i.toFloat() / steps
+            val x = t * w
+            val y = midY - sin(t * PI.toFloat() * 2.4f + phase) * amp *
+                (0.55f + 0.45f * sin(t * PI.toFloat()))
+            if (i == 0) {
+                wavePath.moveTo(x, y)
+                fillPath.moveTo(x, h)
+                fillPath.lineTo(x, y)
+            } else {
+                wavePath.lineTo(x, y)
+                fillPath.lineTo(x, y)
+            }
+        }
+        fillPath.lineTo(w, h)
+        fillPath.close()
+
+        // Subtle frosted monochrome glow under the wave (strictly 2 stops)
+        drawPath(
+            path = fillPath,
+            brush = Brush.verticalGradient(
+                colors = listOf(
+                    Color.White.copy(alpha = 0.18f),
+                    Color.Transparent,
+                ),
+            ),
+        )
+
+        // Crisp luminous white wave curve
+        drawPath(
+            path = wavePath,
+            color = colors.textPrimary.copy(alpha = 0.88f),
+            style = Stroke(width = 1.8.dp.toPx(), cap = StrokeCap.Round),
+        )
+
+        // 7 subtle daily pulse nodes along the wave
+        for (d in 0..6) {
+            val t = (d + 0.5f) / 7f
+            val x = t * w
+            val y = midY - sin(t * PI.toFloat() * 2.4f + phase) * amp *
+                (0.55f + 0.45f * sin(t * PI.toFloat()))
+            drawCircle(
+                color = Color.White.copy(alpha = 0.25f),
+                radius = 4.5.dp.toPx(),
+                center = Offset(x, y),
+            )
+            drawCircle(
+                color = colors.textPrimary,
+                radius = 2.2.dp.toPx(),
+                center = Offset(x, y),
+            )
+        }
     }
 }
 

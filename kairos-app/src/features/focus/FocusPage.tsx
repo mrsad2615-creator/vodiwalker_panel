@@ -24,7 +24,6 @@ import { formatJalaaliShort, getTodayKey } from '@/lib/date';
 import { formatDurationShort } from '@/lib/format';
 import { ambientAudio, type AmbientSoundType } from '@/lib/ambientAudio';
 import { useApp } from '@/context/AppContext';
-import { LuxuryCard } from '@/components/ui/LuxuryCard';
 import { Numeric } from '@/components/ui/Numeric';
 import { NumericInput } from '@/components/ui/NumericInput';
 import { CinematicFocusTimer } from '@/components/focus/CinematicFocusTimer';
@@ -288,161 +287,165 @@ export function FocusPage() {
         </div>
       )}
 
-      {/* Header + Daily Focus Goal Bar */}
-      <div className="flex items-center justify-between gap-2">
-        <div>
-          <h1 className="text-lg font-bold text-[#ECECEF]">محیط تمرکز</h1>
-          <p className="mt-0.5 text-[11px] text-[#9C9CA6]">
-            تمرکز امروز:{' '}
-            <Numeric
-              value={formatDurationShort(todayTotalMin)}
-              className="font-semibold text-[var(--accent-fg)]"
-            />{' '}
-            از{' '}
-            <Numeric
-              value={formatDurationShort(dailyGoalMin)}
-              className="text-[#ECECEF]"
-            />{' '}
-            •{' '}
-            <Numeric value={focus.completedCycles} className="text-[#ECECEF]" /> چرخه
-          </p>
+      {/* ── THRESHOLD ────────────────────────────────────────────────────────
+          Focus opens like a room you step into, not a dashboard: a Latin
+          eyebrow, the section title, and a single hairline that carries today's
+          real minutes. The stage below owns the rest of the screen. */}
+      <header className="-mx-4 px-4 pb-3 pt-1">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <span className="font-display-caps text-[8.5px] font-semibold text-[var(--accent-fg)]">
+              FOCUS
+            </span>
+            <h1 className="mt-1 text-[19px] font-bold tracking-tight text-[var(--text)]">
+              محیط تمرکز
+            </h1>
+            <p className="mt-1 flex flex-wrap items-center gap-1 text-[10.5px] text-[var(--text-3)]">
+              <Numeric
+                value={formatDurationShort(todayTotalMin)}
+                className="font-semibold text-[var(--text)]"
+              />
+              <span>از</span>
+              <Numeric value={formatDurationShort(dailyGoalMin)} className="text-[var(--text-2)]" />
+              <span className="opacity-50">·</span>
+              <Numeric value={focus.completedCycles} variant="geo" className="text-[var(--text-2)]" />
+              <span>چرخه</span>
+            </p>
+          </div>
+
+          <div className="flex shrink-0 items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => setCinemaMode(true)}
+              aria-label="ورود به حالت سینمایی تمام‌صفحه"
+              title="حالت سینمایی تمام‌صفحه"
+              className="grid h-8 w-8 place-items-center rounded-full border border-[var(--accent-fg)]/35 text-[var(--accent-fg)] transition hover:bg-[color-mix(in_srgb,var(--accent)_22%,transparent)]"
+            >
+              <Maximize2 className="h-3.5 w-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowCustomConfig((v) => !v)}
+              aria-label="تنظیم زمان‌های تمرکز"
+              aria-pressed={showCustomConfig}
+              className={`grid h-8 w-8 place-items-center rounded-full border transition ${
+                showCustomConfig
+                  ? 'border-[var(--accent)] text-[var(--accent-fg)]'
+                  : 'border-[var(--border)] text-[var(--text-2)] hover:border-[var(--border-strong)]'
+              }`}
+            >
+              <Sliders className="h-3.5 w-3.5" />
+            </button>
+          </div>
         </div>
 
-        <div className="flex items-center gap-1.5">
-          <button
-            type="button"
-            onClick={() => setCinemaMode(true)}
-            aria-label="ورود به حالت سینمایی تمام‌صفحه"
-            title="حالت سینمایی تمام‌صفحه"
-            className="flex h-9 items-center gap-1.5 rounded-xl border border-[var(--accent)]/40 bg-[#1C1C21]/80 px-2.5 text-[11px] font-semibold text-[var(--accent-fg)] transition hover:bg-[var(--accent)] hover:text-[var(--accent-on)]"
-          >
-            <Maximize2 className="h-3.5 w-3.5" />
-            <span>سینمایی</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setShowCustomConfig((v) => !v)}
-            aria-label="تنظیم زمان‌های تمرکز"
-            className={`flex h-9 w-9 items-center justify-center rounded-xl border transition ${
-              showCustomConfig
-                ? 'border-[var(--accent)] bg-[#1C1C21] text-[var(--accent-fg)]'
-                : 'border-[var(--accent-fg)]/12 bg-[#16161A] text-[#9C9CA6]'
-            }`}
-          >
-            <Sliders className="h-4 w-4" />
-          </button>
-        </div>
-      </div>
-
-      {/* Subtle Daily Focus Goal Progress Rail */}
-      <div className="flex items-center gap-2.5 px-0.5">
-        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[#16161A]">
-          <div
-            className="h-full rounded-full bg-[var(--accent)] transition-all duration-300"
-            style={{ width: `${dailyGoalPercent}%` }}
+        <div className="mt-3 flex items-center gap-2">
+          <span className="font-display-caps text-[8px] font-semibold text-[var(--text-3)]">TODAY</span>
+          <span className="h-[2px] flex-1 overflow-hidden rounded-full bg-white/8">
+            <span
+              className="block h-full rounded-full transition-[width] duration-500"
+              style={{ width: `${Math.max(dailyGoalPercent, 1.5)}%`, background: 'var(--accent)' }}
+            />
+          </span>
+          <Numeric
+            value={dailyGoalPercent}
+            suffix="%"
+            className="text-[10px] font-semibold text-[var(--accent-fg)]"
           />
         </div>
-        <Numeric
-          value={dailyGoalPercent}
-          suffix="%"
-          className="text-[10.5px] font-semibold text-[var(--accent-fg)]"
-        />
+      </header>
+
+      {/* ── MODE LINE ────────────────────────────────────────────────────────
+          Two modes as editorial tabs on a rule — no segmented pill. */}
+      <div className="flex items-center gap-5 border-b border-[var(--border)]">
+        {(
+          [
+            { id: 'pomodoro', label: 'پومودورو', hint: `${focus.focusMinutes}/${focus.shortBreakMinutes}` },
+            { id: 'free', label: 'تایمر آزاد', hint: 'بی‌پایان' },
+          ] as const
+        ).map((mode) => {
+          const active = focus.mode === mode.id;
+          return (
+            <button
+              key={mode.id}
+              type="button"
+              onClick={() => setFocusMode(mode.id)}
+              aria-pressed={active}
+              className="relative flex items-baseline gap-1.5 pb-2 pt-0.5"
+            >
+              <span
+                className={`text-[12px] font-semibold transition-colors ${
+                  active ? 'text-[var(--text)]' : 'text-[var(--text-3)] hover:text-[var(--text-2)]'
+                }`}
+              >
+                {mode.label}
+              </span>
+              <span className="num-geo text-[8.5px] text-[var(--text-3)]">{mode.hint}</span>
+              {active && (
+                <span
+                  aria-hidden="true"
+                  className="absolute inset-x-0 -bottom-px h-[2px] rounded-full"
+                  style={{ background: 'var(--accent)' }}
+                />
+              )}
+            </button>
+          );
+        })}
       </div>
 
-      {/* Mode Switcher (Pomodoro vs Free Deep Timer) */}
-      <div className="grid grid-cols-2 gap-1 rounded-2xl border border-[var(--accent-fg)]/12 bg-[#16161A] p-1">
-        <button
-          type="button"
-          onClick={() => setFocusMode('pomodoro')}
-          className={`rounded-xl py-2 text-xs font-semibold transition ${
-            focus.mode === 'pomodoro'
-              ? 'bg-[#1C1C21] text-[#ECECEF]'
-              : 'text-[#9C9CA6] hover:text-[#ECECEF]'
-          }`}
-        >
-          پومودورو
-        </button>
-        <button
-          type="button"
-          onClick={() => setFocusMode('free')}
-          className={`rounded-xl py-2 text-xs font-semibold transition ${
-            focus.mode === 'free'
-              ? 'bg-[#1C1C21] text-[#ECECEF]'
-              : 'text-[#9C9CA6] hover:text-[#ECECEF]'
-          }`}
-        >
-          تایمر آزاد
-        </button>
-      </div>
-
-      {/* Optional Custom Duration Drawer */}
+      {/* ── CUSTOM DURATIONS — a quiet strip, never a card ─────────────────── */}
       {showCustomConfig && focus.mode === 'pomodoro' && (
-        <LuxuryCard variant="subtle" className="space-y-3 p-4">
-          <div className="grid grid-cols-3 gap-2.5">
-            <div>
-              <label className="mb-1 block text-[10.5px] text-[#9C9CA6]">تمرکز (دقیقه)</label>
+        <div className="grid grid-cols-3 gap-2 border-b border-[var(--border)] pb-3">
+          {[
+            { label: 'تمرکز', value: focus.focusMinutes, min: 1, max: 180, fallback: 25, apply: (v: number) => setFocusDurations(v, focus.shortBreakMinutes, focus.longBreakMinutes), persist: (v: number) => updateSettings({ pomodoroFocusMin: v }) },
+            { label: 'استراحت کوتاه', value: focus.shortBreakMinutes, min: 1, max: 45, fallback: 5, apply: (v: number) => setFocusDurations(focus.focusMinutes, v, focus.longBreakMinutes), persist: (v: number) => updateSettings({ pomodoroShortBreakMin: v }) },
+            { label: 'استراحت بلند', value: focus.longBreakMinutes, min: 5, max: 60, fallback: 15, apply: (v: number) => setFocusDurations(focus.focusMinutes, focus.shortBreakMinutes, v), persist: (v: number) => updateSettings({ pomodoroLongBreakMin: v }) },
+          ].map((field) => (
+            <div key={field.label}>
+              <label className="mb-1 block text-[9.5px] text-[var(--text-3)]">{field.label}</label>
               <NumericInput
-                min={1}
-                max={180}
-                fallback={25}
-                value={focus.focusMinutes}
+                min={field.min}
+                max={field.max}
+                fallback={field.fallback}
+                value={field.value}
                 onChange={(v) => {
-                  setFocusDurations(v, focus.shortBreakMinutes, focus.longBreakMinutes);
-                  void updateSettings({ pomodoroFocusMin: v });
+                  field.apply(v);
+                  void field.persist(v);
                 }}
                 className="luxury-input num-geo py-1.5 text-center text-xs"
               />
             </div>
-            <div>
-              <label className="mb-1 block text-[10.5px] text-[#9C9CA6]">استراحت کوتاه</label>
-              <NumericInput
-                min={1}
-                max={45}
-                fallback={5}
-                value={focus.shortBreakMinutes}
-                onChange={(v) => {
-                  setFocusDurations(focus.focusMinutes, v, focus.longBreakMinutes);
-                  void updateSettings({ pomodoroShortBreakMin: v });
-                }}
-                className="luxury-input num-geo py-1.5 text-center text-xs"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-[10.5px] text-[#9C9CA6]">استراحت بلند</label>
-              <NumericInput
-                min={5}
-                max={60}
-                fallback={15}
-                value={focus.longBreakMinutes}
-                onChange={(v) => {
-                  setFocusDurations(focus.focusMinutes, focus.shortBreakMinutes, v);
-                  void updateSettings({ pomodoroLongBreakMin: v });
-                }}
-                className="luxury-input num-geo py-1.5 text-center text-xs"
-              />
-            </div>
-          </div>
-        </LuxuryCard>
+          ))}
+        </div>
       )}
 
-      {/* CINEMATIC OBSIDIAN CHRONOMETER STAGE CARD */}
-      <LuxuryCard
-        variant="hero"
-        className="relative flex flex-col items-center overflow-hidden px-5 py-6 text-center"
+      {/* ── THE STAGE ────────────────────────────────────────────────────────
+          Full-bleed, no card: one horizon of light behind the Chrono Core, a
+          ghost phase word, and the transport resting under the dial. */}
+      <section
+        aria-label="صحنهٔ تمرکز"
+        className="relative -mx-4 overflow-hidden px-4 pb-5 pt-1"
+        style={{
+          background:
+            'radial-gradient(78% 58% at 50% 40%, color-mix(in srgb, var(--accent) 11%, transparent) 0%, transparent 72%)',
+        }}
       >
-        {/* Subtle Architectural Top/Bottom Stage Hairlines */}
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 top-[16%] select-none text-center font-display text-[56px] font-semibold leading-none tracking-[0.08em] text-white/[0.028]"
+        >
+          {focus.phase === 'focus' ? 'FOCUS' : 'BREAK'}
+        </span>
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute top-0 inset-x-10 h-px"
+          className="pointer-events-none absolute inset-x-7 top-[47%] h-px"
           style={{
             background:
-              'linear-gradient(90deg, transparent, var(--border-strong), transparent)',
+              'linear-gradient(90deg, transparent, color-mix(in srgb, var(--accent) 42%, transparent), transparent)',
           }}
         />
 
-        {/* Sculptural Swiss Chronometer Dial */}
-        <div className="my-2">
+        <div className="relative flex justify-center pt-1">
           <CinematicFocusTimer
             mode={focus.mode}
             phase={focus.phase}
@@ -457,20 +460,20 @@ export function FocusPage() {
           />
         </div>
 
-        {/* Fine-Tune (-5m / Presets / +5m) — Hidden gracefully while running for stillness */}
+        {/* Fine-tune: presets as text on the rule, invisible while running */}
         {focus.mode === 'pomodoro' && !focus.isRunning && focus.phase === 'focus' && (
-          <div className="mt-3 mb-4 w-full space-y-2.5">
-            <div className="flex items-center justify-center gap-1.5">
-              <button
-                type="button"
-                onClick={() => adjustFocusMinutes(-5)}
-                aria-label="کاهش ۵ دقیقه"
-                className="flex h-8 w-8 items-center justify-center rounded-xl border border-[var(--accent-fg)]/14 bg-[#0A0A0C]/70 text-[#9C9CA6] transition hover:border-[var(--accent-fg)]/40 hover:text-[#ECECEF]"
-              >
-                <Minus className="h-3.5 w-3.5" />
-              </button>
-
-              {PRESET_DURATIONS.map((mins) => (
+          <div className="relative mt-4 flex items-center justify-center gap-1">
+            <button
+              type="button"
+              onClick={() => adjustFocusMinutes(-5)}
+              aria-label="کاهش ۵ دقیقه"
+              className="grid h-7 w-7 place-items-center rounded-full text-[var(--text-3)] transition hover:text-[var(--text)]"
+            >
+              <Minus className="h-3 w-3" />
+            </button>
+            {PRESET_DURATIONS.map((mins) => {
+              const active = focus.focusMinutes === mins;
+              return (
                 <button
                   key={mins}
                   type="button"
@@ -478,52 +481,52 @@ export function FocusPage() {
                     setFocusDurations(mins, focus.shortBreakMinutes, focus.longBreakMinutes);
                     void updateSettings({ pomodoroFocusMin: mins });
                   }}
-                  className={`num-geo rounded-xl border px-2.5 py-1.5 text-[11.5px] font-semibold transition ${
-                    focus.focusMinutes === mins
-                      ? 'border-[var(--accent-fg)]/55 bg-[#1C1C21] text-[#ECECEF]'
-                      : 'border-[var(--accent-fg)]/10 bg-[#0A0A0C]/60 text-[#9C9CA6] hover:text-[#ECECEF]'
+                  aria-pressed={active}
+                  className={`num-geo rounded-full px-2.5 py-1 text-[11px] font-semibold transition ${
+                    active
+                      ? 'bg-[color-mix(in_srgb,var(--accent)_26%,transparent)] text-[var(--text)]'
+                      : 'text-[var(--text-3)] hover:text-[var(--text-2)]'
                   }`}
                 >
-                  {mins}m
+                  {mins}
                 </button>
-              ))}
-
-              <button
-                type="button"
-                onClick={() => adjustFocusMinutes(5)}
-                aria-label="افزایش ۵ دقیقه"
-                className="flex h-8 w-8 items-center justify-center rounded-xl border border-[var(--accent-fg)]/14 bg-[#0A0A0C]/70 text-[#9C9CA6] transition hover:border-[var(--accent-fg)]/40 hover:text-[#ECECEF]"
-              >
-                <Plus className="h-3.5 w-3.5" />
-              </button>
-            </div>
+              );
+            })}
+            <button
+              type="button"
+              onClick={() => adjustFocusMinutes(5)}
+              aria-label="افزایش ۵ دقیقه"
+              className="grid h-7 w-7 place-items-center rounded-full text-[var(--text-3)] transition hover:text-[var(--text)]"
+            >
+              <Plus className="h-3 w-3" />
+            </button>
           </div>
         )}
 
-        {/* Primary Luxury Control Bar */}
-        <div className="mt-2 flex w-full items-center justify-center gap-3">
+        {/* Transport */}
+        <div className="relative mt-4 flex items-center justify-center gap-4">
           <button
             type="button"
             onClick={resetFocus}
             aria-label="بازنشانی تایمر"
-            className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[var(--accent-fg)]/14 bg-[#0A0A0C]/75 text-[#9C9CA6] transition hover:border-[var(--accent-fg)]/35 hover:text-[#ECECEF]"
+            className="grid h-11 w-11 place-items-center rounded-full border border-[var(--border)] text-[var(--text-2)] transition hover:border-[var(--border-strong)] hover:text-[var(--text)]"
           >
-            <RotateCcw className="h-4.5 w-4.5" />
+            <RotateCcw className="h-4 w-4" />
           </button>
 
           <button
             type="button"
             onClick={focus.isRunning ? pauseFocus : startOrResumeFocus}
-            className="btn-royal flex h-13 min-w-[162px] items-center justify-center gap-2 rounded-2xl px-6 text-sm font-bold"
+            className="btn-royal flex h-13 items-center justify-center gap-2 rounded-full px-7 text-[13px] font-bold"
           >
             {focus.isRunning ? (
               <>
-                <Pause className="h-4.5 w-4.5" />
+                <Pause className="h-4 w-4" />
                 <span>توقف موقت</span>
               </>
             ) : (
               <>
-                <Play className="h-4.5 w-4.5" />
+                <Play className="h-4 w-4" />
                 <span>{focus.elapsedSeconds > 0 ? 'ادامه تمرکز' : 'شروع تمرکز'}</span>
               </>
             )}
@@ -535,9 +538,9 @@ export function FocusPage() {
               onClick={skipPomodoroPhase}
               aria-label="مرحله بعد"
               title="انتقال به مرحله بعد"
-              className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[var(--accent-fg)]/14 bg-[#0A0A0C]/75 text-[#9C9CA6] transition hover:border-[var(--accent-fg)]/35 hover:text-[#ECECEF]"
+              className="grid h-11 w-11 place-items-center rounded-full border border-[var(--border)] text-[var(--text-2)] transition hover:border-[var(--border-strong)] hover:text-[var(--text)]"
             >
-              <SkipForward className="h-4.5 w-4.5" />
+              <SkipForward className="h-4 w-4" />
             </button>
           ) : (
             <button
@@ -545,41 +548,39 @@ export function FocusPage() {
               onClick={() => void finishAndSaveFocus()}
               aria-label="پایان و ثبت جلسه"
               title="پایان و ثبت جلسه"
-              className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[var(--accent)]/45 bg-[#1C1C21] text-[var(--accent-fg)] transition hover:bg-[var(--accent)] hover:text-[var(--accent-on)]"
+              className="grid h-11 w-11 place-items-center rounded-full border border-[var(--accent)]/50 text-[var(--accent-fg)] transition hover:bg-[color-mix(in_srgb,var(--accent)_24%,transparent)]"
             >
-              <Check className="h-4.5 w-4.5" />
+              <Check className="h-4 w-4" />
             </button>
           )}
         </div>
 
-        {/* Manual Save Early Button when >= 60s focused */}
         {focus.elapsedSeconds >= 60 && focus.phase === 'focus' && (
           <button
             type="button"
             onClick={() => void finishAndSaveFocus()}
-            className="mt-4 text-xs font-medium text-[var(--accent-fg)] underline-offset-4 hover:underline"
+            className="relative mx-auto mt-3 block text-[10.5px] font-medium text-[var(--accent-fg)] underline-offset-4 hover:underline"
           >
-            پایان و ثبت{' '}
-            <Numeric value={Math.max(1, Math.round(focus.elapsedSeconds / 60))} /> دقیقه تمرکز
+            پایان و ثبت <Numeric value={Math.max(1, Math.round(focus.elapsedSeconds / 60))} /> دقیقه
           </button>
         )}
 
-        {/* Offline Ambient Soundscape Bar */}
-        <div className="mt-5 w-full border-t border-[var(--accent-fg)]/10 pt-4">
-          <div className="mb-2 flex items-center justify-between text-[10.5px] text-[#9C9CA6]">
-            <span className="inline-flex items-center gap-1.5 font-medium text-[#ECECEF]">
-              <Volume2 className="h-3.5 w-3.5 text-[var(--accent)]" />
+        {/* Sound rail — real offline layers, as an instrument strip */}
+        <div className="relative mt-5 border-t border-[var(--border)] pt-3">
+          <div className="mb-2 flex items-center justify-between text-[10px] text-[var(--text-3)]">
+            <span className="inline-flex items-center gap-1.5 font-medium text-[var(--text-2)]">
+              <Volume2 className="h-3 w-3 text-[var(--accent-fg)]" />
               فضای صوتی تمرکز (آفلاین)
             </span>
-            <span className="text-[10px] text-[#6B6B75]">
+            <span>
               {soundType === 'off'
                 ? 'خاموش'
                 : focus.isRunning
-                ? 'در حال پخش آرام'
+                ? 'در حال پخش'
                 : 'آماده هنگام شروع'}
             </span>
           </div>
-          <div className="grid grid-cols-4 gap-1.5">
+          <div className="grid grid-cols-4 gap-1">
             {SOUNDSCAPES.map((sc) => {
               const Icon = sc.icon;
               const active = soundType === sc.id;
@@ -588,55 +589,38 @@ export function FocusPage() {
                   key={sc.id}
                   type="button"
                   onClick={() => handleSelectSound(sc.id)}
-                  className={`flex flex-col items-center gap-1 rounded-xl border py-2 text-[10px] font-medium transition ${
+                  aria-pressed={active}
+                  className={`flex flex-col items-center gap-1 rounded-[10px] border py-2 text-[9.5px] font-medium transition ${
                     active
-                      ? 'border-[var(--accent-fg)]/45 bg-[#1C1C21] text-[#ECECEF]'
-                      : 'border-[var(--accent-fg)]/10 bg-[#0A0A0C]/60 text-[#9C9CA6] hover:text-[#ECECEF]'
+                      ? 'border-[var(--accent)]/60 text-[var(--text)]'
+                      : 'border-transparent text-[var(--text-3)] hover:text-[var(--text-2)]'
                   }`}
+                  style={{
+                    background: active ? 'color-mix(in srgb, var(--accent) 12%, transparent)' : 'transparent',
+                  }}
                 >
-                  <Icon className="h-3.5 w-3.5 text-[var(--accent-fg)]" />
+                  <Icon className="h-3.5 w-3.5" />
                   <span>{sc.label}</span>
                 </button>
               );
             })}
           </div>
         </div>
-      </LuxuryCard>
+      </section>
 
-      {/* LINKED TASK SELECTOR */}
-      <LuxuryCard className="space-y-2.5 p-4">
-        <div className="flex items-center justify-between">
-          <label htmlFor="focus-task-select" className="text-xs font-bold text-[#ECECEF]">
-            وظیفه مرتبط با این جلسه
-          </label>
-          {linkedTask && (
-            <button
-              type="button"
-              onClick={async () => {
-                await setTaskStatus(linkedTask.id, 'completed');
-                setFocusLinkedTask(null);
-                pushToast({
-                  title: 'وظیفه تکمیل شد',
-                  description: linkedTask.title,
-                  tone: 'success',
-                });
-              }}
-              className="inline-flex items-center gap-1 text-[11px] font-medium text-[var(--accent-fg)] hover:text-[#ECECEF]"
-            >
-              <CheckCircle2 className="h-3.5 w-3.5" />
-              تکمیل این وظیفه
-            </button>
-          )}
-        </div>
-
+      {/* ── LINKED TASK — one line on the rule ─────────────────────────────── */}
+      <div className="flex items-center gap-3 border-y border-[var(--border)] py-2.5">
+        <label htmlFor="focus-task-select" className="shrink-0 text-[10px] text-[var(--text-3)]">
+          وظیفهٔ این جلسه
+        </label>
         <select
           id="focus-task-select"
           value={focus.linkedTaskId ?? ''}
           onChange={(e) => setFocusLinkedTask(e.target.value || null)}
-          className="luxury-input py-2.5 text-xs"
+          className="min-w-0 flex-1 bg-transparent text-[11.5px] text-[var(--text)] outline-none"
         >
           <option value="" className="bg-[#16161A]">
-            تمرکز آزاد (بدون اتصال به وظیفه خاص)
+            تمرکز آزاد
           </option>
           {availableTasks.map((t) => (
             <option key={t.id} value={t.id} className="bg-[#16161A]">
@@ -644,61 +628,78 @@ export function FocusPage() {
             </option>
           ))}
         </select>
-      </LuxuryCard>
+        {linkedTask && (
+          <button
+            type="button"
+            onClick={async () => {
+              await setTaskStatus(linkedTask.id, 'completed');
+              setFocusLinkedTask(null);
+              pushToast({
+                title: 'وظیفه تکمیل شد',
+                description: linkedTask.title,
+                tone: 'success',
+              });
+            }}
+            aria-label="تکمیل وظیفهٔ مرتبط"
+            className="grid h-6 w-6 shrink-0 place-items-center rounded-full text-[var(--accent-fg)] transition hover:bg-[color-mix(in_srgb,var(--accent)_22%,transparent)]"
+          >
+            <CheckCircle2 className="h-3.5 w-3.5" />
+          </button>
+        )}
+      </div>
 
-      {/* RECENT FOCUS SESSIONS LOG */}
-      <section className="space-y-2.5">
-        <div className="flex items-center justify-between px-0.5">
-          <h2 className="text-sm font-bold text-[#ECECEF]">گزارش جلسات تمرکز</h2>
+      {/* ── SESSION LEDGER ─────────────────────────────────────────────────── */}
+      <section>
+        <div className="flex items-baseline justify-between">
+          <h2 className="text-[13px] font-bold text-[var(--text)]">گزارش جلسات تمرکز</h2>
           <Numeric
             value={sessions.length}
             variant="geo"
-            className="rounded-lg bg-[#16161A] px-2 py-0.5 text-[11px] text-[#9C9CA6]"
+            className="text-[10px] text-[var(--text-3)]"
           />
         </div>
 
         {recentSessions.length === 0 ? (
-          <LuxuryCard variant="subtle" className="py-6 text-center text-xs text-[#6B6B75]">
-            هنوز جلسه تمرکزی ثبت نشده است. اولین جلسه خود را شروع کنید.
-          </LuxuryCard>
+          <p className="mt-2 border-y border-[var(--border)] py-4 text-[10.5px] text-[var(--text-3)]">
+            هنوز جلسه‌ای ثبت نشده است؛ اولین تمرکز امروز را شروع کن.
+          </p>
         ) : (
-          <div className="space-y-2">
+          <ul className="mt-1.5 divide-y divide-[var(--border)] border-y border-[var(--border)]">
             {recentSessions.map((s) => (
-              <LuxuryCard
-                key={s.id}
-                className="flex items-center justify-between gap-3 px-3.5 py-3"
-              >
-                <div className="min-w-0">
-                  <p className="truncate text-xs font-medium text-[#ECECEF]">
+              <li key={s.id} className="flex items-center gap-3 py-2.5">
+                <span
+                  aria-hidden="true"
+                  className="h-1.5 w-1.5 shrink-0 rounded-full"
+                  style={{ background: 'color-mix(in srgb, var(--accent-fg) 55%, transparent)' }}
+                />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[11.5px] text-[var(--text)]">
                     {s.taskTitleSnapshot ||
-                      (s.mode === 'pomodoro' ? 'جلسه پومودورو' : 'تمرکز آزاد')}
+                      (s.mode === 'pomodoro' ? 'جلسهٔ پومودورو' : 'تمرکز آزاد')}
                   </p>
-                  <p className="mt-0.5 text-[10.5px] text-[#9C9CA6]">
-                    {formatJalaaliShort(s.dateKey)} •{' '}
-                    {s.mode === 'pomodoro' ? 'پومودورو' : 'تایمر آزاد'}
+                  <p className="mt-0.5 text-[9.5px] text-[var(--text-3)]">
+                    {formatJalaaliShort(s.dateKey)} · {s.mode === 'pomodoro' ? 'پومودورو' : 'آزاد'}
                   </p>
                 </div>
-
-                <div className="flex shrink-0 items-center gap-2">
-                  <Numeric
-                    value={formatDurationShort(s.durationMinutes)}
-                    variant="display"
-                    className="text-xl font-bold text-[var(--accent-fg)]"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => deleteFocusSession(s.id)}
-                    aria-label="حذف جلسه"
-                    className="rounded-lg p-1.5 text-[#6B6B75] hover:bg-[#E5484D]/15 hover:text-[#EF9095]"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              </LuxuryCard>
+                <Numeric
+                  value={formatDurationShort(s.durationMinutes)}
+                  variant="display"
+                  className="shrink-0 text-[15px] font-semibold text-[var(--text)]"
+                />
+                <button
+                  type="button"
+                  onClick={() => deleteFocusSession(s.id)}
+                  aria-label="حذف جلسه"
+                  className="shrink-0 rounded-md p-1 text-[var(--text-3)] transition hover:text-[#EF9095]"
+                >
+                  <Trash2 className="h-3 w-3" />
+                </button>
+              </li>
             ))}
-          </div>
+          </ul>
         )}
       </section>
+
     </div>
   );
 }

@@ -9,7 +9,9 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Build;
+import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
 
 import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
@@ -53,6 +55,16 @@ public class ChronoService extends Service {
     private static final int NOTIFICATION_ID = 4417;
 
     private static boolean sRunning = false;
+
+    /** Refreshes the home-screen widget once a minute while the session runs. */
+    private final Handler widgetHandler = new Handler(Looper.getMainLooper());
+    private final Runnable widgetTick = new Runnable() {
+        @Override
+        public void run() {
+            ChronoWidget.refresh(ChronoService.this);
+            if (sRunning) widgetHandler.postDelayed(this, 60_000L);
+        }
+    };
 
     @Nullable
     @Override
@@ -149,6 +161,17 @@ public class ChronoService extends Service {
         } catch (SecurityException ignored) {
             // POST_NOTIFICATIONS not granted (Android 13+): the session still runs.
         }
+
+        // The shade counts down by itself; the widget cannot, so it gets a tick.
+        ChronoWidget.refresh(this);
+        widgetHandler.removeCallbacks(widgetTick);
+        if (sRunning) widgetHandler.postDelayed(widgetTick, 60_000L);
+    }
+
+    @Override
+    public void onDestroy() {
+        widgetHandler.removeCallbacks(widgetTick);
+        super.onDestroy();
     }
 
     private Notification buildNotification(

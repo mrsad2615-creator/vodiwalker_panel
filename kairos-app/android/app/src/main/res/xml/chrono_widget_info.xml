@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- updatePeriodMillis is 0 on purpose: the foreground service refreshes the
+     widget once a minute while a session runs, and the system would only allow
+     half-hourly updates anyway — useless for a countdown. -->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:initialLayout="@layout/chrono_widget"
+    android:minWidth="180dp"
+    android:minHeight="90dp"
+    android:resizeMode="horizontal|vertical"
+    android:updatePeriodMillis="0"
+    android:widgetCategory="home_screen" />

@@ -198,6 +198,8 @@ export interface UserSettings {
   countdownMin: number;
   /** Chrono Core: walk into the next segment without a tap. */
   autoAdvance: boolean;
+  /** Chrono Core: silence interruptions while a session runs (Android DND). */
+  dndInFocus: boolean;
   notificationsEnabled: boolean;
   soundEnabled: boolean;
   hapticsEnabled: boolean;

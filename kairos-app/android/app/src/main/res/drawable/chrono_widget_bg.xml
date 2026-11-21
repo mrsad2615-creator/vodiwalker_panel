@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Widget surface: the same calm plate the app uses, no gradients, no glow. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="#F2101018" />
+    <corners android:radius="22dp" />
+    <stroke android:width="1dp" android:color="#33FFFFFF" />
+</shape>

@@ -79,6 +79,20 @@ describe('Chrono Core — the focus screen', () => {
     });
   });
 
+  it('keeps the no-interruption offer native-only and opt-in', async () => {
+    await openFocus();
+    // The web build must not pretend it can silence a phone.
+    expect(
+      screen.queryByRole('switch', { name: 'بدون مزاحمت در جلسه' })
+    ).toBeNull();
+
+    await waitFor(async () => {
+      const settings = await db.settings.get('default');
+      expect(settings?.dndInFocus).toBe(false);
+      expect(settings?.autoAdvance).toBe(false);
+    });
+  });
+
   it('toggles auto-advance as a real switch and stores the choice', async () => {
     await openFocus();
 

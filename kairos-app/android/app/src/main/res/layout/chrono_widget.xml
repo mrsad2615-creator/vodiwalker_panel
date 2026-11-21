@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/chrono_widget_bg"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <TextView
+        android:id="@+id/widget_brand"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:letterSpacing="0.14"
+        android:text="KAIROS"
+        android:textColor="#99FFFFFF"
+        android:textSize="9sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/widget_time"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:fontFamily="sans-serif-light"
+        android:text="۲۵:۰۰"
+        android:textColor="#FFFFFFFF"
+        android:textSize="32sp" />
+
+    <TextView
+        android:id="@+id/widget_meta"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:text="آمادهٔ شروع"
+        android:textColor="#B3FFFFFF"
+        android:textSize="11sp" />
+</LinearLayout>

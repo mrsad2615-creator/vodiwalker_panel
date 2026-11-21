@@ -35,6 +35,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
   intervalRestMin: 10,
   countdownMin: 30,
   autoAdvance: false,
+  dndInFocus: false,
   notificationsEnabled: true,
   soundEnabled: true,
   hapticsEnabled: true,

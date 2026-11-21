@@ -52,6 +52,9 @@ import {
 import {
   mirrorChronoRun,
   onChronoControl,
+  openDndSettings,
+  readDndStatus,
+  setDoNotDisturb,
   startChronoNotification,
   stopChronoNotification,
 } from '@/lib/chrono/native';
@@ -123,6 +126,8 @@ interface AppContextValue {
    *  the box mid-typing. */
   searchOpen: boolean;
   setSearchOpen: (open: boolean) => void;
+  /** Asking for "do not disturb" is opt-in and honest about the system grant. */
+  setDndInFocus: (enabled: boolean) => Promise<void>;
   setFocusLinkedTask: (taskId: string | null) => void;
   startOrResumeFocus: () => void;
   pauseFocus: () => void;
@@ -489,15 +494,60 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setFocus((prev) => ({ ...prev, linkedTaskId: taskId }));
   }, []);
 
+  /**
+   * Turning the switch on is a two-step promise: persist the preference, then ask
+   * the system. If the policy access is missing we send the reader to the screen
+   * that grants it and say so — a switch that flips while nothing changes is worse
+   * than one that refuses.
+   */
+  const setDndInFocus = useCallback(
+    async (enabled: boolean) => {
+      if (!enabled) {
+        await updateSettings({ dndInFocus: false });
+        await setDoNotDisturb(false);
+        return;
+      }
+      const status = await readDndStatus();
+      if (!status) {
+        pushToast({
+          title: 'این قابلیت فقط روی اندروید کار می‌کند',
+          description: 'در نسخهٔ وب، اعلان‌های مرورگر در دسترس نیستند.',
+          tone: 'warning',
+        });
+        return;
+      }
+      if (!status.granted) {
+        await openDndSettings();
+        pushToast({
+          title: 'اجازهٔ «بدون مزاحمت» لازم است',
+          description: 'در صفحهٔ بازشده، کایروس را مجاز کنید و به اپ برگردید.',
+          tone: 'warning',
+        });
+        return;
+      }
+      await updateSettings({ dndInFocus: true });
+      pushToast({ title: 'در جلسه‌های بعدی مزاحمت قطع می‌شود', tone: 'success' });
+    },
+    [pushToast]
+  );
+
+  const applyDnd = useCallback((enabled: boolean) => {
+    if (!settingsRef.current.dndInFocus) return;
+    void setDoNotDisturb(enabled);
+  }, []);
+
   const startOrResumeFocus = useCallback(() => {
     void triggerHaptic('light', settingsRef.current.hapticsEnabled);
     setFocus((prev) => startClock(prev, Date.now()));
-  }, []);
+    applyDnd(true);
+  }, [applyDnd]);
 
   const pauseFocus = useCallback(() => {
     void triggerHaptic('light', settingsRef.current.hapticsEnabled);
     setFocus((prev) => pauseClock(prev, Date.now()));
-  }, []);
+    // Pausing is a pause for the phone too: notifications are not held hostage.
+    applyDnd(false);
+  }, [applyDnd]);
 
   const resetFocus = useCallback(() => {
     setFocus((prev) => {
@@ -510,7 +560,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     });
     void clearActiveRun();
     void stopChronoNotification();
-  }, []);
+    applyDnd(false);
+  }, [applyDnd]);
 
   const finishAndSaveFocus = useCallback(async () => {
     const snap = focus;
@@ -554,12 +605,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
     await clearActiveRun();
     void stopChronoNotification();
+    applyDnd(false);
     setFocus((prev) => ({
       ...freshFocusState(prev.mode, chronoConfigFromSettings(settingsRef.current)),
       linkedTaskId: prev.linkedTaskId,
       autoAdvance: prev.autoAdvance,
     }));
-  }, [focus, commitFocusRecord, pushToast, resetFocus]);
+  }, [focus, commitFocusRecord, pushToast, resetFocus, applyDnd]);
 
   /**
    * Advances past the current segment. In a cyclic plan (pomodoro) it wraps to the
@@ -668,6 +720,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setAutoAdvance,
       searchOpen,
       setSearchOpen,
+      setDndInFocus,
       setFocusLinkedTask,
       startOrResumeFocus,
       pauseFocus,
@@ -694,6 +747,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setAutoAdvance,
       searchOpen,
       setSearchOpen,
+      setDndInFocus,
       setFocusLinkedTask,
       startOrResumeFocus,
       pauseFocus,

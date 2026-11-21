@@ -26,6 +26,7 @@ import { SoundStudio } from '@/components/focus/SoundStudio';
 import { SOUND_PROFILES } from '@/lib/audio/layers';
 import { requestSound } from '@/lib/audio/commands';
 import { CHRONO_MODES } from '@/lib/chrono/plan';
+import { isNativeAndroid } from '@/lib/native';
 import { chronoConfigFromSettings, modeHint, modeLabel } from '@/lib/chrono/config';
 import { phaseDurationSeconds, segmentProgress } from '@/lib/focusTimer';
 
@@ -40,6 +41,7 @@ export function FocusPage() {
     setChronoConfig,
     seekFocusSegment,
     setAutoAdvance,
+    setDndInFocus,
     setFocusLinkedTask,
     startOrResumeFocus,
     pauseFocus,
@@ -401,6 +403,40 @@ export function FocusPage() {
           />
         </button>
       </div>
+
+      {/* ── NO INTERRUPTIONS ───────────────────────────────────────────────
+          Off by default: silencing a phone is the reader's call, and the system
+          grant is theirs to give. */}
+      {isNativeAndroid() && (
+        <div className="flex items-center justify-between border-b border-[var(--border)] pb-2.5">
+          <div className="min-w-0 pr-3">
+            <p className="text-[11px] font-medium text-[var(--text-2)]">بدون مزاحمت در جلسه</p>
+            <p className="mt-0.5 text-[9.5px] leading-relaxed text-[var(--text-3)]">
+              {settings.dndInFocus
+                ? 'اعلان‌ها در طول تمرکز ساکت می‌شوند و در پایان برمی‌گردند.'
+                : 'در طول جلسه اعلان‌ها را قطع می‌کند (نیاز به اجازهٔ سیستم).'}
+            </p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={settings.dndInFocus === true}
+            aria-label="بدون مزاحمت در جلسه"
+            onClick={() => void setDndInFocus(!settings.dndInFocus)}
+            className={`relative h-5 w-9 shrink-0 rounded-full border transition-colors ${
+              settings.dndInFocus
+                ? 'border-[var(--accent)] bg-[color-mix(in_srgb,var(--accent)_55%,transparent)]'
+                : 'border-[var(--border)] bg-[var(--surface-2)]'
+            }`}
+          >
+            <span
+              aria-hidden="true"
+              className="absolute top-0.5 h-3.5 w-3.5 rounded-full bg-[var(--text)] transition-all"
+              style={{ left: settings.dndInFocus ? '1.15rem' : '0.15rem' }}
+            />
+          </button>
+        </div>
+      )}
 
       {/* ── CUSTOM DURATIONS — a quiet strip, never a card ───────────────────
           The fields follow the mode: a pomodoro has breaks, a deep-work plan has

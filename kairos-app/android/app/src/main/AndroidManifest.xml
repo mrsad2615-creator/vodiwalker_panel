@@ -35,6 +35,18 @@
                 android:value="user_initiated_focus_timer" />
         </service>
 
+        <receiver
+            android:name=".ChronoWidgetProvider"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="app.kairos.chrono.WIDGET_TICK" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/chrono_widget_info" />
+        </receiver>
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
@@ -53,4 +65,7 @@
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <!-- Do-not-disturb during a focus session. The user grants this explicitly in
+         system settings; without it the switch stays off and nothing changes. -->
+    <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY" />
 </manifest>

@@ -20,10 +20,18 @@ interface ChronoNotificationOptions {
   running: boolean;
 }
 
+export interface DndStatus {
+  granted: boolean;
+  active: boolean;
+}
+
 interface ChronoPlugin {
   start(options: ChronoNotificationOptions): Promise<void>;
   update(options: ChronoNotificationOptions): Promise<void>;
   stop(): Promise<void>;
+  dndStatus(): Promise<DndStatus>;
+  setDnd(options: { enabled: boolean }): Promise<void>;
+  openDndSettings(): Promise<void>;
   addListener(
     eventName: 'control',
     listener: (data: { action: 'pause' | 'resume' | 'stop' }) => void
@@ -99,5 +107,41 @@ export async function onChronoControl(
     };
   } catch {
     return () => {};
+  }
+}
+
+/**
+ * Do-not-disturb for the length of a session.
+ *
+ * Three honest outcomes: it worked, the user has not granted the policy access
+ * (we open the system screen instead of pretending), or the platform cannot do it
+ * at all. The UI shows the difference.
+ */
+export async function readDndStatus(): Promise<DndStatus | null> {
+  if (!chronoNativeAvailable()) return null;
+  try {
+    return await Chrono.dndStatus();
+  } catch {
+    return null;
+  }
+}
+
+export async function setDoNotDisturb(enabled: boolean): Promise<'ok' | 'not-granted' | 'unsupported'> {
+  if (!chronoNativeAvailable()) return 'unsupported';
+  try {
+    await Chrono.setDnd({ enabled });
+    return 'ok';
+  } catch (error) {
+    const message = String((error as { message?: string })?.message ?? error);
+    return message.includes('not_granted') ? 'not-granted' : 'unsupported';
+  }
+}
+
+export async function openDndSettings(): Promise<void> {
+  if (!chronoNativeAvailable()) return;
+  try {
+    await Chrono.openDndSettings();
+  } catch {
+    // nothing else to do
   }
 }

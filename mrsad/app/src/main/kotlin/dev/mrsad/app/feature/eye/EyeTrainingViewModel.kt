@@ -11,8 +11,8 @@ import dev.mrsad.app.util.MrsadClock
 import dev.mrsad.app.util.firstValue
 import dev.mrsad.core.eye.EyeTrainingEngine
 import dev.mrsad.core.eye.EyeTrainingEngine.DrillType
-import dev.mrsad.core.eye.EyeTrainingEngine.SessionReport
-import dev.mrsad.core.eye.EyeTrainingEngine.TargetPoint
+import dev.mrsad.core.eye.EyeTrainingEngine.EyeSessionReport
+import dev.mrsad.core.eye.EyeTrainingEngine.GazePoint
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -34,7 +34,7 @@ data class EyeUiState(
     val durationSeconds: Int = 60,
     val remainingMillis: Long = 60_000L,
     val progress: Float = 0f,
-    val currentPoint: TargetPoint = TargetPoint(0.5f, 0.5f, 0),
+    val currentPoint: GazePoint = GazePoint(0.5f, 0.5f, 0),
     val schulteBoard: EyeTrainingEngine.SchulteBoard = EyeTrainingEngine.generateSchulteBoard(1L, 2),
     val nextSchulteNumber: Int = 1,
     val hits: Int = 0,
@@ -44,7 +44,7 @@ data class EyeUiState(
     val distractorPhase: Float = 0f,
     val lastTapFeedbackFa: String? = null,
     val lastTapWasHit: Boolean = true,
-    val report: SessionReport? = null,
+    val report: EyeSessionReport? = null,
     val totalCompletedSessions: Int = 0,
     val bestAgilityScore: Int = 0,
 )
@@ -57,7 +57,7 @@ class EyeTrainingViewModel(
     val state: StateFlow<EyeUiState> = _state.asStateFlow()
 
     private var tickerJob: Job? = null
-    private var saccadePoints: List<TargetPoint> = emptyList()
+    private var saccadePoints: List<GazePoint> = emptyList()
     private var sessionSeed: Long = 1L
     private var lastScoredStepIndex: Int = -1
 
@@ -113,7 +113,7 @@ class EyeTrainingViewModel(
         sessionSeed = MrsadClock.nowEpochMillis()
         lastScoredStepIndex = -1
         val totalDurationMs = current.durationSeconds * 1000L
-        val intervalMs = EyeTrainingEngine.stepIntervalMillis(current.speedLevel)
+        val intervalMs = EyeTrainingEngine.targetIntervalMillis(current.speedLevel, current.difficultyLevel)
         val estimatedSteps = (totalDurationMs / intervalMs).toInt().coerceAtLeast(12)
 
         saccadePoints = EyeTrainingEngine.generateSaccadeSequence(
@@ -131,7 +131,7 @@ class EyeTrainingViewModel(
                 phase = EyePhase.RUNNING,
                 remainingMillis = totalDurationMs,
                 progress = 0f,
-                currentPoint = saccadePoints.firstOrNull() ?: TargetPoint(0.5f, 0.5f, 0),
+                currentPoint = saccadePoints.firstOrNull() ?: GazePoint(0.5f, 0.5f, 0),
                 schulteBoard = board,
                 nextSchulteNumber = 1,
                 hits = 0,
@@ -167,7 +167,7 @@ class EyeTrainingViewModel(
                     when (s.selectedDrill) {
                         DrillType.SACCADE -> {
                             val pt = saccadePoints.getOrElse(stepIdx % saccadePoints.size) {
-                                TargetPoint(0.5f, 0.5f, stepIdx)
+                                GazePoint(0.5f, 0.5f, stepIdx)
                             }
                             val newTargets = if (stepIdx > lastStepIndex) s.totalTargets + 1 else s.totalTargets
                             lastStepIndex = stepIdx
@@ -204,7 +204,7 @@ class EyeTrainingViewModel(
                             s.copy(
                                 remainingMillis = remaining,
                                 progress = progress,
-                                currentPoint = TargetPoint(0.5f, 0.5f, stepIdx),
+                                currentPoint = GazePoint(0.5f, 0.5f, stepIdx),
                                 stabilitySignalActive = active,
                                 distractorPhase = tSec,
                                 totalTargets = newTargets,

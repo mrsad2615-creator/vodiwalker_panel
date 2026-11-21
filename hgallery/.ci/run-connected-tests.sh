@@ -16,6 +16,20 @@ ACTIVITY="dev.hgallery.app.MainActivity"
 rm -rf "$OUT_DIR"
 mkdir -p "$OUT_DIR/diag"
 
+mkdir -p ui-shots/diag
+echo "== locating the application APK =="
+APK=$(find apk -name '*.apk' 2>/dev/null | head -1)
+echo "apk path: ${APK:-<none>}" | tee ui-shots/diag/apk-path.txt
+find apk -type f 2>/dev/null | head -10 >> ui-shots/diag/apk-path.txt
+if [ -n "$APK" ]; then
+  adb install -r -g "$APK" > ui-shots/diag/adb-install.txt 2>&1
+  echo "install status: $?"
+  cat ui-shots/diag/adb-install.txt
+else
+  echo "::error title=e2e::no APK was downloaded into apk/"
+  exit 1
+fi
+
 echo "== instrumented UI tests =="
 ./gradlew --console=plain --no-daemon :app:connectedDebugAndroidTest 2>&1 | tee ui-test.log
 TEST_STATUS=$?

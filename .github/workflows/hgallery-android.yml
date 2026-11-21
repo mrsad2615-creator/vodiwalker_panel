@@ -159,7 +159,6 @@ jobs:
           disable-animations: true
           script: |
             cd hgallery
-            adb install -r -g apk/app-debug.apk
             chmod +x .ci/run-connected-tests.sh
             sh .ci/run-connected-tests.sh
       - name: Report instrumented test failures

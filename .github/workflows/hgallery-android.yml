@@ -44,7 +44,7 @@ jobs:
       - name: Report failure details
         if: failure() || cancelled()
         shell: bash
-        run: python3 ../.github/scripts/annotate.py hgallery/core.log "core tests"
+        run: python3 ../.github/scripts/annotate.py core.log "core tests"
       - name: Upload core test reports
         if: always()
         uses: actions/upload-artifact@v4
@@ -87,7 +87,7 @@ jobs:
       - name: Report failure details
         if: failure() || cancelled()
         shell: bash
-        run: python3 ../.github/scripts/annotate.py hgallery/build.log "app build"
+        run: python3 ../.github/scripts/annotate.py build.log "app build"
       - name: Upload debug APK
         if: success()
         uses: actions/upload-artifact@v4

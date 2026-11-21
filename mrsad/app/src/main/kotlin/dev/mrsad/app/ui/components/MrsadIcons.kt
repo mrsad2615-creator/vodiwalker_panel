@@ -1,7 +1,5 @@
 package dev.mrsad.app.ui.components
 
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AutoAwesome
@@ -40,18 +38,10 @@ import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawWithCache
-import androidx.compose.ui.graphics.BlendMode
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import dev.mrsad.app.ui.theme.MrsadTheme
 
@@ -62,7 +52,7 @@ enum class MetalTone { LIGHT, MID, DARK, ACCENT }
 
 /**
  * Icon descriptor carrying both high-precision professional vector glyphs for
- * OBSIDIAN (3D Metallic Rounded Vector) and NOIR (Precision Architectural Outlined Vector).
+ * OBSIDIAN (Rounded Precision Vector) and NOIR (Architectural Outlined Vector).
  */
 class IconFacet(
     val path: Path = Path(),
@@ -76,9 +66,8 @@ class IconFacet(
 /**
  * Dual-System Professional Vector Iconography (Master Prompt §7):
  *
- * - **THEME 01 — OBSIDIAN**: High-detail rounded vector glyphs rendered with
- *   a 3-stop brushed-titanium & ice-silver shader gradient (`BlendMode.SrcAtop`)
- *   and subtle 3D depth.
+ * - **THEME 01 — OBSIDIAN**: High-detail rounded vector glyphs rendered in
+ *   luminous brushed-silver & ice-chrome (`colors.metalLight`).
  * - **THEME 02 — NOIR**: Precision architectural linear outlined vector glyphs
  *   rendered in pure monochrome (`#FFFFFF` / `#000000`).
  */
@@ -114,10 +103,7 @@ object MrsadIcons {
 }
 
 /**
- * Renders a professional icon in the active theme's visual language:
- * - In **OBSIDIAN**, applies a brushed-titanium & specular-silver vertical
- *   gradient shader (`BlendMode.SrcAtop`) over the high-detail vector glyph.
- * - In **NOIR**, renders the precision outlined vector glyph in pure monochrome.
+ * Renders a professional vector icon in the active theme's visual language.
  */
 @Composable
 fun MetalIcon(
@@ -128,7 +114,6 @@ fun MetalIcon(
 ) {
     val colors = MrsadTheme.colors
     val isNoir = colors.isNoir
-    val label = contentDescription
     val primary = facets.firstOrNull()
     val vector = if (isNoir) {
         primary?.vectorNoir ?: Icons.Outlined.SpaceDashboard
@@ -136,69 +121,16 @@ fun MetalIcon(
         primary?.vectorObsidian ?: Icons.Rounded.SpaceDashboard
     }
 
-    val semanticsModifier = if (label != null) {
-        Modifier.semantics { this.contentDescription = label }
+    val tint = if (isNoir) {
+        if (dark) colors.background else colors.textPrimary
     } else {
-        Modifier
+        if (dark) Color(0xFF07080B) else colors.metalLight
     }
 
-    if (isNoir) {
-        val noirTint = if (dark) colors.background else colors.textPrimary
-        Box(
-            modifier = modifier
-                .size(22.dp)
-                .then(semanticsModifier),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                imageVector = vector,
-                contentDescription = null,
-                tint = noirTint,
-                modifier = Modifier.fillMaxSize(),
-            )
-        }
-    } else {
-        if (dark) {
-            Box(
-                modifier = modifier
-                    .size(22.dp)
-                    .then(semanticsModifier),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    imageVector = vector,
-                    contentDescription = null,
-                    tint = Color(0xFF07080B),
-                    modifier = Modifier.fillMaxSize(),
-                )
-            }
-        } else {
-            val topColor = Color(0xFFF6F9FF)
-            val midColor = colors.metalLight
-            val bottomColor = colors.metalDark
-            Box(
-                modifier = modifier
-                    .size(22.dp)
-                    .then(semanticsModifier)
-                    .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)
-                    .drawWithCache {
-                        val brush = Brush.verticalGradient(
-                            colors = listOf(topColor, midColor, bottomColor),
-                        )
-                        onDrawWithContent {
-                            drawContent()
-                            drawRect(brush = brush, blendMode = BlendMode.SrcAtop)
-                        }
-                    },
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    imageVector = vector,
-                    contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier.fillMaxSize(),
-                )
-            }
-        }
-    }
+    Icon(
+        imageVector = vector,
+        contentDescription = contentDescription,
+        tint = tint,
+        modifier = modifier.size(22.dp),
+    )
 }

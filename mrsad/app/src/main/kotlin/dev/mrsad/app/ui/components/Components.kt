@@ -261,39 +261,42 @@ fun MrsadSurface(
                 ),
             )
             .drawBehind {
-                // 1. Ambient radial light reflection in the upper-left glass chamber
-                drawCircle(
-                    brush = Brush.radialGradient(
-                        colors = listOf(
-                            (accent ?: colors.accent).copy(alpha = 0.16f + 0.08f * highlight),
-                            Color.Transparent,
+                if (size.width > 1f && size.height > 1f) {
+                    val glowR = (size.width * 0.78f).coerceAtLeast(1f)
+                    // 1. Ambient radial light reflection in the upper-left glass chamber
+                    drawCircle(
+                        brush = Brush.radialGradient(
+                            colors = listOf(
+                                (accent ?: colors.accent).copy(alpha = 0.16f + 0.08f * highlight),
+                                Color.Transparent,
+                            ),
+                            center = Offset(size.width * 0.22f, 0f),
+                            radius = glowR,
                         ),
+                        radius = glowR,
                         center = Offset(size.width * 0.22f, 0f),
-                        radius = size.width * 0.78f,
-                    ),
-                    radius = size.width * 0.78f,
-                    center = Offset(size.width * 0.22f, 0f),
-                )
-                // 2. Top-edge specular bevel highlight (machined titanium lip)
-                drawRect(
-                    brush = Brush.verticalGradient(
-                        listOf(
-                            Color.White.copy(alpha = 0.22f + 0.08f * highlight),
-                            (accent ?: colors.metalLight).copy(alpha = 0.08f),
-                            Color.Transparent,
+                    )
+                    // 2. Top-edge specular bevel highlight (machined titanium lip)
+                    drawRect(
+                        brush = Brush.verticalGradient(
+                            listOf(
+                                Color.White.copy(alpha = 0.22f + 0.08f * highlight),
+                                (accent ?: colors.metalLight).copy(alpha = 0.08f),
+                                Color.Transparent,
+                            ),
+                            startY = 0f,
+                            endY = 72f.coerceAtMost(size.height),
                         ),
-                        startY = 0f,
-                        endY = 72f,
-                    ),
-                )
-                // 3. Bottom recessed depth trench
-                drawRect(
-                    brush = Brush.verticalGradient(
-                        listOf(Color.Transparent, Color.Black.copy(alpha = 0.48f)),
-                        startY = size.height - 84f,
-                        endY = size.height,
-                    ),
-                )
+                    )
+                    // 3. Bottom recessed depth trench
+                    drawRect(
+                        brush = Brush.verticalGradient(
+                            listOf(Color.Transparent, Color.Black.copy(alpha = 0.48f)),
+                            startY = (size.height - 84f).coerceAtLeast(0f),
+                            endY = size.height,
+                        ),
+                    )
+                }
             }
             .border(
                 width = 1.25.dp,

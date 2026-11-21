@@ -83,6 +83,7 @@ fun ModuleSculpture3D(
     }
 
     Canvas(modifier = modifier) {
+        if (size.minDimension <= 2f) return@Canvas
         if (colors.isNoir) {
             drawNoirSchematic(type, scratchPath, colors)
         } else {

@@ -757,7 +757,7 @@ private fun PillarSculptureCard(
                     if (isNoir) {
                         Brush.verticalGradient(listOf(colors.background, colors.background))
                     } else {
-                        Brush.radialGradient(
+                        Brush.verticalGradient(
                             colors = listOf(
                                 Color(0xFF1E2738),
                                 Color(0xFF0B0E16),

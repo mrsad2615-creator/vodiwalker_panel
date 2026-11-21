@@ -1,7 +1,5 @@
 package dev.mrsad.app.ui.components
 
-import android.graphics.RuntimeShader
-import android.os.Build
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -20,11 +18,11 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.ShaderBrush
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.semantics.contentDescription
@@ -33,90 +31,21 @@ import androidx.compose.ui.unit.dp
 import dev.mrsad.app.data.settings.GraphicsQuality
 import dev.mrsad.app.ui.theme.MrsadColors
 import dev.mrsad.app.ui.theme.MrsadTheme
-import org.intellij.lang.annotations.Language
 import kotlin.math.cos
 import kotlin.math.exp
 import kotlin.math.max
 import kotlin.math.sin
-import kotlin.math.sqrt
 
 /**
- * Real-time GPU Per-Pixel 3D PBR & Volumetric Plasma Shader (AGSL, API 33+).
- *
- * Raycasts a 3D sphere per pixel, rotates the surface normal in 3D space
- * using [uYaw] and [uPitch], computes 3D procedural liquid-titanium & plasma
- * veins, Blinn-Phong + GGX metallic specular highlights, and Fresnel rim lighting.
- */
-@Language("AGSL")
-private const val CORE_PBR_AGSL = """
-uniform float2 uCenter;
-uniform float uRadius;
-uniform float uTime;
-uniform float uYaw;
-uniform float uPitch;
-uniform float uEnergy;
-
-half4 main(float2 fragCoord) {
-    float2 d = (fragCoord - uCenter) / max(uRadius, 1.0);
-    float r2 = dot(d, d);
-    if (r2 > 1.0) {
-        return half4(0.0, 0.0, 0.0, 0.0);
-    }
-    float z = sqrt(max(0.0, 1.0 - r2));
-    float3 N = normalize(float3(d.x, -d.y, z));
-
-    // Rotate 3D point by yaw & pitch for volumetric plasma veins
-    float cy = cos(uYaw);
-    float sy = sin(uYaw);
-    float cp = cos(uPitch);
-    float sp = sin(uPitch);
-    float3 p = float3(
-        N.x * cy + N.z * sy,
-        N.x * sy * sp + N.y * cp - N.z * cy * sp,
-        -N.x * sy * cp + N.y * sp + N.z * cy * cp
-    );
-
-    // 3D volumetric energy lattice inside the liquid-metal sphere
-    float wave1 = sin(p.x * 6.5 + uTime * 1.8) * cos(p.y * 6.5 - uTime * 1.4);
-    float wave2 = sin(p.z * 8.0 + uTime * 2.2 + wave1 * 1.6);
-    float vein = smoothstep(0.15, 0.88, 0.5 + 0.5 * wave2);
-
-    // PBR lighting: key light, fill light, view vector V=(0,0,1)
-    float3 L1 = normalize(float3(-0.45, 0.62, 0.64));
-    float3 L2 = normalize(float3(0.65, -0.38, 0.35));
-    float diff1 = max(dot(N, L1), 0.0);
-    float diff2 = max(dot(N, L2), 0.0);
-
-    float3 H = normalize(L1 + float3(0.0, 0.0, 1.0));
-    float spec = pow(max(dot(N, H), 0.0), 42.0);
-    float fresnel = pow(1.0 - max(N.z, 0.0), 3.0);
-
-    float3 baseDark = float3(0.05, 0.08, 0.14);
-    float3 metalMid = float3(0.42, 0.50, 0.62);
-    float3 plasmaIce = float3(0.76, 0.88, 1.00);
-    float3 specWhite = float3(0.98, 0.99, 1.00);
-
-    float energyBoost = 0.35 + 0.65 * uEnergy;
-    float3 col = mix(baseDark, metalMid, diff1 * 0.78 + diff2 * 0.25);
-    col = mix(col, plasmaIce, vein * (0.45 + 0.45 * energyBoost));
-    col += specWhite * (spec * 0.95);
-    col += plasmaIce * (fresnel * (0.55 + 0.35 * energyBoost));
-
-    float edgeAlpha = smoothstep(1.0, 0.92, r2);
-    return half4(half3(clamp(col, 0.0, 1.0)), half(edgeAlpha * 0.96));
-}
-"""
-
-/**
- * The MRSAD Core: True 3D Volumetric PBR & Machined Titanium Reactor.
+ * The MRSAD Core: True 3D Volumetric PBR-Shaded & Machined Titanium Reactor.
  *
  * Combines:
- * 1. Per-pixel 3D AGSL PBR/Raymarched nucleus sphere (API 33+) + multi-layer
- *    volumetric 3D Phong sphere.
+ * 1. Multi-layer 3D Phong/PBR liquid-titanium & plasma sphere nucleus with
+ *    rotating 3D meridian energy veins, Fresnel rim lighting, and specular hotspots.
  * 2. Solid, back-face culled & front-face bevelled 3D brushed-titanium geodesic
- *    exoskeleton armor plates with recessed reactor windows.
+ *    exoskeleton armor plates with recessed reactor aperture windows.
  * 3. Thick 3D cylindrical torus gyroscope rings (shadow base + brushed titanium
- *    body + razor specular crest) and 3D spherical chrome satellites.
+ *    cylinder + razor specular crest) and 3D spherical chrome satellites.
  */
 @Composable
 fun MrsadCore(
@@ -132,8 +61,8 @@ fun MrsadCore(
 
     val ringSegments = when (quality) {
         GraphicsQuality.HIGH -> 56
-        GraphicsQuality.BALANCED -> 44
-        GraphicsQuality.PERFORMANCE -> 28
+        GraphicsQuality.BALANCED -> 40
+        GraphicsQuality.PERFORMANCE -> 24
     }
     val engine = remember(ringSegments) { Core3D(ringSegments) }
     engine.nodeCount = when (quality) {
@@ -145,14 +74,6 @@ fun MrsadCore(
     val scratchPath = remember { Path() }
     val innerPath = remember { Path() }
     val clampedEnergy = energy.coerceIn(0f, 1f)
-
-    val runtimeShaderHolder = remember {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            runCatching { AgslCoreShader() }.getOrNull()
-        } else {
-            null
-        }
-    }
 
     LaunchedEffect(motion.animationsEnabled, pulse) {
         if (!motion.animationsEnabled) return@LaunchedEffect
@@ -206,7 +127,6 @@ fun MrsadCore(
                 scene = scene,
                 scratchPath = scratchPath,
                 innerPath = innerPath,
-                agslShader = runtimeShaderHolder,
                 colors = colors,
                 energy = clampedEnergy,
                 streakDays = streakDays,
@@ -214,34 +134,6 @@ fun MrsadCore(
                 quality = quality,
             )
         }
-    }
-}
-
-private class AgslCoreShader {
-    val shader: RuntimeShader? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-        RuntimeShader(CORE_PBR_AGSL)
-    } else {
-        null
-    }
-
-    fun brushFor(
-        centerX: Float,
-        centerY: Float,
-        radius: Float,
-        time: Float,
-        yaw: Float,
-        pitch: Float,
-        energy: Float,
-    ): ShaderBrush? {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return null
-        val s = shader ?: return null
-        s.setFloatUniform("uCenter", centerX, centerY)
-        s.setFloatUniform("uRadius", radius)
-        s.setFloatUniform("uTime", time)
-        s.setFloatUniform("uYaw", yaw)
-        s.setFloatUniform("uPitch", pitch)
-        s.setFloatUniform("uEnergy", energy)
-        return ShaderBrush(s)
     }
 }
 
@@ -305,16 +197,16 @@ private fun DrawScope.drawCore(
     scene: CoreScene,
     scratchPath: Path,
     innerPath: Path,
-    agslShader: AgslCoreShader?,
     colors: MrsadColors,
     energy: Float,
     streakDays: Int,
     bestWpm: Int,
     quality: GraphicsQuality,
 ) {
+    if (size.minDimension <= 2f) return
     val centerX = size.width / 2f
     val centerY = size.height / 2f + sin(scene.time * 0.75f) * size.minDimension * 0.008f
-    val radiusPx = size.minDimension * 0.235f
+    val radiusPx = max(8f, size.minDimension * 0.235f)
 
     engine.update(
         yaw = scene.yaw,
@@ -330,11 +222,11 @@ private fun DrawScope.drawCore(
     val pulseGlow = if (pulse >= 0f) (1f - pulse) else 0f
 
     // ---- 1. Deep Volumetric Ambient Aura & Pedestal Floor Shadow ------------
-    val bloomRadius = radiusPx * 2.35f
+    val bloomRadius = max(1f, radiusPx * 2.25f)
     drawCircle(
         brush = Brush.radialGradient(
             colors = listOf(
-                colors.accent.copy(alpha = 0.18f + 0.18f * energy + 0.14f * pulseGlow),
+                colors.accent.copy(alpha = 0.20f + 0.18f * energy + 0.14f * pulseGlow),
                 colors.navy.copy(alpha = 0.14f),
                 Color.Transparent,
             ),
@@ -345,18 +237,18 @@ private fun DrawScope.drawCore(
         center = Offset(centerX, centerY),
     )
 
-    val poolWidth = radiusPx * 2.8f
-    val poolHeight = radiusPx * 0.62f
+    val poolWidth = max(2f, radiusPx * 2.75f)
+    val poolHeight = max(2f, radiusPx * 0.60f)
     val poolCenter = Offset(centerX, centerY + radiusPx * 1.24f)
     drawOval(
         brush = Brush.radialGradient(
             colors = listOf(
-                Color.Black.copy(alpha = 0.65f),
-                colors.accent.copy(alpha = 0.14f + 0.10f * energy),
+                Color.Black.copy(alpha = 0.68f),
+                colors.accent.copy(alpha = 0.16f + 0.10f * energy),
                 Color.Transparent,
             ),
             center = poolCenter,
-            radius = poolWidth / 2f,
+            radius = max(1f, poolWidth / 2f),
         ),
         topLeft = Offset(poolCenter.x - poolWidth / 2f, poolCenter.y - poolHeight / 2f),
         size = Size(poolWidth, poolHeight),
@@ -370,7 +262,7 @@ private fun DrawScope.drawCore(
         centerX = centerX,
         centerY = centerY,
         radiusPx = radiusPx,
-        tubeRadius = radiusPx * 0.042f,
+        tubeRadius = radiusPx * 0.044f,
         metalLight = colors.metalLight,
         metalMid = colors.metalMid,
         metalDark = colors.metalDark,
@@ -384,7 +276,7 @@ private fun DrawScope.drawCore(
         centerX = centerX,
         centerY = centerY,
         radiusPx = radiusPx,
-        tubeRadius = radiusPx * 0.052f,
+        tubeRadius = radiusPx * 0.054f,
         metalLight = colors.metalLight,
         metalMid = colors.metalMid,
         metalDark = colors.metalDark,
@@ -398,7 +290,7 @@ private fun DrawScope.drawCore(
         centerX = centerX,
         centerY = centerY,
         radiusPx = radiusPx,
-        tubeRadius = radiusPx * 0.082f,
+        tubeRadius = radiusPx * 0.084f,
         metalLight = colors.metalLight,
         metalMid = colors.metalMid,
         metalDark = colors.metalDark,
@@ -437,10 +329,10 @@ private fun DrawScope.drawCore(
 
         val shade = engine.faceShade[f]
         val chamberColor = lerpColor(
-            Color(0xFF06080D),
-            Color(0xFF1C2434),
+            Color(0xFF06080E),
+            Color(0xFF1D2638),
             shade * 0.65f,
-        ).copy(alpha = 0.92f)
+        ).copy(alpha = 0.94f)
         drawPath(scratchPath, chamberColor)
         drawPath(
             scratchPath,
@@ -449,60 +341,65 @@ private fun DrawScope.drawCore(
         )
     }
 
-    // ---- 5. The Volumetric 3D PBR / Shader Plasma & Liquid-Metal Nucleus ----
-    val nucleusRadius = radiusPx * (0.62f + 0.08f * energy + 0.08f * pulseGlow)
-    val shaderBrush = agslShader?.brushFor(
-        centerX = centerX,
-        centerY = centerY,
-        radius = nucleusRadius,
-        time = scene.time,
-        yaw = scene.yaw,
-        pitch = scene.pitch,
-        energy = energy,
-    )
-    if (shaderBrush != null) {
-        drawCircle(
-            brush = shaderBrush,
-            radius = nucleusRadius,
-            center = Offset(centerX, centerY),
-        )
-    } else {
-        // Multi-layer 3D Phong sphere fallback for API 26–32
-        val hotspot = Offset(centerX - nucleusRadius * 0.32f, centerY - nucleusRadius * 0.35f)
-        drawCircle(
-            brush = Brush.radialGradient(
-                colors = listOf(
-                    Color(0xFFF6FAFF),
-                    colors.accent,
-                    Color(0xFF283A58),
-                    Color(0xFF090D16),
-                ),
-                center = hotspot,
-                radius = nucleusRadius * 1.25f,
-            ),
-            radius = nucleusRadius,
-            center = Offset(centerX, centerY),
-        )
-    }
-    // Inner plasma core corona ring
+    // ---- 5. The Volumetric 3D PBR / Phong Liquid-Metal & Plasma Nucleus -----
+    val nucleusRadius = max(4f, radiusPx * (0.64f + 0.08f * energy + 0.08f * pulseGlow))
+    val hotspot = Offset(centerX - nucleusRadius * 0.34f, centerY - nucleusRadius * 0.36f)
+
+    // 5a. Solid 3D Sphere Base with PBR Radial Phong Shading
     drawCircle(
         brush = Brush.radialGradient(
             colors = listOf(
-                Color.White.copy(alpha = 0.55f + 0.25f * energy),
-                colors.accent.copy(alpha = 0.35f + 0.25f * energy),
-                Color.Transparent,
+                Color(0xFFF8FBFF),
+                colors.accent,
+                Color(0xFF3E587A),
+                Color(0xFF162032),
+                Color(0xFF070A12),
             ),
-            center = Offset(centerX - nucleusRadius * 0.22f, centerY - nucleusRadius * 0.22f),
-            radius = nucleusRadius * 0.85f,
+            center = hotspot,
+            radius = max(1f, nucleusRadius * 1.32f),
         ),
-        radius = nucleusRadius * 0.85f,
+        radius = nucleusRadius,
         center = Offset(centerX, centerY),
     )
 
+    // 5b. 3D Rotating Plasma Meridians inside the Sphere
+    val yawDeg = (scene.yaw * 57.2958f) % 360f
+    val pitchAspect = (0.32f + 0.48f * absCos(scene.pitch)).coerceIn(0.25f, 0.85f)
+    rotate(degrees = yawDeg, pivot = Offset(centerX, centerY)) {
+        val ovalW = nucleusRadius * 1.72f
+        val ovalH = max(2f, nucleusRadius * 1.72f * pitchAspect)
+        drawOval(
+            color = Color.White.copy(alpha = 0.42f + 0.25f * energy),
+            topLeft = Offset(centerX - ovalW / 2f, centerY - ovalH / 2f),
+            size = Size(ovalW, ovalH),
+            style = Stroke(width = 1.8.dp.toPx()),
+        )
+    }
+    rotate(degrees = -yawDeg * 0.7f + 60f, pivot = Offset(centerX, centerY)) {
+        val ovalW = max(2f, nucleusRadius * 1.65f * pitchAspect)
+        val ovalH = nucleusRadius * 1.65f
+        drawOval(
+            color = colors.accent.copy(alpha = 0.48f + 0.25f * energy),
+            topLeft = Offset(centerX - ovalW / 2f, centerY - ovalH / 2f),
+            size = Size(ovalW, ovalH),
+            style = Stroke(width = 1.4.dp.toPx()),
+        )
+    }
+
+    // 5c. 3D Specular Hotspots & Fresnel Rim Ring on the Nucleus Sphere
+    drawCircle(
+        color = Color.White.copy(alpha = 0.92f),
+        radius = nucleusRadius * 0.16f,
+        center = Offset(centerX - nucleusRadius * 0.34f, centerY - nucleusRadius * 0.34f),
+    )
+    drawCircle(
+        color = colors.accent.copy(alpha = 0.72f),
+        radius = nucleusRadius,
+        center = Offset(centerX, centerY),
+        style = Stroke(width = 1.6.dp.toPx()),
+    )
+
     // ---- 6. Solid Front-Facing Bevelled 3D Titanium Exoskeleton Plates ------
-    // Each front-facing facet is a thick, physically shaded metallic armor plate
-    // with a machined triangular aperture window so the 3D plasma sphere shines
-    // through the precision-cut openings!
     for (index in 0 until engine.faceCount) {
         val f = engine.faceOrder[index]
         val nz = engine.faceNormalZ[f]
@@ -519,7 +416,7 @@ private fun DrawScope.drawCore(
         val cx = (x0 + x1 + x2) / 3f
         val cy = (y0 + y1 + y2) / 3f
 
-        // Compute the inner aperture window vertices (42% opening)
+        // Compute the inner aperture window vertices (44% opening)
         val openRatio = 0.44f
         val ix0 = cx + (x0 - cx) * openRatio
         val iy0 = cy + (y0 - cy) * openRatio
@@ -534,7 +431,6 @@ private fun DrawScope.drawCore(
         val nx = engine.faceNormalX[f]
         val ny = engine.faceNormalY[f]
 
-        // Build the 3 trapezoidal metallic frame segments of this triangular armor plate
         val plateShadow = lerpColor(Color(0xFF141A24), colors.metalDark, shade * 0.7f)
         val plateMid = lerpColor(colors.metalDark, colors.metalMid, shade)
         val plateBright = lerpColor(
@@ -543,10 +439,16 @@ private fun DrawScope.drawCore(
             (spec * 0.85f + rim * 0.35f + shade * 0.25f).coerceIn(0f, 1f),
         )
 
-        val gradStart = Offset(cx - nx * radiusPx * 0.45f, cy + ny * radiusPx * 0.45f)
-        val gradEnd = Offset(cx + nx * radiusPx * 0.45f, cy - ny * radiusPx * 0.45f)
+        val dx = nx * radiusPx * 0.45f
+        val dy = ny * radiusPx * 0.45f
+        val gradStart = Offset(cx - dx, cy + dy)
+        val gradEnd = Offset(cx + dx + 1f, cy - dy + 1f)
         val plateBrush = Brush.linearGradient(
-            colors = listOf(plateBright.copy(alpha = 0.95f), plateMid.copy(alpha = 0.92f), plateShadow.copy(alpha = 0.95f)),
+            colors = listOf(
+                plateBright.copy(alpha = 0.96f),
+                plateMid.copy(alpha = 0.93f),
+                plateShadow.copy(alpha = 0.96f),
+            ),
             start = gradStart,
             end = gradEnd,
         )
@@ -556,7 +458,7 @@ private fun DrawScope.drawCore(
         drawQuadFacet(scratchPath, x1, y1, x2, y2, ix2, iy2, ix1, iy1, plateBrush)
         drawQuadFacet(scratchPath, x2, y2, x0, y0, ix0, iy0, ix2, iy2, plateBrush)
 
-        // Inner window bevel thickness (simulates 3D armor thickness towards the reactor core)
+        // Inner window bevel thickness
         innerPath.reset()
         innerPath.moveTo(ix0, iy0)
         innerPath.lineTo(ix1, iy1)
@@ -564,7 +466,7 @@ private fun DrawScope.drawCore(
         innerPath.close()
         drawPath(
             path = innerPath,
-            color = colors.accent.copy(alpha = (0.28f + 0.45f * shade + 0.30f * spec).coerceIn(0f, 0.95f)),
+            color = colors.accent.copy(alpha = (0.32f + 0.45f * shade + 0.25f * spec).coerceIn(0f, 0.95f)),
             style = Stroke(width = 1.6.dp.toPx(), join = StrokeJoin.Round),
         )
 
@@ -576,13 +478,13 @@ private fun DrawScope.drawCore(
         scratchPath.close()
         drawPath(
             path = scratchPath,
-            color = Color(0xFF070A10).copy(alpha = 0.85f),
+            color = Color(0xFF070A10).copy(alpha = 0.88f),
             style = Stroke(width = 2.2.dp.toPx(), join = StrokeJoin.Round),
         )
         drawPath(
             path = scratchPath,
             color = lerpColor(colors.metalMid, Color.White, (shade * 0.6f + spec * 0.8f).coerceIn(0f, 1f))
-                .copy(alpha = (0.45f + 0.50f * shade).coerceIn(0f, 1f)),
+                .copy(alpha = (0.48f + 0.48f * shade).coerceIn(0f, 1f)),
             style = Stroke(width = 1.0.dp.toPx(), join = StrokeJoin.Round),
         )
     }
@@ -595,7 +497,7 @@ private fun DrawScope.drawCore(
         centerX = centerX,
         centerY = centerY,
         radiusPx = radiusPx,
-        tubeRadius = radiusPx * 0.082f,
+        tubeRadius = radiusPx * 0.084f,
         metalLight = colors.metalLight,
         metalMid = colors.metalMid,
         metalDark = colors.metalDark,
@@ -609,7 +511,7 @@ private fun DrawScope.drawCore(
         centerX = centerX,
         centerY = centerY,
         radiusPx = radiusPx,
-        tubeRadius = radiusPx * 0.052f,
+        tubeRadius = radiusPx * 0.054f,
         metalLight = colors.metalLight,
         metalMid = colors.metalMid,
         metalDark = colors.metalDark,
@@ -623,7 +525,7 @@ private fun DrawScope.drawCore(
         centerX = centerX,
         centerY = centerY,
         radiusPx = radiusPx,
-        tubeRadius = radiusPx * 0.042f,
+        tubeRadius = radiusPx * 0.044f,
         metalLight = colors.metalLight,
         metalMid = colors.metalMid,
         metalDark = colors.metalDark,
@@ -649,7 +551,7 @@ private fun DrawScope.drawCore(
             val depth = (engine.ringZ[index] + 1.8f) / 3.6f
             val x = engine.ringScreenX(0, index, centerX, radiusPx)
             val y = engine.ringScreenY(0, index, centerY, radiusPx)
-            val r = radiusPx * (0.022f + 0.018f * depth.coerceIn(0f, 1f))
+            val r = max(1.5f, radiusPx * (0.022f + 0.018f * depth.coerceIn(0f, 1f)))
             drawCircle(
                 color = colors.accent.copy(alpha = (0.45f + 0.50f * depth).coerceIn(0f, 0.95f)),
                 radius = r,
@@ -685,7 +587,7 @@ private fun DrawScope.drawCore(
 
     // ---- 11. Interactive Shockwave Ring on Tap ------------------------------
     if (pulse >= 0f) {
-        val waveRadius = radiusPx * (0.55f + 1.55f * pulse)
+        val waveRadius = max(2f, radiusPx * (0.55f + 1.55f * pulse))
         drawCircle(
             color = colors.accent.copy(alpha = (1f - pulse) * 0.65f),
             radius = waveRadius,
@@ -693,6 +595,11 @@ private fun DrawScope.drawCore(
             style = Stroke(width = (1.0f + (1f - pulse) * 3.2f).dp.toPx()),
         )
     }
+}
+
+private fun absCos(rad: Float): Float {
+    val c = cos(rad)
+    return if (c < 0f) -c else c
 }
 
 private fun DrawScope.drawQuadFacet(
@@ -783,8 +690,8 @@ private fun DrawScope.drawVolumetricRingHalf(
     val lowCloseness = ((lowest + 1.8f) / 3.6f).coerceIn(0f, 1f)
     val highCloseness = ((highest + 1.8f) / 3.6f).coerceIn(0f, 1f)
     val average = (lowCloseness + highCloseness) / 2f
-    val visibility = if (front) 0.94f else 0.58f
-    val thickness = tubeRadius * (0.72f + 0.52f * average)
+    val visibility = if (front) 0.95f else 0.58f
+    val thickness = max(1.5f, tubeRadius * (0.72f + 0.52f * average))
 
     // Pass 1: 3D Tube dark metallic shadow base
     drawPath(
@@ -803,7 +710,7 @@ private fun DrawScope.drawVolumetricRingHalf(
                 accent.copy(alpha = 0.78f * visibility),
             ),
             start = Offset(farX, farY),
-            end = Offset(nearX, nearY),
+            end = Offset(nearX + 1f, nearY + 1f),
         ),
         style = Stroke(width = thickness, cap = StrokeCap.Round, join = StrokeJoin.Round),
     )
@@ -811,7 +718,7 @@ private fun DrawScope.drawVolumetricRingHalf(
     // Pass 3: Razor-sharp Specular Highlight Crest along the top of the 3D cylinder
     drawPath(
         path = scratchPath,
-        color = Color.White.copy(alpha = (0.38f + 0.48f * average) * visibility),
+        color = Color.White.copy(alpha = (0.40f + 0.48f * average) * visibility),
         style = Stroke(width = max(1.0f, thickness * 0.28f), cap = StrokeCap.Round, join = StrokeJoin.Round),
     )
 }
@@ -836,7 +743,7 @@ private fun DrawScope.drawOrbitingNodes(
         val depth = ((z + 1.8f) / 3.6f).coerceIn(0f, 1f)
         val x = centerX + engine.nodeX[n] * radiusPx
         val y = centerY + engine.nodeY[n] * radiusPx
-        val r = engine.nodeSize[n] * radiusPx * 1.35f
+        val r = max(2f, engine.nodeSize[n] * radiusPx * 1.35f)
 
         // Ambient shadow behind sphere
         drawCircle(
@@ -854,7 +761,7 @@ private fun DrawScope.drawOrbitingNodes(
                     Color(0xFF121722),
                 ),
                 center = Offset(x - r * 0.32f, y - r * 0.32f),
-                radius = r * 1.35f,
+                radius = max(1f, r * 1.35f),
             ),
             radius = r,
             center = Offset(x, y),

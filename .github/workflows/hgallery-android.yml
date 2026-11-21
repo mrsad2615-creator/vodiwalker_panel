@@ -6,6 +6,7 @@ on:
     paths:
       - 'hgallery/**'
       - '.github/workflows/hgallery-android.yml'
+      - '.github/scripts/annotate.py'
 
 permissions:
   contents: read
@@ -14,11 +15,16 @@ concurrency:
   group: hgallery-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  # Keep Gradle quiet but deterministic; every job tees its output so the
+  # reporter below always has something to read.
+  GRADLE_OPTS: '-Dorg.gradle.daemon=false'
+
 jobs:
   core-tests:
     name: Domain core (pure Kotlin tests)
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     defaults:
       run:
         working-directory: hgallery
@@ -29,8 +35,25 @@ jobs:
           distribution: temurin
           java-version: '17'
       - uses: gradle/actions/setup-gradle@v4
+      - name: Make the wrapper executable
+        run: chmod +x ./gradlew
       - name: Core unit tests
-        run: ./gradlew --console=plain --no-daemon :core:test
+        run: |
+          set -o pipefail
+          ./gradlew --console=plain --no-daemon :core:test 2>&1 | tee core.log
+      - name: Report failure details
+        if: failure() || cancelled()
+        shell: bash
+        run: python3 ../.github/scripts/annotate.py hgallery/core.log "core tests"
+      - name: Upload core test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hgallery-core-reports
+          path: |
+            hgallery/core/build/reports/tests/test/**
+            hgallery/core/build/test-results/**
+          if-no-files-found: ignore
 
   build:
     name: Build debug APK
@@ -47,6 +70,8 @@ jobs:
           distribution: temurin
           java-version: '17'
       - uses: gradle/actions/setup-gradle@v4
+      - name: Make the wrapper executable
+        run: chmod +x ./gradlew
       - name: Assemble debug
         run: |
           set -o pipefail
@@ -55,10 +80,14 @@ jobs:
         run: |
           set -o pipefail
           ./gradlew --console=plain --no-daemon :app:testDebugUnitTest 2>&1 | tee -a build.log
+      - name: Lint
+        run: |
+          set -o pipefail
+          ./gradlew --console=plain --no-daemon :app:lintDebug 2>&1 | tee -a build.log
       - name: Report failure details
         if: failure() || cancelled()
         shell: bash
-        run: python3 ../.github/scripts/annotate.py build.log "HGallery build log" || true
+        run: python3 ../.github/scripts/annotate.py hgallery/build.log "app build"
       - name: Upload debug APK
         if: success()
         uses: actions/upload-artifact@v4
@@ -72,6 +101,6 @@ jobs:
         with:
           name: hgallery-reports
           path: |
-            hgallery/core/build/reports/tests/test/**
             hgallery/app/build/reports/**
+            hgallery/app/build/test-results/**
           if-no-files-found: ignore

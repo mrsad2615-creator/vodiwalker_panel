@@ -119,6 +119,10 @@ interface AppContextValue {
   seekFocusSegment: (index: number) => void;
   /** Chrono Core: run straight through the plan or stop at every boundary. */
   setAutoAdvance: (value: boolean) => void;
+  /** Global search lives here, not in the shell: a shell re-render used to close
+   *  the box mid-typing. */
+  searchOpen: boolean;
+  setSearchOpen: (open: boolean) => void;
   setFocusLinkedTask: (taskId: string | null) => void;
   startOrResumeFocus: () => void;
   pauseFocus: () => void;
@@ -133,6 +137,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
   const [activeTab, setActiveTab] = useState<NavTab>('dashboard');
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
+  const [searchOpen, setSearchOpen] = useState(false);
   const [taskModal, setTaskModal] = useState<TaskModalRequest>({ open: false });
 
   const settings = useSettings();
@@ -661,6 +666,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setChronoConfig,
       seekFocusSegment,
       setAutoAdvance,
+      searchOpen,
+      setSearchOpen,
       setFocusLinkedTask,
       startOrResumeFocus,
       pauseFocus,
@@ -685,6 +692,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setChronoConfig,
       seekFocusSegment,
       setAutoAdvance,
+      searchOpen,
+      setSearchOpen,
       setFocusLinkedTask,
       startOrResumeFocus,
       pauseFocus,

@@ -37,6 +37,9 @@ export {
   DotsThree as MoreHorizontal,
   GearSix as Settings,
   MagnifyingGlass as Search,
+  ArrowElbowDownLeft as CornerDownLeft,
+  Export as Share2,
+  Copy,
   // actions
   Check,
   CheckSquare,

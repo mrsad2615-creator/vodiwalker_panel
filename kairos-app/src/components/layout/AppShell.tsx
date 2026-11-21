@@ -15,11 +15,13 @@ import { applySectionAppearance } from '@/lib/sections';
 import { INITIAL_CHROME, resolveScrollChrome, type ScrollChrome } from '@/lib/scrollChrome';
 import { useApp } from '@/context/AppContext';
 import { KairosMarkTile } from '@/components/ui/KairosMark';
+import { Search } from '@/components/ui/icons';
 import { APP_VERSION, BUILD_NUMBER } from '@/lib/buildInfo';
 import { Numeric } from '@/components/ui/Numeric';
 import { ToastHost } from '@/components/ui/ToastHost';
 import { formatTimerSeconds } from '@/lib/format';
 import { setupAndroidBackButton, triggerHaptic } from '@/lib/native';
+import { SearchSheet } from '@/components/search/SearchSheet';
 
 type PrimaryTab = Extract<NavTab, 'dashboard' | 'tasks' | 'habits' | 'focus'>;
 
@@ -37,7 +39,16 @@ const SECONDARY_TABS: { id: NavTab; label: string; hint: string; icon: typeof La
 ];
 
 export function AppShell({ children }: { children: ReactNode }) {
-  const { activeTab, setActiveTab, settings, toasts, dismissToast, focus } = useApp();
+  const {
+    activeTab,
+    setActiveTab,
+    settings,
+    toasts,
+    dismissToast,
+    focus,
+    searchOpen,
+    setSearchOpen,
+  } = useApp();
   const [moreOpen, setMoreOpen] = useState(false);
   const [chrome, setChrome] = useState<ScrollChrome>(INITIAL_CHROME);
 
@@ -88,6 +99,18 @@ export function AppShell({ children }: { children: ReactNode }) {
       ? formatTimerSeconds(focus.remainingSeconds)
       : formatTimerSeconds(focus.elapsedSeconds);
 
+  // Ctrl/⌘+K anywhere in the product opens the box. Escape is handled by the sheet.
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        setSearchOpen(!searchOpen);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [searchOpen, setSearchOpen]);
+
   const isSecondaryActive = SECONDARY_TABS.some((t) => t.id === activeTab);
 
   // The shell scrolls its <main>, not the document, so a tab change has to reset
@@ -126,6 +149,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="kairos-ambient-bg h-full w-full">
       <ToastHost toasts={toasts} onDismiss={dismissToast} />
+      <SearchSheet open={searchOpen} onClose={() => setSearchOpen(false)} />
 
       {/* Shell owns the viewport; only `.app-scroll` moves. */}
       <div className="app-shell app-safe-frame relative mx-auto w-full max-w-[480px]">
@@ -159,6 +183,17 @@ export function AppShell({ children }: { children: ReactNode }) {
             </span>
           </button>
 
+          <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setSearchOpen(true)}
+            aria-label="جست‌وجوی سراسری"
+            title="جست‌وجو (Ctrl+K)"
+            className="grid h-8 w-8 place-items-center rounded-full border border-[var(--border)] text-[var(--text-2)] transition-colors hover:border-[var(--border-strong)] hover:text-[var(--text)]"
+          >
+            <Search className="h-3.5 w-3.5" />
+          </button>
+
           {focus.isRunning && activeTab !== 'focus' && (
             <button
               type="button"
@@ -170,6 +205,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               <Numeric value={liveFocusDisplay} variant="geo" className="text-[11px] font-medium" />
             </button>
           )}
+          </div>
         </header>
         </div>
 

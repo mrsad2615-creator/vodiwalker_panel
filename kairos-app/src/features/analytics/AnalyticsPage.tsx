@@ -12,6 +12,7 @@ import {
   TrendingUp,
 } from '@/components/ui/icons';
 import { useFocusSessions, useHabitLogs, useHabits, useTasks } from '@/lib/queries';
+import { ShareReportCard } from '@/components/analytics/ShareReportCard';
 import {
   computeAnnualHeatmap,
   computeAnnualReview,
@@ -173,6 +174,10 @@ export function AnalyticsPage() {
         title="تحلیل و گزارش عملکرد"
         meta={<span>آمار واقعی از داده‌های ثبت‌شدهٔ شما · مرور ماهانه و سالانه</span>}
       />
+
+      {/* The weekly report sits above the switcher: it is a summary of *all*
+          views, so hiding it behind one of the three tabs made no sense. */}
+      <ShareReportCard tasks={tasks} habitLogs={habitLogs} focusSessions={focusSessions} />
 
       {/* Sub-Navigation Switcher */}
       <div className="grid grid-cols-3 gap-1 rounded-2xl border border-[var(--accent-fg)]/12 bg-[var(--surface-2)] p-1">

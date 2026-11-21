@@ -57,12 +57,14 @@ fun ModuleSculpture3D(
     type: ModuleSculptureType,
     modifier: Modifier = Modifier,
     intensity: Float = 0.75f,
+    animated: Boolean = false,
 ) {
     val colors = MrsadTheme.colors
     val motion = MrsadTheme.motion
     val scratchPath = remember { Path() }
 
-    val animate = !colors.isNoir &&
+    val animate = animated &&
+        !colors.isNoir &&
         !MrsadTestHooks.isDeterministic &&
         motion.animationsEnabled &&
         motion.quality != GraphicsQuality.PERFORMANCE

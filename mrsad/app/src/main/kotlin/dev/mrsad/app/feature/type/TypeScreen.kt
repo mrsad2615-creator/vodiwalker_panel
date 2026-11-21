@@ -170,6 +170,7 @@ private fun HeaderRow(state: TypeUiState, persianNumerals: Boolean) {
         ModuleSculpture3D(
             type = ModuleSculptureType.TYPING,
             modifier = Modifier.size(54.dp),
+            animated = true,
         )
         Spacer(Modifier.width(MrsadTokens.Spacing.xs))
         Column(Modifier.weight(1f)) {

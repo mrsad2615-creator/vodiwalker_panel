@@ -120,6 +120,7 @@ private fun MindLobby(state: MindUiState, viewModel: MindViewModel, settings: Mr
             ModuleSculpture3D(
                 type = ModuleSculptureType.BRAIN,
                 modifier = Modifier.size(72.dp),
+                animated = true,
             )
         }
 

@@ -549,8 +549,7 @@ private fun HomeHeader(
                         1.dp,
                         colors.border,
                         if (isNoir) RoundedCornerShape(2.dp) else RoundedCornerShape(MrsadTokens.Radius.md),
-                    )
-                    .clickable(role = Role.Button, onClick = onOpenSettings),
+                    ),
                 contentAlignment = Alignment.Center,
             ) {
                 MrsadMarkView(

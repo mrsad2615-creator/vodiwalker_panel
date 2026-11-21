@@ -187,6 +187,7 @@ private fun EyeSetupPanel(
             ModuleSculpture3D(
                 type = ModuleSculptureType.EYE,
                 modifier = Modifier.size(92.dp),
+                animated = true,
             )
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(

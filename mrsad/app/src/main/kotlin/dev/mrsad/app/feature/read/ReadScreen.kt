@@ -100,6 +100,7 @@ fun ReadScreen(
                 ModuleSculpture3D(
                     type = ModuleSculptureType.READING,
                     modifier = Modifier.size(64.dp),
+                    animated = true,
                 )
             }
 

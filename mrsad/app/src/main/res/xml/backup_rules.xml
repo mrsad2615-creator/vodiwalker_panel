@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- MRSAD stores personal progress locally; include the database + settings in
+     encrypted OS backups so re-installation does not lose training history. -->
+<full-backup-content>
+    <include domain="database" path="mrsad.db" />
+    <include domain="file" path="datastore/" />
+</full-backup-content>

@@ -1,0 +1,345 @@
+name: MRSAD Android
+
+on:
+  workflow_dispatch:
+  push:
+    # Only what can change the application, the core or the way it is
+    # built. A document does not change a single byte of the APK, and
+    # rebuilding it would publish the same build under a new name.
+    paths:
+      - 'mrsad/app/**'
+      - 'mrsad/core/**'
+      - 'mrsad/.ci/**'
+      - 'mrsad/build.gradle.kts'
+      - 'mrsad/settings.gradle.kts'
+      - 'mrsad/gradle/**'
+      - '.github/workflows/mrsad-android.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mrsad-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  core-tests:
+    name: Domain core (pure Kotlin tests)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: mrsad
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Core unit tests
+        run: ./gradlew --console=plain --no-daemon :core:test
+
+  build:
+    name: Build & test Android app
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    needs: core-tests
+    defaults:
+      run:
+        working-directory: mrsad
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Assemble debug
+        run: |
+          set -o pipefail
+          ./gradlew --console=plain --no-daemon :app:assembleDebug 2>&1 | tee build.log
+
+      - name: Unit tests
+        run: |
+          set -o pipefail
+          ./gradlew --console=plain --no-daemon :app:testDebugUnitTest 2>&1 | tee -a build.log
+
+      - name: Lint
+        run: |
+          set -o pipefail
+          ./gradlew --console=plain --no-daemon :app:lintDebug 2>&1 | tee -a build.log
+
+      # NOTE: this job runs with `working-directory: mrsad`, so every path
+      # handed to the reporter must be relative to `mrsad/`, not to the
+      # repository root. Passing root-relative paths made the reporter exit
+      # before it could annotate anything.
+      - name: Report failure details
+        if: failure()
+        shell: bash
+        run: |
+          python3 .ci/report_failure.py build.log app/build/reports/lint-results-debug.txt
+
+      - name: Upload debug APK
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mrsad-debug-apk
+          path: mrsad/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mrsad-reports
+          path: |
+            mrsad/core/build/reports/tests/test/**
+            mrsad/app/build/reports/**
+            mrsad/app/build/test-results/**
+            mrsad/app/build/outputs/logs/**
+          if-no-files-found: ignore
+
+  e2e:
+    name: Emulator smoke test
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Enable KVM access
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Run instrumented UI tests
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 33
+          arch: x86_64
+          emulator-boot-timeout: 420
+          disable-animations: true
+          script: cd mrsad && sh .ci/run-connected-tests.sh
+      # NOTE: this job has NO `working-directory` override, so its paths are
+      # relative to the repository root — the opposite of the build job.
+      # `cancelled()` matters: a Compose test that never reaches idle blocks
+      # in waitForIdle(), which has no timeout, and the job-level timeout is
+      # what ends it. Without this condition the reporter would be skipped
+      # exactly when its output is most needed.
+      - name: Report instrumented test failure details
+        if: failure() || cancelled()
+        shell: bash
+        run: |
+          python3 mrsad/.ci/report_failure.py mrsad/ui-test.log
+      - name: Upload instrumented test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mrsad-androidtest-reports
+          path: |
+            mrsad/ui-test.log
+            mrsad/ui-test-results/**
+            mrsad/ui-test-dumps/**
+            mrsad/app/build/reports/androidTests/**
+            mrsad/app/build/outputs/androidTest-results/**
+          if-no-files-found: ignore
+
+  release:
+    name: Publish signed release APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: [core-tests, build, e2e]
+    permissions:
+      contents: write
+    defaults:
+      run:
+        working-directory: mrsad
+    env:
+      # The signing key lives in a repository *secret*, never in the
+      # repository itself. A secret survives a cache eviction; a cached key
+      # does not. The cache below stays as a fallback for as long as the
+      # secret has not been created yet.
+      #
+      # `secrets` is not available in a step-level `if`, which is why the
+      # secret is exposed through the job-level environment instead.
+      MRSAD_KEYSTORE_BASE64: ${{ secrets.MRSAD_KEYSTORE_BASE64 }}
+      MRSAD_KEYSTORE_PASSWORD: ${{ secrets.MRSAD_KEYSTORE_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+
+      # The signing key lives in the Actions cache, never in the repository.
+      # Caching it (instead of generating one per run) keeps the signing
+      # identity stable, which is what allows a new APK to be installed over
+      # an older one without losing the user's local data.
+      - name: Restore the release keystore
+        id: keystore
+        uses: actions/cache@v4
+        with:
+          # `actions/cache` resolves its path against the workspace root,
+          # while the steps below run inside `mrsad/`.
+          path: mrsad/.keystore
+          key: mrsad-release-keystore-v1
+
+      # The stored key wins over the cached one. Writing it after the cache
+      # restore keeps the transition safe: the cache is still there when the
+      # secret is missing, and the secret is used as soon as it exists.
+      - name: Write the stored signing key
+        if: env.MRSAD_KEYSTORE_BASE64 != ''
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .keystore
+          printf '%s' "$MRSAD_KEYSTORE_BASE64" | base64 -d > .keystore/mrsad-release.jks
+          printf '%s' "$MRSAD_KEYSTORE_PASSWORD" > .keystore/password.txt
+          echo "using the signing key from the repository secret"
+
+      - name: Create the release keystore
+        if: steps.keystore.outputs.cache-hit != 'true' && env.MRSAD_KEYSTORE_BASE64 == ''
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .keystore
+          # A random password, stored next to the key in the cache. It is
+          # never written to a log or to the repository.
+          PASS=$(head -c 48 /dev/urandom | base64 | tr -dc 'A-Za-z0-9' | cut -c1-40)
+          printf '%s' "$PASS" > .keystore/password.txt
+          keytool -genkeypair -v \
+            -keystore .keystore/mrsad-release.jks \
+            -alias mrsad \
+            -keyalg RSA -keysize 4096 -validity 10950 \
+            -storepass "$PASS" -keypass "$PASS" \
+            -dname "CN=MRSAD, OU=Personal, O=MRSAD, L=Tehran, C=IR"
+
+      - name: Build the signed release APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          PASS=$(cat .keystore/password.txt)
+          export ORG_GRADLE_PROJECT_MRSAD_KEYSTORE="$GITHUB_WORKSPACE/mrsad/.keystore/mrsad-release.jks"
+          export ORG_GRADLE_PROJECT_MRSAD_KEYSTORE_PASSWORD="$PASS"
+          export ORG_GRADLE_PROJECT_MRSAD_KEY_ALIAS="mrsad"
+          export ORG_GRADLE_PROJECT_MRSAD_KEY_PASSWORD="$PASS"
+          ./gradlew --console=plain --no-daemon :app:assembleRelease
+
+      # The fingerprint of the signing certificate is published with the
+      # release, so a rotated key can be recognised from outside the
+      # repository — and so anybody can tell whether two releases carry the
+      # same signature.
+      - name: Read the signing certificate fingerprint
+        id: fingerprint
+        shell: bash
+        run: |
+          set -euo pipefail
+          PASS=$(cat .keystore/password.txt)
+          FP=$(keytool -list -v \
+                 -keystore .keystore/mrsad-release.jks \
+                 -alias mrsad -storepass "$PASS" \
+                 | grep -iE 'SHA256:' | head -1 | sed 's/.*SHA256: *//' || true)
+          echo "value=${FP:-unknown}" >> "$GITHUB_OUTPUT"
+          echo "signing certificate SHA-256: ${FP:-unknown}"
+
+      # The publish step is a script of its own, so that it can be tried
+      # out before it is trusted with a release.
+      - name: Test the release publish
+        shell: bash
+        run: bash .ci/test-publish-release.sh
+
+      - name: Publish the release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ github.run_number }}
+          COMMIT: ${{ github.sha }}
+        run: |
+          set -uo pipefail
+          # Everything the step prints is kept, so a failing publish can be
+          # read without downloading the log of the run.
+          exec > >(tee release.log) 2>&1
+
+          set -- app/build/outputs/apk/release/*.apk
+          APK="$1"
+          if [ ! -f "$APK" ]; then
+            echo "there is no release APK at $APK"
+            exit 1
+          fi
+
+          TAG="v$(sed -n 's/.*versionName = "\(.*\)".*/\1/p' app/build.gradle.kts | head -1)"
+          echo "the release is $TAG"
+
+          cat > notes.md <<EOF
+          MRSAD — Persian command centre for focus, typing and reading.
+
+          * COSMIC LUXURY: a new visual identity — obsidian black, chrome and
+            titanium structure, and ice-blue, electric-blue and violet accents
+            that appear only where they carry meaning.
+          * ORRERY PRIME: the home centrepiece is now a mechanical cosmic
+            universe — a faceted icosahedral shell around a luminous energy
+            core, three orbital rings at different angles, and metallic
+            bodies riding them at their own speeds. It still reacts to the
+            finger, and its brightness is still the real goal progress.
+          * A custom icon family in hybrid 3D geometry: every module —
+            Home, Type, Read, Mind, Analytics, Assistant, Settings, Focus,
+            Studio — is a machined object shaded with the metal ramp,
+            replacing the generic glyphs.
+          * Typography: Space Grotesk now voices every Latin string (the
+            wordmark, Latin numerals) beside Vazirmatn and Estedad, so a
+            mixed line reads as one design.
+          * Smoked-glass surfaces with a deep-navy wash, chamfered
+            machined corners on the module cards, and a short cinematic
+            opening that plays once per launch and never on back-navigation.
+          * Offline by design: no INTERNET permission, everything stays on the device.
+          * The "Geometric M" brand mark is generated from one geometry and
+            shared by the launcher icon, the splash and the in-app brand mark.
+          * Difficulty that actually progresses: every cognitive exercise carries its
+            own ladder, moved only after two consecutive strong or weak rounds.
+          * More content: the reading corpus grew to nine passages across three
+            subjects and three difficulty tiers; the typing corpus gained a third
+            passage per tier in both languages.
+          * Charts that tell the truth: a day without a measurement breaks the line
+            instead of dipping to the floor, a flat series sits in the middle of the
+            plot, and the newest marker points at the real latest measurement.
+          * Accessibility: every control reserves the 48dp minimum touch target, the
+            metric type scale stops clipping Persian digits, the colour system is
+            checked against the WCAG contrast floor by a unit test, and every tappable
+            control has a name a screen reader can reach.
+          * Right-to-left on every device: the app is Persian only, so the layout
+            direction no longer follows the phone's language. The back arrow and the
+            send arrow are the auto-mirrored icons, and the navigation runs from
+            right to left whatever the system locale happens to be.
+          * Build: commit \`${COMMIT:0:7}\`
+          * CI run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}
+          * Signing certificate (SHA-256): ${{ steps.fingerprint.outputs.value }}
+
+          Install \`mrsad.apk\` on Android 8.0+ (it may ask to allow installs from
+          unknown sources). Verify the download with \`SHA256SUMS.txt\`.
+
+          The signing key must not change between releases: Android refuses to
+          install a build over an older one when the signature differs, and the
+          training history stored on the device becomes unreachable. The
+          fingerprint above is what proves two releases carry the same
+          signature.
+          EOF
+
+          bash .ci/publish-release.sh "$TAG" "$APK" notes.md "$COMMIT" app
+          STATUS=$?
+          echo "the publish of $TAG finished with status $STATUS"
+          exit "$STATUS"
+
+      - name: Report what happened
+        if: failure() || cancelled()
+        shell: bash
+        run: |
+          set -uo pipefail
+          python3 ../.github/scripts/annotate.py release.log "MRSAD release log" || true
+          gh release view "$TAG" --json url --jq .url

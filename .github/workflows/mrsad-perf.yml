@@ -1,0 +1,291 @@
+name: MRSAD Performance
+
+# The performance comparison of the interface.
+#
+# Two builds of the app are measured: the revision before the redesign
+# and the revision after it. The numbers come from the platform's own
+# `FrameMetrics`, so the comparison is a measurement and not an
+# estimate.
+#
+# Both builds are measured **on the same emulator, in the same job**,
+# and the order of the two is swapped after every round. This is the
+# point of the whole workflow: a job of a matrix runs on its own
+# machine, and a machine of the cloud is not the same machine twice.
+# Measured on two machines, a slow afternoon on one of them looks
+# exactly like a slow application — and that is what two campaigns of
+# this comparison showed before the two sides were brought together.
+#
+# Every build is measured several times, because one run of an emulator
+# is not a measurement: the machine shares its cores with everything
+# else that runs on it. The comparison reports the middle of the runs
+# and the spread of the runs.
+#
+# The reports of every run are uploaded as an artefact, the comparison of
+# the two sides is written into `PERF-COMPARISON.md`, and both the
+# reports and the comparison are published as annotations, so that they
+# can be read without downloading anything.
+
+on:
+  workflow_dispatch:
+    inputs:
+      baseline_ref:
+        description: 'The revision the redesign is compared against'
+        required: false
+        default: '465b3e532cadeefb167a9fa2c8303fcea6549d41'
+      runs:
+        description: 'How many times each build is measured'
+        required: false
+        default: '5'
+  push:
+    # The measurement only has to run again when something that can
+    # change it changes: the application, the domain core, the benchmark
+    # itself or the comparison. A document does not move a single frame.
+    paths:
+      - 'mrsad/app/**'
+      - 'mrsad/core/**'
+      - 'mrsad/.ci/run-perf-benchmark.sh'
+      - 'mrsad/.ci/perf-session.sh'
+      - '.github/workflows/mrsad-perf.yml'
+      - '.github/scripts/compare_perf.py'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mrsad-perf-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  measure:
+    name: Measure both revisions on one emulator
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      MRSAD_PERF_RUNS: ${{ github.event.inputs.runs || '5' }}
+      BASELINE_REF: ${{ github.event.inputs.baseline_ref || '465b3e532cadeefb167a9fa2c8303fcea6549d41' }}
+    steps:
+      # The revision the redesign is compared against.
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.BASELINE_REF }}
+          path: baseline
+
+      # The revision that is measured against it.
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: redesign
+
+      # The benchmark itself is taken from the head of the branch, so the
+      # two sides are measured by exactly the same instrument.
+      - name: Install the benchmark into the baseline checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          source_dir="$GITHUB_WORKSPACE/redesign/mrsad/app/src/androidTest/kotlin/dev/mrsad/app"
+          target_dir="$GITHUB_WORKSPACE/baseline/mrsad/app/src/androidTest/kotlin/dev/mrsad/app"
+          mkdir -p "$target_dir"
+          cp "$source_dir/PerformanceBenchmarkTest.kt" "$target_dir/"
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Enable KVM access
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      # Both builds are made before the emulator starts, so that the
+      # measurement itself is not interrupted by a build.
+      - name: Build both revisions
+        shell: bash
+        run: |
+          set -euo pipefail
+          for side in baseline redesign; do
+            (
+              cd "$GITHUB_WORKSPACE/$side/mrsad"
+              ./gradlew --console=plain --no-daemon \
+                :app:assembleDebug :app:assembleDebugAndroidTest
+            ) 2>&1 | tee "$GITHUB_WORKSPACE/build-$side.log"
+
+            mkdir -p "$GITHUB_WORKSPACE/perf/apks/$side"
+            cp "$GITHUB_WORKSPACE/$side/mrsad/app/build/outputs/apk/debug/app-debug.apk" \
+               "$GITHUB_WORKSPACE/perf/apks/$side/app.apk"
+            cp "$GITHUB_WORKSPACE/$side/mrsad/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk" \
+               "$GITHUB_WORKSPACE/perf/apks/$side/test.apk"
+            ls -la "$GITHUB_WORKSPACE/perf/apks/$side"
+          done
+
+      - name: Measure both revisions, round after round
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 33
+          arch: x86_64
+          emulator-boot-timeout: 420
+          # The measurement has to see the animated application, so the
+          # platform animations are left alone.
+          disable-animations: false
+          script: cd $GITHUB_WORKSPACE/redesign/mrsad && bash .ci/run-perf-benchmark.sh "$GITHUB_WORKSPACE/perf" "$MRSAD_PERF_RUNS"
+
+      - name: Report what happened
+        if: failure() || cancelled()
+        shell: bash
+        run: |
+          set -uo pipefail
+          python3 "$GITHUB_WORKSPACE/redesign/mrsad/.ci/report_failure.py" \
+            "$GITHUB_WORKSPACE/perf/perf-benchmark.log" || true
+
+      - name: Collect the reports
+        if: always()
+        shell: bash
+        run: |
+          set -uo pipefail
+          for side in baseline redesign; do
+            for report in "$GITHUB_WORKSPACE"/perf/out/perf-$side/perf-session-*.json; do
+              if [ -f "$report" ]; then
+                echo "== $side, $(basename "$report") =="
+                cat "$report"
+              fi
+            done
+          done
+
+      - name: Publish the reports and the screenshots
+        if: always()
+        shell: bash
+        run: |
+          set -uo pipefail
+          for side in baseline redesign; do
+            for report in "$GITHUB_WORKSPACE"/perf/out/perf-$side/perf-session-*.json; do
+              if [ -f "$report" ]; then
+                python3 "$GITHUB_WORKSPACE/redesign/.github/scripts/annotate.py" \
+                  "$report" \
+                  "MRSAD measurement ($side, $(basename "$report"))"
+              fi
+            done
+          done
+          python3 "$GITHUB_WORKSPACE/redesign/.github/scripts/annotate.py" \
+            "$GITHUB_WORKSPACE/perf/out/summary.txt" \
+            "MRSAD measurement (the summary)"
+          for side in baseline redesign; do
+            python3 "$GITHUB_WORKSPACE/redesign/.github/scripts/annotate.py" \
+              "$GITHUB_WORKSPACE/perf/out/perf-$side/screenshot-collection.txt" \
+              "MRSAD screenshots ($side)"
+          done
+
+      - name: Upload the reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mrsad-perf
+          path: |
+            perf/out/perf-baseline
+            perf/out/perf-redesign
+            perf/out/screenshots-baseline
+            perf/out/screenshots-redesign
+            perf/out/summary.txt
+          if-no-files-found: ignore
+
+  compare:
+    name: Compare
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: measure
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: mrsad-perf
+          path: evidence
+        continue-on-error: true
+      - name: Write the comparison
+        shell: bash
+        run: |
+          set -uo pipefail
+          # Where the artefact put the two sides is looked up, not
+          # assumed: the shape of an artefact depends on the paths it was
+          # uploaded with.
+          BASE=$(find evidence -type d -name 'perf-baseline' | head -1)
+          REDESIGN=$(find evidence -type d -name 'perf-redesign' | head -1)
+          echo "the baseline is in $BASE"
+          echo "the redesign is in $REDESIGN"
+          python3 .github/scripts/compare_perf.py \
+            "$BASE" \
+            "$REDESIGN" \
+            PERF-COMPARISON.md
+          echo "----- the comparison -----"
+          cat PERF-COMPARISON.md
+      - name: Publish the comparison
+        shell: bash
+        run: |
+          set -uo pipefail
+          {
+            echo "## The measurement"
+            echo
+            cat PERF-COMPARISON.md
+          } >> "$GITHUB_STEP_SUMMARY"
+          python3 .github/scripts/annotate.py PERF-COMPARISON.md "MRSAD comparison"
+      - name: Upload the comparison
+        uses: actions/upload-artifact@v4
+        with:
+          name: mrsad-perf-comparison
+          path: |
+            PERF-COMPARISON.md
+            evidence/**
+          if-no-files-found: ignore
+
+  # The measurement belongs in the repository, not only in the artefacts of
+  # a run: the screenshots are the visual evidence of the claim, and the
+  # comparison is the evidence of the numbers.
+  publish:
+    name: Publish the evidence
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: compare
+    if: github.ref_type == 'branch'
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+          persist-credentials: true
+      - uses: actions/download-artifact@v4
+        with:
+          name: mrsad-perf-comparison
+          path: evidence
+        continue-on-error: true
+      - name: Write the evidence into the repository
+        shell: bash
+        run: |
+          set -uo pipefail
+          mkdir -p benchmarks/screenshots/baseline benchmarks/screenshots/redesign
+          if [ -f evidence/PERF-COMPARISON.md ]; then
+            cp evidence/PERF-COMPARISON.md PERF-COMPARISON.md
+          fi
+          for side in baseline redesign; do
+            SOURCE=$(find evidence -type d -name "screenshots-$side" | head -1)
+            if [ -n "$SOURCE" ]; then
+              cp "$SOURCE"/*.png "benchmarks/screenshots/$side/" 2>/dev/null || true
+            fi
+          done
+          find benchmarks -name '*.png' -size +2M -delete 2>/dev/null || true
+          echo "----- what is published -----"
+          ls -la benchmarks/screenshots/baseline benchmarks/screenshots/redesign 2>/dev/null || true
+      - name: Commit the evidence
+        shell: bash
+        run: |
+          set -uo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add PERF-COMPARISON.md benchmarks 2>/dev/null || true
+          if git diff --cached --quiet; then
+            echo "the measurement did not change, so there is nothing to publish"
+            exit 0
+          fi
+          git commit \
+            -m "Publish the measured comparison of the interface" \
+            -m "Measured by the MRSAD Performance workflow on one emulator, with the platform's own FrameMetrics. The numbers and the screenshots are the evidence of the redesign."
+          git push origin "HEAD:refs/heads/${{ github.ref_name }}"

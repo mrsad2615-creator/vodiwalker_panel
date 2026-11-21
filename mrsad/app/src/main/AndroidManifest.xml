@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- MRSAD is offline-first: no INTERNET permission is declared. -->
+    <!-- Least privilege: no INTERNET, no location, no contacts. Permissions are
+         added only when the corresponding feature actually ships. -->
+    <uses-permission android:name="android.permission.VIBRATE" />
+
+    <!-- Focus mode posts an ongoing timer notification. From Android 13 (API 33)
+         the runtime POST_NOTIFICATIONS permission is required; without it
+         NotificationManagerCompat.notify() is a no-op and Lint reports
+         "MissingPermission" at the call site. The permission is requested
+         in-app at the moment a Focus session actually starts. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <application
+        android:name=".MrsadApplication"
+        android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:label="@string/app_name"
+        android:localeConfig="@xml/locales_config"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.MRSAD.Splash"
+        tools:targetApi="33">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|uiMode"
+            android:windowSoftInputMode="adjustResize"
+            android:theme="@style/Theme.MRSAD.Splash">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+    </application>
+</manifest>

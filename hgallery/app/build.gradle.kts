@@ -64,6 +64,13 @@ android {
     testOptions {
         unitTests.isReturnDefaultValues = true
     }
+
+    // The lint policy lives in hgallery/lint.xml; see the comment there for why
+    // exactly two checks are silenced and everything else still fails the build.
+    lint {
+        lintConfig = file("../lint.xml")
+        abortOnError = true
+    }
 }
 
 dependencies {

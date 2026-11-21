@@ -33,10 +33,13 @@ fun FullResolutionImage(
     modifier: Modifier = Modifier,
 ) {
     val resolver = container.contentResolver
+    // Lint cannot see through `withContext` inside a `produceState` block, so the
+    // decode is awaited first and the result assigned directly.
     val bitmap by produceState<Bitmap?>(initialValue = null, item.id) {
-        value = withContext(Dispatchers.IO) {
+        val decoded = withContext(Dispatchers.IO) {
             decodeBounded(resolver, item.uri, maxEdge = 2048)
         }
+        value = decoded
     }
 
     Box(modifier, contentAlignment = Alignment.Center) {

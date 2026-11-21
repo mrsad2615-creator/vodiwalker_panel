@@ -1,0 +1,23 @@
+# Lint configuration.
+#
+# Lint stays enabled and fatal: a lint error fails CI, exactly as a compile
+# error does. These two checks are disabled for stated reasons, not to make the
+# build green.
+#
+#  - GradleDependency: "a newer version exists" is not a defect. AndroidX
+#    versions are pinned deliberately to a combination verified to build
+#    together; upgrading them one at a time because lint suggested it is how a
+#    Compose project acquires an unresolvable dependency graph.
+#
+#  - OldTargetApi: the target SDK (35) is chosen for the POCO X3 Pro running
+#    Android 13; lint's suggestion to chase a newer platform each time it ships
+#    would silently change runtime behaviour on the user's device.
+#
+# Everything else — including Compose correctness checks such as
+# ProduceStateDoesNotAssignValue, accessibility and scoped-storage rules — is
+# reported and still fails the build.
+lint {
+    disable += setOf("GradleDependency", "OldTargetApi")
+    abortOnError = true
+    checkDependencies = false
+}

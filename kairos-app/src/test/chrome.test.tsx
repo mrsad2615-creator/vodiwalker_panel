@@ -36,7 +36,7 @@ describe('Top bar behaves like a product, not a fixed slab', () => {
     fireEvent.click(screen.getByRole('status', { name: /kairos/i }));
     await waitFor(() => expect(screen.getByText('پیشرفت امروز')).toBeInTheDocument());
 
-    expect(document.querySelector('main')).not.toBeNull();
+    expect(document.querySelector('main.app-scroll')).not.toBeNull();
     expect(headerWrapper().dataset.chrome).toBe('visible');
     // Hiding must be visual only — any layout change makes the bar bounce.
     expect(headerWrapper().style.gridTemplateRows).toBe('');
@@ -44,7 +44,9 @@ describe('Top bar behaves like a product, not a fixed slab', () => {
     // Re-query every time: the shell can re-mount when settings arrive from
     // IndexedDB, and a stale node would swallow the event.
     const scrollTo = async (top: number) => {
-      const node = document.querySelector('main') as HTMLElement;
+      // `.app-scroll` is the shell's scroller; a bare `main` selector can pick
+      // up another tree during a transition, and then the event goes nowhere.
+      const node = document.querySelector('main.app-scroll') as HTMLElement;
       expect(node.isConnected).toBe(true);
       Object.defineProperty(node, 'scrollTop', {
         value: top,

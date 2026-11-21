@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   BarChart3,
   CalendarDays,
@@ -56,6 +56,9 @@ export function AppShell({ children }: { children: ReactNode }) {
   const handleNav = (tab: NavTab) => {
     setMoreOpen(false);
     if (tab === activeTab) return;
+    // Revealing the bar is part of navigating, not of an effect that may land
+    // after the user has already started reading.
+    setChrome(INITIAL_CHROME);
     void triggerHaptic('light', settings.hapticsEnabled);
     setActiveTab(tab);
     // Scroll reset happens in the effect below — the document no longer scrolls.
@@ -95,7 +98,6 @@ export function AppShell({ children }: { children: ReactNode }) {
     if (!node) return;
     if (typeof node.scrollTo === 'function') node.scrollTo({ top: 0, behavior: 'auto' });
     else node.scrollTop = 0;
-    setChrome(INITIAL_CHROME);
   }, [activeTab]);
 
   // The top bar tucks itself away while reading downward and returns on the way
@@ -103,8 +105,14 @@ export function AppShell({ children }: { children: ReactNode }) {
   // nothing changed, so the common case costs no render — and no rAF is needed,
   // which means a throttled or suspended frame (background tab, cold WebView)
   // can never leave the bar stuck open.
-  useEffect(() => {
-    const node = scrollRef.current;
+  // The listener is bound through a ref callback, not an effect: the scroller
+  // can be replaced when the shell re-renders, and an effect that captured the
+  // old node would leave the new one unable to move the bar at all.
+  const detachRef = useRef<(() => void) | null>(null);
+  const bindScroller = useCallback((node: HTMLElement | null) => {
+    detachRef.current?.();
+    detachRef.current = null;
+    scrollRef.current = node;
     if (!node) return;
 
     const onScroll = () => {
@@ -112,7 +120,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     };
 
     node.addEventListener('scroll', onScroll, { passive: true });
-    return () => node.removeEventListener('scroll', onScroll);
+    detachRef.current = () => node.removeEventListener('scroll', onScroll);
   }, []);
 
   return (
@@ -121,7 +129,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       {/* Shell owns the viewport; only `.app-scroll` moves. */}
       <div className="app-shell app-safe-frame relative mx-auto w-full max-w-[480px]">
-        <main ref={scrollRef} className="app-scroll">
+        <main ref={bindScroller} className="app-scroll">
         {/* The bar is sticky and hides by transform only. Toggling layout height
             (the 1.4.4 approach) shifted the content under the finger, which
             re-fired scroll events and made the bar bounce up and down. */}

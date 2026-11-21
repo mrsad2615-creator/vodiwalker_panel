@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import App from '@/App';
 import { db } from '@/lib/db';
 
@@ -36,26 +36,34 @@ describe('Top bar behaves like a product, not a fixed slab', () => {
     fireEvent.click(screen.getByRole('status', { name: /kairos/i }));
     await waitFor(() => expect(screen.getByText('پیشرفت امروز')).toBeInTheDocument());
 
-    const main = document.querySelector('main');
-    expect(main).not.toBeNull();
+    expect(document.querySelector('main')).not.toBeNull();
     expect(headerWrapper().dataset.chrome).toBe('visible');
     // Hiding must be visual only — any layout change makes the bar bounce.
     expect(headerWrapper().style.gridTemplateRows).toBe('');
 
-    Object.defineProperty(main as HTMLElement, 'scrollTop', {
-      value: 260,
-      writable: true,
-      configurable: true,
-    });
-    fireEvent.scroll(main as HTMLElement);
+    // Re-query every time: the shell can re-mount when settings arrive from
+    // IndexedDB, and a stale node would swallow the event.
+    const scrollTo = async (top: number) => {
+      const node = document.querySelector('main') as HTMLElement;
+      expect(node.isConnected).toBe(true);
+      Object.defineProperty(node, 'scrollTop', {
+        value: top,
+        writable: true,
+        configurable: true,
+      });
+      await act(async () => {
+        fireEvent.scroll(node);
+      });
+    };
 
-    await waitFor(() => expect(headerWrapper().dataset.chrome).toBe('hidden'), { timeout: 3000 });
+    // Drive the handler inside act and assert synchronously: no timers, no
+    // frames, nothing a slow CI runner can miss.
+    await scrollTo(260);
+    expect(headerWrapper().dataset.chrome).toBe('hidden');
     expect(headerWrapper().style.transform).toBe('translateY(-104%)');
 
-    (main as HTMLElement).scrollTop = 120;
-    fireEvent.scroll(main as HTMLElement);
-
-    await waitFor(() => expect(headerWrapper().dataset.chrome).toBe('visible'), { timeout: 3000 });
+    await scrollTo(120);
+    expect(headerWrapper().dataset.chrome).toBe('visible');
     expect(headerWrapper().style.transform).toBe('translateY(0)');
   });
 

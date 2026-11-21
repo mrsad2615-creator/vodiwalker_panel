@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      The activity window is drawn by Compose, so the platform theme only has to
+      supply a background that matches the reference (#FFFFFF) and hide the
+      action bar. Edge-to-edge is enabled from the activity itself.
+    -->
+    <style name="Theme.HGallery" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@android:color/white</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">true</item>
+    </style>
+</resources>

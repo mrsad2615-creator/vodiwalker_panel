@@ -1,0 +1,77 @@
+name: HGallery Android
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'hgallery/**'
+      - '.github/workflows/hgallery-android.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hgallery-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  core-tests:
+    name: Domain core (pure Kotlin tests)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: hgallery
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Core unit tests
+        run: ./gradlew --console=plain --no-daemon :core:test
+
+  build:
+    name: Build debug APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    needs: core-tests
+    defaults:
+      run:
+        working-directory: hgallery
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Assemble debug
+        run: |
+          set -o pipefail
+          ./gradlew --console=plain --no-daemon :app:assembleDebug 2>&1 | tee build.log
+      - name: Unit tests
+        run: |
+          set -o pipefail
+          ./gradlew --console=plain --no-daemon :app:testDebugUnitTest 2>&1 | tee -a build.log
+      - name: Report failure details
+        if: failure() || cancelled()
+        shell: bash
+        run: python3 ../.github/scripts/annotate.py build.log "HGallery build log" || true
+      - name: Upload debug APK
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hgallery-debug-apk
+          path: hgallery/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hgallery-reports
+          path: |
+            hgallery/core/build/reports/tests/test/**
+            hgallery/app/build/reports/**
+          if-no-files-found: ignore

@@ -21,6 +21,9 @@ KEYWORDS = (
     "Could not",
     "cannot find symbol",
     "Unresolved reference",
+    "Error:",
+    "lint",
+    "Lint found",
 )
 
 

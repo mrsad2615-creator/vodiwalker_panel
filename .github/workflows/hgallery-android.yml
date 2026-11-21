@@ -84,6 +84,19 @@ jobs:
         run: |
           set -o pipefail
           ./gradlew --console=plain --no-daemon :app:lintDebug 2>&1 | tee -a build.log
+      - name: Report lint findings
+        if: failure() || cancelled()
+        shell: bash
+        run: |
+          set -uo pipefail
+          REPORT=app/build/reports/lint-results-debug.txt
+          if [ -f "$REPORT" ]; then
+            grep -E "Error:|Warning:" "$REPORT" | head -25 | while IFS= read -r line; do
+              echo "::error title=lint::${line//\%/%25}"
+            done
+          else
+            echo "::warning title=lint::no lint report was produced"
+          fi
       - name: Report failure details
         if: failure() || cancelled()
         shell: bash

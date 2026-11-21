@@ -59,12 +59,16 @@ class PerformanceBenchmarkTest {
 
     @After
     fun tearDown() {
+        // Re-enable deterministic mode before closing the scenario so
+        // recurring animations stop and `ActivityScenario.close()` does
+        // not block inside `waitForIdleSync()` for 30+ minutes.
+        MrsadTestHooks.enableDeterministicMode()
         if (::scenario.isInitialized) {
             scenario.close()
         }
     }
 
-    @Test
+    @Test(timeout = 90_000)
     fun theAnimatedApplicationHoldsItsFrameBudget() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         scenario = ActivityScenario.launch(MainActivity::class.java)

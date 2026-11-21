@@ -23,6 +23,7 @@ import androidx.compose.material.icons.outlined.Keyboard
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -98,8 +99,9 @@ fun HomeScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .graphicsLayer {
-                    alpha = opening
-                    val settle = 0.97f + 0.03f * opening
+                    val open = opening.value
+                    alpha = open
+                    val settle = 0.97f + 0.03f * open
                     scaleX = settle
                     scaleY = settle
                 }
@@ -478,7 +480,7 @@ private object OpeningSequence {
 }
 
 @Composable
-private fun rememberOpeningProgress(): Float {
+private fun rememberOpeningProgress(): Animatable<Float, AnimationVector1D> {
     val motion = MrsadTheme.motion
     val progress = remember { Animatable(0f) }
     LaunchedEffect(Unit) {
@@ -498,5 +500,5 @@ private fun rememberOpeningProgress(): Float {
             ),
         )
     }
-    return progress.value
+    return progress
 }

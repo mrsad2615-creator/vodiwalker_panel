@@ -162,10 +162,14 @@ rm -f "$GRADLE_DIR/device-report.json"
 adb shell "rm -f /data/user/0/$APP_ID/files/mrsad-perf.json /data/data/$APP_ID/files/mrsad-perf.json" \
   >/dev/null 2>&1 || true
 
-adb shell am instrument -w \
+SESSION_TIMEOUT="${MRSAD_PERF_SESSION_TIMEOUT:-120}"
+timeout "$SESSION_TIMEOUT" adb shell am instrument -w \
   -e class dev.mrsad.app.PerformanceBenchmarkTest \
   "$TEST_ID/$INSTRUMENTATION" 2>&1 | tee -a "$LOG"
 STATUS=${PIPESTATUS[0]}
+if [ "$STATUS" -eq 124 ]; then
+  adb shell am force-stop "$APP_ID" >/dev/null 2>&1 || true
+fi
 echo "the session finished with status $STATUS" | tee -a "$LOG"
 
 if [ "$STATUS" -ne 0 ]; then

@@ -76,6 +76,7 @@ fun MrsadCore(
         GraphicsQuality.PERFORMANCE -> 0
     }
     val scene = remember { CoreScene() }
+    val scratchPath = remember { Path() }
     val clampedEnergy = energy.coerceIn(0f, 1f)
 
     // The clock of the object. It is a real frame clock rather than an
@@ -139,6 +140,7 @@ fun MrsadCore(
             drawCore(
                 engine = engine,
                 scene = scene,
+                scratchPath = scratchPath,
                 colors = colors,
                 energy = clampedEnergy,
                 streakDays = streakDays,
@@ -263,6 +265,7 @@ private class CoreScene {
 private fun DrawScope.drawCore(
     engine: Core3D,
     scene: CoreScene,
+    scratchPath: Path,
     colors: MrsadColors,
     energy: Float,
     streakDays: Int,
@@ -325,6 +328,7 @@ private fun DrawScope.drawCore(
     // ---- 3. The half of each ring that is behind the body -------------------
     drawRingHalf(
         engine = engine,
+        scratchPath = scratchPath,
         offset = 0,
         centerX = centerX,
         centerY = centerY,
@@ -336,6 +340,7 @@ private fun DrawScope.drawCore(
     )
     drawRingHalf(
         engine = engine,
+        scratchPath = scratchPath,
         offset = engine.secondRingOffset,
         centerX = centerX,
         centerY = centerY,
@@ -347,6 +352,7 @@ private fun DrawScope.drawCore(
     )
     drawRingHalf(
         engine = engine,
+        scratchPath = scratchPath,
         offset = engine.thirdRingOffset,
         centerX = centerX,
         centerY = centerY,
@@ -360,17 +366,16 @@ private fun DrawScope.drawCore(
     // ---- 4. The body --------------------------------------------------------
     // The facets are translucent, so the light of the nucleus shines
     // through the shell instead of being hidden behind it.
-    val path = Path()
     for (index in 0 until engine.faceCount) {
         val face = CoreGeometry.faces[engine.faceOrder[index]]
-        path.reset()
-        path.moveTo(engine.screenX[face[0]], engine.screenY[face[0]])
-        path.lineTo(engine.screenX[face[1]], engine.screenY[face[1]])
-        path.lineTo(engine.screenX[face[2]], engine.screenY[face[2]])
-        path.close()
+        scratchPath.reset()
+        scratchPath.moveTo(engine.screenX[face[0]], engine.screenY[face[0]])
+        scratchPath.lineTo(engine.screenX[face[1]], engine.screenY[face[1]])
+        scratchPath.lineTo(engine.screenX[face[2]], engine.screenY[face[2]])
+        scratchPath.close()
         val shade = engine.faceShade[engine.faceOrder[index]]
         val fill = lerpColor(shadow, highlight, shade).copy(alpha = 0.13f + 0.13f * shade)
-        drawPath(path, fill)
+        drawPath(scratchPath, fill)
     }
 
     // ---- 5. The nucleus -----------------------------------------------------
@@ -437,6 +442,7 @@ private fun DrawScope.drawCore(
     // ---- 7. The half of each ring that is in front of the body --------------
     drawRingHalf(
         engine = engine,
+        scratchPath = scratchPath,
         offset = 0,
         centerX = centerX,
         centerY = centerY,
@@ -448,6 +454,7 @@ private fun DrawScope.drawCore(
     )
     drawRingHalf(
         engine = engine,
+        scratchPath = scratchPath,
         offset = engine.secondRingOffset,
         centerX = centerX,
         centerY = centerY,
@@ -459,6 +466,7 @@ private fun DrawScope.drawCore(
     )
     drawRingHalf(
         engine = engine,
+        scratchPath = scratchPath,
         offset = engine.thirdRingOffset,
         centerX = centerX,
         centerY = centerY,
@@ -566,6 +574,7 @@ private fun DrawScope.drawCore(
  */
 private fun DrawScope.drawRingHalf(
     engine: Core3D,
+    scratchPath: Path,
     offset: Int,
     centerX: Float,
     centerY: Float,
@@ -577,13 +586,13 @@ private fun DrawScope.drawRingHalf(
 ) {
     val segments = engine.ringSegments
 
-    // The band is drawn as one path, not as one line per segment: forty
-    // lines a ring meant forty colours, forty widths and eighty points
-    // to throw away on every frame, and the frame budget is not a place
-    // to waste that. The path itself is exactly the same line the
-    // segments made.
-    val path = Path()
-    var started = false
+    // The band is drawn as one reused path, not as one line per segment
+    // and without allocating a fresh Path per call. Whenever segments are
+    // skipped across the depth split, `connected` resets so the next arc
+    // starts with `moveTo` instead of drawing a chord across the gap.
+    scratchPath.reset()
+    var hasAny = false
+    var connected = false
     var lowest = Float.MAX_VALUE
     var highest = -Float.MAX_VALUE
     var farX = 0f
@@ -595,20 +604,22 @@ private fun DrawScope.drawRingHalf(
         val j = i + 1
         val depth = (engine.ringZ[offset + i] + engine.ringZ[offset + j]) / 2f
         val isFront = depth >= 0f
-        if (isFront != front) continue
+        if (isFront != front) {
+            connected = false
+            continue
+        }
 
         val x1 = engine.ringScreenX(offset, i, centerX, radiusPx)
         val y1 = engine.ringScreenY(offset, i, centerY, radiusPx)
         val x2 = engine.ringScreenX(offset, j, centerX, radiusPx)
         val y2 = engine.ringScreenY(offset, j, centerY, radiusPx)
 
-        if (!started) {
-            path.moveTo(x1, y1)
-            started = true
-        } else {
-            path.lineTo(x1, y1)
+        if (!connected) {
+            scratchPath.moveTo(x1, y1)
+            connected = true
+            hasAny = true
         }
-        path.lineTo(x2, y2)
+        scratchPath.lineTo(x2, y2)
 
         // The deepest and the shallowest point of this half: they are the
         // two ends of the depth ramp of the band.
@@ -623,7 +634,7 @@ private fun DrawScope.drawRingHalf(
             nearY = y1
         }
     }
-    if (!started) return
+    if (!hasAny) return
 
     // How near the two ends of the half are, in 0..1. The near end is
     // the brighter and the wider one.
@@ -635,7 +646,7 @@ private fun DrawScope.drawRingHalf(
     val width = bandWidth * (0.55f + 0.55f * average)
 
     drawPath(
-        path = path,
+        path = scratchPath,
         brush = Brush.linearGradient(
             colors = listOf(
                 lerpColor(far, near, lowCloseness)
@@ -651,7 +662,7 @@ private fun DrawScope.drawRingHalf(
     // The lit edge along the top of the band.
     if (front) {
         drawPath(
-            path = path,
+            path = scratchPath,
             color = near.copy(alpha = 0.30f + 0.45f * average),
             style = Stroke(width = max(0.7f, width * 0.22f)),
         )

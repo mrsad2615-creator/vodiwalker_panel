@@ -252,10 +252,10 @@ private fun SetupPanel(
         Spacer(Modifier.height(MrsadTokens.Spacing.xs))
         SectionHeader(title = "۳. سطح دشواری و متن تمرین")
         ObsidianSegmentedBar(
-            items = listOf(0, 1, 2, 3, 4, 5).map { lvl ->
+            items = listOf(0, 1, 2, 3).map { lvl ->
                 SegmentedBarItem(
                     id = lvl.toString(),
-                    label = if (lvl == 0) "همه" else "سطح ${formatInt(lvl, persianNumerals)}",
+                    label = if (lvl == 0) "همهٔ سطوح" else "سطح ${formatInt(lvl, persianNumerals)}",
                     accent = ObsidianSpectrum.BrightBlue,
                 )
             },

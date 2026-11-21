@@ -84,7 +84,7 @@ class TypeViewModel(private val container: AppContainer) : ViewModel() {
 
     fun setLevelFilter(level: Int) {
         if (_state.value.isActive) return
-        val clamped = level.coerceIn(0, 5)
+        val clamped = level.coerceIn(0, 3)
         _state.update { it.copy(selectedLevelFilter = clamped) }
         val filtered = TypeTexts.forLanguage(_state.value.usePersian, clamped)
         if (filtered.isNotEmpty() && filtered.none { it.id == _state.value.selectedTextId }) {

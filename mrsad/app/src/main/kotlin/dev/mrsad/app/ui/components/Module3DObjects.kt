@@ -37,6 +37,9 @@ enum class ModuleSculptureType {
     BRAIN,
     ;
 
+    val palette: ModuleSpectralIdentity
+        get() = spectralIdentity()
+
     fun spectralIdentity(): ModuleSpectralIdentity = when (this) {
         TYPING -> ModulePalettes.Typing
         READING -> ModulePalettes.Reading
@@ -55,7 +58,7 @@ fun ModuleSculpture3D(
 ) {
     val identity = type.spectralIdentity()
     val primary = identity.primary
-    val highlight = accentOverride ?: identity.highlight
+    val highlight = accentOverride ?: identity.luminous
 
     Canvas(modifier = modifier.size(56.dp)) {
         val w = size.width

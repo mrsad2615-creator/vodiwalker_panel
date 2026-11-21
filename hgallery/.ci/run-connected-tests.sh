@@ -10,7 +10,7 @@ set -u
 ALBUM_NAME="hgallery-shots"
 OUT_DIR="ui-shots"
 DEVICE_DIR="/sdcard/Pictures/$ALBUM_NAME"
-PKG="dev.hgallery.app.debug"
+PKG="${HGPKG:-dev.hgallery.app.debug}"
 ACTIVITY="dev.hgallery.app.MainActivity"
 
 rm -rf "$OUT_DIR"
@@ -32,6 +32,13 @@ adb shell ls "$DEVICE_DIR" | wc -l
 adb shell am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE -d "file://$DEVICE_DIR" >/dev/null 2>&1
 adb shell content call --uri content://media/external --method scan_volume --arg external_primary >/dev/null 2>&1
 adb shell content query --uri content://media/external/images/media --projection _id 2>/dev/null | head -20 > ui-shots/diag/mediastore.txt
+
+echo "== verifying the app is installed =="
+if ! adb shell pm list packages | grep -q "$PKG"; then
+  echo "::error title=e2e::$PKG is not installed on the emulator"
+  adb shell pm list packages | grep -i gallery > ui-shots/diag/packages.txt
+  exit 1
+fi
 
 echo "== granting media permissions =="
 for p in READ_MEDIA_IMAGES READ_MEDIA_VIDEO READ_MEDIA_VISUAL_USER_SELECTED; do

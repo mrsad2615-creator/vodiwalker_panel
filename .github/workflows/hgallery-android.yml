@@ -136,6 +136,13 @@ jobs:
           distribution: temurin
           java-version: '17'
       - uses: gradle/actions/setup-gradle@v4
+      # The instrumentation test builds its own test APK; the *application* has
+      # to be installed separately for the app to be launched and photographed.
+      - name: Fetch the debug APK built by the previous job
+        uses: actions/download-artifact@v4
+        with:
+          name: hgallery-debug-apk
+          path: hgallery/apk
       - name: Enable KVM
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
@@ -150,7 +157,11 @@ jobs:
           target: google_apis
           emulator-boot-timeout: 480
           disable-animations: true
-          script: cd hgallery && chmod +x .ci/run-connected-tests.sh && sh .ci/run-connected-tests.sh
+          script: |
+            cd hgallery
+            adb install -r -g apk/app-debug.apk
+            chmod +x .ci/run-connected-tests.sh
+            sh .ci/run-connected-tests.sh
       - name: Report instrumented test failures
         if: failure() || cancelled()
         shell: bash

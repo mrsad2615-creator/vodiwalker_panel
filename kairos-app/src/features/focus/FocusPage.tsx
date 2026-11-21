@@ -1,45 +1,31 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   Check,
   CheckCircle2,
-  CloudRain,
   Maximize2,
   Minimize2,
   Minus,
   Pause,
   Play,
   Plus,
-  Radio,
   RotateCcw,
   SkipForward,
   Sliders,
   Trash2,
-  Volume2,
-  VolumeX,
-  Waves,
 } from '@/components/ui/icons';
 import { deleteFocusSession, setTaskStatus, updateSettings } from '@/lib/db';
 import { useFocusSessions, useTasks } from '@/lib/queries';
 import { formatJalaaliShort, getTodayKey } from '@/lib/date';
 import { formatDurationShort } from '@/lib/format';
-import { ambientAudio, type AmbientSoundType } from '@/lib/ambientAudio';
 import { useApp } from '@/context/AppContext';
 import { Numeric } from '@/components/ui/Numeric';
 import { NumericInput } from '@/components/ui/NumericInput';
 import { CinematicFocusTimer } from '@/components/focus/CinematicFocusTimer';
+import { SoundStudio } from '@/components/focus/SoundStudio';
+import { SOUND_PROFILES } from '@/lib/audio/layers';
+import { requestSound } from '@/lib/audio/commands';
 
 const PRESET_DURATIONS = [15, 25, 45, 60, 90] as const;
-
-const SOUNDSCAPES: {
-  id: AmbientSoundType;
-  label: string;
-  icon: typeof VolumeX;
-}[] = [
-  { id: 'off', label: 'سکوت', icon: VolumeX },
-  { id: 'rain', label: 'باران آرام', icon: CloudRain },
-  { id: 'brown', label: 'نویز عمیق', icon: Waves },
-  { id: 'drone', label: 'فضای سینمایی', icon: Radio },
-];
 
 export function FocusPage() {
   const {
@@ -58,23 +44,10 @@ export function FocusPage() {
 
   const [showCustomConfig, setShowCustomConfig] = useState(false);
   const [cinemaMode, setCinemaMode] = useState(false);
-  const [soundType, setSoundType] = useState<AmbientSoundType>('off');
 
   const todayKey = getTodayKey();
   const tasks = useTasks();
   const sessions = useFocusSessions();
-
-  // Sync offline ambient soundscape with running timer & clean up on unmount
-  useEffect(() => {
-    if (focus.isRunning && soundType !== 'off') {
-      ambientAudio.start(soundType);
-    } else {
-      ambientAudio.stop();
-    }
-    return () => {
-      ambientAudio.stop();
-    };
-  }, [focus.isRunning, soundType]);
 
   const availableTasks = useMemo(
     () => tasks.filter((t) => !t.archived && t.status !== 'completed'),
@@ -130,15 +103,6 @@ export function FocusPage() {
     const next = Math.max(5, Math.min(180, focus.focusMinutes + delta));
     setFocusDurations(next, focus.shortBreakMinutes, focus.longBreakMinutes);
     void updateSettings({ pomodoroFocusMin: next });
-  };
-
-  const handleSelectSound = (next: AmbientSoundType) => {
-    setSoundType(next);
-    if (next === 'off') {
-      ambientAudio.stop();
-    } else if (focus.isRunning) {
-      ambientAudio.start(next);
-    }
   };
 
   return (
@@ -198,27 +162,25 @@ export function FocusPage() {
               cinemaMode
             />
 
-            {/* Soundscape Selector inside Cinema Mode */}
+            {/* Sound profiles inside Cinema Mode — same engine as the studio */}
             <div className="mt-6 flex flex-wrap items-center justify-center gap-1.5">
-              {SOUNDSCAPES.map((sc) => {
-                const Icon = sc.icon;
-                const active = soundType === sc.id;
-                return (
-                  <button
-                    key={sc.id}
-                    type="button"
-                    onClick={() => handleSelectSound(sc.id)}
-                    className={`flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-[11px] font-medium transition ${
-                      active
-                        ? 'border-[var(--accent-fg)]/45 bg-[var(--surface-3)] text-[var(--text)]'
-                        : 'border-[var(--accent-fg)]/12 bg-[var(--surface-2)]/80 text-[var(--text-2)]'
-                    }`}
-                  >
-                    <Icon className="h-3.5 w-3.5 text-[var(--accent-fg)]" />
-                    <span>{sc.label}</span>
-                  </button>
-                );
-              })}
+              {SOUND_PROFILES.map((profile) => (
+                <button
+                  key={profile.id}
+                  type="button"
+                  onClick={() => requestSound({ type: 'profile', profileId: profile.id })}
+                  className="rounded-full border border-[var(--accent-fg)]/18 bg-[var(--surface-2)]/80 px-3 py-1.5 text-[11px] font-medium text-[var(--text-2)] transition-colors hover:border-[var(--accent-fg)]/45 hover:text-[var(--text)]"
+                >
+                  {profile.label}
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={() => requestSound({ type: 'stop' })}
+                className="rounded-full border border-[var(--border)] px-3 py-1.5 text-[11px] text-[var(--text-3)]"
+              >
+                سکوت
+              </button>
             </div>
           </div>
 
@@ -565,46 +527,9 @@ export function FocusPage() {
           </button>
         )}
 
-        {/* Sound rail — real offline layers, as an instrument strip */}
+        {/* Sound Studio — real synthesised layers, mixer, sleep timer, breath */}
         <div className="relative mt-5 border-t border-[var(--border)] pt-3">
-          <div className="mb-2 flex items-center justify-between text-[10px] text-[var(--text-3)]">
-            <span className="inline-flex items-center gap-1.5 font-medium text-[var(--text-2)]">
-              <Volume2 className="h-3 w-3 text-[var(--accent-fg)]" />
-              فضای صوتی تمرکز (آفلاین)
-            </span>
-            <span>
-              {soundType === 'off'
-                ? 'خاموش'
-                : focus.isRunning
-                ? 'در حال پخش'
-                : 'آماده هنگام شروع'}
-            </span>
-          </div>
-          <div className="grid grid-cols-4 gap-1">
-            {SOUNDSCAPES.map((sc) => {
-              const Icon = sc.icon;
-              const active = soundType === sc.id;
-              return (
-                <button
-                  key={sc.id}
-                  type="button"
-                  onClick={() => handleSelectSound(sc.id)}
-                  aria-pressed={active}
-                  className={`flex flex-col items-center gap-1 rounded-[10px] border py-2 text-[9.5px] font-medium transition ${
-                    active
-                      ? 'border-[var(--accent)]/60 text-[var(--text)]'
-                      : 'border-transparent text-[var(--text-3)] hover:text-[var(--text-2)]'
-                  }`}
-                  style={{
-                    background: active ? 'color-mix(in srgb, var(--accent) 12%, transparent)' : 'transparent',
-                  }}
-                >
-                  <Icon className="h-3.5 w-3.5" />
-                  <span>{sc.label}</span>
-                </button>
-              );
-            })}
-          </div>
+          <SoundStudio />
         </div>
       </section>
 

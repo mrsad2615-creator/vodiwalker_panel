@@ -203,7 +203,9 @@ class AlbumBuilderTest {
     @Test
     fun `itemsOf answers synthetic and real albums alike`() {
         val albums = AlbumBuilder.fromItems(items)
-        assertEquals(3, AlbumBuilder.itemsOf(albums, items, AlbumBuilder.ALL_PHOTOS).size)
+        // "All photos" includes videos, exactly as the reference album does:
+        // it is every item on the device, not only the stills.
+        assertEquals(4, AlbumBuilder.itemsOf(albums, items, AlbumBuilder.ALL_PHOTOS).size)
         assertEquals(listOf(3L), AlbumBuilder.itemsOf(albums, items, AlbumBuilder.VIDEOS).map { it.id })
         assertEquals(listOf(4L), AlbumBuilder.itemsOf(albums, items, AlbumBuilder.FAVORITES).map { it.id })
         assertEquals(listOf(1L, 2L), AlbumBuilder.itemsOf(albums, items, 10L).map { it.id })

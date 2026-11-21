@@ -19,6 +19,8 @@ data class SkillSnapshot(
     val readingSessions: Int = 0,
     val avgReadingWpm: Int = 0,
     val avgComprehension: Int = 0,
+    val eyeSessions: Int = 0,
+    val avgEyeScore: Double = 0.0,
     val mindSessions: Int = 0,
     val avgMindScore: Double = 0.0,
     val focusMinutesLast7Days: Int = 0,
@@ -28,10 +30,10 @@ data class SkillSnapshot(
     /** Per-module session counts used for variety decisions. */
     val sessionsThisWeek: Map<Module, Int> = emptyMap(),
 ) {
-    val totalSessions: Int get() = typingSessions + readingSessions + mindSessions
+    val totalSessions: Int get() = typingSessions + readingSessions + eyeSessions + mindSessions
 }
 
-enum class Module { TYPE, READ, MIND, FOCUS }
+enum class Module { TYPE, READ, EYE, MIND, FOCUS }
 
 enum class Confidence { LOW, MEDIUM, HIGH }
 
@@ -213,14 +215,21 @@ object Coach {
         val weaknesses = ArrayList<Pair<Module, Int>>()
         if (snapshot.typingSessions > 0) weaknesses += Module.TYPE to (100 - snapshot.avgAccuracy).roundToInt()
         if (snapshot.readingSessions > 0) weaknesses += Module.READ to (100 - snapshot.avgComprehension)
+        if (snapshot.eyeSessions > 0) weaknesses += Module.EYE to (100 - snapshot.avgEyeScore).roundToInt()
         if (snapshot.mindSessions > 0) weaknesses += Module.MIND to (100 - snapshot.avgMindScore).roundToInt()
         if (snapshot.focusMinutesLast7Days < 75) weaknesses += Module.FOCUS to 55
 
+        val basePool = if (snapshot.eyeSessions > 0) {
+            listOf(Module.TYPE, Module.READ, Module.EYE, Module.MIND, Module.FOCUS)
+        } else {
+            listOf(Module.TYPE, Module.READ, Module.MIND, Module.FOCUS)
+        }
+
         val ordered = if (weaknesses.isEmpty()) {
-            rng.shuffle(listOf(Module.TYPE, Module.READ, Module.MIND, Module.FOCUS))
+            rng.shuffle(basePool)
         } else {
             weaknesses.sortedByDescending { it.second }.map { it.first }
-                .plus(rng.shuffle(listOf(Module.TYPE, Module.READ, Module.MIND, Module.FOCUS)))
+                .plus(rng.shuffle(basePool))
                 .distinct()
         }
 
@@ -233,6 +242,10 @@ object Coach {
                 Module.READ -> PlanItem(
                     "خواندن با درک مطلب", Module.READ, 10,
                     "خواندن همراه با ارزیابی، یادگیری پایدارتری ایجاد می‌کند.", dateIso,
+                )
+                Module.EYE -> PlanItem(
+                    "تمرین مهارت دیداری چشم", Module.EYE, 4,
+                    "پرش‌های سریع نگاه و میدان دید، سرعت مطالعه را تقویت می‌کنند.", dateIso,
                 )
                 Module.MIND -> PlanItem(
                     "تمرین ذهنی", Module.MIND, 6,

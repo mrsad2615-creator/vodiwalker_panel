@@ -185,7 +185,7 @@ private fun createChamferedShape(
 @Composable
 fun MrsadSurface(
     modifier: Modifier = Modifier,
-    shape: Shape = RoundedCornerShape(MrsadTokens.Radius.lg),
+    shape: Shape = if (MrsadTheme.colors.isNoir) RoundedCornerShape(2.dp) else chamferedShape(),
     elevated: Boolean = false,
     accent: Color? = null,
     onClick: (() -> Unit)? = null,
@@ -193,11 +193,12 @@ fun MrsadSurface(
 ) {
     val colors = MrsadTheme.colors
     val motion = MrsadTheme.motion
+    val isNoir = colors.isNoir
     val surfaceColor = if (elevated) colors.surfaceHigh else colors.surface
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
     val scale by animateFloatAsState(
-        targetValue = if (pressed) 0.985f else 1f,
+        targetValue = if (pressed) (if (isNoir) 0.994f else 0.985f) else 1f,
         animationSpec = motion.spatialFast(),
         label = "surfacePress",
     )
@@ -207,71 +208,93 @@ fun MrsadSurface(
         label = "surfaceHighlight",
     )
 
+    val effectiveShape = if (isNoir) RoundedCornerShape(2.dp) else shape
+
+    if (isNoir) {
+        Column(
+            modifier = modifier
+                .graphicsLayer { scaleX = scale; scaleY = scale }
+                .clip(effectiveShape)
+                .background(surfaceColor)
+                .border(
+                    width = 1.dp,
+                    color = accent ?: if (elevated) colors.borderStrong else colors.border,
+                    shape = effectiveShape,
+                )
+                .then(
+                    if (onClick != null) {
+                        Modifier.clickable(
+                            interactionSource = interaction,
+                            indication = ripple(color = colors.textPrimary),
+                            role = Role.Button,
+                            onClick = onClick,
+                        )
+                    } else {
+                        Modifier
+                    },
+                )
+                .padding(MrsadTokens.Spacing.md),
+            verticalArrangement = Arrangement.spacedBy(MrsadTokens.Spacing.xs),
+            content = content,
+        )
+        return
+    }
+
     Column(
         modifier = modifier
             .graphicsLayer { scaleX = scale; scaleY = scale }
             .shadow(
-                // Material's elevation level 3: enough to lift the card
-                // off the page, cheap enough to draw on every card.
                 elevation = 6.dp,
-                shape = shape,
+                shape = effectiveShape,
                 clip = false,
             )
-            .clip(shape)
+            .clip(effectiveShape)
             .background(
                 Brush.verticalGradient(
                     listOf(
-                        surfaceColor.copy(alpha = if (colors.isLight) 0.99f else 0.94f),
-                        surfaceColor.copy(alpha = if (colors.isLight) 0.93f else 0.80f),
-                    )
-                )
+                        surfaceColor.copy(alpha = 0.95f),
+                        surfaceColor.copy(alpha = 0.84f),
+                    ),
+                ),
             )
             .drawBehind {
-                // The smoked-glass wash: a whisper of deep navy through
-                // the glass, so the card has depth instead of being a
-                // flat tint.
-                if (!colors.isLight) {
-                    drawRect(
-                        brush = Brush.verticalGradient(
-                            listOf(
-                                colors.navy.copy(alpha = 0.10f),
-                                Color.Transparent,
-                            ),
-                            startY = 0f,
-                            endY = size.height * 0.6f,
-                        )
-                    )
-                }
-                // The sheen along the top edge: the light is above.
                 drawRect(
                     brush = Brush.verticalGradient(
                         listOf(
-                            (accent ?: colors.metalLight).copy(alpha = 0.13f + 0.05f * highlight),
+                            colors.navy.copy(alpha = 0.12f),
+                            Color.Transparent,
+                        ),
+                        startY = 0f,
+                        endY = size.height * 0.6f,
+                    ),
+                )
+                drawRect(
+                    brush = Brush.verticalGradient(
+                        listOf(
+                            (accent ?: colors.metalLight).copy(alpha = 0.14f + 0.05f * highlight),
                             Color.Transparent,
                         ),
                         startY = 0f,
                         endY = 108f,
-                    )
+                    ),
                 )
-                // The shade along the bottom edge: the card rests on
-                // something, and that something casts back.
                 drawRect(
                     brush = Brush.verticalGradient(
-                        listOf(Color.Transparent, Color.Black.copy(alpha = if (colors.isLight) 0.05f else 0.26f)),
+                        listOf(Color.Transparent, Color.Black.copy(alpha = 0.28f)),
                         startY = size.height - 96f,
                         endY = size.height,
-                    )
+                    ),
                 )
             }
             .border(
                 width = 1.dp,
                 brush = Brush.verticalGradient(
                     listOf(
-                        (accent ?: colors.borderStrong).copy(alpha = if (accent != null) 0.5f else 0.42f),
-                        (accent ?: colors.borderStrong).copy(alpha = 0.10f),
-                    )
+                        (accent ?: colors.borderStrong).copy(alpha = if (accent != null) 0.52f else 0.44f),
+                        (accent ?: colors.borderStrong).copy(alpha = 0.12f),
+                    ),
                 ),
-                shape = shape,
+                shape = effectiveShape,
             )
             .then(
                 if (onClick != null) {
@@ -281,7 +304,9 @@ fun MrsadSurface(
                         role = Role.Button,
                         onClick = onClick,
                     )
-                } else Modifier
+                } else {
+                    Modifier
+                },
             )
             .padding(MrsadTokens.Spacing.md),
         verticalArrangement = Arrangement.spacedBy(MrsadTokens.Spacing.xs),
@@ -410,7 +435,7 @@ fun SectionHeader(
     }
 }
 
-/** Primary action: metallic fill, obsidian label — the "commit" affordance. */
+/** Primary action: metallic fill in OBSIDIAN, pure white architectural slab in NOIR. */
 @Composable
 fun MrsadPrimaryButton(
     text: String,
@@ -423,50 +448,53 @@ fun MrsadPrimaryButton(
     val colors = MrsadTheme.colors
     val type = MrsadTheme.type
     val motion = MrsadTheme.motion
+    val isNoir = colors.isNoir
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
-    // The button moves, so the press is a spatial spring.
     val scale by animateFloatAsState(
         targetValue = if (pressed) 0.97f else 1f,
         animationSpec = motion.spatialFast(),
         label = "btn",
     )
-    // The sheen is an effect, so it uses an effects spring.
     val sheen by animateFloatAsState(
         targetValue = if (pressed) 1f else 0f,
         animationSpec = motion.effectsDefault(),
         label = "btnSheen",
     )
-    // A button whose only content is an icon has to name itself, or a
-    // screen reader announces an unlabelled control. When there is a
-    // visible label the icon is decoration and must stay silent.
     val spokenLabel = if (text.isBlank()) iconContentDescription else null
-    val shape = RoundedCornerShape(MrsadTokens.Radius.pill)
+    val shape = if (isNoir) RoundedCornerShape(2.dp) else RoundedCornerShape(MrsadTokens.Radius.pill)
 
     Row(
         modifier = modifier
             .graphicsLayer { scaleX = scale; scaleY = scale }
-            .shadow(elevation = 8.dp, shape = shape, clip = false)
+            .then(
+                if (isNoir) Modifier else Modifier.shadow(elevation = 8.dp, shape = shape, clip = false),
+            )
             .clip(shape)
             .background(
                 if (enabled) {
-                    Brush.verticalGradient(colors.metalGradient)
+                    if (isNoir) {
+                        Brush.verticalGradient(listOf(colors.textPrimary, colors.textPrimary))
+                    } else {
+                        Brush.verticalGradient(colors.metalGradient)
+                    }
                 } else {
                     Brush.verticalGradient(listOf(colors.disabled, colors.disabled))
-                }
+                },
             )
             .drawBehind {
-                // The lit top edge of the metal.
-                drawRect(
-                    brush = Brush.verticalGradient(
-                        listOf(
-                            Color.White.copy(alpha = 0.22f + 0.18f * sheen),
-                            Color.Transparent,
+                if (!isNoir) {
+                    drawRect(
+                        brush = Brush.verticalGradient(
+                            listOf(
+                                Color.White.copy(alpha = 0.22f + 0.18f * sheen),
+                                Color.Transparent,
+                            ),
+                            startY = 0f,
+                            endY = 22f,
                         ),
-                        startY = 0f,
-                        endY = 22f,
                     )
-                )
+                }
             }
             .heightIn(min = MrsadTokens.TouchTarget)
             .clickable(
@@ -483,10 +511,8 @@ fun MrsadPrimaryButton(
         if (icon != null) {
             Icon(
                 imageVector = icon,
-                // A clickable merges its descendants' semantics, so an
-                // icon-only button names itself through the icon.
                 contentDescription = spokenLabel,
-                tint = if (colors.isLight) Color.White else colors.background,
+                tint = colors.background,
                 modifier = Modifier.size(18.dp),
             )
             if (text.isNotBlank()) Spacer(Modifier.width(MrsadTokens.Spacing.xs))
@@ -495,13 +521,13 @@ fun MrsadPrimaryButton(
             Text(
                 text = text,
                 style = type.label.copy(fontWeight = FontWeight.SemiBold, fontSize = type.body.fontSize),
-                color = if (enabled) (if (colors.isLight) Color.White else colors.background) else colors.textMuted,
+                color = if (enabled) colors.background else colors.textMuted,
             )
         }
     }
 }
 
-/** Secondary action: outlined silver hairline. */
+/** Secondary action: outlined silver hairline in OBSIDIAN, sharp 1dp editorial box in NOIR. */
 @Composable
 fun MrsadSecondaryButton(
     text: String,
@@ -513,14 +539,12 @@ fun MrsadSecondaryButton(
 ) {
     val colors = MrsadTheme.colors
     val type = MrsadTheme.type
-    // A button whose only content is an icon has to name itself, or a
-    // screen reader announces an unlabelled control. When there is a
-    // visible label the icon is decoration and must stay silent.
+    val shape = if (colors.isNoir) RoundedCornerShape(2.dp) else RoundedCornerShape(MrsadTokens.Radius.pill)
     val spokenLabel = if (text.isBlank()) iconContentDescription else null
     Row(
         modifier = modifier
-            .clip(RoundedCornerShape(MrsadTokens.Radius.pill))
-            .border(1.dp, if (enabled) colors.borderStrong else colors.disabled, RoundedCornerShape(MrsadTokens.Radius.pill))
+            .clip(shape)
+            .border(1.dp, if (enabled) colors.borderStrong else colors.disabled, shape)
             .heightIn(min = MrsadTokens.TouchTarget)
             .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
             .padding(horizontal = MrsadTokens.Spacing.lg, vertical = MrsadTokens.Spacing.sm),
@@ -528,8 +552,6 @@ fun MrsadSecondaryButton(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (icon != null) {
-            // A clickable merges its descendants' semantics, so an
-            // icon-only button names itself through the icon.
             Icon(
                 icon,
                 spokenLabel,
@@ -559,11 +581,12 @@ fun MrsadChip(
 ) {
     val colors = MrsadTheme.colors
     val color = tint ?: colors.textSecondary
+    val shape = if (colors.isNoir) RoundedCornerShape(2.dp) else RoundedCornerShape(MrsadTokens.Radius.pill)
     Row(
         modifier = modifier
-            .clip(RoundedCornerShape(MrsadTokens.Radius.pill))
-            .background(color.copy(alpha = 0.10f))
-            .border(1.dp, color.copy(alpha = 0.28f), RoundedCornerShape(MrsadTokens.Radius.pill))
+            .clip(shape)
+            .background(if (colors.isNoir) colors.backgroundElevated else color.copy(alpha = 0.10f))
+            .border(1.dp, if (colors.isNoir) colors.borderStrong else color.copy(alpha = 0.28f), shape)
             .then(
                 if (onClick != null) {
                     Modifier
@@ -571,7 +594,7 @@ fun MrsadChip(
                         .clickable(onClick = onClick)
                 } else {
                     Modifier
-                }
+                },
             )
             .padding(horizontal = MrsadTokens.Spacing.sm, vertical = 5.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -582,7 +605,7 @@ fun MrsadChip(
     }
 }
 
-/** Progress bar with a metallic leading edge. Real values only. */
+/** Progress bar: metallic gradient in OBSIDIAN, segmented Swiss tick-bar in NOIR. */
 @Composable
 fun MrsadProgressBar(
     progress: Float,
@@ -593,18 +616,39 @@ fun MrsadProgressBar(
     val colors = MrsadTheme.colors
     val motion = MrsadTheme.motion
     val clamped = progress.coerceIn(0f, 1f)
-    // The bar grows, so it moves in space: a spatial spring.
     val animated by animateFloatAsState(
         targetValue = clamped,
         animationSpec = motion.spatialDefault(),
         label = "progress",
     )
+
+    if (colors.isNoir) {
+        val segments = 12
+        val activeSegments = (animated * segments).toInt().coerceIn(0, segments)
+        Row(
+            modifier = modifier
+                .fillMaxWidth()
+                .height(height),
+            horizontalArrangement = Arrangement.spacedBy(3.dp),
+        ) {
+            for (i in 0 until segments) {
+                Box(
+                    Modifier
+                        .weight(1f)
+                        .height(height)
+                        .background(if (i < activeSegments) (tint ?: colors.textPrimary) else colors.border),
+                )
+            }
+        }
+        return
+    }
+
     Box(
         modifier = modifier
             .fillMaxWidth()
             .height(height)
             .clip(CircleShape)
-            .background(colors.surfaceHigh)
+            .background(colors.surfaceHigh),
     ) {
         Box(
             Modifier
@@ -613,9 +657,9 @@ fun MrsadProgressBar(
                 .clip(CircleShape)
                 .background(
                     Brush.horizontalGradient(
-                        listOf((tint ?: colors.metalDark), tint ?: colors.metalLight)
-                    )
-                )
+                        listOf((tint ?: colors.metalDark), tint ?: colors.metalLight),
+                    ),
+                ),
         )
     }
 }
@@ -711,19 +755,28 @@ fun StatTile(
     }
 }
 
-/** Thin silver divider. */
+/** Thin silver divider in OBSIDIAN, full-bleed 1dp architectural rule in NOIR. */
 @Composable
 fun MrsadDivider(modifier: Modifier = Modifier) {
     val colors = MrsadTheme.colors
+    if (colors.isNoir) {
+        Box(
+            modifier
+                .fillMaxWidth()
+                .height(1.dp)
+                .background(colors.border),
+        )
+        return
+    }
     Box(
         modifier
             .fillMaxWidth()
             .height(1.dp)
             .background(
                 Brush.horizontalGradient(
-                    listOf(Color.Transparent, colors.border, Color.Transparent)
-                )
-            )
+                    listOf(Color.Transparent, colors.border, Color.Transparent),
+                ),
+            ),
     )
 }
 

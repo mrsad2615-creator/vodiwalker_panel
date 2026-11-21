@@ -2,26 +2,35 @@ package dev.mrsad.app.ui.components
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.unit.dp
 import dev.mrsad.app.ui.theme.MrsadTheme
+import dev.mrsad.core.progression.ProgressionEngine
 
 /**
  * A point of a spark line: its slot in the window and its height, measured
@@ -35,13 +44,6 @@ data class SparkPoint(val index: Int, val height: Float)
  */
 object SparkGeometry {
 
-    /**
-     * The normalised height of one measurement, from 0 (floor) to 1 (top).
-     *
-     * The plot keeps a small margin above and below the curve, and a flat
-     * series sits in the middle: on the floor it would read as "almost
-     * nothing happened".
-     */
     fun height(value: Double, values: List<Double?>): Float {
         val present = values.filterNotNull()
         if (present.isEmpty()) return 0.5f
@@ -53,14 +55,6 @@ object SparkGeometry {
         return (fraction * 0.86 + 0.07).toFloat()
     }
 
-    /**
-     * Splits a window series into the runs of consecutive measured days.
-     *
-     * A `null` slot is a day without a measurement, not a zero: the line
-     * breaks there instead of dipping to the floor, so the chart never
-     * invents a session the user did not have. A run needs at least two
-     * points to be a line, so a lone measurement produces no run at all.
-     */
     fun runs(values: List<Double?>): List<List<SparkPoint>> {
         val present = values.filterNotNull()
         if (present.size < 2) return emptyList()
@@ -81,17 +75,11 @@ object SparkGeometry {
 }
 
 /**
- * Real-data charts. Every chart renders exactly the list it is given — no
- * synthetic filler points, no decorative randomness. Empty input shows an
- * empty state instead of a fake curve.
+ * Dual-System Real-Data SparkLine (Master Prompt §3 & §6):
  *
- * A `null` slot is a day without a measurement, not a zero: the line breaks
- * there instead of dipping to the floor, so the chart never invents a
- * session the user did not have.
- *
- * When the data changes, the curve is *revealed* from left to right
- * instead of jumping. The values themselves are never altered: the
- * animation only moves the edge of the drawing.
+ * - **OBSIDIAN**: Metallic curve with soft specular area gradient and glowing latest node.
+ * - **NOIR**: Monochrome 1.5dp polyline on calibrated Swiss horizontal reference rules
+ *   with a sharp square latest-value marker (zero gradient fill).
  */
 @Composable
 fun SparkLine(
@@ -102,13 +90,10 @@ fun SparkLine(
 ) {
     val colors = MrsadTheme.colors
     val motion = MrsadTheme.motion
-    val lineColor = tint ?: colors.metalMid
+    val isNoir = colors.isNoir
+    val lineColor = if (isNoir) colors.textPrimary else (tint ?: colors.metalLight)
     val present = values.filterNotNull()
 
-    // The reveal of the curve. It restarts whenever the data changes —
-    // and only then: the key is the *content* of the series, not the
-    // identity of the list, so a caller that rebuilds its list on every
-    // recomposition does not make the curve flicker.
     val reveal = remember { Animatable(0f) }
     val signature = remember(values) { values.hashCode() }
     LaunchedEffect(signature) {
@@ -140,47 +125,82 @@ fun SparkLine(
         Canvas(
             Modifier
                 .fillMaxWidth()
-                .height(64.dp)
+                .height(68.dp),
         ) {
             val stepX = size.width / (values.size - 1).coerceAtLeast(1)
             fun xOf(index: Int): Float = index * stepX
             fun yOf(height: Float): Float = size.height - height * size.height
 
-            // The curve is revealed from the left; the edge of the reveal
-            // is the only thing that moves.
+            // In NOIR, draw 3 calibrated horizontal reference rules
+            if (isNoir) {
+                val ruleColor = colors.border.copy(alpha = 0.75f)
+                for (r in 1..3) {
+                    val ry = size.height * (r / 4f)
+                    drawLine(
+                        color = ruleColor,
+                        start = Offset(0f, ry),
+                        end = Offset(size.width, ry),
+                        strokeWidth = 1.dp.toPx(),
+                    )
+                }
+            }
+
             val revealX = size.width * reveal.value.coerceIn(0f, 1f)
             clipRect(right = revealX) {
-                // Each run of consecutive measured days is drawn as its own
-                // curve, so a gap breaks the line instead of bridging it.
                 SparkGeometry.runs(values).forEach { run ->
                     val path = Path().apply {
                         moveTo(xOf(run.first().index), yOf(run.first().height))
                         run.drop(1).forEach { lineTo(xOf(it.index), yOf(it.height)) }
                     }
-                    val fill = Path().apply {
-                        addPath(path)
-                        lineTo(xOf(run.last().index), size.height)
-                        lineTo(xOf(run.first().index), size.height)
-                        close()
+                    if (!isNoir) {
+                        val fill = Path().apply {
+                            addPath(path)
+                            lineTo(xOf(run.last().index), size.height)
+                            lineTo(xOf(run.first().index), size.height)
+                            close()
+                        }
+                        drawPath(
+                            fill,
+                            Brush.verticalGradient(
+                                listOf(lineColor.copy(alpha = 0.24f), Color.Transparent),
+                            ),
+                        )
                     }
                     drawPath(
-                        fill,
-                        Brush.verticalGradient(
-                            listOf(lineColor.copy(alpha = 0.22f), Color.Transparent),
-                        )
+                        path = path,
+                        color = lineColor,
+                        style = Stroke(
+                            width = if (isNoir) 1.5.dp.toPx() else 2.0.dp.toPx(),
+                            cap = if (isNoir) StrokeCap.Square else StrokeCap.Round,
+                            join = if (isNoir) StrokeJoin.Miter else StrokeJoin.Round,
+                        ),
                     )
-                    drawPath(path, lineColor, style = Stroke(width = 1.8.dp.toPx(), cap = StrokeCap.Round))
                 }
 
-                // The most recent measurement is the one worth pointing at.
                 val lastIndex = values.indexOfLast { it != null }
                 if (lastIndex >= 0) {
                     val value = values[lastIndex] ?: 0.0
-                    drawCircle(
-                        lineColor,
-                        radius = 2.6.dp.toPx(),
-                        center = Offset(xOf(lastIndex), yOf(SparkGeometry.height(value, values))),
-                    )
+                    val cx = xOf(lastIndex)
+                    val cy = yOf(SparkGeometry.height(value, values))
+                    if (isNoir) {
+                        val boxSize = 5.dp.toPx()
+                        drawRect(
+                            color = lineColor,
+                            topLeft = Offset(cx - boxSize / 2f, cy - boxSize / 2f),
+                            size = Size(boxSize, boxSize),
+                        )
+                    } else {
+                        drawCircle(
+                            color = lineColor.copy(alpha = 0.25f),
+                            radius = 5.5.dp.toPx(),
+                            center = Offset(cx, cy),
+                        )
+                        drawCircle(
+                            color = lineColor,
+                            radius = 2.8.dp.toPx(),
+                            center = Offset(cx, cy),
+                        )
+                    }
                 }
             }
         }
@@ -212,5 +232,55 @@ fun BarRow(
             height = 5.dp,
             modifier = Modifier.padding(top = 4.dp),
         )
+    }
+}
+
+/**
+ * 28-Day Streak & Consistency Matrix (`تقویم استمرار`).
+ *
+ * In **OBSIDIAN**, active days glow with a metallic silver facet and subtle border.
+ * In **NOIR**, active days are crisp monochrome white squares (`#FFFFFF`) inside a
+ * `1dp` `#27272A` Swiss matrix grid.
+ */
+@Composable
+fun StreakCalendarMatrix(
+    days: List<ProgressionEngine.CalendarDayCell>,
+    modifier: Modifier = Modifier,
+) {
+    val colors = MrsadTheme.colors
+    val isNoir = colors.isNoir
+    val shape = if (isNoir) RoundedCornerShape(1.dp) else RoundedCornerShape(5.dp)
+
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(5.dp),
+    ) {
+        days.chunked(7).forEach { week ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(5.dp),
+            ) {
+                week.forEach { cell ->
+                    val bgColor = when {
+                        cell.active -> if (isNoir) colors.textPrimary else colors.metalLight
+                        cell.isToday -> colors.surfaceHigh
+                        else -> if (isNoir) colors.backgroundElevated else colors.background
+                    }
+                    val borderColor = when {
+                        cell.isToday -> colors.accent
+                        cell.active -> if (isNoir) colors.textPrimary else colors.borderStrong
+                        else -> colors.border
+                    }
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .aspectRatio(1.4f)
+                            .clip(shape)
+                            .background(bgColor)
+                            .border(1.dp, borderColor, shape),
+                    )
+                }
+            }
+        }
     }
 }

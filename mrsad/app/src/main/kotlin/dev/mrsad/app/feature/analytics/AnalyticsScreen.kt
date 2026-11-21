@@ -38,6 +38,7 @@ import dev.mrsad.app.ui.components.MrsadTokens
 import dev.mrsad.app.ui.components.MetricValue
 import dev.mrsad.app.ui.components.SectionHeader
 import dev.mrsad.app.ui.components.SparkLine
+import dev.mrsad.app.ui.components.StreakCalendarMatrix
 import dev.mrsad.app.ui.theme.AmbientBackground
 import dev.mrsad.app.ui.theme.MrsadTheme
 import dev.mrsad.app.ui.theme.PageEnvironment
@@ -184,6 +185,13 @@ fun AnalyticsScreen(
                         style = type.caption,
                         color = colors.textMuted,
                     )
+                }
+            }
+
+            if (state.calendarDays.isNotEmpty()) {
+                MrsadSurface(Modifier.fillMaxWidth()) {
+                    SectionHeader(title = "ماتریس استمرار ۲۸ روزه")
+                    StreakCalendarMatrix(days = state.calendarDays)
                 }
             }
 

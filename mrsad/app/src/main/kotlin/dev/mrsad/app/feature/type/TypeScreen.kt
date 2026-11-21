@@ -56,6 +56,8 @@ import dev.mrsad.app.data.settings.MrsadSettings
 import dev.mrsad.app.testing.MrsadTestHooks
 import dev.mrsad.app.testing.MrsadTestTags
 import dev.mrsad.app.ui.components.LocalBottomBarClearance
+import dev.mrsad.app.ui.components.ModuleSculpture3D
+import dev.mrsad.app.ui.components.ModuleSculptureType
 import dev.mrsad.app.ui.components.MrsadChip
 import dev.mrsad.app.ui.components.MrsadPrimaryButton
 import dev.mrsad.app.ui.components.MrsadProgressBar
@@ -165,10 +167,15 @@ private fun HeaderRow(state: TypeUiState, persianNumerals: Boolean) {
     val colors = MrsadTheme.colors
     val type = MrsadTheme.type
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        ModuleSculpture3D(
+            type = ModuleSculptureType.TYPING,
+            modifier = Modifier.size(54.dp),
+        )
+        Spacer(Modifier.width(MrsadTokens.Spacing.xs))
         Column(Modifier.weight(1f)) {
             Text("MRSAD TYPE", style = type.headline.copy(letterSpacing = 1.sp), color = colors.textPrimary)
             Text(
-                if (state.usePersian) "تمرین تایپ فارسی" else "English typing practice",
+                if (state.usePersian) "تمرین تایپ فارسی • WPM استاندارد" else "English typing practice • Standard WPM",
                 style = type.caption,
                 color = colors.textSecondary,
             )

@@ -42,6 +42,8 @@ import dev.mrsad.app.data.AppContainer
 import dev.mrsad.app.data.settings.MrsadSettings
 import dev.mrsad.app.ui.components.MrsadChip
 import dev.mrsad.app.ui.components.MetalIcon
+import dev.mrsad.app.ui.components.ModuleSculpture3D
+import dev.mrsad.app.ui.components.ModuleSculptureType
 import dev.mrsad.app.ui.components.MrsadIcons
 import dev.mrsad.app.ui.components.MrsadPrimaryButton
 import dev.mrsad.app.ui.components.MrsadProgressBar
@@ -86,8 +88,20 @@ fun ReadScreen(
                 .padding(MrsadTokens.Spacing.md),
             verticalArrangement = Arrangement.spacedBy(MrsadTokens.Spacing.md),
         ) {
-            Text("MRSAD READ", style = type.headline.copy(letterSpacing = 1.sp), color = colors.textPrimary)
-            Text("خواندن سریع همراه با درک مطلب", style = type.caption, color = colors.textSecondary)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text("MRSAD READ", style = type.headline.copy(letterSpacing = 1.sp), color = colors.textPrimary)
+                    Text("خواندن سریع همراه با درک مطلب و RSVP", style = type.caption, color = colors.textSecondary)
+                }
+                ModuleSculpture3D(
+                    type = ModuleSculptureType.READING,
+                    modifier = Modifier.size(64.dp),
+                )
+            }
 
             when (state.phase) {
                 ReadPhase.SETUP -> ReadSetup(

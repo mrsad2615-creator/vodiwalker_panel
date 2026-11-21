@@ -202,4 +202,48 @@ object MindGenerators {
     }
 
     data class OddOneOut(val side: Int, val symbols: List<String>, val correctIndex: Int)
+
+    // ---------------- Reaction speed ----------------
+
+    /**
+     * Reaction-speed trials: each trial waits [waitMillis] before firing the
+     * target stimulus at a normalized coordinate (`targetX`, `targetY`).
+     * Higher levels narrow the target window and shorten the maximum wait
+     * variance while keeping delays unpredictable (900ms..2600ms).
+     */
+    fun reactionTrials(seed: Long, level: Int, count: Int = 5): List<ReactionTrial> {
+        val rng = SplitMix64(seed)
+        val clampedLevel = level.coerceIn(0, 12)
+        val minWait = (1000 - clampedLevel * 25).coerceAtLeast(650)
+        val maxWait = (2500 - clampedLevel * 60).coerceAtLeast(minWait + 500)
+        return List(count.coerceAtLeast(1)) { index ->
+            val waitMillis = rng.nextInt(minWait, maxWait).toLong()
+            val tx = 0.2f + (rng.nextInt(600) / 1000f)
+            val ty = 0.2f + (rng.nextInt(600) / 1000f)
+            ReactionTrial(
+                index = index,
+                waitMillis = waitMillis,
+                targetX = tx,
+                targetY = ty,
+            )
+        }
+    }
+
+    /**
+     * Converts a median reaction time (in milliseconds) into a 0..100 score.
+     * 200ms or faster = 100%; 650ms or slower = 20%.
+     */
+    fun scoreReactionMillis(medianMillis: Long): Double {
+        if (medianMillis <= 0L) return 0.0
+        val clamped = medianMillis.coerceIn(180L, 700L)
+        val normalized = 1.0 - ((clamped - 180.0) / (700.0 - 180.0))
+        return (20.0 + normalized * 80.0).coerceIn(0.0, 100.0)
+    }
+
+    data class ReactionTrial(
+        val index: Int,
+        val waitMillis: Long,
+        val targetX: Float,
+        val targetY: Float,
+    )
 }

@@ -3,6 +3,9 @@ package dev.mrsad.app
 import androidx.compose.ui.graphics.Color
 import dev.mrsad.app.data.settings.ThemeVariant
 import dev.mrsad.app.ui.theme.colorsFor
+import dev.mrsad.app.ui.theme.specFor
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import kotlin.math.max
@@ -72,6 +75,19 @@ class ContrastChecks {
                 ratio >= 1.4,
             )
         }
+    }
+
+    @Test
+    fun obsidianAndNoirHaveDistinctDesignSpecs() {
+        val obsidianSpec = specFor(ThemeVariant.OBSIDIAN)
+        val noirSpec = specFor(ThemeVariant.NOIR)
+        assertTrue(obsidianSpec.use3DSculptures)
+        assertFalse(obsidianSpec.useSwissGrid)
+        assertFalse(noirSpec.use3DSculptures)
+        assertTrue(noirSpec.useSwissGrid)
+        assertEquals(ThemeVariant.NOIR, ThemeVariant.fromId("noir"))
+        assertEquals(ThemeVariant.NOIR, ThemeVariant.fromId("carbon"))
+        assertEquals(ThemeVariant.OBSIDIAN, ThemeVariant.fromId("obsidian"))
     }
 
     private fun contrast(a: Color, b: Color): Double {

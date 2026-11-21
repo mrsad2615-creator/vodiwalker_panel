@@ -27,6 +27,7 @@ enum class MindExercise(val titleFa: String, val subtitleFa: String, val categor
     STROOP("اثر استروپ", "رنگ را از معنی جدا کن", "توجه"),
     ARITHMETIC("سرعت محاسبه", "در زمان محدود حساب کن", "پردازش"),
     LOGIC("استدلال منطقی", "الگوی عددی را کامل کن", "منطق"),
+    REACTION("سرعت واکنش", "به‌محض ظهور محرک دیداری ضربه بزن", "واکنش"),
 }
 
 data class MindUiState(
@@ -62,10 +63,12 @@ data class MindUiState(
     val selectedCells: Set<Int> = emptySet(),
     // attention
     val attentionGrid: MindGenerators.AttentionGrid? = null,
-    // stroop / arithmetic / logic queues
+    // stroop / arithmetic / logic / reaction queues
     val stroopQueue: List<MindGenerators.StroopItem> = emptyList(),
     val arithmeticQueue: List<MindGenerators.ArithmeticItem> = emptyList(),
     val logicQueue: List<MindGenerators.NumberSequence> = emptyList(),
+    val reactionQueue: List<MindGenerators.ReactionTrial> = emptyList(),
+    val reactionSignalArmed: Boolean = false,
     // result of last session
     val lastScore: Double = 0.0,
     val resultDetailFa: String = "",
@@ -89,6 +92,7 @@ data class MindUiState(
     val stroopItem: MindGenerators.StroopItem? get() = stroopQueue.getOrNull(questionIndex)
     val arithmeticItem: MindGenerators.ArithmeticItem? get() = arithmeticQueue.getOrNull(questionIndex)
     val logicSequence: MindGenerators.NumberSequence? get() = logicQueue.getOrNull(questionIndex)
+    val reactionTrial: MindGenerators.ReactionTrial? get() = reactionQueue.getOrNull(questionIndex)
 }
 
 /**
@@ -262,6 +266,20 @@ class MindViewModel(private val container: AppContainer) : ViewModel() {
                     )
                 }
             }
+            MindExercise.REACTION -> {
+                val count = 5
+                _state.update {
+                    it.copy(
+                        reactionQueue = MindGenerators.reactionTrials(seed, level, count),
+                        questionIndex = 0,
+                        questionCount = count,
+                        correctAnswers = 0,
+                        reactionSignalArmed = false,
+                        rememberTimer = it.rememberTimer + 1,
+                        roundStartMonotonic = SystemClock.elapsedRealtime(),
+                    )
+                }
+            }
         }
     }
 
@@ -368,6 +386,54 @@ class MindViewModel(private val container: AppContainer) : ViewModel() {
         val reaction = now - current.roundStartMonotonic
         val correct = index == item.correctIndex
         advanceQueue(correct = correct, reactionMillis = reaction)
+    }
+
+    fun armReactionSignal() {
+        val current = _state.value
+        if (current.exercise != MindExercise.REACTION) return
+        _state.update {
+            it.copy(
+                reactionSignalArmed = true,
+                roundStartMonotonic = SystemClock.elapsedRealtime(),
+            )
+        }
+    }
+
+    fun tapReaction() {
+        val current = _state.value
+        if (current.exercise != MindExercise.REACTION) return
+        if (!current.reactionSignalArmed) {
+            // Early tap before stimulus — counts as a miss with 900ms penalty
+            advanceReaction(correct = false, reactionMillis = 900L)
+            return
+        }
+        val elapsed = (SystemClock.elapsedRealtime() - current.roundStartMonotonic).coerceAtLeast(120L)
+        advanceReaction(correct = elapsed <= 650L, reactionMillis = elapsed)
+    }
+
+    private fun advanceReaction(correct: Boolean, reactionMillis: Long) {
+        val current = _state.value
+        val nextIndex = current.questionIndex + 1
+        val newCorrect = current.correctAnswers + if (correct) 1 else 0
+        val reactions = current.reactionTimes + reactionMillis
+        if (nextIndex >= current.questionCount) {
+            val avgReaction = reactions.average().toLong()
+            val score = MindGenerators.scoreReactionMillis(avgReaction)
+            finishSingleRound(
+                score = score,
+                detail = "میانگین زمان واکنش: ${avgReaction} میلی‌ثانیه (${newCorrect} از ${current.questionCount} واکنش به‌موقع)",
+            )
+        } else {
+            _state.update {
+                it.copy(
+                    questionIndex = nextIndex,
+                    correctAnswers = newCorrect,
+                    reactionTimes = reactions,
+                    reactionSignalArmed = false,
+                    rememberTimer = it.rememberTimer + 1,
+                )
+            }
+        }
     }
 
     private fun advanceQueue(correct: Boolean, reactionMillis: Long) {

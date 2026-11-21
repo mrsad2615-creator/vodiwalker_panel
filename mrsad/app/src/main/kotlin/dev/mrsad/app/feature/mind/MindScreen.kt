@@ -50,8 +50,13 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import dev.mrsad.app.data.AppContainer
 import dev.mrsad.app.data.settings.MrsadSettings
+import dev.mrsad.app.ui.components.IconFacet
 import dev.mrsad.app.ui.components.LocalBottomBarClearance
+import dev.mrsad.app.ui.components.MetalIcon
+import dev.mrsad.app.ui.components.ModuleSculpture3D
+import dev.mrsad.app.ui.components.ModuleSculptureType
 import dev.mrsad.app.ui.components.MrsadChip
+import dev.mrsad.app.ui.components.MrsadIcons
 import dev.mrsad.app.ui.components.MrsadPrimaryButton
 import dev.mrsad.app.ui.components.MrsadProgressBar
 import dev.mrsad.app.ui.components.MrsadSecondaryButton
@@ -103,8 +108,20 @@ private fun MindLobby(state: MindUiState, viewModel: MindViewModel, settings: Mr
             .padding(MrsadTokens.Spacing.md),
         verticalArrangement = Arrangement.spacedBy(MrsadTokens.Spacing.md),
     ) {
-        Text("MRSAD MIND", style = type.headline.copy(letterSpacing = 1.sp), color = colors.textPrimary)
-        Text("مرکز تمرین شناختی", style = type.caption, color = colors.textSecondary)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text("MRSAD MIND", style = type.headline.copy(letterSpacing = 1.sp), color = colors.textPrimary)
+                Text("مرکز تمرین شناختی، حافظه، تمرکز و سرعت واکنش", style = type.caption, color = colors.textSecondary)
+            }
+            ModuleSculpture3D(
+                type = ModuleSculptureType.BRAIN,
+                modifier = Modifier.size(72.dp),
+            )
+        }
 
         MrsadSurface(Modifier.fillMaxWidth()) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
@@ -184,9 +201,7 @@ private fun ExerciseCard(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.Top,
         ) {
-            Icon(exercise.icon, null, tint = colors.metalMid, modifier = Modifier.size(22.dp))
-            // The exercise's own ladder position, so the profile of each
-            // skill is visible before it is started.
+            MetalIcon(exercise.facets, modifier = Modifier.size(22.dp))
             MrsadChip(
                 text = levelLabel,
                 tint = if (hasHistory) colors.metalMid else colors.textMuted,
@@ -236,6 +251,7 @@ private fun MindPlayer(state: MindUiState, viewModel: MindViewModel, settings: M
             MindExercise.STROOP -> StroopStage(state, viewModel, settings)
             MindExercise.ARITHMETIC -> ArithmeticStage(state, viewModel, settings)
             MindExercise.LOGIC -> LogicStage(state, viewModel, settings)
+            MindExercise.REACTION -> ReactionStage(state, viewModel, settings)
             null -> Unit
         }
         Spacer(Modifier.height(MrsadTokens.Spacing.lg))
@@ -610,25 +626,73 @@ private fun MindResult(state: MindUiState, viewModel: MindViewModel, settings: M
 }
 
 @Composable
+private fun ReactionStage(state: MindUiState, viewModel: MindViewModel, settings: MrsadSettings) {
+    val colors = MrsadTheme.colors
+    val type = MrsadTheme.type
+    val trial = state.reactionTrial
+    val waitMillis = trial?.waitMillis ?: 1200L
+    LaunchedEffect(state.rememberTimer, state.questionIndex) {
+        if (state.reactionSignalArmed) return@LaunchedEffect
+        delay(waitMillis)
+        viewModel.armReactionSignal()
+    }
+    MrsadSurface(Modifier.fillMaxWidth(), elevated = true) {
+        Text(
+            "مرحله ${formatInt(state.questionIndex + 1, settings.persianNumerals)} از ${formatInt(state.questionCount, settings.persianNumerals)}",
+            style = type.caption,
+            color = colors.textMuted,
+        )
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(210.dp)
+                .clip(RoundedCornerShape(if (colors.isNoir) 2.dp else MrsadTokens.Radius.lg))
+                .background(if (state.reactionSignalArmed) colors.success.copy(alpha = 0.25f) else colors.surfaceHigh)
+                .border(
+                    width = 1.dp,
+                    color = if (state.reactionSignalArmed) colors.success else colors.border,
+                    shape = RoundedCornerShape(if (colors.isNoir) 2.dp else MrsadTokens.Radius.lg),
+                )
+                .clickable { viewModel.tapReaction() },
+            contentAlignment = Alignment.Center,
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                MetalIcon(
+                    facets = if (state.reactionSignalArmed) MrsadIcons.Bolt else MrsadIcons.Target,
+                    modifier = Modifier.size(34.dp),
+                )
+                Spacer(Modifier.height(MrsadTokens.Spacing.xs))
+                Text(
+                    if (state.reactionSignalArmed) "حالا ضربه بزنید!" else "منتظر سیگنال بمانید…",
+                    style = type.headline,
+                    color = if (state.reactionSignalArmed) colors.success else colors.textSecondary,
+                )
+            }
+        }
+    }
+}
+
+@Composable
 private fun MrsadDividerLine() {
     Spacer(Modifier.height(MrsadTokens.Spacing.xs))
     Box(
         Modifier
             .fillMaxWidth()
             .height(1.dp)
-            .background(MrsadTheme.colors.border)
+            .background(MrsadTheme.colors.border),
     )
     Spacer(Modifier.height(MrsadTokens.Spacing.xs))
 }
 
-private val MindExercise.icon: ImageVector
+private val MindExercise.facets: List<IconFacet>
     get() = when (this) {
-        MindExercise.NUMBER_MEMORY -> Icons.Outlined.Memory
-        MindExercise.PATTERN_MEMORY -> Icons.Outlined.TouchApp
-        MindExercise.ATTENTION -> Icons.Outlined.Bolt
-        MindExercise.STROOP -> Icons.Outlined.Lightbulb
-        MindExercise.ARITHMETIC -> Icons.Outlined.Extension
-        MindExercise.LOGIC -> Icons.Outlined.PlayArrow
+        MindExercise.NUMBER_MEMORY -> MrsadIcons.Memory
+        MindExercise.PATTERN_MEMORY -> MrsadIcons.Mind
+        MindExercise.ATTENTION -> MrsadIcons.Target
+        MindExercise.STROOP -> MrsadIcons.Eye
+        MindExercise.ARITHMETIC -> MrsadIcons.Spark
+        MindExercise.LOGIC -> MrsadIcons.Trophy
+        MindExercise.REACTION -> MrsadIcons.Bolt
     }
 
 private val MindExercise.instructionFa: String
@@ -639,4 +703,5 @@ private val MindExercise.instructionFa: String
         MindExercise.STROOP -> "رنگ جوهر را نه معنی کلمه را انتخاب کنید"
         MindExercise.ARITHMETIC -> "در کمترین زمان پاسخ درست را بزنید"
         MindExercise.LOGIC -> "الگوی عددی را کامل کنید"
+        MindExercise.REACTION -> "به‌محض روشن شدن محرک واکنش نشان دهید"
     }

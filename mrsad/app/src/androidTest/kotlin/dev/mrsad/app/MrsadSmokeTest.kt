@@ -249,15 +249,15 @@ class MrsadSmokeTest {
         awaitTag(MrsadTestTags.SETTINGS_ROOT)
         composeRule.onNodeWithTag(MrsadTestTags.SETTINGS_THEME_SECTION).assertIsDisplayed()
 
-        val crystal = MrsadTestTags.settingsTheme(ThemeVariant.CRYSTAL.id)
+        val noir = MrsadTestTags.settingsTheme(ThemeVariant.NOIR.id)
         val obsidian = MrsadTestTags.settingsTheme(ThemeVariant.OBSIDIAN.id)
 
-        composeRule.onNodeWithTag(crystal).performScrollTo().performClick()
+        composeRule.onNodeWithTag(noir).performScrollTo().performClick()
 
         // The choice is persisted through DataStore, so the selection has to
         // survive the round trip through the repository.
-        awaitSelected(crystal)
-        composeRule.onNodeWithTag(crystal).assertIsSelected()
+        awaitSelected(noir)
+        composeRule.onNodeWithTag(noir).assertIsSelected()
         composeRule.onNodeWithTag(obsidian).assertIsNotSelected()
     }
 }

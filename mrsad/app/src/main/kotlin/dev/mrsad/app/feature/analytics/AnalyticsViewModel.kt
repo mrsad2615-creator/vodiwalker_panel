@@ -48,6 +48,7 @@ data class AnalyticsState(
     val daily: List<DailyRow> = emptyList(),
     val wpmChange: Double = 0.0,
     val hasTrendChange: Boolean = false,
+    val calendarDays: List<dev.mrsad.core.progression.ProgressionEngine.CalendarDayCell> = emptyList(),
 ) {
     /** The number of days in the window that actually had a typing session. */
     val typingDays: Int get() = typingSeries.count { it != null }
@@ -56,6 +57,7 @@ data class AnalyticsState(
 private val moduleLabels = mapOf(
     "TYPE" to "تایپ",
     "READ" to "خواندن",
+    "EYE" to "تمرین چشم",
     "MIND" to "ذهن",
     "FOCUS" to "تمرکز",
 )
@@ -148,6 +150,11 @@ class AnalyticsViewModel(container: AppContainer) : ViewModel() {
             daily = daily,
             wpmChange = change,
             hasTrendChange = prevWpm > 0.0,
+            calendarDays = dev.mrsad.core.progression.ProgressionEngine.buildStreakCalendar(
+                todayIso = MrsadClock.todayIso(),
+                activeDates = activeDates.toSet(),
+                windowDays = 28,
+            ),
         )
     }
 

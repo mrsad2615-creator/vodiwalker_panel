@@ -61,6 +61,7 @@ class AssistantViewModel(private val container: AppContainer) : ViewModel() {
         val activeDates = activityDao.activeDates().first()
         val recent = activityDao.recentEvents(now - DAY * 30, 200).first()
         val readEvents = recent.filter { it.module == "READ" }
+        val eyeEvents = recent.filter { it.module == "EYE" }
         val mindEvents = recent.filter { it.module == "MIND" }
         val focusMinutes = recent.filter { it.module == "FOCUS" }.sumOf { it.minutes }
         val mistakes = typingDao.mistakesSince(now - DAY * 14)
@@ -86,6 +87,8 @@ class AssistantViewModel(private val container: AppContainer) : ViewModel() {
             readingSessions = readEvents.size,
             avgReadingWpm = readEvents.map { it.primaryMetric }.averageOrZero().toInt(),
             avgComprehension = readEvents.map { it.secondaryMetric }.averageOrZero().toInt(),
+            eyeSessions = eyeEvents.size,
+            avgEyeScore = eyeEvents.map { it.primaryMetric }.averageOrZero(),
             mindSessions = mindEvents.size,
             avgMindScore = mindEvents.map { it.secondaryMetric * 100 }.averageOrZero(),
             focusMinutesLast7Days = focusMinutes,
@@ -100,12 +103,14 @@ class AssistantViewModel(private val container: AppContainer) : ViewModel() {
         val wantsTyping = listOf("تایپ", "سرعت", "دقت", "type", "wpm", "کیبورد").any { it in q || it in question.lowercase() }
         val wantsFeatures = listOf("امکان", "مجوز", " چه‌کار", "کمک", "چیست", "چی‌کار", "ویژگی", " اینترنت", "آفلاین", "حریم").any { it in q }
         val wantsReading = listOf("خواندن", "درک", "مطالعه", "read").any { it in q }
+        val wantsEye = listOf("چشم", "دیداری", "ساکاد", "eye", "نگاه").any { it in q }
         val wantsMind = listOf("ذهن", "حافظه", "تمرکز حواس", "mind", "شناختی").any { it in q }
 
         if (wantsFeatures) return featuresAnswer()
         if (wantsPlan) return planAnswer(snapshot, persianNumerals)
         if (wantsTyping) return typingAnswer(snapshot)
         if (wantsReading) return readingAnswer(snapshot)
+        if (wantsEye) return eyeAnswer(snapshot)
         if (wantsMind) return mindAnswer(snapshot)
 
         // Default: a full analysis, or an honest needs-data response.
@@ -179,15 +184,24 @@ class AssistantViewModel(private val container: AppContainer) : ViewModel() {
             plan.joinToString("\n") { "— ${it.titleFa} (${it.minutes} دقیقه): ${it.reasonFa}" }
     }
 
+    private fun eyeAnswer(snapshot: SkillSnapshot): String {
+        if (snapshot.eyeSessions == 0) {
+            return "هنوز تمرین دیداری در MRSAD EYE ثبت نشده است. این بخش برای تقویت پرش‌های سریع نگاه (ساکاد)، " +
+                "تعقیب پیوسته و گسترش میدان دید محیطی طراحی شده و غیرپزشکی است."
+        }
+        return "شما ${snapshot.eyeSessions} جلسه تمرین مهارت دیداری با میانگین چابکی ${snapshot.avgEyeScore.roundToInt()}٪ ثبت کرده‌اید. " +
+            "ترکیب تمرین جدول شولته با تندخوانی، سرعت برداشت واژه‌ها را بهبود می‌دهد."
+    }
+
     private fun featuresAnswer(): String = buildString {
-        appendLine("مرصاد یک محیط کامل تمرین و رشد شناختی است و همه‌چیز روی همین دستگاه و بدون اینترنت کار می‌کند:")
-        appendLine("— TYPE: تمرین تایپ فارسی و انگلیسی با سنجش سرعت، دقت و تحلیل خطاها")
-        appendLine("— READ: خواندن سریع (RSVP) همراه با ارزیابی درک مطلب")
-        appendLine("— MIND: شش تمرین شناختی واقعی (حافظه، توجه، پردازش، منطق)")
-        appendLine("— ANALYTICS: تحلیل داده‌های واقعی تمرین")
-        appendLine("— AI: همین مربی محلی که از داده‌های شما تحلیل می‌سازد")
-        appendLine("— STUDIO: شش تم بصری و تنظیمات کامل ظاهری")
-        append("بخش‌های ARENA، FOCUS SPACE، برنامه‌ریز و کتابخانه در فاز بعدی توسعه فعال می‌شوند.")
+        appendLine("مرصاد یک زیست‌بوم کامل رشد شناختی و مهارت‌های فردی است که کاملاً آفلاین و روی دستگاه شما کار می‌کند:")
+        appendLine("— TYPE: تمرین تایپ فارسی و انگلیسی با سنجش استاندارد WPM، دقت و تحلیل خطاها")
+        appendLine("— READ: تندخوانی هدایت‌شده و RSVP همراه با آزمون درک مطلب")
+        appendLine("— EYE: تمرین مهارت‌های دیداری، ساکاد، تعقیب پیوسته و جدول شولته (غیرپزشکی)")
+        appendLine("— MIND: هفت تمرین شناختی واقعی (حافظه، توجه، استروپ، محاسبه، منطق و سرعت واکنش)")
+        appendLine("— ANALYTICS: تحلیل داده‌های واقعی، ماتریس استمرار ۲۸ روزه و روند پیشرفت")
+        appendLine("— STUDIO: معماری دوگانهٔ تم مستقل — OBSIDIAN (لوکس سه‌بعدی تیره) و NOIR (مینیمال سیاه‌وسفید)")
+        append("— ARENA & FOCUS: سیستم سطح‌بندی (XP)، دستاوردها، چالش‌های هفتگی و زمان‌سنج تمرکز عمیق.")
     }
 
     class Factory(private val container: AppContainer) : ViewModelProvider.Factory {

@@ -16,17 +16,35 @@ import java.io.IOException
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "mrsad_settings")
 
-/** Visual themes shipped with MRSAD. */
-enum class ThemeVariant(val id: String, val labelFa: String) {
-    OBSIDIAN("obsidian", "ابسیدین"),
-    QUANTUM("quantum", "کوانتوم"),
-    CRYSTAL("crystal", "کریستال"),
-    ARCTIC("arctic", "آرکتیک"),
-    PHANTOM("phantom", "فانتوم"),
-    SPECTRUM("spectrum", "اسپکتروم");
+/**
+ * The two independent design systems shipped with MRSAD (Master Prompt §2, §3 & §10):
+ * - [OBSIDIAN]: Luxury / 3D / Premium / Cinematic (Smoked glass, brushed metal, 3D sculptures, faceted icons).
+ * - [NOIR]: Pure Minimalism / Intelligence / Swiss Editorial / Monochrome (Pure black, flat charcoal, 1dp hairlines, linear icons).
+ */
+enum class ThemeVariant(
+    val id: String,
+    val labelFa: String,
+    val subtitleFa: String,
+    val identityEn: String,
+) {
+    OBSIDIAN(
+        id = "obsidian",
+        labelFa = "OBSIDIAN · ابسیدین",
+        subtitleFa = "لوکس، سه‌بعدی، متالیک و سینمایی",
+        identityEn = "LUXURY · 3D · CINEMATIC",
+    ),
+    NOIR(
+        id = "noir",
+        labelFa = "NOIR · نوآر",
+        subtitleFa = "مینیمالیسم خالص، ادیتوریال سوئیسی و تک‌رنگ",
+        identityEn = "PURE MINIMALISM · SWISS EDITORIAL",
+    );
 
     companion object {
-        fun fromId(id: String?): ThemeVariant = entries.firstOrNull { it.id == id } ?: OBSIDIAN
+        fun fromId(id: String?): ThemeVariant = when (id?.lowercase()) {
+            NOIR.id, "crystal", "arctic", "phantom" -> NOIR
+            else -> OBSIDIAN
+        }
     }
 }
 
@@ -52,10 +70,14 @@ data class MrsadSettings(
     /** Full-strength animations only when the user allows it. */
     val animationsEnabled: Boolean get() = !reduceMotion
     val particleCount: Int
-        get() = when (quality) {
-            GraphicsQuality.HIGH -> 90
-            GraphicsQuality.BALANCED -> 45
-            GraphicsQuality.PERFORMANCE -> 0
+        get() = if (theme == ThemeVariant.NOIR) {
+            0
+        } else {
+            when (quality) {
+                GraphicsQuality.HIGH -> 80
+                GraphicsQuality.BALANCED -> 40
+                GraphicsQuality.PERFORMANCE -> 0
+            }
         }
 }
 
@@ -91,7 +113,7 @@ class SettingsRepository(private val context: Context) {
     /**
      * Seeds defaults once. Visual quality is chosen from real device memory:
      * low-RAM devices start at Balanced (not High) so the first launch is
-     * smooth even before the user visits Studio (spec §26 adaptive graphics).
+     * smooth even before the user visits Studio.
      */
     suspend fun ensureDefaults() {
         context.dataStore.edit { prefs ->

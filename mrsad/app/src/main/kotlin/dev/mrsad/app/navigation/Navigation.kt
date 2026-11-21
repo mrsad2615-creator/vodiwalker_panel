@@ -35,9 +35,11 @@ import dev.mrsad.app.data.AppContainer
 import dev.mrsad.app.data.settings.MrsadSettings
 import dev.mrsad.app.feature.analytics.AnalyticsScreen
 import dev.mrsad.app.feature.assistant.AssistantScreen
+import dev.mrsad.app.feature.eye.EyeTrainingScreen
 import dev.mrsad.app.feature.focus.FocusScreen
 import dev.mrsad.app.feature.home.HomeScreen
 import dev.mrsad.app.feature.mind.MindScreen
+import dev.mrsad.app.feature.placeholder.ArenaScreen
 import dev.mrsad.app.feature.placeholder.PlaceholderScreen
 import dev.mrsad.app.feature.read.ReadScreen
 import dev.mrsad.app.feature.settings.SettingsScreen
@@ -55,6 +57,7 @@ object Routes {
     const val ANALYTICS = "analytics"
     const val AI = "assistant"
     const val READ = "read"
+    const val EYE = "eye"
     const val STUDIO = "studio"
     const val SETTINGS = "settings"
     const val ARENA = "arena"
@@ -159,6 +162,13 @@ fun MrsadRoot(
                 composable(Routes.READ) {
                     ReadScreen(container = container, settings = settings)
                 }
+                composable(Routes.EYE) {
+                    EyeTrainingScreen(
+                        container = container,
+                        settings = settings,
+                        onBack = { navController.popBackStack() },
+                    )
+                }
                 composable(Routes.STUDIO) {
                     StudioScreen(container = container, settings = settings)
                 }
@@ -170,10 +180,9 @@ fun MrsadRoot(
                     )
                 }
                 composable(Routes.ARENA) {
-                    PlaceholderScreen(
-                        title = "MRSAD ARENA",
-                        environment = dev.mrsad.app.ui.theme.PageEnvironment.ARENA,
-                        description = "چالش‌ها، مأموریت‌های روزانه، دستاوردها و رکوردهای شخصی — در فاز ۶ پیاده‌سازی می‌شود.",
+                    ArenaScreen(
+                        container = container,
+                        settings = settings,
                         onBack = { navController.popBackStack() },
                     )
                 }

@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -50,17 +51,12 @@ fun MrsadMarkView(
     contentDescription: String? = null,
 ) {
     val colors = MrsadTheme.colors
-
-    // The metal ramp is sorted by luminance so the mark keeps the same
-    // "outer plates catch the light, stems sit in shadow" hierarchy on both
-    // the obsidian and the light palettes.
-    val ramp = listOf(colors.metalLight, colors.metalMid, colors.metalDark)
-        .sortedByDescending { it.luminance() }
-
-    val plates = MrsadMark.plates()
-    val silhouette = MrsadMark.silhouette()
-    // Captured under a different name: inside `semantics` the unqualified
-    // name `contentDescription` would resolve to the semantics property.
+    val ramp = remember(colors.metalLight, colors.metalMid, colors.metalDark) {
+        listOf(colors.metalLight, colors.metalMid, colors.metalDark)
+            .sortedByDescending { it.luminance() }
+    }
+    val plates = remember { MrsadMark.plates() }
+    val silhouette = remember { MrsadMark.silhouette() }
     val label = contentDescription
 
     Canvas(

@@ -30,6 +30,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -46,13 +47,13 @@ data class MrsadBottomBarItem(
 )
 
 /**
- * Floating five-destination navigation.
+ * Dual-System Five-Destination Bottom Navigation (Master Prompt §3):
  *
- * The selected item becomes a silver "pill" with its label; the others
- * collapse to icons. The change between the two states is a *spatial*
- * movement, so it is driven by a spatial spring: the label grows out of
- * the icon instead of appearing, and the pill settles rather than
- * snapping.
+ * - **OBSIDIAN**: Floating smoked-glass & brushed-titanium dock with a
+ *   metallic active pill, top specular sheen, and 3D faceted icons.
+ * - **NOIR**: Sharp architectural monochrome bar (`#000000` with `1dp`
+ *   `#27272A` hairline border, `0dp` shadow, `2dp` top white active rule,
+ *   and uniform `1.5dp` geometric linear icons).
  */
 @Composable
 fun MrsadBottomBar(
@@ -65,29 +66,44 @@ fun MrsadBottomBar(
     val colors = MrsadTheme.colors
     val type = MrsadTheme.type
     val motion = MrsadTheme.motion
-    val shape = RoundedCornerShape(MrsadTokens.Radius.xl)
+    val isNoir = colors.isNoir
+    val shape = if (isNoir) RoundedCornerShape(2.dp) else RoundedCornerShape(MrsadTokens.Radius.xl)
+    val itemShape = if (isNoir) RoundedCornerShape(2.dp) else RoundedCornerShape(MrsadTokens.Radius.pill)
 
     Row(
         modifier = modifier
             .padding(horizontal = MrsadTokens.Spacing.md, vertical = MrsadTokens.Spacing.sm)
             .fillMaxWidth()
             .testTag(MrsadTestTags.NAV_BAR)
-            .shadow(elevation = 12.dp, shape = shape, clip = false)
+            .then(
+                if (isNoir) Modifier else Modifier.shadow(elevation = 12.dp, shape = shape, clip = false),
+            )
             .clip(shape)
             .background(
-                Brush.verticalGradient(
-                    listOf(
-                        colors.surfaceHigh.copy(alpha = 0.98f),
-                        colors.surface.copy(alpha = 0.95f),
+                if (isNoir) {
+                    Brush.verticalGradient(listOf(colors.background, colors.backgroundElevated))
+                } else {
+                    Brush.verticalGradient(
+                        listOf(
+                            colors.surfaceHigh.copy(alpha = 0.98f),
+                            colors.surface.copy(alpha = 0.95f),
+                        ),
                     )
-                )
+                },
             )
-            .drawBehindTopSheen()
+            .then(if (isNoir) Modifier else Modifier.drawBehindTopSheen())
             .border(
                 width = 1.dp,
-                brush = Brush.verticalGradient(
-                    listOf(colors.borderStrong.copy(alpha = 0.40f), colors.borderStrong.copy(alpha = 0.08f))
-                ),
+                brush = if (isNoir) {
+                    Brush.verticalGradient(listOf(colors.borderStrong, colors.border))
+                } else {
+                    Brush.verticalGradient(
+                        listOf(
+                            colors.borderStrong.copy(alpha = 0.44f),
+                            colors.borderStrong.copy(alpha = 0.10f),
+                        ),
+                    )
+                },
                 shape = shape,
             )
             .padding(horizontal = MrsadTokens.Spacing.xs, vertical = 7.dp),
@@ -96,37 +112,42 @@ fun MrsadBottomBar(
     ) {
         items.forEach { item ->
             val selected = item.route == selectedRoute
-            // The colour of the icon is an effect: it fades.
             val contentColor by animateColorAsState(
                 targetValue = if (selected) colors.background else colors.textSecondary,
                 animationSpec = motion.effectsDefault(),
                 label = "navColor",
             )
-            // The pill behind the item moves and grows, so it is spatial.
             val bgAlpha by animateFloatAsState(
                 targetValue = if (selected) 1f else 0f,
                 animationSpec = motion.spatialDefault(),
                 label = "navBg",
             )
-            // The icon lifts a little when it is chosen.
             val iconScale by animateFloatAsState(
-                targetValue = if (selected) 1.08f else 1f,
+                targetValue = if (selected) (if (isNoir) 1.02f else 1.08f) else 1f,
                 animationSpec = motion.spatialDefault(),
                 label = "navIcon",
             )
             Row(
                 modifier = Modifier
                     .testTag(MrsadTestTags.navItem(item.route))
-                    .clip(RoundedCornerShape(MrsadTokens.Radius.pill))
+                    .clip(itemShape)
                     .background(
-                        if (colors.isLight) {
-                            colors.accent.copy(alpha = bgAlpha * 0.16f)
+                        if (isNoir) {
+                            colors.textPrimary.copy(alpha = bgAlpha)
                         } else {
-                            colors.metalMid.copy(alpha = bgAlpha * 0.85f)
-                        }
+                            colors.metalMid.copy(alpha = bgAlpha * 0.88f)
+                        },
                     )
-                    // A 22dp icon is not a 22dp target: the destination
-                    // keeps a full 48dp of touchable area in both directions.
+                    .drawBehind {
+                        if (isNoir && selected) {
+                            drawLine(
+                                color = colors.textPrimary,
+                                start = Offset(0f, 0f),
+                                end = Offset(size.width, 0f),
+                                strokeWidth = 2.dp.toPx(),
+                            )
+                        }
+                    }
                     .heightIn(min = MrsadTokens.TouchTarget)
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
@@ -134,19 +155,17 @@ fun MrsadBottomBar(
                         role = Role.Tab,
                         onClick = { onSelect(item.route) },
                     )
-                    .padding(horizontal = if (selected) MrsadTokens.Spacing.sm else MrsadTokens.Spacing.xs, vertical = 6.dp),
+                    .padding(
+                        horizontal = if (selected) MrsadTokens.Spacing.sm else MrsadTokens.Spacing.xs,
+                        vertical = 6.dp,
+                    ),
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 MetalIcon(
                     facets = item.icon,
-                    // The selected item shows its label as text, so the
-                    // icon must stay silent; the collapsed items have no
-                    // text and have to name themselves.
                     contentDescription = if (selected) null else item.label,
-                    // On the light pill the icon is painted dark; on the
-                    // bar it carries the metal ramp.
-                    dark = selected && !colors.isLight,
+                    dark = selected,
                     modifier = Modifier
                         .size(22.dp)
                         .graphicsLayer {
@@ -170,19 +189,18 @@ fun MrsadBottomBar(
                     Text(
                         text = item.label,
                         style = type.label,
-                        color = if (colors.isLight) colors.textPrimary else contentColor,
+                        color = contentColor,
                         maxLines = 1,
                         modifier = Modifier.padding(start = MrsadTokens.Spacing.xxs),
                     )
                 }
             }
         }
-        // Settings lives in the bar as a secondary affordance.
         Box(
             Modifier
                 .testTag(MrsadTestTags.NAV_SETTINGS)
                 .size(MrsadTokens.TouchTarget)
-                .clip(CircleShape)
+                .clip(if (isNoir) RoundedCornerShape(2.dp) else CircleShape)
                 .clickable(role = Role.Button, onClick = onSettings),
             contentAlignment = Alignment.Center,
         ) {
@@ -191,19 +209,12 @@ fun MrsadBottomBar(
     }
 }
 
-/**
- * The lit top edge of the floating bar.
- *
- * The bar hovers over the content, so the light that falls on it comes
- * from above: a short bright band along its top edge is what makes it
- * read as a separate object rather than as a strip of colour.
- */
 private fun Modifier.drawBehindTopSheen(): Modifier = drawBehind {
     drawRect(
         brush = Brush.verticalGradient(
-            listOf(Color.White.copy(alpha = 0.07f), Color.Transparent),
+            listOf(Color.White.copy(alpha = 0.08f), Color.Transparent),
             startY = 0f,
             endY = 26f,
-        )
+        ),
     )
 }

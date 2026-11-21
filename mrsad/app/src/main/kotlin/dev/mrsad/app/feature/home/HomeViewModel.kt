@@ -12,16 +12,17 @@ import dev.mrsad.core.analytics.AnalyticsMath
 import dev.mrsad.core.coach.Coach
 import dev.mrsad.core.coach.PlanItem
 import dev.mrsad.core.coach.SkillSnapshot
+import dev.mrsad.core.progression.ProgressionEngine
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 
 data class HomeState(
@@ -31,9 +32,17 @@ data class HomeState(
     val todayProgress: Float = 0f,
     val bestWpm: Int? = null,
     val bestAccuracy: Double? = null,
+    val bestReadingWpm: Int? = null,
     val totalSessions: Int = 0,
+    val readSessions: Int = 0,
+    val eyeSessions: Int = 0,
+    val mindSessions: Int = 0,
+    val avgEyeScore: Int = 0,
+    val avgMindScore: Int = 0,
+    val weeklyMinutesSeries: List<Double?> = emptyList(),
     val plan: List<PlanItem> = emptyList(),
     val recentEvents: List<ActivityEventEntity> = emptyList(),
+    val progression: ProgressionEngine.ProgressionSummary? = null,
 ) {
     val hasAnyData: Boolean get() = totalSessions > 0 || recentEvents.isNotEmpty()
 
@@ -85,50 +94,115 @@ class HomeViewModel(container: AppContainer) : ViewModel() {
         )
     }
 
-    private val plan: Flow<Pair<List<PlanItem>, List<ActivityEventEntity>>> = todayFlow.flatMapLatest { date ->
-        flow {
-            emit(computePlan(date))
+    private val recentEventsFlow: Flow<List<ActivityEventEntity>> = todayFlow.flatMapLatest {
+        val now = clock.nowEpochMillis()
+        activityDao.recentEvents(now - 90 * DAY, 300)
+    }
+
+    private val coachInputsFlow: Flow<CoachSnapshotInputs> = todayFlow.flatMapLatest { date ->
+        recentEventsFlow.map { events ->
+            val now = clock.nowEpochMillis()
+            val recentWpm = typingDao.averageWpmSince(now - 7 * DAY) ?: 0.0
+            val previousWpm = typingDao.averageWpmBetween(now - 14 * DAY, now - 7 * DAY) ?: 0.0
+            val accuracy = typingDao.averageAccuracySince(now - 7 * DAY) ?: 0.0
+            val mistakes = decodeMistakes(typingDao.mistakesSince(now - 14 * DAY))
+            CoachSnapshotInputs(
+                dateIso = date,
+                recentWpm = recentWpm,
+                previousWpm = previousWpm,
+                accuracy = accuracy,
+                mistakes = mistakes,
+                events = events,
+            )
         }
     }
 
-    private suspend fun computePlan(date: String): Pair<List<PlanItem>, List<ActivityEventEntity>> {
-        val now = clock.nowEpochMillis()
-        val activeDates = activityDao.activeDates().first()
-        val typingSessions = typingDao.totalCount().first()
-        val recentWpm = typingDao.averageWpmSince(now - 7 * DAY) ?: 0.0
-        val previousWpm = typingDao.averageWpmBetween(now - 14 * DAY, now - 7 * DAY) ?: 0.0
-        val accuracy = typingDao.averageAccuracySince(now - 7 * DAY) ?: 0.0
-        val recent = activityDao.recentEvents(now - 30 * DAY, 20).first()
-        val mistakes = decodeMistakes(typingDao.mistakesSince(now - 14 * DAY))
+    val state: StateFlow<HomeState> = combine(dashboard, coachInputsFlow) { head, inputs ->
+        val date = inputs.dateIso
+        val events = inputs.events
+        val activeSet = head.activeDates.toSet()
+        val streak = AnalyticsMath.currentStreak(activeSet, date)
+
+        val readEvents = events.filter { it.module == "READ" }
+        val eyeEvents = events.filter { it.module == "EYE" }
+        val mindEvents = events.filter { it.module == "MIND" }
+        val focusEvents = events.filter { it.module == "FOCUS" }
+        val aiEvents = events.filter { it.module == "AI" }
+
+        val bestReadWpm = readEvents.maxOfOrNull { it.primaryMetric.toInt() }
+        val avgEye = if (eyeEvents.isEmpty()) 0.0 else eyeEvents.map { it.primaryMetric }.average()
+        val avgMind = if (mindEvents.isEmpty()) 0.0 else mindEvents.map { it.primaryMetric }.average()
+        val totalMinutes = events.sumOf { it.minutes }
+
+        val last7Days = AnalyticsMath.lastDays(date, 7)
+        val minutesByDate = events.groupBy { it.dateIso }.mapValues { (_, list) -> list.sumOf { it.minutes } }
+        val weeklySeries: List<Double?> = last7Days.map { d ->
+            val m = minutesByDate[d]
+            if (m != null && m > 0) m.toDouble() else null
+        }
+        val weeklyMinutesSum = last7Days.sumOf { minutesByDate[it] ?: 0 }
 
         val snapshot = SkillSnapshot(
-            typingSessions = typingSessions,
-            avgWpm = recentWpm,
-            avgAccuracy = accuracy,
-            recentWpm = recentWpm,
-            previousWpm = previousWpm,
-            topMistakes = mistakes,
-            activeDaysLast7Days = AnalyticsMath.lastDays(date, 7).count { it in activeDates },
+            typingSessions = head.totalSessions,
+            avgWpm = inputs.recentWpm,
+            avgAccuracy = inputs.accuracy,
+            recentWpm = inputs.recentWpm,
+            previousWpm = inputs.previousWpm,
+            topMistakes = inputs.mistakes,
+            readingSessions = readEvents.size,
+            avgReadingWpm = readEvents.map { it.primaryMetric }.average().takeIf { !it.isNaN() }?.toInt() ?: 0,
+            avgComprehension = readEvents.map { it.secondaryMetric }.average().takeIf { !it.isNaN() }?.toInt() ?: 0,
+            mindSessions = mindEvents.size,
+            avgMindScore = avgMind,
+            eyeSessions = eyeEvents.size,
+            avgEyeScore = avgEye,
+            focusMinutesLast7Days = focusEvents.sumOf { it.minutes },
+            activeDaysLast7Days = last7Days.count { it in activeSet },
         )
-        val items = if (typingSessions > 0 || activeDates.isNotEmpty()) {
+
+        val planItems = if (head.totalSessions > 0 || activeSet.isNotEmpty() || events.isNotEmpty()) {
             Coach.dailyPlan(snapshot, date)
         } else {
             emptyList()
         }
-        return items to recent
-    }
 
-    val state: StateFlow<HomeState> = combine(dashboard, plan, todayFlow) { head, planData, date ->
+        val progression = ProgressionEngine.summarize(
+            todayIso = date,
+            activeDates = activeSet,
+            streakDays = streak,
+            typingSessions = head.totalSessions,
+            bestWpm = head.bestWpm ?: 0.0,
+            bestAccuracy = head.bestAccuracy ?: 0.0,
+            readingSessions = readEvents.size,
+            bestReadingWpm = (bestReadWpm ?: 0).toDouble(),
+            eyeSessions = eyeEvents.size,
+            bestEyeScore = eyeEvents.maxOfOrNull { it.primaryMetric.toInt() } ?: 0,
+            mindSessions = mindEvents.size,
+            bestMindScore = mindEvents.maxOfOrNull { it.primaryMetric.toInt() } ?: 0,
+            focusMinutes = focusEvents.sumOf { it.minutes },
+            aiSessions = aiEvents.size,
+            totalMinutes = totalMinutes,
+            weeklyMinutes = weeklyMinutesSum,
+        )
+
         HomeState(
             todayMinutes = head.minutes,
             todaySessions = head.sessions,
-            streakDays = AnalyticsMath.currentStreak(head.activeDates.toSet(), date),
+            streakDays = streak,
             todayProgress = (head.minutes / 25f).coerceIn(0f, 1f),
             bestWpm = head.bestWpm?.toInt(),
             bestAccuracy = head.bestAccuracy,
+            bestReadingWpm = bestReadWpm,
             totalSessions = head.totalSessions,
-            plan = planData.first,
-            recentEvents = planData.second,
+            readSessions = readEvents.size,
+            eyeSessions = eyeEvents.size,
+            mindSessions = mindEvents.size,
+            avgEyeScore = avgEye.toInt(),
+            avgMindScore = avgMind.toInt(),
+            weeklyMinutesSeries = weeklySeries,
+            plan = planItems,
+            recentEvents = events.take(20),
+            progression = progression,
         )
     }
         .flowOn(Dispatchers.Default)
@@ -143,6 +217,15 @@ class HomeViewModel(container: AppContainer) : ViewModel() {
         val totalSessions: Int,
     )
 
+    private data class CoachSnapshotInputs(
+        val dateIso: String,
+        val recentWpm: Double,
+        val previousWpm: Double,
+        val accuracy: Double,
+        val mistakes: List<Pair<Char, Int>>,
+        val events: List<ActivityEventEntity>,
+    )
+
     class Factory(private val container: AppContainer) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T = HomeViewModel(container) as T
@@ -151,7 +234,6 @@ class HomeViewModel(container: AppContainer) : ViewModel() {
     private companion object {
         const val DAY = 86_400_000L
 
-        /** Decodes the compact "charCode:count|…" mistake log into a heatmap. */
         fun decodeMistakes(encoded: List<String>): List<Pair<Char, Int>> =
             encoded.asSequence()
                 .flatMap { it.split('|').asSequence() }

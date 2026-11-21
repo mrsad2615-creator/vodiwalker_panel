@@ -6,8 +6,10 @@ import dev.mrsad.core.brand.MrsadMark
 import dev.mrsad.core.coach.Coach
 import dev.mrsad.core.coach.CoachAnswer
 import dev.mrsad.core.coach.SkillSnapshot
+import dev.mrsad.core.eye.EyeTrainingEngine
 import dev.mrsad.core.mind.MindGenerators
 import dev.mrsad.core.mind.MindProgression
+import dev.mrsad.core.progression.ProgressionEngine
 import dev.mrsad.core.random.SplitMix64
 import dev.mrsad.core.reading.ReadingEngine
 import dev.mrsad.core.session.FocusSession
@@ -499,6 +501,64 @@ object CoreChecks {
                 MindProgression.step(history + 0.1, 0.1) == -1,
                 "the second consecutive weak round demotes",
             )
+        }
+
+        check("Mind: reaction trials stay within normalized bounds and score monotonically") {
+            val trials = MindGenerators.reactionTrials(seed = 17L, level = 3, count = 6)
+            expect(trials.size == 6, "expected 6 reaction trials")
+            expect(trials.all { it.waitMillis in 650L..2600L }, "waitMillis out of range")
+            expect(trials.all { it.targetX in 0.2f..0.8f && it.targetY in 0.2f..0.8f }, "target coords out of bounds")
+            val fast = MindGenerators.scoreReactionMillis(210L)
+            val slow = MindGenerators.scoreReactionMillis(550L)
+            expect(fast > slow, "faster reaction must score higher ($fast vs $slow)")
+        }
+
+        check("Eye: saccade sequence and Schulte board are deterministic and non-medical") {
+            expect(EyeTrainingEngine.DISCLAIMER_FA.contains("پزشکی"), "disclaimer must state non-medical scope")
+            val seqA = EyeTrainingEngine.generateSaccadeSequence(seed = 99L, difficultyLevel = 3, count = 12)
+            val seqB = EyeTrainingEngine.generateSaccadeSequence(seed = 99L, difficultyLevel = 3, count = 12)
+            expect(seqA == seqB, "saccade sequence must be deterministic")
+            expect(seqA.all { it.x in 0.08f..0.92f && it.y in 0.12f..0.88f }, "saccade coords out of bounds")
+            val board = EyeTrainingEngine.generateSchulteBoard(seed = 11L, difficultyLevel = 4)
+            expect(board.side == 4 && board.numbers.sorted() == (1..16).toList(), "4x4 Schulte board must contain 1..16")
+            val report = EyeTrainingEngine.evaluateSession(
+                drill = EyeTrainingEngine.DrillType.SACCADE,
+                speedLevel = 3,
+                difficultyLevel = 3,
+                durationSeconds = 60,
+                hits = 18,
+                totalTargets = 20,
+            )
+            expect(report.accuracyPercent == 90, "expected 90% accuracy, got ${report.accuracyPercent}")
+        }
+
+        check("Progression: XP, levels, 28-day calendar and achievements derive honestly from telemetry") {
+            val empty = ProgressionEngine.compute(ProgressionEngine.TelemetryInput(todayIso = "2026-11-21"))
+            expect(empty.levelStatus.level == 1, "new user starts at level 1")
+            expect(empty.unlockedCount == 0, "new user has 0 unlocked badges")
+            expect(empty.calendar28Days.size == 28, "calendar must have 28 days")
+            expect(empty.calendar28Days.last().isToday, "last cell of calendar must be today")
+
+            val active = ProgressionEngine.compute(
+                ProgressionEngine.TelemetryInput(
+                    totalMinutes = 120,
+                    totalSessions = 14,
+                    todayMinutes = 25,
+                    todaySessions = 3,
+                    currentStreak = 7,
+                    longestStreak = 7,
+                    bestWpm = 64,
+                    bestAccuracy = 97.2,
+                    bestReadingWpm = 290,
+                    eyeSessions = 4,
+                    mindSessions = 6,
+                    activeDates = setOf("2026-11-15", "2026-11-16", "2026-11-17", "2026-11-18", "2026-11-19", "2026-11-20", "2026-11-21"),
+                    todayIso = "2026-11-21",
+                ),
+            )
+            expect(active.levelStatus.level >= 5, "active user must advance levels (got ${active.levelStatus.level})")
+            expect(active.unlockedCount == 8, "all 8 achievements should unlock with qualifying telemetry")
+            expect(active.dailyGoalProgress == 1f, "25/25 minutes must be 100% daily goal")
         }
 
         val failures = results.filter { it.second != null }

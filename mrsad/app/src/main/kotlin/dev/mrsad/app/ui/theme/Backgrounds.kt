@@ -21,36 +21,30 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import dev.mrsad.core.random.SplitMix64
 
-/** Each major page has its own environmental identity (spec §10). */
+/** Each major page has its own environmental identity. */
 enum class PageEnvironment {
-    HOME, TYPE, READ, MIND, ANALYTICS, AI, ARENA, STUDIO, FOCUS, PLANNER, LIBRARY, SETTINGS
+    HOME, TYPE, READ, EYE, MIND, ANALYTICS, AI, ARENA, STUDIO, FOCUS, PLANNER, LIBRARY, SETTINGS
 }
 
 /**
- * Ambient page background.
+ * Dual-System Ambient Page Background (OBSIDIAN × NOIR).
  *
- * The atmosphere is built in four layers, from the back to the front:
+ * - **OBSIDIAN (Luxury / 3D / Cinematic)**:
+ *   1. Deep vertical horizon gradient (`#07080B` -> `#0D1016` -> `#07080B`),
+ *   2. Controlled cold-silver specular light pools drifting slowly,
+ *   3. 3D depth-sorted particle field on a single Canvas,
+ *   4. Soft radial vignette focusing attention toward the center.
  *
- *  1. a **base gradient** that falls from the page colour into the
- *     elevated one and back, so the page has a horizon instead of being a
- *     flat sheet of colour,
- *  2. two **light pools** that drift slowly across the page at different
- *     speeds — a still background is what makes an interface feel dead,
- *  3. a **particle field** with real depth: the particles near the viewer
- *     are bigger, brighter and move faster than the ones far away,
- *  4. a **vignette** that pulls the eye towards the middle of the page.
- *
- * Performance contract:
- * - Particles are drawn on a single Canvas, never as composables.
- * - The animation clock is suspended whenever the app is not RESUMED, so a
- *   backgrounded app costs no GPU.
- * - Quality=Performance and reduced-motion disable motion entirely while
- *   keeping the static atmosphere.
+ * - **NOIR (Pure Minimalism / Swiss Editorial / Monochrome)**:
+ *   Pure `#000000` canvas with an architectural Swiss editorial hairline grid
+ *   and registration crosshairs — zero drifting light pools, zero particles,
+ *   and zero background GPU frame loop.
  */
 @Composable
 fun AmbientBackground(
@@ -60,8 +54,21 @@ fun AmbientBackground(
 ) {
     val colors = MrsadTheme.colors
     val motion = MrsadTheme.motion
-    // An infinite transition requests frames forever, which would keep an
-    // instrumented test from ever reaching idle.
+
+    if (colors.isNoir) {
+        Box(
+            modifier = modifier
+                .fillMaxSize()
+                .background(colors.background),
+        ) {
+            Canvas(Modifier.fillMaxSize()) {
+                drawNoirSwissGrid(colors)
+            }
+            content()
+        }
+        return
+    }
+
     val deterministic = dev.mrsad.app.testing.MrsadTestHooks.isDeterministic
     var appResumed by remember { mutableStateOf(true) }
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -76,14 +83,15 @@ fun AmbientBackground(
     }
 
     val accentStrength = when (environment) {
-        PageEnvironment.HOME -> 0.30f
+        PageEnvironment.HOME -> 0.24f
         PageEnvironment.TYPE -> 0.14f
         PageEnvironment.READ -> 0.12f
-        PageEnvironment.MIND -> 0.26f
-        PageEnvironment.ANALYTICS -> 0.20f
-        PageEnvironment.AI -> 0.34f
-        PageEnvironment.ARENA -> 0.22f
-        PageEnvironment.STUDIO -> 0.26f
+        PageEnvironment.EYE -> 0.20f
+        PageEnvironment.MIND -> 0.22f
+        PageEnvironment.ANALYTICS -> 0.18f
+        PageEnvironment.AI -> 0.24f
+        PageEnvironment.ARENA -> 0.20f
+        PageEnvironment.STUDIO -> 0.24f
         PageEnvironment.FOCUS -> 0.10f
         PageEnvironment.PLANNER -> 0.12f
         PageEnvironment.LIBRARY -> 0.12f
@@ -99,14 +107,12 @@ fun AmbientBackground(
                         colors.background,
                         colors.backgroundElevated,
                         colors.background,
-                    )
-                )
-            )
+                    ),
+                ),
+            ),
     ) {
         val animated = !deterministic && motion.animationsEnabled && motion.particleCount > 0
         if (animated) {
-            // Two clocks with different periods: the pools never line up
-            // again, so the page never repeats a pattern.
             val transition = rememberInfiniteTransition(label = "ambient")
             val drift by transition.animateFloat(
                 initialValue = 0f,
@@ -126,13 +132,16 @@ fun AmbientBackground(
                 ),
                 label = "counter",
             )
-            // A paused clock: when the app is not resumed the same Canvas is
-            // recomposed once with a frozen progress — no frames are scheduled.
             val clock = if (appResumed) drift else 0f
             val counterClock = if (appResumed) counter else 0f
 
             Canvas(Modifier.fillMaxSize()) {
-                drawAtmosphere(colors = colors, accentStrength = accentStrength, drift = clock, counter = counterClock)
+                drawAtmosphere(
+                    colors = colors,
+                    accentStrength = accentStrength,
+                    drift = clock,
+                    counter = counterClock,
+                )
             }
             ParticleLayer(
                 count = motion.particleCount,
@@ -143,7 +152,12 @@ fun AmbientBackground(
             )
         } else {
             Canvas(Modifier.fillMaxSize()) {
-                drawAtmosphere(colors = colors, accentStrength = accentStrength, drift = 0f, counter = 0f)
+                drawAtmosphere(
+                    colors = colors,
+                    accentStrength = accentStrength,
+                    drift = 0f,
+                    counter = 0f,
+                )
             }
         }
 
@@ -152,12 +166,39 @@ fun AmbientBackground(
 }
 
 /**
- * The light of the page.
- *
- * Two pools of light drift across the background at different speeds, and
- * a vignette closes the corners of the page so that the content in the
- * middle is what the eye goes to.
+ * Draws the subtle Swiss editorial structural grid on the pure black NOIR canvas.
  */
+private fun DrawScope.drawNoirSwissGrid(colors: MrsadColors) {
+    val stroke = 1.dp.toPx()
+    val gridColor = colors.border.copy(alpha = 0.24f)
+    val margin = 16.dp.toPx()
+    val usableWidth = (size.width - margin * 2f).coerceAtLeast(1f)
+
+    // 4 architectural vertical column hairlines
+    for (col in 0..4) {
+        val x = margin + (usableWidth * col / 4f)
+        drawLine(
+            color = gridColor,
+            start = Offset(x, 0f),
+            end = Offset(x, size.height),
+            strokeWidth = stroke,
+        )
+    }
+
+    // Subtle horizontal baseline ticks every 96dp
+    val stepY = 96.dp.toPx().coerceAtLeast(48f)
+    var y = stepY
+    while (y < size.height) {
+        drawLine(
+            color = gridColor.copy(alpha = 0.14f),
+            start = Offset(margin, y),
+            end = Offset(size.width - margin, y),
+            strokeWidth = stroke,
+        )
+        y += stepY
+    }
+}
+
 private fun DrawScope.drawAtmosphere(
     colors: MrsadColors,
     accentStrength: Float,
@@ -166,13 +207,12 @@ private fun DrawScope.drawAtmosphere(
 ) {
     val min = size.minDimension
 
-    // The first pool: the accent light from above, drifting sideways.
     val poolOneX = size.width * (0.82f - 0.34f * drift)
     val poolOneY = size.height * (0.06f + 0.10f * drift)
     drawCircle(
         brush = Brush.radialGradient(
             colors = listOf(
-                colors.accent.copy(alpha = accentStrength * 0.32f),
+                colors.accent.copy(alpha = accentStrength * 0.24f),
                 Color.Transparent,
             ),
             center = Offset(poolOneX, poolOneY),
@@ -182,14 +222,12 @@ private fun DrawScope.drawAtmosphere(
         center = Offset(poolOneX, poolOneY),
     )
 
-    // The second pool: a colder light from the opposite corner, drifting
-    // the other way and on a different clock.
     val poolTwoX = size.width * (0.12f + 0.40f * counter)
     val poolTwoY = size.height * (0.94f - 0.12f * counter)
     drawCircle(
         brush = Brush.radialGradient(
             colors = listOf(
-                colors.metalMid.copy(alpha = 0.09f),
+                colors.metalMid.copy(alpha = 0.08f),
                 Color.Transparent,
             ),
             center = Offset(poolTwoX, poolTwoY),
@@ -199,7 +237,6 @@ private fun DrawScope.drawAtmosphere(
         center = Offset(poolTwoX, poolTwoY),
     )
 
-    // The vignette.
     val vignetteRadius = maxOf(size.width, size.height) * 0.78f
     drawRect(
         brush = Brush.radialGradient(
@@ -209,7 +246,7 @@ private fun DrawScope.drawAtmosphere(
             ),
             center = Offset(size.width / 2f, size.height * 0.42f),
             radius = vignetteRadius,
-        )
+        ),
     )
 }
 
@@ -221,19 +258,18 @@ private fun ParticleLayer(
     accent: Color,
     enabled: Boolean,
 ) {
-    // Deterministic particle field: stable layout across recompositions.
     val particles = remember(count) {
-        val rng = SplitMix64(0x4D52_5341L) // "MRSA"
+        val rng = SplitMix64(0x4D52_5341L)
         List(count) {
             val depth = rng.nextDouble().toFloat()
             ParticleField(
                 x = rng.nextDouble().toFloat(),
                 y = rng.nextDouble().toFloat(),
-                radius = 0.5f + depth * 1.9f,
-                speed = 0.25f + depth * 1.0f,
+                radius = 0.5f + depth * 1.7f,
+                speed = 0.22f + depth * 0.9f,
                 depth = depth,
                 phase = rng.nextDouble().toFloat(),
-                accent = rng.nextInt(100) < 18,
+                accent = rng.nextInt(100) < 16,
             )
         }
     }
@@ -248,19 +284,11 @@ private data class ParticleField(
     val y: Float,
     val radius: Float,
     val speed: Float,
-    /** How close the particle is to the viewer, from 0 to 1. */
     val depth: Float,
     val phase: Float,
     val accent: Boolean,
 )
 
-/**
- * The particle field.
- *
- * The particles are not a uniform snow: each one has a depth, and the
- * depth decides how big it is, how bright it is and how fast it travels.
- * That is what turns a flat overlay into a space.
- */
 private fun DrawScope.drawParticles(
     particles: List<ParticleField>,
     progress: Float,
@@ -270,12 +298,11 @@ private fun DrawScope.drawParticles(
     particles.forEach { p ->
         val travel = (p.y - progress * p.speed) % 1f
         val y = (if (travel < 0f) travel + 1f else travel) * size.height
-        // The near particles drift sideways as well: that is the parallax.
         val x = ((p.x + progress * 0.04f * p.depth) % 1f) * size.width
         val twinkle = 0.35f + 0.35f * kotlin.math.sin((progress * 6.2832f * 2f + p.phase * 6.2832f)).toFloat()
         val color = if (p.accent) accent else tint
         drawCircle(
-            color = color.copy(alpha = (0.05f + 0.17f * p.depth * twinkle).coerceIn(0f, 0.3f)),
+            color = color.copy(alpha = (0.04f + 0.14f * p.depth * twinkle).coerceIn(0f, 0.25f)),
             radius = p.radius,
             center = Offset(x, y),
         )

@@ -181,10 +181,10 @@ fun SettingsScreen(
                 )
                 ToggleRow(
                     title = "افکت صوتی",
-                    subtitle = "صدای بازخورد تمرین (به‌زودی فعال می‌شود)",
+                    subtitle = "صدای ظریف بازخورد کلیدها و تکمیل جلسهٔ تمرین",
                     checked = settings.soundEnabled,
-                    enabled = false,
-                    onCheckedChange = { },
+                    enabled = true,
+                    onCheckedChange = { scope.launch { repo.setSound(it) } },
                 )
             }
 
@@ -283,6 +283,12 @@ private fun ThemeSwatch(
             color = MrsadTheme.colors.textPrimary,
             fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
             modifier = Modifier.padding(top = 4.dp),
+        )
+        Text(
+            variant.subtitleFa,
+            style = type.caption,
+            color = MrsadTheme.colors.textMuted,
+            maxLines = 2,
         )
     }
 }

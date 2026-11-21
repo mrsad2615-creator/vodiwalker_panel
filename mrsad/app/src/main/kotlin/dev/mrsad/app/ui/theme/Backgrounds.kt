@@ -2,73 +2,61 @@ package dev.mrsad.app.ui.theme
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout. statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.unit.dp
 
-/**
- * OBSIDIAN SPECTRUM — Unified Atmospheric Foundation (`Backgrounds.kt`).
- *
- * Every screen shares a unified, noise-free deep Obsidian foundation (`#090810` → `#100E18`)
- * with a subtle top spectral tint corresponding to the active module and automatic
- * `WindowInsets.statusBars` padding so headers never overlap the Android status bar.
- */
+/** Each major page has its own environmental identity (Master Prompt §4 & §5). */
 enum class PageEnvironment {
-    HOME,
-    TYPE,
-    READ,
-    EYE,
-    MIND,
-    FOCUS,
-    ANALYTICS,
-    AI,
-    ARENA,
-    STUDIO,
-    SETTINGS,
-    ;
-
-    fun spectralAccent(): Color = when (this) {
-        HOME -> ObsidianSpectrum.ElectricBlue
-        TYPE -> ObsidianSpectrum.ElectricBlue
-        READ -> ObsidianSpectrum.DeepViolet
-        EYE -> ObsidianSpectrum.Teal
-        MIND -> ObsidianSpectrum.Magenta
-        FOCUS -> ObsidianSpectrum.Teal
-        ANALYTICS -> ObsidianSpectrum.ElectricBlue
-        AI -> ObsidianSpectrum.DeepViolet
-        ARENA -> ObsidianSpectrum.Magenta
-        STUDIO -> ObsidianSpectrum.DeepViolet
-        SETTINGS -> ObsidianSpectrum.ElectricBlue
-    }
+    HOME, TYPE, READ, EYE, MIND, ANALYTICS, AI, ARENA, STUDIO, FOCUS, PLANNER, LIBRARY, SETTINGS
 }
 
+/**
+ * Resolves the primary spectral accent pair for a given [PageEnvironment].
+ */
+fun PageEnvironment.spectralColors(): Pair<Color, Color> = when (this) {
+    PageEnvironment.TYPE -> ObsidianSpectrum.ElectricBlue to ObsidianSpectrum.BrightBlue
+    PageEnvironment.READ, PageEnvironment.LIBRARY -> ObsidianSpectrum.DeepViolet to ObsidianSpectrum.Lavender
+    PageEnvironment.EYE -> ObsidianSpectrum.Teal to ObsidianSpectrum.Aqua
+    PageEnvironment.MIND -> ObsidianSpectrum.Magenta to ObsidianSpectrum.Pink
+    PageEnvironment.FOCUS, PageEnvironment.PLANNER -> ObsidianSpectrum.Teal to ObsidianSpectrum.BrightBlue
+    PageEnvironment.ANALYTICS, PageEnvironment.ARENA -> ObsidianSpectrum.ElectricBlue to ObsidianSpectrum.Lavender
+    PageEnvironment.AI, PageEnvironment.STUDIO -> ObsidianSpectrum.DeepViolet to ObsidianSpectrum.Pink
+    PageEnvironment.HOME, PageEnvironment.SETTINGS -> ObsidianSpectrum.DeepViolet to ObsidianSpectrum.BrightBlue
+}
+
+/**
+ * OBSIDIAN SPECTRUM — Clean Atmospheric Background System (Master Prompt §5).
+ *
+ * - Unified deep Obsidian foundation (`#090810` -> `#100E18`) across all screens.
+ * - Zero grid lines and zero radial banding noise.
+ * - Controlled top spectral horizon illumination matched to each module's
+ *   identity (`TYPE` Blue, `READ` Violet, `EYE` Teal/Aqua, `MIND` Magenta/Pink).
+ * - Automatically applies `WindowInsets.statusBars` padding so top bars never
+ *   collide with the system clock or status icons under `enableEdgeToEdge()`.
+ */
 @Composable
 fun AmbientBackground(
     environment: PageEnvironment,
     modifier: Modifier = Modifier,
-    content: @Composable BoxScope.() -> Unit,
+    content: @Composable () -> Unit,
 ) {
     val colors = MrsadTheme.colors
-    val spectral = environment.spectralAccent()
-    val topColor = remember(colors.backgroundElevated, spectral) {
-        lerp(colors.backgroundElevated, spectral, 0.12f)
-    }
-    val backgroundBrush = remember(topColor, colors.background) {
-        Brush.verticalGradient(listOf(topColor, colors.background))
-    }
+    val (primarySpectral, secondarySpectral) = environment.spectralColors()
 
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(backgroundBrush)
+            .background(colors.background)
             .windowInsetsPadding(WindowInsets.statusBars),
     ) {
         content()

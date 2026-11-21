@@ -49,6 +49,8 @@ enum class ModuleSculptureType {
 fun ModuleSculpture3D(
     type: ModuleSculptureType,
     modifier: Modifier = Modifier,
+    intensity: Float = 0.90f,
+    animated: Boolean = false,
     accentOverride: Color? = null,
 ) {
     val identity = type.spectralIdentity()

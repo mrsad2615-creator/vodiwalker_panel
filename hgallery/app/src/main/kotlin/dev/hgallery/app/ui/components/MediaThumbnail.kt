@@ -10,9 +10,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.produceState
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -42,8 +44,10 @@ fun MediaThumbnail(
     showVideoBadge: Boolean = true,
 ) {
     val palette = hgPalette
-    val bitmap by produceState<android.graphics.Bitmap?>(initialValue = null, item.uri, item.id) {
-        value = store.get(item.uri, item.isVideo)
+    var bitmap by remember(item.uri) { mutableStateOf<android.graphics.Bitmap?>(null) }
+    LaunchedEffect(item.uri) {
+        val decoded = store.get(item.uri, item.isVideo)
+        bitmap = decoded
     }
 
     val shape = remember(cornerRadius) {

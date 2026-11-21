@@ -44,23 +44,13 @@ describe('KAIROS Full Application End-to-End Flow', () => {
     // Tap splash to skip directly into Dashboard
     fireEvent.click(splash);
     await waitFor(() => {
-      expect(screen.getByText('پیشرفت امروز')).toBeInTheDocument();
+      expect(screen.getByTestId('home-ready')).toBeInTheDocument();
     });
 
-    // Default board mode is cinematic: showcase cards driven by real rows.
-    expect(screen.getAllByText('تمرکز امروز').length).toBeGreaterThan(1);
-    expect(screen.getByText('روند دو هفته')).toBeInTheDocument();
-
-    // The detailed board is the same data with the full ledgers.
-    fireEvent.click(screen.getByRole('button', { name: 'جزئی' }));
-    await waitFor(() => {
-      expect(screen.getByText('کارهای مهم امروز')).toBeInTheDocument();
-    });
-    expect(screen.getByText('عادت‌های امروز')).toBeInTheDocument();
-    expect(screen.getByText('اهداف فعال')).toBeInTheDocument();
-
-    // Back to the default board for the rest of the run.
-    fireEvent.click(screen.getByRole('button', { name: 'سینمایی' }));
+    // 3.0 home is a day, not a board: three numbers, then a real list.
+    expect(screen.getByText('دقیقه تمرکز')).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'کارهای امروز' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'این هفته' })).toBeInTheDocument();
 
     // Navigate to Tasks -> Kanban -> Eisenhower -> create a real task & test typing/deleting
     fireEvent.click(screen.getByRole('button', { name: 'وظایف' }));

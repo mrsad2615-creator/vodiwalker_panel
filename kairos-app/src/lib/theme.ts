@@ -23,6 +23,9 @@ export interface AccentPreset {
 
 /** Curated starting points. The user can still pick any colour. */
 export const ACCENT_PRESETS: AccentPreset[] = [
+  // Default. Brass on ink is the "paper & ink" signature: warm, uncommon for a
+  // productivity app, and quiet enough that it can be used for "now" only.
+  { id: 'brass', label: 'برنجی', hex: '#C9A063' },
   { id: 'kairos', label: 'بنفش کایروس', hex: '#6D4AFF' },
   { id: 'indigo', label: 'نیلی الکتریک', hex: '#4B6BFF' },
   { id: 'aurora', label: 'فیروزه‌ای', hex: '#0FB5A6' },

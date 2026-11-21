@@ -109,7 +109,7 @@ export function searchEverything(
 /** The seven rooms, so the box can also be used as navigation. */
 export function sectionItems(): SearchableItem[] {
   return [
-    { id: 'nav:dashboard', kind: 'section', title: 'خانه', subtitle: 'پیشرفت امروز و کارت‌های بخش‌ها', tab: 'dashboard', keywords: ['داشبورد', 'خانه'] },
+    { id: 'nav:dashboard', kind: 'section', title: 'خانه', subtitle: 'کارهای امروز، عادت‌ها و خلاصهٔ هفته', tab: 'dashboard', keywords: ['داشبورد', 'خانه'] },
     { id: 'nav:focus', kind: 'section', title: 'تمرکز', subtitle: 'زمان‌سنج، سکوت و فضای صوتی', tab: 'focus', keywords: ['تایمر', 'پومودورو', 'صدا'] },
     { id: 'nav:tasks', kind: 'section', title: 'وظایف', subtitle: 'فهرست کارها و ماتریس آیزنهاور', tab: 'tasks', keywords: ['کار', 'تسک'] },
     { id: 'nav:habits', kind: 'section', title: 'عادت‌ها', subtitle: 'زنجیره‌ها و ثبت روزانه', tab: 'habits', keywords: ['روتین', 'زنجیره'] },

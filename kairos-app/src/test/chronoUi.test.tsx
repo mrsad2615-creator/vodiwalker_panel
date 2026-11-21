@@ -11,7 +11,7 @@ import { db } from '@/lib/db';
 async function openFocus() {
   render(<App />);
   fireEvent.click(screen.getByRole('status', { name: /kairos/i }));
-  await waitFor(() => expect(screen.getByText('پیشرفت امروز')).toBeInTheDocument());
+  await waitFor(() => expect(screen.getByTestId('home-ready')).toBeInTheDocument());
   fireEvent.click(screen.getByRole('button', { name: 'تمرکز' }));
   await waitFor(() => expect(screen.getByText('محیط تمرکز')).toBeInTheDocument());
 }

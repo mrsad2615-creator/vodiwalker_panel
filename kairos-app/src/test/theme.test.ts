@@ -37,11 +37,12 @@ describe('KAIROS theme engine', () => {
 
   it('keeps the brand derivation identical to the shipped palette', () => {
     const derived = deriveAccent(DEFAULT_ACCENT);
-    expect(derived.accent).toBe('#6D4AFF');
+    expect(derived.accent).toBe(DEFAULT_ACCENT);
     // Foreground must stay readable as text on obsidian (AA, normal text).
     expect(contrastRatio(derived.fg, INK)).toBeGreaterThanOrEqual(4.5);
-    // White on the violet fill is AA too.
-    expect(derived.on).toBe('#FFFFFF');
+    // The label on the accent fill is chosen by contrast, not by brand vanity:
+    // brass takes ink, violet would take white. Either way it must be AA.
+    expect(['#FFFFFF', INK]).toContain(derived.on);
     expect(contrastRatio(derived.on, derived.accent)).toBeGreaterThanOrEqual(4.5);
   });
 

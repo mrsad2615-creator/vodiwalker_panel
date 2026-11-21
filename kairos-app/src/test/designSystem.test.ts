@@ -73,3 +73,58 @@ describe('design system standards', () => {
     for (const value of grains) expect(value).toBeLessThanOrEqual(0.03);
   });
 });
+
+/* =============================================================================
+   KAIROS Paper — the 3.0 rules, held by tests
+   -----------------------------------------------------------------------------
+   A visual language that only lives in a document drifts with the next feature.
+   These assertions are the language: the six type steps, the two-tone group, the
+   single wash, and the home screen having no gradient, no glow and no text below
+   11px. If a future change wants to break one of them, it has to delete a test
+   and say why — which is exactly the conversation we want to have.
+   ========================================================================== */
+
+describe('KAIROS Paper — visual rules', () => {
+  const HOME = readFileSync(join(ROOT, 'features/dashboard/DashboardPage.tsx'), 'utf8');
+
+  it('defines exactly six type steps and no seventh', () => {
+    const steps = [...CSS.matchAll(/--t-(\d):\s*(\d+)px/g)].map((m) => Number(m[2]));
+    expect(steps).toEqual([11, 13, 15, 17, 22, 30]);
+  });
+
+  it('keeps every home-screen text size at 11px or larger', () => {
+    // `text-[9.5px]` and friends were the single biggest reason the old board
+    // read as a dashboard instead of a page.
+    const sizes = [...HOME.matchAll(/text-\[(\d+(?:\.\d+)?)px\]/g)].map((m) => Number(m[1]));
+    expect(sizes.length).toBeGreaterThan(0);
+    for (const size of sizes) expect(size).toBeGreaterThanOrEqual(11);
+  });
+
+  it('keeps the home screen free of gradients and glows', () => {
+    expect(HOME).not.toMatch(/linear-gradient|radial-gradient/i);
+    expect(HOME).not.toMatch(/--accent-glow/);
+    expect(HOME).not.toMatch(/backdrop-blur/);
+  });
+
+  it('uses tone, not borders, for groups', () => {
+    expect(CSS).toMatch(/\.k-group\s*\{[^}]*background:\s*var\(--surface-1\)/);
+    expect(CSS).toMatch(/\.k-row \+ \.k-row::before\s*\{[^}]*background:\s*var\(--rule\)/);
+    // A rail is a plate: no outer border.
+    expect(CSS).toMatch(/\.rail\s*\{[^}]*border:\s*0/);
+  });
+
+  it('keeps the texture quiet: one wash, grain effectively invisible', () => {
+    const grains = [...CSS.matchAll(/--atmosphere-grain:\s*([\d.]+)/g)].map((m) => Number(m[1]));
+    expect(grains.length).toBeGreaterThan(0);
+    for (const value of grains) expect(value).toBeLessThanOrEqual(0.01);
+  });
+
+  it('announces a room in Persian, without Latin tracking', () => {
+    // The last `.eyebrow` block is the one that wins in the cascade.
+    const blocks = [...CSS.matchAll(/\.eyebrow\s*\{([^}]*)\}/g)].map((m) => m[1]);
+    const active = blocks[blocks.length - 1];
+    expect(active).toMatch(/letter-spacing:\s*0/);
+    expect(active).toMatch(/text-transform:\s*none/);
+    expect(active).not.toMatch(/uppercase/);
+  });
+});

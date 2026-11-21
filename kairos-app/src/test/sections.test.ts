@@ -16,7 +16,7 @@ afterEach(() => {
 });
 
 describe('section identity', () => {
-  it('covers every nav tab with a unique Latin eyebrow', () => {
+  it('covers every nav tab with a unique Persian label', () => {
     const tabs: NavTab[] = [
       'dashboard',
       'focus',
@@ -30,7 +30,9 @@ describe('section identity', () => {
 
     const eyebrows = tabs.map((tab) => {
       expect(SECTION_IDENTITIES[tab].id).toBe(tab);
-      expect(sectionEyebrow(tab)).toMatch(/^[A-Z]+$/);
+      // 3.0: the room is announced in Persian, not in uppercase Latin.
+      expect(sectionEyebrow(tab)).toMatch(/[\u0600-\u06FF]/);
+      expect(sectionEyebrow(tab)).not.toMatch(/[A-Za-z]/);
       return SECTION_IDENTITIES[tab].eyebrow;
     });
     expect(new Set(eyebrows).size).toBe(tabs.length);

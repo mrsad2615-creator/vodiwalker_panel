@@ -42,7 +42,7 @@ enum class ThemeVariant(
 
     companion object {
         fun fromId(id: String?): ThemeVariant = when (id?.lowercase()) {
-            NOIR.id, "crystal", "arctic", "phantom" -> NOIR
+            NOIR.id, "carbon", "crystal", "arctic", "phantom" -> NOIR
             else -> OBSIDIAN
         }
     }

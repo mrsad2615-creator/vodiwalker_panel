@@ -55,19 +55,23 @@ class MediaActions(context: Context) {
      * the caller falls back to deleting directly after its own confirmation.
      */
     fun buildDeleteRequest(uris: List<Uri>, path: DeletePath): IntentSender? {
-        if (uris.isEmpty()) return null
-        val pending: PendingIntent = when (path) {
-            DeletePath.SYSTEM_TRASH -> {
-                if (Build.VERSION.SDK_INT < 30) return null
+        val pending: PendingIntent? = when {
+            uris.isEmpty() -> null
+            path == DeletePath.SYSTEM_TRASH && Build.VERSION.SDK_INT >= API_TRASH ->
                 MediaStore.createTrashRequest(resolver, uris, true)
-            }
-            DeletePath.SYSTEM_DELETE_REQUEST -> {
-                if (Build.VERSION.SDK_INT < 29) return null
+            path == DeletePath.SYSTEM_DELETE_REQUEST && Build.VERSION.SDK_INT >= API_DELETE_REQUEST ->
                 MediaStore.createDeleteRequest(resolver, uris)
-            }
-            DeletePath.DIRECT_DELETE -> return null
+            else -> null
         }
-        return pending.intentSender
+        return pending?.intentSender
+    }
+
+    private companion object {
+        /** `MediaStore.createDeleteRequest` arrived in Android 10 (API 29). */
+        const val API_DELETE_REQUEST = 29
+
+        /** `MediaStore.createTrashRequest` arrived in Android 11 (API 30). */
+        const val API_TRASH = 30
     }
 
     /**

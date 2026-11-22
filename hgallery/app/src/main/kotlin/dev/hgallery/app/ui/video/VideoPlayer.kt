@@ -171,22 +171,26 @@ fun VideoPlayerScreen(
         Box(Modifier.align(Alignment.BottomCenter)) {
             PlayerBottomBar(
                 visible = chrome.visible,
-                isPlaying = controller.state.isPlaying,
-                positionMs = chrome.displayPositionMs,
-                durationMs = controller.durationMs,
-                fraction = chrome.displayFraction,
-                scrubbing = chrome.scrubbing,
-                speed = controller.speed,
-                fillScreen = fillScreen,
-                onTogglePlay = {
-                    controller.togglePlay()
-                    chromeVisible = true
-                },
-                onStart = { controller.beginScrub() },
-                onMove = { controller.moveScrub(it) },
-                onEnd = { controller.endScrub() },
-                onSpeed = { controller.setSpeed(it) },
-                onFillScreen = { fillScreen = !fillScreen },
+                transport = PlayerTransport(
+                    isPlaying = controller.state.isPlaying,
+                    positionMs = chrome.displayPositionMs,
+                    durationMs = controller.durationMs,
+                    fraction = chrome.displayFraction,
+                    scrubbing = chrome.scrubbing,
+                    speed = controller.speed,
+                    fillScreen = fillScreen,
+                ),
+                actions = PlayerActions(
+                    onTogglePlay = {
+                        controller.togglePlay()
+                        chromeVisible = true
+                    },
+                    onScrubStart = { controller.beginScrub() },
+                    onScrubMove = { controller.moveScrub(it) },
+                    onScrubEnd = { controller.endScrub() },
+                    onSpeed = { controller.setSpeed(it) },
+                    onFillScreen = { fillScreen = !fillScreen },
+                ),
             )
         }
     }

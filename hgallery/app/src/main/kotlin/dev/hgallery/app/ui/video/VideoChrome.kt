@@ -103,6 +103,35 @@ fun PlayerTopBar(
     }
 }
 
+/**
+ * Everything the bottom bar needs to draw, as one value.
+ *
+ * `PlayerBottomBar` took fourteen parameters before this existed — detekt's
+ * `LongParameterList` was correct that call sites had become unreadable, and a
+ * value object also makes the bar trivially previewable.
+ */
+@androidx.compose.runtime.Immutable
+data class PlayerTransport(
+    val isPlaying: Boolean,
+    val positionMs: Long,
+    val durationMs: Long,
+    val fraction: Float,
+    val scrubbing: Boolean,
+    val speed: Float,
+    val fillScreen: Boolean,
+)
+
+/** The callbacks the bottom bar fires. Grouped for the same reason as the state. */
+@androidx.compose.runtime.Immutable
+data class PlayerActions(
+    val onTogglePlay: () -> Unit,
+    val onScrubStart: () -> Unit,
+    val onScrubMove: (Float) -> Unit,
+    val onScrubEnd: () -> Unit,
+    val onSpeed: (Float) -> Unit,
+    val onFillScreen: () -> Unit,
+)
+
 /** The thin progress line: thickens while held, grows a thumb only while held. */
 @Composable
 fun PlayerProgress(
@@ -159,19 +188,8 @@ fun PlayerProgress(
 @Composable
 fun PlayerBottomBar(
     visible: Boolean,
-    isPlaying: Boolean,
-    positionMs: Long,
-    durationMs: Long,
-    fraction: Float,
-    scrubbing: Boolean,
-    speed: Float,
-    fillScreen: Boolean,
-    onTogglePlay: () -> Unit,
-    onStart: () -> Unit,
-    onMove: (Float) -> Unit,
-    onEnd: () -> Unit,
-    onSpeed: (Float) -> Unit,
-    onFillScreen: () -> Unit,
+    transport: PlayerTransport,
+    actions: PlayerActions,
 ) {
     AnimatedVisibility(
         visible = visible,
@@ -185,7 +203,13 @@ fun PlayerBottomBar(
                 .navigationBarsPadding()
                 .padding(bottom = 6.dp),
         ) {
-            PlayerProgress(fraction, scrubbing, onStart, onMove, onEnd)
+            PlayerProgress(
+                fraction = transport.fraction,
+                scrubbing = transport.scrubbing,
+                onStart = actions.onScrubStart,
+                onMove = actions.onScrubMove,
+                onEnd = actions.onScrubEnd,
+            )
 
             Row(
                 modifier = Modifier
@@ -195,17 +219,18 @@ fun PlayerBottomBar(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 HgIconButton(
-                    icon = if (isPlaying) HgIcons.Pause else HgIcons.Play,
+                    icon = if (transport.isPlaying) HgIcons.Pause else HgIcons.Play,
                     contentDescription = stringResource(
-                        if (isPlaying) R.string.video_pause else R.string.video_play,
+                        if (transport.isPlaying) R.string.video_pause else R.string.video_play,
                     ),
-                    onClick = onTogglePlay,
+                    onClick = actions.onTogglePlay,
                     tint = Color.White,
                     modifier = Modifier.testTag(HgTestTags.VIDEO_PLAY_PAUSE),
                 )
 
                 Text(
-                    text = "${PlayerPolicy.timecode(positionMs)} / ${PlayerPolicy.timecode(durationMs)}",
+                    text = "${PlayerPolicy.timecode(transport.positionMs)} / " +
+                        PlayerPolicy.timecode(transport.durationMs),
                     style = TimecodeLabel,
                     color = Color.White.copy(alpha = 0.9f),
                     modifier = Modifier
@@ -215,13 +240,13 @@ fun PlayerBottomBar(
 
                 Spacer(Modifier.weight(1f))
 
-                SpeedControl(speed = speed, onPick = onSpeed)
+                SpeedControl(speed = transport.speed, onPick = actions.onSpeed)
 
                 HgIconButton(
                     icon = HgIcons.FillScreen,
                     contentDescription = stringResource(R.string.video_fill_screen),
-                    onClick = onFillScreen,
-                    tint = if (fillScreen) Color(0xFF0A84FF) else Color.White,
+                    onClick = actions.onFillScreen,
+                    tint = if (transport.fillScreen) Color(0xFF0A84FF) else Color.White,
                     modifier = Modifier.testTag(HgTestTags.VIDEO_FILL),
                 )
             }

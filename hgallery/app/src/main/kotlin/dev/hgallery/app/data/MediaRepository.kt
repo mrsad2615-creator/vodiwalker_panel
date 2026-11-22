@@ -39,7 +39,7 @@ class MediaRepository(private val context: Context) {
 
     /** Images and videos, newest first, with metadata already normalised. */
     suspend fun loadAll(): List<MediaItem> = withContext(Dispatchers.IO) {
-        val collection = if (Build.VERSION.SDK_INT >= 29) {
+        val collection = if (Build.VERSION.SDK_INT >= API_Q) {
             MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL)
         } else {
             MediaStore.Files.getContentUri("external")
@@ -52,8 +52,14 @@ class MediaRepository(private val context: Context) {
             MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO.toString(),
         )
 
-        val items = ArrayList<MediaItem>(512)
-        resolver.query(collection, projection, selection, args, "${MediaStore.MediaColumns.DATE_TAKEN} DESC, ${MediaStore.MediaColumns._ID} DESC")
+        val items = ArrayList<MediaItem>(INITIAL_CAPACITY)
+        resolver.query(
+            collection,
+            projection,
+            selection,
+            args,
+            "${MediaStore.MediaColumns.DATE_TAKEN} DESC, ${MediaStore.MediaColumns._ID} DESC",
+        )
             ?.use { cursor ->
                 val idCol = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns._ID)
                 val nameCol = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DISPLAY_NAME)
@@ -67,14 +73,18 @@ class MediaRepository(private val context: Context) {
                 val bucketNameCol = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.BUCKET_DISPLAY_NAME)
                 val durationCol = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DURATION)
                 val pathCol = cursor.getColumnIndex(MediaStore.MediaColumns.RELATIVE_PATH)
-                val favCol = if (Build.VERSION.SDK_INT >= 30) cursor.getColumnIndex(MediaStore.MediaColumns.IS_FAVORITE) else -1
+                val favCol = if (Build.VERSION.SDK_INT >= API_R) {
+                    cursor.getColumnIndex(MediaStore.MediaColumns.IS_FAVORITE)
+                } else {
+                    -1
+                }
 
                 while (cursor.moveToNext()) {
                     val id = cursor.getLong(idCol)
                     // DATE_TAKEN is 0 for plenty of files (screenshots, downloads,
                     // anything copied without EXIF); DATE_ADDED is the sane fallback.
                     val taken = cursor.getLong(takenCol).takeIf { it > 0L }
-                        ?: (cursor.getLong(addedCol) * 1000L)
+                        ?: (cursor.getLong(addedCol) * MILLIS_PER_SECOND)
 
                     items += MediaItem(
                         id = id,
@@ -106,10 +116,24 @@ class MediaRepository(private val context: Context) {
     }
 
     suspend fun setFavorite(uri: Uri, favorite: Boolean): Boolean = withContext(Dispatchers.IO) {
-        if (Build.VERSION.SDK_INT < 30) return@withContext false
+        if (Build.VERSION.SDK_INT < API_R) return@withContext false
         val values = android.content.ContentValues().apply {
             put(MediaStore.MediaColumns.IS_FAVORITE, if (favorite) 1 else 0)
         }
         runCatching { resolver.update(uri, values, null, null) > 0 }.getOrDefault(false)
+    }
+
+    private companion object {
+        /** Android 10: scoped storage and the `VOLUME_EXTERNAL` content URI. */
+        const val API_Q = 29
+
+        /** Android 11: `IS_FAVORITE`, trash, and no write permission needed. */
+        const val API_R = 30
+
+        /** `DATE_ADDED` is in seconds; every other column here is milliseconds. */
+        const val MILLIS_PER_SECOND = 1000L
+
+        /** Typical library size, so the list does not reallocate while filling. */
+        const val INITIAL_CAPACITY = 512
     }
 }

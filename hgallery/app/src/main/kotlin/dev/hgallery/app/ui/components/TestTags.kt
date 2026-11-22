@@ -36,4 +36,8 @@ object HgTestTags {
     const val VIDEO_SPEED = "video-speed"
     const val VIDEO_SPEED_MENU = "video-speed-menu"
     const val VIDEO_FILL = "video-fill"
+
+    // Search.
+    const val SEARCH_FIELD = "search-field"
+    const val SEARCH_RESULTS = "search-results"
 }

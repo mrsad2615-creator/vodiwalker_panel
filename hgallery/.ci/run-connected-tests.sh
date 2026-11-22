@@ -134,14 +134,6 @@ H=$(echo "$SIZE" | cut -d' ' -f2)
 echo "screen ${W}x${H}"
 Y=$((H - 55))
 
-# Tap a control by its Compose test tag.
-#
-# This exists because guessing pixel coordinates produced four wrong screenshots
-# in a row: a tap 4% too high hits white space and the shot silently shows the
-# previous screen. MainActivity exposes test tags as accessibility resource ids,
-# so `uiautomator dump` can locate the real bounds and we tap the centre of them.
-# Returns non-zero (and reports why) when the tag is not on screen, which is far
-# more useful than a screenshot of the wrong page.
 # Dump the live view hierarchy once, into the artifacts directory.
 dump_ui() {
   adb shell uiautomator dump /sdcard/ui.xml >/dev/null 2>&1
@@ -178,26 +170,10 @@ tap_tag_or_text() {
   return 0
 }
 
-tap_tag() {
-  TAG="$1"
-  adb shell uiautomator dump /sdcard/ui.xml >/dev/null 2>&1
-  adb shell cat /sdcard/ui.xml > "$OUT_DIR/diag/ui-$TAG.xml" 2>/dev/null
-  BOUNDS=$(adb shell cat /sdcard/ui.xml 2>/dev/null \
-    | tr '>' '\n' \
-    | grep "resource-id=\"$PKG:id/$TAG\"" \
-    | sed -n 's/.*bounds="\[\([0-9]*\),\([0-9]*\)\]\[\([0-9]*\),\([0-9]*\)\]".*/\1 \2 \3 \4/p' \
-    | head -1)
-  if [ -z "$BOUNDS" ]; then
-    echo "::warning title=e2e::no node with tag $TAG on screen"
-    return 1
-  fi
-  set -- $BOUNDS
-  CX=$(( ($1 + $3) / 2 ))
-  CY=$(( ($2 + $4) / 2 ))
-  echo "tap_tag $TAG -> centre ($CX,$CY) from bounds [$1,$2][$3,$4]"
-  adb shell input tap "$CX" "$CY"
-  sleep 3
-  return 0
+# Type into whatever has focus.
+type_text() {
+  adb shell input text "$1"
+  sleep 2
 }
 
 tap_and_shot() {
@@ -323,6 +299,34 @@ if tap_tag_or_text "videos-album" 'content-desc="Videos|text="Videos'; then
   fi
 else
   echo "::warning title=e2e::Videos album tile not found; player not photographed"
+fi
+
+# Search: the magnifier used to be wired to an empty lambda, so this is the first
+# run in which the screen it should have opened can be photographed at all.
+echo "== photographing search =="
+adb shell input keyevent KEYCODE_BACK
+sleep 2
+tap_and_shot $((W / 8 * 3)) 17-albums-before-search.png
+if tap_tag_or_text "search-button" 'content-desc="Search"'; then
+  sleep 2
+  shot 18-search-empty.png
+  type_text "clip"
+  shot 19-search-text.png
+  if tap_tag_or_text "chip-videos" 'text="Videos"'; then
+    sleep 2
+    shot 20-search-videos.png
+  fi
+  if tap_tag_or_text "chip-large" 'text="Large"'; then
+    sleep 2
+    # "clip" AND Videos AND Large: the fixtures are 1.5-1.9 MB, so this must be
+    # empty. Photographing it proves the axes AND rather than OR.
+    shot 21-search-no-results.png
+  fi
+  adb shell input keyevent KEYCODE_BACK
+  sleep 2
+  shot 22-after-search.png
+else
+  echo "::warning title=e2e::search button not found"
 fi
 
 echo "== pulling screenshots =="

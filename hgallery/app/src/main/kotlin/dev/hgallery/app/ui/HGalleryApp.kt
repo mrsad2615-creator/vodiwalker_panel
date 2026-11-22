@@ -25,12 +25,14 @@ import dev.hgallery.app.ui.albums.AlbumDetailScreen
 import dev.hgallery.app.ui.albums.AlbumsScreen
 import dev.hgallery.app.ui.photos.PhotosScreen
 import dev.hgallery.app.ui.placeholder.PlaceholderScreen
+import dev.hgallery.app.ui.search.SearchScreen
 import dev.hgallery.app.ui.shell.HgBottomBar
 import dev.hgallery.app.ui.shell.HgTab
 import dev.hgallery.app.ui.theme.hgPalette
 import dev.hgallery.app.ui.video.VideoPlayerScreen
 import dev.hgallery.app.ui.viewer.ViewerScreen
 import dev.hgallery.core.Album
+import dev.hgallery.core.AlbumBuilder
 
 /**
  * Application shell.
@@ -55,6 +57,7 @@ fun HGalleryApp(container: AppContainer) {
     var openAlbum by remember { mutableStateOf<Album?>(null) }
     var viewerId by remember { mutableStateOf<Long?>(null) }
     var playerId by remember { mutableStateOf<Long?>(null) }
+    var searchOpen by remember { mutableStateOf(false) }
 
     val items by container.mediaStore.items.collectAsStateWithLifecycle()
 
@@ -63,6 +66,11 @@ fun HGalleryApp(container: AppContainer) {
     // Back closes the innermost layer first, which is what a user expects and
     // what the reference does.
     BackHandler(enabled = playerId != null) { playerId = null }
+    // Search is a layer, not a tab: Back closes it and returns to whatever was
+    // underneath, exactly like the viewer.
+    BackHandler(enabled = playerId == null && viewerId == null && searchOpen) {
+        searchOpen = false
+    }
     BackHandler(enabled = playerId == null && viewerId != null) { viewerId = null }
     BackHandler(enabled = playerId == null && viewerId == null && openAlbum != null) { openAlbum = null }
 
@@ -76,6 +84,20 @@ fun HGalleryApp(container: AppContainer) {
             media.isVideo -> playerId = id
             else -> viewerId = id
         }
+    }
+
+    // Search covers the tabs and the bar, as the reference does: it is a mode, and
+    // leaving it must be an explicit action rather than a stray tap on a tab. It is
+    // therefore drawn over the shell rather than inside it.
+    if (searchOpen) {
+        SearchScreen(
+            container = container,
+            items = items,
+            albums = remember(items) { AlbumBuilder.visible(AlbumBuilder.fromItems(items)) },
+            onClose = { searchOpen = false },
+            onOpenItem = openItem,
+        )
+        return
     }
 
     Box(Modifier.fillMaxSize().background(palette.page)) {
@@ -100,6 +122,7 @@ fun HGalleryApp(container: AppContainer) {
                             HgTab.Photos -> PhotosScreen(
                                 container = container,
                                 onOpenItem = openItem,
+                                onSearch = { searchOpen = true },
                             )
                             HgTab.Albums -> AlbumsScreen(
                                 container = container,

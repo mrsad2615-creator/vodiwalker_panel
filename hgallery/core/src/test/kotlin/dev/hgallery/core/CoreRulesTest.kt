@@ -83,6 +83,11 @@ class SearchFiltersTest {
      * call: `item(1, size = 5)` and `item(1, mime = "video/mp4")` compiled happily
      * while testing something nobody had intended.
      */
+    private companion object {
+        /** A fixed instant, so date assertions do not depend on when tests run. */
+        const val NOW_MS = 1_767_225_600_000L
+    }
+
     private class ItemBuilder(val id: Long) {
         var name: String = "IMG_$id.jpg"
         var bucket: String = "Camera"
@@ -216,6 +221,71 @@ class AlbumBuilderTest {
     fun `empty albums are hidden`() {
         val albums = AlbumBuilder.fromItems(items)
         assertTrue(AlbumBuilder.visible(albums).none { it.count == 0 })
+    }
+
+    @Test
+    fun `size buckets are contiguous and leave nothing out`() {
+        // A photo is in exactly one bucket. If the bounds disagreed by a byte, a
+        // file could vanish from a search that asked for its own size.
+        assertEquals(SizeBucket.SMALL.maxBytes, SizeBucket.MEDIUM.minBytes)
+        assertEquals(SizeBucket.MEDIUM.maxBytes, SizeBucket.LARGE.minBytes)
+        val query = SearchChips(size = SizeBucket.LARGE).toQuery(NOW_MS)
+        val large = item(1) { size = 40L * 1024L * 1024L }
+        val small = item(2) { size = 200L * 1024L }
+        assertEquals(listOf(1L), SearchFilters.apply(listOf(large, small), query).map { it.id })
+    }
+
+    @Test
+    fun `a date bucket reaches back from the clock it is given`() {
+        // The conversion takes `now` rather than reading the system clock, which is
+        // the only way "last 7 days" can be asserted at all.
+        val weekAgo = NOW_MS - 7L * 24L * 60L * 60L * 1000L
+        val query = SearchChips(within = DateBucket.WEEK).toQuery(NOW_MS)
+        assertEquals(weekAgo, query.fromMs)
+        val recent = item(1) { date = NOW_MS - 60_000L }
+        val old = item(2) { date = weekAgo - 1L }
+        assertEquals(listOf(1L), SearchFilters.apply(listOf(recent, old), query).map { it.id })
+    }
+
+    @Test
+    fun `a chip query is empty until a chip is chosen`() {
+        assertTrue(SearchChips().isEmpty)
+        assertFalse(SearchChips().hasFilters)
+        // Text alone is not a "filter" for the chip row, but it does make the query
+        // non-empty, so typing shows results without claiming to be filtering.
+        assertFalse(SearchChips(text = "lake").isEmpty)
+        assertFalse(SearchChips(text = "lake").hasFilters)
+        assertTrue(SearchChips(videosOnly = true).hasFilters)
+        assertFalse(SearchChips(videosOnly = true).isEmpty)
+    }
+
+    @Test
+    fun `chips narrow together rather than replace one another`() {
+        // A favourites-only, video-only, recent query has to satisfy all three.
+        val query = SearchChips(
+            videosOnly = true,
+            favouritesOnly = true,
+            within = DateBucket.WEEK,
+        ).toQuery(NOW_MS)
+        val yes = item(1) {
+            mime = "video/mp4"
+            favourite = true
+            date = NOW_MS - 1_000L
+        }
+        val notFavourite = item(2) {
+            mime = "video/mp4"
+            favourite = false
+            date = NOW_MS - 1_000L
+        }
+        val tooOld = item(3) {
+            mime = "video/mp4"
+            favourite = true
+            date = NOW_MS - 30L * 24L * 60L * 60L * 1000L
+        }
+        assertEquals(
+            listOf(1L),
+            SearchFilters.apply(listOf(yes, notFavourite, tooOld), query).map { it.id },
+        )
     }
 
     @Test

@@ -77,15 +77,22 @@ import java.util.Locale
 fun PhotosScreen(
     container: AppContainer,
     onOpenItem: (Long) -> Unit,
+    onSearch: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    SelectionAwarePhotos(container = container, onOpenItem = onOpenItem, modifier = modifier)
+    SelectionAwarePhotos(
+        container = container,
+        onOpenItem = onOpenItem,
+        onSearch = onSearch,
+        modifier = modifier,
+    )
 }
 
 @Composable
 private fun SelectionAwarePhotos(
     container: AppContainer,
     onOpenItem: (Long) -> Unit,
+    onSearch: () -> Unit,
     modifier: Modifier,
 ) {
     val palette = hgPalette
@@ -148,7 +155,7 @@ private fun SelectionAwarePhotos(
         } else {
         Column(Modifier.fillMaxWidth()) {
             HgToolbar(
-                onSearch = {},
+                onSearch = onSearch,
                 onMore = {},
                 viewAction = {
                     // Selection is reachable without a long press, so the feature
@@ -302,7 +309,7 @@ private fun SelectionAwarePhotos(
 
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
-private fun ThumbnailCell(
+internal fun ThumbnailCell(
     item: MediaItem,
     store: ThumbnailStore,
     selection: Selection,

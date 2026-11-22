@@ -100,4 +100,20 @@
         <item quantity="one">%d minute</item>
         <item quantity="other">%d minutes</item>
     </plurals>
+    <string name="search_hint">Search photos and videos</string>
+    <string name="search_close">Close search</string>
+    <string name="search_no_results">No matches</string>
+    <string name="search_no_results_body">Nothing in your library matches that name.</string>
+    <string name="search_no_results_filters">Nothing matches with these filters. Try clearing one.</string>
+    <string name="filter_photos">Photos</string>
+    <string name="filter_videos">Videos</string>
+    <string name="filter_favourites">Favourites</string>
+    <string name="filter_small">Small</string>
+    <string name="filter_large">Large</string>
+    <string name="filter_this_week">This week</string>
+    <string name="filter_this_year">This year</string>
+    <plurals name="search_result_count">
+        <item quantity="one">%d result</item>
+        <item quantity="other">%d results</item>
+    </plurals>
 </resources>

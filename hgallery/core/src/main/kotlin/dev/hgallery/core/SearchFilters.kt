@@ -1,5 +1,75 @@
 package dev.hgallery.core
 
+/**
+ * The size buckets the search screen offers.
+ *
+ * Nobody searches a photo library for "larger than 524288 bytes", so the screen
+ * asks in the terms people use — small, medium, large — and this maps those to
+ * byte bounds. The thresholds are chosen from what a phone camera and a chat app
+ * actually produce: a compressed screenshot and a shared sticker sit under 1 MiB,
+ * a 12 MP camera frame is 2–5 MiB, and anything past 15 MiB is a long 4K video or
+ * an edited panorama.
+ */
+enum class SizeBucket(val minBytes: Long?, val maxBytes: Long?) {
+    SMALL(null, 1024L * 1024L),
+    MEDIUM(1024L * 1024L, 15L * 1024L * 1024L),
+    LARGE(15L * 1024L * 1024L, null),
+}
+
+/** How far back the date buckets reach. */
+enum class DateBucket(val spanMs: Long) {
+    TODAY(24L * 60L * 60L * 1000L),
+    WEEK(7L * 24L * 60L * 60L * 1000L),
+    MONTH(31L * 24L * 60L * 60L * 1000L),
+    YEAR(366L * 24L * 60L * 60L * 1000L),
+}
+
+/**
+ * The query one can build on the search screen, as opposed to a full [SearchQuery].
+ *
+ * The screen offers one choice per axis, because that is what the reference's
+ * chip row does: a user picks "Videos" or "Photos", not both. `SearchQuery` keeps
+ * the richer model for callers that need it; this type exists so the screen cannot
+ * construct a contradictory query in the first place, and so turning it into a
+ * `SearchQuery` is one tested function rather than logic in a composable.
+ */
+data class SearchChips(
+    val text: String = "",
+    val videosOnly: Boolean = false,
+    val imagesOnly: Boolean = false,
+    val favouritesOnly: Boolean = false,
+    val albumId: Long? = null,
+    val size: SizeBucket? = null,
+    val within: DateBucket? = null,
+) {
+    val isEmpty: Boolean
+        get() = text.isBlank() && !videosOnly && !imagesOnly && !favouritesOnly &&
+            albumId == null && size == null && within == null
+
+    /** True when anything beyond the text field is set, which the chip row shows. */
+    val hasFilters: Boolean
+        get() = videosOnly || imagesOnly || favouritesOnly || albumId != null ||
+            size != null || within != null
+
+    /**
+     * The byte and date bounds, resolved against a clock.
+     *
+     * `nowMs` is a parameter rather than a call to the system clock so the
+     * conversion is testable at a fixed instant; a "last 7 days" query that reads
+     * the clock itself can only be tested by waiting.
+     */
+    fun toQuery(nowMs: Long): SearchQuery = SearchQuery(
+        text = text,
+        imagesOnly = imagesOnly,
+        videosOnly = videosOnly,
+        minBytes = size?.minBytes,
+        maxBytes = size?.maxBytes,
+        fromMs = within?.let { nowMs - it.spanMs },
+        albumId = albumId,
+        favouritesOnly = favouritesOnly,
+    )
+}
+
 /** The axes Huawei Gallery's search screen offers. */
 data class SearchQuery(
     val text: String = "",

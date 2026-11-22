@@ -105,4 +105,20 @@
         <item quantity="one">%d دقیقه</item>
         <item quantity="other">%d دقیقه</item>
     </plurals>
+    <string name="search_hint">جستجوی عکس و ویدیو</string>
+    <string name="search_close">بستن جستجو</string>
+    <string name="search_no_results">موردی پیدا نشد</string>
+    <string name="search_no_results_body">چیزی با این نام در گالری شما نیست.</string>
+    <string name="search_no_results_filters">با این فیلترها چیزی پیدا نشد. یکی از فیلترها را بردارید.</string>
+    <string name="filter_photos">عکس‌ها</string>
+    <string name="filter_videos">ویدیوها</string>
+    <string name="filter_favourites">موردعلاقه‌ها</string>
+    <string name="filter_small">کوچک</string>
+    <string name="filter_large">بزرگ</string>
+    <string name="filter_this_week">این هفته</string>
+    <string name="filter_this_year">امسال</string>
+    <plurals name="search_result_count">
+        <item quantity="one">%d نتیجه</item>
+        <item quantity="other">%d نتیجه</item>
+    </plurals>
 </resources>

@@ -136,6 +136,17 @@ tap_and_shot $((W / 8 * 5)) 03-highlights.png
 tap_and_shot $((W / 8 * 7)) 04-discover.png
 tap_and_shot $((W / 8)) 05-photos-again.png
 
+# Open the first thumbnail to photograph the full-screen viewer. The first cell
+# sits just under the date header; tap its centre.
+adb shell input tap $((W / 4)) $((H / 2 - 40))
+sleep 5
+shot 06-viewer.png
+# A single tap toggles the chrome off; this shot proves the photo can be seen
+# without any bars in the way.
+adb shell input tap $((W / 2)) $((H / 2))
+sleep 3
+shot 07-viewer-chrome-hidden.png
+
 echo "== pulling screenshots =="
 adb pull "$DEVICE_DIR" "$OUT_DIR" >/dev/null 2>&1
 find "$OUT_DIR" -name '*.png' -exec ls -l {} \;

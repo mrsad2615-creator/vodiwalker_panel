@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { motion } from 'framer-motion';
 import { ArrowUpLeft, Check, ChevronLeft, Plus, Timer } from '@/components/ui/icons';
 import type { Goal, Habit, Task } from '@/types/domain';
 import {
@@ -65,6 +66,13 @@ export function DashboardPage() {
     return () => window.clearInterval(t);
   }, []);
 
+  // If the setting changes elsewhere (settings screen, a restored backup), follow
+  // it — but never fight the local value during a tap.
+  useEffect(() => {
+    const stored = readStoredMode(settings.homeMode);
+    setBoardMode((current) => (stored === current ? current : stored));
+  }, [settings.homeMode]);
+
   const todayKey = getTodayKey();
   const dateInfo = useMemo(() => formatJalaaliFull(todayKey), [todayKey]);
 
@@ -121,7 +129,12 @@ export function DashboardPage() {
   const activeGoals = useMemo(() => goals.filter((g) => !g.completed).slice(0, 4), [goals]);
 
   // ── Board data: arithmetic over the user's own rows, nothing else ──────────
-  const boardMode: HomeMode = settings.homeMode ?? 'cinematic';
+  // The mode is owned locally first and written to settings afterwards. The
+  // board used to read only `settings.homeMode`, so a slow or refused Dexie write
+  // (or a live-query that had not fired yet) made the chips look dead: you tapped
+  // «فشرده» and nothing changed. A tap must be instant, and the persistence is
+  // an implementation detail the reader should never have to wait for.
+  const [boardMode, setBoardMode] = useState<HomeMode>(() => readStoredMode(settings.homeMode));
   const series = useMemo(
     () => buildDailySeries({ focusSessions, tasks, habitLogs }, todayKey, 14),
     [focusSessions, tasks, habitLogs, todayKey]
@@ -150,9 +163,18 @@ export function DashboardPage() {
     const task = tasks.find((t) => t.id === id);
     if (task) openEditTask(task);
   };
-  const chooseMode = (mode: HomeMode) => {
-    void updateSettings({ homeMode: mode });
+  const toggleHabitById = (habitId: string) => {
+    const today = habitLogs.find((log) => log.habitId === habitId && log.dateKey === todayKey);
     void triggerHaptic('light', settings.hapticsEnabled);
+    if (today?.status === 'completed') void clearHabitLog(habitId, todayKey);
+    else void upsertHabitLog(habitId, todayKey, 'completed', 1);
+  };
+
+  const chooseMode = (mode: HomeMode) => {
+    setBoardMode(mode);
+    storeMode(mode);
+    void triggerHaptic('light', settings.hapticsEnabled);
+    void updateSettings({ homeMode: mode }).catch(() => undefined);
   };
 
   const handleToggleTask = async (task: Task) => {
@@ -267,7 +289,7 @@ export function DashboardPage() {
               type="button"
               onClick={() => chooseMode(mode.id)}
               aria-pressed={active}
-              className={`rounded-full border px-2.5 py-1 text-[10px] font-medium transition-colors ${
+              className={`min-h-[30px] rounded-full border px-3 py-1.5 text-[11px] font-medium transition-all active:scale-95 ${
                 active
                   ? 'border-[var(--accent-fg)]/60 bg-[color-mix(in_srgb,var(--accent)_18%,transparent)] text-[var(--text)]'
                   : 'border-[var(--border)] text-[var(--text-3)] hover:text-[var(--text-2)]'
@@ -408,6 +430,12 @@ export function DashboardPage() {
       )}
 
       {/* ── SHOWCASE BOARD ───────────────────────────────────────────────── */}
+      <motion.div
+        key={boardMode}
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+      >
       {boardMode === 'compact' ? (
         <div className="grid grid-cols-2 gap-2">
           <FocusShowcase
@@ -428,6 +456,7 @@ export function DashboardPage() {
           <HabitsShowcase
             dense
             matrix={habitMatrix}
+            onToggle={toggleHabitById}
             onOpenAll={() => setActiveTab('habits')}
             onStart={() => setActiveTab('habits')}
           />
@@ -461,6 +490,7 @@ export function DashboardPage() {
           />
           <HabitsShowcase
             matrix={habitMatrix}
+            onToggle={toggleHabitById}
             onOpenAll={() => setActiveTab('habits')}
             onStart={() => setActiveTab('habits')}
           />
@@ -471,6 +501,7 @@ export function DashboardPage() {
           />
         </div>
       )}
+      </motion.div>
 
       {/* ── TASKS ─────────────────────────────────────────────────────────── */}
       {boardMode === 'detailed' && (
@@ -742,4 +773,29 @@ export function DashboardPage() {
       />
     </div>
   );
+}
+
+/* ── Home-mode persistence ────────────────────────────────────────────────────
+   Two places on purpose: `localStorage` answers instantly (and survives a hard
+   reload even before Dexie opens), while the settings row is what backup, restore
+   and cross-device import carry. localStorage wins only when Dexie has no opinion. */
+
+const HOME_MODE_KEY = 'kairos:home-mode';
+
+function readStoredMode(fromSettings: HomeMode | undefined): HomeMode {
+  try {
+    const raw = window.localStorage.getItem(HOME_MODE_KEY);
+    if (raw === 'cinematic' || raw === 'compact' || raw === 'detailed') return raw;
+  } catch {
+    // storage blocked: fall through to the settings row
+  }
+  return fromSettings ?? 'cinematic';
+}
+
+function storeMode(mode: HomeMode): void {
+  try {
+    window.localStorage.setItem(HOME_MODE_KEY, mode);
+  } catch {
+    // the DB write still carries it
+  }
 }

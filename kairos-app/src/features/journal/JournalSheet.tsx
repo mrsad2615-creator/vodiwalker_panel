@@ -26,16 +26,21 @@ export function JournalSheet({ open, dateKey = getTodayKey(), entry, onClose }: 
   const [note, setNote] = useState(entry?.note ?? '');
   const [saving, setSaving] = useState(false);
 
-  // Hydrate exactly once per opening. The live query pushes a new `entry` the
-  // instant the mood is stored, and an effect that watched every field would
-  // then overwrite the sentence the user is still typing — a bug that showed up
-  // as "my note disappeared" (and as a flaky test).
+  // Hydrate exactly once per opening — and never again after the reader has
+  // touched a field. The live query pushes a new `entry` the instant the mood is
+  // stored, so the row can arrive *while* the sentence is being typed: keying the
+  // effect on `entry.id` alone re-hydrated `new-<date>` → `journal-<date>` and
+  // wiped the input (the "my note disappeared" bug). Dirty wins over fresh data;
+  // the sheet is a draft until it is saved or closed.
   const hydratedRef = useRef<string | null>(null);
+  const dirtyRef = useRef(false);
   useEffect(() => {
     if (!open) {
       hydratedRef.current = null;
+      dirtyRef.current = false;
       return;
     }
+    if (dirtyRef.current) return;
     const key = entry?.id ?? `new-${dateKey}`;
     if (hydratedRef.current === key) return;
     hydratedRef.current = key;
@@ -43,6 +48,10 @@ export function JournalSheet({ open, dateKey = getTodayKey(), entry, onClose }: 
     setHighlight(entry?.highlight ?? '');
     setNote(entry?.note ?? '');
   }, [open, entry?.id, entry?.mood, entry?.highlight, entry?.note, dateKey]);
+
+  const touch = () => {
+    dirtyRef.current = true;
+  };
 
   const dateInfo = formatJalaaliFull(dateKey);
 
@@ -97,7 +106,10 @@ export function JournalSheet({ open, dateKey = getTodayKey(), entry, onClose }: 
                 <button
                   key={option.value}
                   type="button"
-                  onClick={() => setMood(option.value)}
+                  onClick={() => {
+                    touch();
+                    setMood(option.value);
+                  }}
                   aria-pressed={active}
                   aria-label={option.label}
                   className={`flex flex-col items-center gap-1.5 rounded-2xl border px-1 py-2.5 transition-colors ${
@@ -128,7 +140,10 @@ export function JournalSheet({ open, dateKey = getTodayKey(), entry, onClose }: 
             type="text"
             dir="auto"
             value={highlight}
-            onChange={(event) => setHighlight(event.target.value)}
+            onChange={(event) => {
+              touch();
+              setHighlight(event.target.value);
+            }}
             maxLength={120}
             placeholder="مثلاً: تمام‌کردن بخش سخت گزارش"
             className="luxury-input text-xs"
@@ -146,7 +161,10 @@ export function JournalSheet({ open, dateKey = getTodayKey(), entry, onClose }: 
             id="journal-note"
             dir="auto"
             value={note}
-            onChange={(event) => setNote(event.target.value)}
+            onChange={(event) => {
+              touch();
+              setNote(event.target.value);
+            }}
             rows={5}
             maxLength={2000}
             placeholder="آنچه ارزش یادآوری دارد…"

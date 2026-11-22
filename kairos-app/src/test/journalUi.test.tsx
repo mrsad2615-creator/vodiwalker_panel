@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import App from '@/App';
+import { AppProvider } from '@/context/AppContext';
+import { JournalSheet } from '@/features/journal/JournalSheet';
 import { db } from '@/lib/db';
 import { addDays, getTodayKey } from '@/lib/date';
 
@@ -62,6 +64,41 @@ describe('KAIROS 3.2 — ژورنال و ورود تقویم', () => {
       const row = await db.journal.get(`journal-${today}`);
       expect(row?.highlight).toBe('بخش سخت گزارش تمام شد');
     });
+  });
+
+  it('does not wipe a half-typed line when the stored row arrives late', () => {
+    // The mood tap stores the entry, and the live query then pushes the row into
+    // the open sheet. For a moment the sheet has `entry === null`; hydrating on
+    // the `new-<date>` → `journal-<date>` id change used to clear the input the
+    // reader was typing into.
+    const stored = {
+      id: `journal-${today}`,
+      dateKey: today,
+      mood: 4,
+      note: '',
+      highlight: '',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    const view = render(
+      <AppProvider>
+        <JournalSheet open entry={null} onClose={() => {}} />
+      </AppProvider>
+    );
+
+    fireEvent.change(screen.getByLabelText('بهترین لحظهٔ امروز'), {
+      target: { value: 'بخش سخت گزارش تمام شد' },
+    });
+    expect(screen.getByLabelText('بهترین لحظهٔ امروز')).toHaveValue('بخش سخت گزارش تمام شد');
+
+    view.rerender(
+      <AppProvider>
+        <JournalSheet open entry={stored} onClose={() => {}} />
+      </AppProvider>
+    );
+
+    expect(screen.getByLabelText('بهترین لحظهٔ امروز')).toHaveValue('بخش سخت گزارش تمام شد');
   });
 
   it('imports a .ics file into real tasks, once', async () => {

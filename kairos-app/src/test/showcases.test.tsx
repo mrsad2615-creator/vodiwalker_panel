@@ -50,6 +50,44 @@ describe('Home showcases', () => {
     expect(screen.getAllByTestId('habit-cell')).toHaveLength(14);
   });
 
+  it('habit rail is a control: one tap on a card logs that habit', () => {
+    const habits = [
+      { id: 'h1', name: 'کتاب', icon: 'book', accentColor: '#fff', archived: false },
+      { id: 'h2', name: 'ورزش', icon: 'dumbbell', accentColor: '#fff', archived: false },
+    ] as unknown as Habit[];
+    const matrix = habitWeekMatrix(habits, [], TODAY, 7);
+    const onToggle = vi.fn();
+
+    render(
+      <HabitsShowcase matrix={matrix} onToggle={onToggle} onOpenAll={vi.fn()} onStart={vi.fn()} />
+    );
+
+    const card = screen.getByRole('button', { name: /کتاب — ثبت نشده/ });
+    expect(card).toHaveAttribute('aria-pressed', 'false');
+    fireEvent.click(card);
+    expect(onToggle).toHaveBeenCalledWith('h1');
+  });
+
+  it('habit rail shows today as done when the log exists', () => {
+    const habits = [
+      { id: 'h1', name: 'کتاب', icon: 'book', accentColor: '#fff', archived: false },
+    ] as unknown as Habit[];
+    const matrix = habitWeekMatrix(
+      habits,
+      [{ id: 'l1', habitId: 'h1', dateKey: TODAY, status: 'completed', value: 1 } as never],
+      TODAY,
+      7
+    );
+
+    render(
+      <HabitsShowcase matrix={matrix} onToggle={vi.fn()} onOpenAll={vi.fn()} onStart={vi.fn()} />
+    );
+    expect(screen.getByRole('button', { name: /کتاب — انجام شد/ })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    );
+  });
+
   it('analytics sparkline plots one point per day of the window', () => {
     const { container } = render(
       <AnalyticsShowcase

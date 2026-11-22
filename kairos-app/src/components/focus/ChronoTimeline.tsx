@@ -1,3 +1,4 @@
+import { motion } from 'framer-motion';
 import { Check } from '@/components/ui/icons';
 import { Numeric } from '@/components/ui/Numeric';
 import type { ClockSegment } from '@/lib/chrono/plan';
@@ -36,9 +37,7 @@ export function ChronoTimeline({
   return (
     <section aria-label="برنامهٔ جلسه" className="space-y-2">
       <div className="flex items-baseline justify-between">
-        <span className="font-display-caps text-[8px] font-semibold text-[var(--text-3)]">
-          SESSION PLAN
-        </span>
+        <span className="text-[10.5px] font-medium text-[var(--text-2)]">برنامهٔ جلسه</span>
         <span className="text-[10px] text-[var(--text-3)]">
           {focusTotal > 0 ? (
             <>
@@ -55,6 +54,26 @@ export function ChronoTimeline({
         </span>
       </div>
 
+      {/* Where the session sits overall: one bar, so the rail has a "you are here"
+          even before you read a single chip. */}
+      <div className="h-[3px] overflow-hidden rounded-full bg-[var(--border)]" aria-hidden="true">
+        <motion.div
+          className="h-full rounded-full"
+          style={{ background: 'var(--accent)' }}
+          initial={false}
+          animate={{
+            width: `${Math.round(
+              ((segmentIndex + (plan[segmentIndex]?.seconds
+                ? 1 - remainingSeconds / plan[segmentIndex].seconds
+                : 0)) /
+                Math.max(1, plan.length)) *
+                100
+            )}%`,
+          }}
+          transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+        />
+      </div>
+
       <ol className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1">
         {plan.map((segment, index) => {
           const isCurrent = index === segmentIndex;
@@ -63,9 +82,16 @@ export function ChronoTimeline({
           const shownSeconds = isCurrent ? remainingSeconds : segment.seconds;
 
           return (
-            <li key={`${segment.label}-${index}`} className="shrink-0">
-              <button
+            <motion.li
+              key={`${segment.label}-${index}`}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.035, type: 'spring', stiffness: 320, damping: 28 }}
+              className="shrink-0"
+            >
+              <motion.button
                 type="button"
+                whileTap={{ scale: 0.95 }}
                 onClick={() => onSeek(index)}
                 aria-current={isCurrent ? 'step' : undefined}
                 aria-label={`بخش ${index + 1}: ${segment.label}، ${
@@ -106,8 +132,22 @@ export function ChronoTimeline({
                 <span className="num-geo text-[9px] text-[var(--text-3)]">
                   {segment.seconds > 0 ? `${minutes(shownSeconds)}′` : '∞'}
                 </span>
-              </button>
-            </li>
+
+                {/* The current chip drains as the block runs: motion is the state. */}
+                {isCurrent && segment.seconds > 0 && (
+                  <motion.span
+                    aria-hidden="true"
+                    className="absolute inset-x-0 bottom-0 h-[2px] rounded-full"
+                    style={{ background: 'var(--accent)' }}
+                    initial={false}
+                    animate={{
+                      width: `${Math.max(0, Math.min(100, (remainingSeconds / segment.seconds) * 100))}%`,
+                    }}
+                    transition={{ duration: 0.5, ease: 'linear' }}
+                  />
+                )}
+              </motion.button>
+            </motion.li>
           );
         })}
       </ol>

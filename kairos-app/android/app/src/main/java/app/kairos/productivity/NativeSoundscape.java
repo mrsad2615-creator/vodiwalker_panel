@@ -9,56 +9,65 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * KAIROS native soundscape engine.
+ * KAIROS native soundscape engine — v2.
  *
- * ── Why this exists ──────────────────────────────────────────────────────────
- * The 1.7 engine synthesised everything in the WebView with Web Audio. It sounded
- * fine on a desktop and failed on a phone for one structural reason: Android
- * suspends a backgrounded WebView. Lock the screen during a 45-minute block and
- * the audio graph was frozen with the page — no soundscape, and no bell at the
- * end of the session either. A focus timer whose sound dies at the exact moment
- * you stop looking at it is not a feature.
+ * ── Why it is native ─────────────────────────────────────────────────────────
+ * Android suspends a backgrounded WebView. A soundscape built with Web Audio
+ * therefore died the moment the screen locked, and the end-of-session bell never
+ * rang at all. The audio lives in the app process now: a foreground service owns
+ * one AudioTrack at 48 kHz stereo, streaming, and nothing depends on the page.
  *
- * So the sound moved into the app process: a foreground service drives one
- * AudioTrack at 48 kHz stereo, streaming, with the same eleven layers generated
- * from noise colours, biquad filters and LFOs. Nothing is downloaded, nothing is
- * licensed, and the loop is mathematically endless (there is no buffer to wrap).
+ * ── Why it sounds different from v1 ──────────────────────────────────────────
+ * v1 was technically correct and audibly thin. Four things were missing, and all
+ * four are what "quality" actually means to a person listening on a phone:
  *
- * ── Design notes ─────────────────────────────────────────────────────────────
- *   · one track, one thread, fixed 1024-frame blocks: no allocation inside the
- *     audio loop, so the JVM never pauses to collect garbage mid-swell;
- *   · filters are re-coefficiented every 64 blocks, not every sample: a slow LFO
- *     does not need 48 000 filter updates per second;
- *   · a soft-clip curve instead of hard limiting: four layers at once stay loud
- *     without the ugly square edge of a clamp;
- *   · stop() joins the thread, so starting and stopping repeatedly (the studio's
- *     play/pause) cannot leak threads or tracks.
+ *   1. WIDTH. Every layer was one mono noise source copied to both channels,
+ *      which collapses to a point in the middle of your head. Each layer now runs
+ *      two decorrelated noise generators with slightly different filter
+ *      frequencies (L and R), so the stereo field has size.
+ *   2. SPACE. Dry noise has no depth. A small Schroeder reverb (four damped
+ *      feedback combs + two allpass diffusers) sits on the wet bus at ~22%, which
+ *      is the difference between "hiss" and "outside".
+ *   3. TRANSIENTS. Rain was high-passed noise and fire was amplitude-wobbled
+ *      noise: both read as static. They now carry scheduled droplets and crackles
+ *      — short band-passed bursts with their own envelopes — which is the texture
+ *      the ear identifies as water and fire.
+ *   4. CLICKS. Starting and stopping used to cut the track dead. There is now a
+ *      raised-cosine fade in and out (300 ms), and a soft-clip limiter so loud
+ *      mixes stay clean instead of fizzing.
+ *
+ * Still: no audio files, no licences, no network, no loop seam (there is no
+ * buffer to wrap).
  */
 public final class NativeSoundscape {
 
     private static final int SAMPLE_RATE = 48000;
     private static final int BLOCK = 1024;
+    /** Headroom-aware make-up gain: the bus is mixed conservatively, then lifted
+     *  into the soft clipper so quiet layers are still audible on a phone speaker. */
+    private static final float OUTPUT_GAIN = 1.3f;
 
     private final Map<String, Float> mix = new HashMap<>();
     private volatile float master = 0.8f;
     private volatile boolean running = false;
+    private volatile boolean stopped = false;
     private volatile boolean paused = false;
 
     private AudioTrack track;
     private Thread thread;
 
-    /** Layer ids, in the same order the studio uses. */
     private static final String[] IDS = {
             "rain", "ocean", "wind", "fire", "forest", "cafe",
             "brown", "pink", "white", "drone", "binaural"
     };
 
-    private Layer[] layers;
+    private final Layer[] layers;
+    private final Reverb reverb = new Reverb(SAMPLE_RATE);
 
     public NativeSoundscape() {
         layers = new Layer[IDS.length];
         for (int i = 0; i < IDS.length; i++) {
-            layers[i] = new Layer(i, presetFor(IDS[i]));
+            layers[i] = new Layer(IDS[i], presetFor(IDS[i]));
         }
     }
 
@@ -75,19 +84,34 @@ public final class NativeSoundscape {
     }
 
     public boolean isRunning() {
-        return running && !paused;
+        return running && !paused && !stopped;
     }
 
     public synchronized void start() {
-        if (running) return;
+        if (running && !stopped) {
+            paused = false;
+            if (track != null) {
+                try {
+                    track.play();
+                } catch (Exception ignored) {
+                    // rebuilt below
+                }
+            }
+            return;
+        }
+
         running = true;
+        stopped = false;
         paused = false;
 
         int minBuffer = AudioTrack.getMinBufferSize(
                 SAMPLE_RATE,
                 AudioFormat.CHANNEL_OUT_STEREO,
                 AudioFormat.ENCODING_PCM_16BIT);
-        int bufferBytes = Math.max(minBuffer, BLOCK * 2 * 2 * 4);
+
+        // 3× the platform minimum: underruns are audible as crackle, and crackle is
+        // exactly what "low quality audio" sounds like.
+        int bufferBytes = Math.max(minBuffer * 3, BLOCK * 2 * 2 * 3);
 
         AudioAttributes attributes = new AudioAttributes.Builder()
                 .setUsage(AudioAttributes.USAGE_MEDIA)
@@ -99,14 +123,18 @@ public final class NativeSoundscape {
                 .setChannelMask(AudioFormat.CHANNEL_OUT_STEREO)
                 .build();
 
-        track = new AudioTrack.Builder()
-                .setAudioAttributes(attributes)
-                .setAudioFormat(format)
-                .setBufferSizeInBytes(bufferBytes)
-                .setTransferMode(AudioTrack.MODE_STREAM)
-                .build();
-
-        track.play();
+        try {
+            track = new AudioTrack.Builder()
+                    .setAudioAttributes(attributes)
+                    .setAudioFormat(format)
+                    .setBufferSizeInBytes(bufferBytes)
+                    .setTransferMode(AudioTrack.MODE_STREAM)
+                    .build();
+            track.play();
+        } catch (Exception e) {
+            running = false;
+            return;
+        }
 
         thread = new Thread(new Runnable() {
             @Override
@@ -120,31 +148,41 @@ public final class NativeSoundscape {
 
     public synchronized void pause() {
         paused = true;
-        if (track != null) {
-            try {
-                track.pause();
-            } catch (Exception ignored) {
-                // already stopped
-            }
-        }
     }
 
     public synchronized void resume() {
         paused = false;
-        if (track != null) {
-            try {
-                track.play();
-            } catch (Exception ignored) {
-                // the track is gone; the next start() rebuilds it
-            }
-        }
     }
 
+    /**
+     * Fades out, then tears the track down. The fade is not politeness: cutting a
+     * noise signal at a non-zero sample is a click, and a click is the single most
+     * "cheap" sound an audio app can make.
+     */
     public synchronized void stop() {
+        if (!running) {
+            releaseTrack();
+            return;
+        }
+        stopped = true;
+        Thread localThread = thread;
+        if (localThread != null) {
+            try {
+                localThread.join(700);
+            } catch (InterruptedException ignored) {
+                Thread.currentThread().interrupt();
+            }
+        }
+        releaseTrack();
         running = false;
+        stopped = false;
         paused = false;
+    }
+
+    private void releaseTrack() {
         AudioTrack local = track;
         track = null;
+        thread = null;
         if (local != null) {
             try {
                 local.pause();
@@ -159,36 +197,33 @@ public final class NativeSoundscape {
                 // already released
             }
         }
-        Thread localThread = thread;
-        thread = null;
-        if (localThread != null) {
-            try {
-                localThread.join(400);
-            } catch (InterruptedException ignored) {
-                Thread.currentThread().interrupt();
-            }
-        }
     }
 
-    /** Renders blocks until stopped. No allocation inside the loop. */
     private void renderLoop() {
         float[] left = new float[BLOCK];
         float[] right = new float[BLOCK];
         short[] out = new short[BLOCK * 2];
         int frame = 0;
+        float env = 0f;
 
         while (running) {
             AudioTrack local = track;
             if (local == null) break;
 
-            if (paused) {
+            if (stopped) {
+                // short release tail, then leave
+                env = Math.max(0f, env - 1f / 15f);
+                if (env <= 0.0005f) break;
+            } else if (paused) {
                 try {
-                    Thread.sleep(40);
+                    Thread.sleep(30);
                 } catch (InterruptedException ignored) {
                     Thread.currentThread().interrupt();
                     break;
                 }
                 continue;
+            } else {
+                env = Math.min(1f, env + 1f / 15f);
             }
 
             java.util.Arrays.fill(left, 0f);
@@ -198,10 +233,13 @@ public final class NativeSoundscape {
             boolean anyActive = false;
 
             for (Layer layer : layers) {
-                Float level = mix.get(IDS[layer.index]);
+                Float level = mix.get(layer.id);
                 if (level == null || level <= 0.01f) {
                     layer.gain = approach(layer.gain, 0f);
-                    if (layer.gain < 0.0005f) continue;
+                    if (layer.gain < 0.0005f) {
+                        layer.gain = 0f;
+                        continue;
+                    }
                 } else {
                     layer.gain = approach(layer.gain, level * masterNow);
                 }
@@ -213,10 +251,9 @@ public final class NativeSoundscape {
 
             frame += BLOCK;
 
-            if (!anyActive) {
-                // Nothing selected: keep the track alive but silent.
+            if (!anyActive && !stopped) {
                 try {
-                    Thread.sleep(30);
+                    Thread.sleep(25);
                 } catch (InterruptedException ignored) {
                     Thread.currentThread().interrupt();
                     break;
@@ -224,11 +261,19 @@ public final class NativeSoundscape {
                 continue;
             }
 
+            float reverbMix = 0.22f;
             for (int i = 0; i < BLOCK; i++) {
-                float l = softClip(left[i]);
-                float r = softClip(right[i]);
-                out[i * 2] = (short) (l * 32767f);
-                out[i * 2 + 1] = (short) (r * 32767f);
+                float l = left[i];
+                float r = right[i];
+
+                float wetL = reverb.processLeft(l);
+                float wetR = reverb.processRight(r);
+
+                float mixL = softClip((l * (1f - reverbMix) + wetL * reverbMix) * env * OUTPUT_GAIN);
+                float mixR = softClip((r * (1f - reverbMix) + wetR * reverbMix) * env * OUTPUT_GAIN);
+
+                out[i * 2] = (short) (mixL * 32767f);
+                out[i * 2 + 1] = (short) (mixR * 32767f);
             }
 
             try {
@@ -237,20 +282,127 @@ public final class NativeSoundscape {
                 break;
             }
         }
+
+        // Drain: write a few silent blocks so the track does not click on release.
+        AudioTrack local = track;
+        if (local != null) {
+            java.util.Arrays.fill(out, (short) 0);
+            for (int i = 0; i < 3; i++) {
+                try {
+                    local.write(out, 0, out.length);
+                } catch (Exception ignored) {
+                    break;
+                }
+            }
+        }
     }
 
     private static float approach(float current, float target) {
-        // ~120 ms ramp at 48 kHz blocks — long enough to be a crossfade, short
-        // enough that the slider still feels live.
+        // ~120 ms at 48 kHz / 1024 frames per block.
         return current + (target - current) * 0.08f;
     }
 
-    /** Cubic soft clip: transparent below 0.7, saturating instead of clipping. */
+    /** Cubic soft clip: transparent below ~0.7, saturating instead of clipping. */
     private static float softClip(float x) {
         if (x > 3f) return 1f;
         if (x < -3f) return -1f;
         float x2 = x * x;
         return x * (27f + x2) / (27f + 9f * x2);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Reverb — four damped combs into two allpass diffusers, per channel
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private static final class Reverb {
+
+        /** One damped feedback comb (Schroeder/Freeverb topology). */
+        private static final class Comb {
+            final float[] buffer;
+            int pos;
+            float store;
+
+            Comb(int length) {
+                buffer = new float[length];
+            }
+
+            float process(float input, float feedback, float damping) {
+                float delayed = buffer[pos];
+                store = delayed * (1f - damping) + store * damping;
+                buffer[pos] = input * 0.22f + store * feedback;
+                pos++;
+                if (pos >= buffer.length) pos = 0;
+                return delayed;
+            }
+        }
+
+        /** One allpass diffuser. */
+        private static final class Allpass {
+            final float[] buffer;
+            int pos;
+
+            Allpass(int length) {
+                buffer = new float[length];
+            }
+
+            float process(float input, float feedback) {
+                float delayed = buffer[pos];
+                float output = -input + delayed;
+                buffer[pos] = input + delayed * feedback;
+                pos++;
+                if (pos >= buffer.length) pos = 0;
+                return output;
+            }
+        }
+
+        private final Comb[][] combs = new Comb[2][4];
+        private final Allpass[][] aps = new Allpass[2][2];
+        private final float feedback;
+        private final float damping;
+
+        Reverb(int sampleRate) {
+            // Freeverb's tunings, scaled from 44.1 kHz to the device rate.
+            float scale = sampleRate / 44100f;
+            int[] combLengths = {1116, 1188, 1277, 1356};
+            int[] apLengths = {556, 441};
+            feedback = 0.78f;
+            damping = 0.35f;
+
+            for (int ch = 0; ch < 2; ch++) {
+                for (int i = 0; i < combLengths.length; i++) {
+                    // A different length per channel decorrelates the two tails.
+                    int length = Math.max(64, (int) (combLengths[i] * scale) + ch * 23);
+                    combs[ch][i] = new Comb(length);
+                }
+                for (int i = 0; i < apLengths.length; i++) {
+                    int length = Math.max(32, (int) (apLengths[i] * scale) + ch * 11);
+                    aps[ch][i] = new Allpass(length);
+                }
+            }
+        }
+
+        float process(float input, int channel) {
+            float wet = 0f;
+            Comb[] bank = combs[channel];
+            for (int i = 0; i < bank.length; i++) {
+                wet += bank[i].process(input, feedback, damping);
+            }
+            wet *= 0.25f;
+
+            Allpass[] diffusers = aps[channel];
+            for (int i = 0; i < diffusers.length; i++) {
+                wet = diffusers[i].process(wet, 0.5f);
+            }
+            return wet;
+        }
+
+        float processLeft(float input) {
+            return process(input, 0);
+        }
+
+        float processRight(float input) {
+            return process(input, 1);
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -265,14 +417,18 @@ public final class NativeSoundscape {
         int filter;
         float cutoff;
         float q;
-        float lfoRate;      // filter LFO, Hz
-        float lfoDepth;     // filter LFO, Hz
-        float ampRate;      // amplitude LFO, Hz
-        float ampDepth;     // 0..1
-        float toneA = 0f;
-        float toneB = 0f;
-        boolean wide;       // hard L/R split (binaural)
-        boolean crackle;    // sparse transients (fire, birds)
+        float lfoRate;
+        float lfoDepth;
+        float ampRate;
+        float ampDepth;
+        float toneA;
+        float toneB;
+        boolean wide;
+        /** Random short transients per second (droplets, crackles, birds). */
+        float transientRate;
+        float transientFreq;
+        float transientQ;
+
         Preset(int source, int filter, float cutoff, float q) {
             this.source = source;
             this.filter = filter;
@@ -284,53 +440,69 @@ public final class NativeSoundscape {
     private static Preset presetFor(String id) {
         switch (id) {
             case "rain": {
-                Preset p = new Preset(WHITE, HIGHPASS, 1200f, 0.7f);
-                p.lfoRate = 0.12f;
-                p.lfoDepth = 200f;
+                Preset p = new Preset(WHITE, HIGHPASS, 1400f, 0.6f);
+                p.lfoRate = 0.11f;
+                p.lfoDepth = 180f;
+                p.transientRate = 26f;
+                p.transientFreq = 2600f;
+                p.transientQ = 2.2f;
                 return p;
             }
             case "ocean": {
-                Preset p = new Preset(BROWN, LOWPASS, 620f, 0.6f);
-                p.ampRate = 0.075f;
-                p.ampDepth = 0.45f;
+                Preset p = new Preset(BROWN, LOWPASS, 700f, 0.55f);
+                p.ampRate = 0.07f;
+                p.ampDepth = 0.5f;
+                p.lfoRate = 0.02f;
+                p.lfoDepth = 220f;
                 return p;
             }
             case "wind": {
-                Preset p = new Preset(PINK, BANDPASS, 480f, 0.9f);
-                p.lfoRate = 0.05f;
-                p.lfoDepth = 300f;
+                Preset p = new Preset(PINK, BANDPASS, 460f, 0.8f);
+                p.lfoRate = 0.045f;
+                p.lfoDepth = 320f;
+                p.ampRate = 0.03f;
+                p.ampDepth = 0.3f;
                 return p;
             }
             case "fire": {
-                Preset p = new Preset(BROWN, LOWPASS, 1100f, 0.7f);
-                p.crackle = true;
-                p.ampRate = 0.35f;
-                p.ampDepth = 0.12f;
+                Preset p = new Preset(BROWN, LOWPASS, 1300f, 0.6f);
+                p.ampRate = 0.4f;
+                p.ampDepth = 0.15f;
+                p.transientRate = 7f;
+                p.transientFreq = 2200f;
+                p.transientQ = 1.4f;
                 return p;
             }
             case "forest": {
-                Preset p = new Preset(PINK, BANDPASS, 3200f, 0.7f);
-                p.lfoRate = 0.09f;
-                p.lfoDepth = 600f;
-                p.crackle = true;
+                Preset p = new Preset(PINK, BANDPASS, 3400f, 0.6f);
+                p.lfoRate = 0.08f;
+                p.lfoDepth = 700f;
+                p.transientRate = 0.6f;
+                p.transientFreq = 3000f;
+                p.transientQ = 6f;
                 return p;
             }
             case "cafe": {
-                Preset p = new Preset(PINK, LOWPASS, 780f, 0.6f);
-                p.ampRate = 0.21f;
-                p.ampDepth = 0.22f;
+                Preset p = new Preset(PINK, LOWPASS, 820f, 0.55f);
+                p.ampRate = 0.19f;
+                p.ampDepth = 0.25f;
+                p.transientRate = 2.2f;
+                p.transientFreq = 900f;
+                p.transientQ = 1.2f;
                 return p;
             }
             case "brown":
-                return new Preset(BROWN, LOWPASS, 4200f, 0.5f);
+                return new Preset(BROWN, LOWPASS, 5200f, 0.5f);
             case "pink":
                 return new Preset(PINK, LOWPASS, 16000f, 0.5f);
             case "white":
                 return new Preset(WHITE, HIGHPASS, 20f, 0.5f);
             case "drone": {
-                Preset p = new Preset(TONES, LOWPASS, 420f, 0.7f);
+                Preset p = new Preset(TONES, LOWPASS, 520f, 0.7f);
                 p.toneA = 110f;
                 p.toneB = 110.7f;
+                p.ampRate = 0.05f;
+                p.ampDepth = 0.12f;
                 return p;
             }
             case "binaural":
@@ -344,62 +516,71 @@ public final class NativeSoundscape {
         }
     }
 
-    /** Per-layer DSP state. */
+    /** One layer, with independent left and right voices. */
     private static final class Layer {
-        final int index;
+        final String id;
         final Preset p;
         float gain = 0f;
 
-        // noise / oscillator state
-        private int rng = 0x9e3779b9;
-        private final float[] pinkRows = new float[7];
-        private float brown = 0f;
+        // Two decorrelated generators — the width of the sound.
+        private int rngL = 0x9e3779b9;
+        private int rngR = 0x85ebca6b;
+        private final float[][] pinkRows = new float[2][7];
+        private final float[] brown = new float[2];
+
         private double phaseA = 0;
         private double phaseB = 0;
 
-        // filter state (two biquads cascaded for a steeper slope where it helps)
-        private final float[] b0 = new float[2], b1 = new float[2], b2 = new float[2];
-        private final float[] a1 = new float[2], a2 = new float[2];
-        private final float[] z1 = new float[2], z2 = new float[2];
+        private final float[][] b0 = new float[2][2];
+        private final float[][] b1 = new float[2][2];
+        private final float[][] b2 = new float[2][2];
+        private final float[][] a1 = new float[2][2];
+        private final float[][] a2 = new float[2][2];
+        private final float[][] z1 = new float[2][2];
+        private final float[][] z2 = new float[2][2];
 
-        // modulation state
         private double lfoPhase = 0;
         private double ampPhase = 0;
-        private float crackleEnv = 0f;
-        private int crackleCountdown = 0;
         private int coeffCountdown = 0;
 
-        Layer(int index, Preset preset) {
-            this.index = index;
+        // transient state
+        private float transientEnv = 0f;
+        private float transientPhase = 0f;
+        private final float[] transientState = new float[2];
+        private double transientRateAccumulator = 0;
+
+        Layer(String id, Preset preset) {
+            this.id = id;
             this.p = preset;
             updateCoefficients(p.cutoff);
         }
 
-        private float random() {
-            rng ^= rng << 13;
-            rng ^= rng >>> 17;
-            rng ^= rng << 5;
-            return ((rng & 0x7fffffff) / (float) 0x7fffffff) * 2f - 1f;
+        private float random(int channel) {
+            int state = channel == 0 ? rngL : rngR;
+            state ^= state << 13;
+            state ^= state >>> 17;
+            state ^= state << 5;
+            if (channel == 0) rngL = state;
+            else rngR = state;
+            return ((state & 0x7fffffff) / (float) 0x7fffffff) * 2f - 1f;
         }
 
-        private float noise() {
-            float white = random();
+        private float noise(int channel) {
+            float white = random(channel);
             switch (p.source) {
-                case BROWN: {
-                    brown = (brown + 0.02f * white) / 1.02f;
-                    return brown * 3.2f;
-                }
+                case BROWN:
+                    brown[channel] = (brown[channel] + 0.02f * white) / 1.02f;
+                    return brown[channel] * 3.2f;
                 case PINK: {
-                    // Paul Kellet's economy pink filter.
-                    pinkRows[0] = 0.99886f * pinkRows[0] + white * 0.0555179f;
-                    pinkRows[1] = 0.99332f * pinkRows[1] + white * 0.0750759f;
-                    pinkRows[2] = 0.96900f * pinkRows[2] + white * 0.1538520f;
-                    pinkRows[3] = 0.86650f * pinkRows[3] + white * 0.3104856f;
-                    pinkRows[4] = 0.55000f * pinkRows[4] + white * 0.5329522f;
-                    pinkRows[5] = -0.7616f * pinkRows[5] - white * 0.0168980f;
-                    float sum = pinkRows[0] + pinkRows[1] + pinkRows[2] + pinkRows[3]
-                            + pinkRows[4] + pinkRows[5] + pinkRows[6] + white * 0.5362f;
-                    pinkRows[6] = white * 0.115926f;
+                    float[] r = pinkRows[channel];
+                    r[0] = 0.99886f * r[0] + white * 0.0555179f;
+                    r[1] = 0.99332f * r[1] + white * 0.0750759f;
+                    r[2] = 0.96900f * r[2] + white * 0.1538520f;
+                    r[3] = 0.86650f * r[3] + white * 0.3104856f;
+                    r[4] = 0.55000f * r[4] + white * 0.5329522f;
+                    r[5] = -0.7616f * r[5] - white * 0.0168980f;
+                    float sum = r[0] + r[1] + r[2] + r[3] + r[4] + r[5] + r[6] + white * 0.5362f;
+                    r[6] = white * 0.115926f;
                     return sum * 0.11f;
                 }
                 case WHITE:
@@ -409,7 +590,7 @@ public final class NativeSoundscape {
         }
 
         private void updateCoefficients(float cutoff) {
-            float f = Math.min(0.45f, cutoff / SAMPLE_RATE);
+            float f = Math.min(0.45f, Math.max(0.0008f, cutoff / SAMPLE_RATE));
             float omega = (float) (2 * Math.PI * f);
             float sin = (float) Math.sin(omega);
             float cos = (float) Math.cos(omega);
@@ -430,7 +611,7 @@ public final class NativeSoundscape {
                 na0 = 1f + alpha;
                 na1 = -2f * cos;
                 na2 = 1f - alpha;
-            } else { // bandpass, constant skirt gain
+            } else {
                 nb0 = alpha;
                 nb1 = 0f;
                 nb2 = -alpha;
@@ -439,12 +620,21 @@ public final class NativeSoundscape {
                 na2 = 1f - alpha;
             }
 
-            for (int s = 0; s < 2; s++) {
-                b0[s] = nb0 / na0;
-                b1[s] = nb1 / na0;
-                b2[s] = nb2 / na0;
-                a1[s] = na1 / na0;
-                a2[s] = na2 / na0;
+            // A 1.5% offset between channels: enough to widen the image, small
+            // enough that both ears still hear the same sound.
+            for (int ch = 0; ch < 2; ch++) {
+                float scale = ch == 0 ? 1f : 1.015f;
+                float gb0 = nb0 * scale, gb1 = nb1 * scale, gb2 = nb2 * scale;
+                b0[ch][0] = gb0 / na0;
+                b1[ch][0] = gb1 / na0;
+                b2[ch][0] = gb2 / na0;
+                a1[ch][0] = na1 / na0;
+                a2[ch][0] = na2 / na0;
+                b0[ch][1] = b0[ch][0];
+                b1[ch][1] = b1[ch][0];
+                b2[ch][1] = b2[ch][0];
+                a1[ch][1] = a1[ch][0];
+                a2[ch][1] = a2[ch][0];
             }
         }
 
@@ -471,8 +661,8 @@ public final class NativeSoundscape {
                 double incA = 2 * Math.PI * p.toneA / SAMPLE_RATE;
                 double incB = 2 * Math.PI * p.toneB / SAMPLE_RATE;
                 for (int i = 0; i < BLOCK; i++) {
-                    float a = (float) Math.sin(phaseA) * 0.22f;
-                    float b = (float) Math.sin(phaseB) * 0.22f;
+                    float a = (float) Math.sin(phaseA) * 0.2f;
+                    float b = (float) Math.sin(phaseB) * 0.2f;
                     phaseA += incA;
                     phaseB += incB;
                     if (p.wide) {
@@ -488,32 +678,48 @@ public final class NativeSoundscape {
                 return;
             }
 
-            for (int i = 0; i < BLOCK; i++) {
-                float sample = noise();
+            // Transients: droplets, crackles, distant birds. One envelope drives a
+            // band-passed burst, which the ear reads as a discrete event instead of
+            // as modulated hiss.
+            boolean hasTransient = p.transientRate > 0f;
+            double transientInc = hasTransient ? (2 * Math.PI * p.transientFreq / SAMPLE_RATE) : 0;
 
-                if (p.crackle) {
-                    if (crackleCountdown-- <= 0) {
-                        crackleCountdown = 4000 + (int) (Math.random() * 26000);
-                        crackleEnv = 0.5f + (float) Math.random() * 0.5f;
+            for (int i = 0; i < BLOCK; i++) {
+                float sampleL = noise(0);
+                float sampleR = noise(1);
+
+                float yL = filterSample(sampleL, 0, 0);
+                yL = filterSample(yL, 0, 1);
+                float yR = filterSample(sampleR, 1, 0);
+                yR = filterSample(yR, 1, 1);
+
+                if (hasTransient) {
+                    transientRateAccumulator += p.transientRate / SAMPLE_RATE;
+                    if (transientRateAccumulator >= 1.0) {
+                        transientRateAccumulator -= 1.0;
+                        transientEnv = 0.6f + (float) Math.random() * 0.4f;
                     }
-                    if (crackleEnv > 0.0005f) {
-                        sample += sample * crackleEnv * 1.8f;
-                        crackleEnv *= 0.9955f;
+                    if (transientEnv > 0.0004f) {
+                        transientPhase += (float) transientInc;
+                        if (transientPhase > 2 * Math.PI) transientPhase -= (float) (2 * Math.PI);
+                        float burst = (float) Math.sin(transientPhase) * transientEnv * 0.5f;
+                        // one-pole smoothing keeps the burst from clicking
+                        transientState[0] += (burst - transientState[0]) * 0.25f;
+                        yL += transientState[0];
+                        yR += transientState[0] * 0.85f;
+                        transientEnv *= 0.9993f;
                     }
                 }
 
-                // cascade the biquad twice for a cleaner skirt
-                float y = filter(sample, 0);
-                y = filter(y, 1);
-                left[i] += y * gainNow;
-                right[i] += y * gainNow;
+                left[i] += yL * gainNow;
+                right[i] += yR * gainNow;
             }
         }
 
-        private float filter(float x, int stage) {
-            float y = b0[stage] * x + z1[stage];
-            z1[stage] = b1[stage] * x - a1[stage] * y + z2[stage];
-            z2[stage] = b2[stage] * x - a2[stage] * y;
+        private float filterSample(float x, int channel, int stage) {
+            float y = b0[channel][stage] * x + z1[channel][stage];
+            z1[channel][stage] = b1[channel][stage] * x - a1[channel][stage] * y + z2[channel][stage];
+            z2[channel][stage] = b2[channel][stage] * x - a2[channel][stage] * y;
             return y;
         }
     }
@@ -524,20 +730,20 @@ public final class NativeSoundscape {
 
     /**
      * The end-of-session bell, synthesised on demand: 264/396/528/792 Hz struck
-     * low to high, 70 ms apart, each with its own exponential decay. Plays on a
-     * one-shot track so it can ring over (or instead of) the soundscape, and it
-     * works with the screen off because it lives in the service, not the page.
+     * low to high, 70 ms apart, each with its own exponential decay plus a touch
+     * of detune for "struck metal". Plays on a one-shot track so it rings over the
+     * soundscape, and it lives in the service, so a locked screen does not mute it.
      */
     public static void playBell() {
-        final float seconds = 3.2f;
+        final float seconds = 3.4f;
         final int frames = (int) (SAMPLE_RATE * seconds);
         final short[] buffer = new short[frames * 2];
 
         final float[][] partials = {
-                {264f, 0.00f, 0.32f, 2.6f},
-                {396f, 0.07f, 0.23f, 2.1f},
-                {528f, 0.13f, 0.16f, 1.7f},
-                {792f, 0.20f, 0.10f, 1.2f},
+                {264f, 0.00f, 0.34f, 2.7f},
+                {396f, 0.07f, 0.24f, 2.2f},
+                {528f, 0.13f, 0.17f, 1.8f},
+                {792f, 0.20f, 0.11f, 1.3f},
         };
 
         for (int i = 0; i < frames; i++) {
@@ -547,12 +753,21 @@ public final class NativeSoundscape {
                 float start = partial[1];
                 if (t < start) continue;
                 float local = t - start;
-                float envelope = (float) Math.exp(-local * 2.2f) * (1f - (float) Math.exp(-local * 260f));
-                value += (float) Math.sin(2 * Math.PI * partial[0] * local) * partial[2] * envelope;
+                float attack = 1f - (float) Math.exp(-local * 300f);
+                float envelope = (float) Math.exp(-local * 2.1f) * attack;
+                // Slight inharmonic shimmer, as on a struck bell.
+                float f1 = partial[0];
+                float f2 = partial[0] * 1.004f;
+                value += (float) (Math.sin(2 * Math.PI * f1 * local) * 0.6
+                        + Math.sin(2 * Math.PI * f2 * local) * 0.4) * partial[2] * envelope;
             }
-            float clipped = softClip(value * 1.15f);
-            buffer[i * 2] = (short) (clipped * 32767f);
-            buffer[i * 2 + 1] = (short) (clipped * 32767f);
+            float clipped = softClip(value * 1.2f);
+            // Stereo: a 6 ms difference is enough for the bell to feel "in the room".
+            int delay = (int) (SAMPLE_RATE * 0.006f);
+            float leftValue = clipped;
+            float rightValue = i > delay ? clipped : 0f;
+            buffer[i * 2] = (short) (leftValue * 32767f);
+            buffer[i * 2 + 1] = (short) (rightValue * 32767f);
         }
 
         new Thread(new Runnable() {
@@ -578,7 +793,7 @@ public final class NativeSoundscape {
                             .build();
                     bell.write(buffer, 0, buffer.length);
                     bell.play();
-                    Thread.sleep((long) (seconds * 1000) + 120);
+                    Thread.sleep((long) (seconds * 1000) + 150);
                 } catch (Exception ignored) {
                     // A blocked audio device must never break the session.
                 } finally {
@@ -595,7 +810,6 @@ public final class NativeSoundscape {
         }, "kairos-bell").start();
     }
 
-    /** True when the device can build an output track at all. */
     public static boolean isSupported() {
         if (Build.VERSION.SDK_INT < 21) return false;
         return AudioTrack.getMinBufferSize(

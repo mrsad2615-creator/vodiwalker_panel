@@ -42,6 +42,30 @@ describe('native audio — wiring', () => {
     expect(engine).toContain('public static void playBell()');
   });
 
+  it('synthesises width, space and air instead of one thin mono stream', () => {
+    // Two decorrelated noise generators: a shared stream collapses to mono.
+    expect(engine).toMatch(/rngL|randomLeft/);
+    expect(engine).toMatch(/rngR|randomRight/);
+    expect(engine).not.toMatch(/Math\.random\(\)\s*\*\s*2\s*-\s*1;\s*\n\s*left\[/);
+    // A real reverb tail (damped combs + allpass diffusers), not a delay line.
+    expect(engine).toContain('class Reverb');
+    expect(engine).toMatch(/class Comb/);
+    expect(engine).toMatch(/class Allpass/);
+    expect(engine).toMatch(/damping/);
+    // Transients (droplets, crackle, birds) rather than flat-filtered noise.
+    expect(engine).toContain('transientRate');
+    expect(engine).toContain('transient');
+  });
+
+  it('fades in and out and soft-clips so a session never clicks', () => {
+    expect(engine).toMatch(/fade|envelope|FADE/i);
+    expect(engine).toMatch(/softClip|tanh/);
+    // Three blocks of silence drain the reverb tail instead of cutting it dead.
+    expect(engine).toMatch(/drain|DRAIN/i);
+    // A generous buffer keeps the stream ahead of the scheduler.
+    expect(engine).toContain('minBuffer * 3');
+  });
+
   it('arms the end-of-session alarm inside the timer service', () => {
     // The shade's chronometer is drawn by the system and tells the app nothing,
     // so the service has to hold its own timer for the bell.

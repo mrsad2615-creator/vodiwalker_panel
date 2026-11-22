@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { motion } from 'framer-motion';
 import { ArrowUpLeft, Check, Flame, Timer } from '@/components/ui/icons';
 import { Numeric } from '@/components/ui/Numeric';
 import { HabitIcon } from '@/components/ui/KairosMark';
@@ -73,6 +74,8 @@ export function FocusShowcase({
   const C = 2 * Math.PI * R;
   const week = series.slice(-7);
   const max = Math.max(1, ...week.map((d) => d.focusMinutes));
+  const activeDays = week.filter((d) => d.focusMinutes > 0).length;
+  const bestDay = week.reduce((best, day) => (day.focusMinutes > best.focusMinutes ? day : best), week[0]);
 
   return (
     <ShowcaseCard
@@ -81,31 +84,43 @@ export function FocusShowcase({
       meta={`هدف ${goalMinutes} دقیقه`}
       dense={dense}
       action={
-        <button
+        <motion.button
           type="button"
           onClick={onStart}
+          whileTap={{ scale: 0.94 }}
+          whileHover={{ scale: 1.03 }}
+          transition={{ type: 'spring', stiffness: 420, damping: 26 }}
           className="flex items-center gap-1 rounded-full border border-[var(--accent-fg)]/40 px-2.5 py-1 text-[10px] font-semibold text-[var(--accent-fg)]"
         >
           <Timer className="h-3 w-3" />
           شروع
-        </button>
+        </motion.button>
       }
     >
       <div className="flex items-center gap-3">
-        <div className="relative h-[74px] w-[74px] shrink-0">
-          <svg viewBox="0 0 74 74" className="h-full w-full -rotate-90">
-            <circle cx="37" cy="37" r={R} fill="none" stroke="var(--border-strong)" strokeWidth="3" />
-            <circle
-              cx="37"
-              cy="37"
+        {/* The ring is the only circular thing on the board, and it fills with the
+            animation rather than appearing full: motion is the meaning. */}
+        <div className="relative h-[78px] w-[78px] shrink-0">
+          <svg viewBox="0 0 78 78" className="h-full w-full -rotate-90">
+            <defs>
+              <linearGradient id="showcase-focus-ring" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stopColor="var(--accent-fg)" />
+                <stop offset="100%" stopColor="var(--accent)" />
+              </linearGradient>
+            </defs>
+            <circle cx="39" cy="39" r={R} fill="none" stroke="var(--border-strong)" strokeWidth="3" />
+            <motion.circle
+              cx="39"
+              cy="39"
               r={R}
               fill="none"
-              stroke="var(--accent)"
-              strokeWidth="3"
+              stroke="url(#showcase-focus-ring)"
+              strokeWidth="3.4"
               strokeLinecap="round"
               strokeDasharray={C}
-              strokeDashoffset={C * (1 - pct / 100)}
-              style={{ transition: 'stroke-dashoffset 600ms cubic-bezier(0.22,1,0.36,1)' }}
+              initial={{ strokeDashoffset: C }}
+              animate={{ strokeDashoffset: C * (1 - pct / 100) }}
+              transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
             />
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
@@ -121,22 +136,28 @@ export function FocusShowcase({
         <div className="min-w-0 flex-1">
           {dense ? (
             <p className="text-[10px] leading-4 text-[var(--text-3)]">
-              <Numeric value={week.filter((d) => d.focusMinutes > 0).length} variant="geo" /> روز
-              فعال در هفتهٔ گذشته
+              <Numeric value={activeDays} variant="geo" /> روز فعال در هفتهٔ گذشته
             </p>
           ) : (
             <>
-              <div className="flex h-[38px] items-end gap-[3px]">
-                {week.map((day) => {
-                  const h = Math.max(6, Math.round((day.focusMinutes / max) * 100));
-                  const isToday = day === week[week.length - 1];
+              <div className="flex h-[42px] items-end gap-[3px]">
+                {week.map((day, index) => {
+                  const height = Math.max(6, Math.round((day.focusMinutes / max) * 100));
+                  const isToday = index === week.length - 1;
                   return (
-                    <span
+                    <motion.span
                       key={day.dateKey}
                       title={`${day.dateKey} · ${day.focusMinutes} دقیقه`}
+                      initial={{ height: 4, opacity: 0.3 }}
+                      animate={{ height: `${day.focusMinutes === 0 ? 6 : height}%`, opacity: 1 }}
+                      transition={{
+                        delay: 0.05 + index * 0.05,
+                        type: 'spring',
+                        stiffness: 260,
+                        damping: 24,
+                      }}
                       className="flex-1 rounded-[3px]"
                       style={{
-                        height: `${day.focusMinutes === 0 ? 6 : h}%`,
                         background:
                           day.focusMinutes === 0
                             ? 'var(--border-strong)'
@@ -148,11 +169,35 @@ export function FocusShowcase({
                   );
                 })}
               </div>
-              <p className="mt-1.5 text-[9px] text-[var(--text-3)]">۷ روز گذشته · دقیقه</p>
+              <p className="mt-1.5 flex items-center justify-between text-[9px] text-[var(--text-3)]">
+                <span>۷ روز گذشته · دقیقه</span>
+                {bestDay && bestDay.focusMinutes > 0 && (
+                  <span className="num-geo">
+                    اوج <Numeric value={bestDay.focusMinutes} variant="geo" /> دقیقه
+                  </span>
+                )}
+              </p>
             </>
           )}
         </div>
       </div>
+
+      {!dense && (
+        <div className="mt-2.5 flex items-center gap-2 border-t border-[var(--border)] pt-2">
+          <div className="h-1 flex-1 overflow-hidden rounded-full bg-[var(--border)]">
+            <motion.span
+              className="block h-full rounded-full"
+              style={{ background: 'var(--accent)' }}
+              initial={{ width: 0 }}
+              animate={{ width: `${pct}%` }}
+              transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+            />
+          </div>
+          <span className="shrink-0 text-[9px] text-[var(--text-3)]">
+            {minutes >= goalMinutes ? 'هدف امروز کامل شد' : `${goalMinutes - minutes} دقیقه تا هدف`}
+          </span>
+        </div>
+      )}
     </ShowcaseCard>
   );
 }
@@ -273,15 +318,19 @@ export function HabitsShowcase({
   matrix,
   onOpenAll,
   onStart,
+  onToggle,
   dense = false,
 }: {
   matrix: HabitMatrix;
   onOpenAll: () => void;
   onStart: () => void;
+  /** Logs today's habit straight from the board — the rail is a control, not a diagram. */
+  onToggle?: (habitId: string) => void;
   dense?: boolean;
 }) {
   const rows = matrix.rows.slice(0, dense ? 3 : 5);
   const hidden = matrix.rows.length - rows.length;
+  const rail = matrix.rows;
 
   return (
     <ShowcaseCard
@@ -305,7 +354,82 @@ export function HabitsShowcase({
         </button>
       ) : (
         <>
-          <div className="flex items-center gap-2">
+          {/* Horizontal rail: one card per habit, today's state on its face, a
+              single tap to log it. Scrolls sideways instead of growing tall. */}
+          <div className="-mx-1 flex snap-x snap-mandatory gap-1.5 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {rail.map((row, index) => {
+              const todayCell = row.cells[row.cells.length - 1];
+              const done = todayCell === 'done';
+              return (
+                <motion.button
+                  key={row.habitId}
+                  type="button"
+                  onClick={() => onToggle?.(row.habitId)}
+                  disabled={!onToggle}
+                  aria-pressed={done}
+                  aria-label={`${row.name} — ${done ? 'انجام شد' : 'ثبت نشده'}`}
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.04, type: 'spring', stiffness: 300, damping: 26 }}
+                  whileTap={{ scale: 0.95 }}
+                  className={`relative flex w-[104px] shrink-0 snap-start flex-col gap-1.5 rounded-[12px] border p-2 text-start transition-colors ${
+                    done
+                      ? 'border-[var(--accent-fg)]/50 bg-[color-mix(in_srgb,var(--accent)_16%,transparent)]'
+                      : 'border-[var(--border)] bg-[var(--surface-1)]'
+                  }`}
+                >
+                  <div className="flex items-center gap-1.5">
+                    <span
+                      className={`grid h-5 w-5 shrink-0 place-items-center rounded-full ${
+                        done ? 'bg-[var(--accent)] text-[var(--accent-on)]' : 'bg-[var(--surface-2)]'
+                      }`}
+                    >
+                      {done ? (
+                        <Check className="h-3 w-3" strokeWidth={3} />
+                      ) : (
+                        <HabitIcon
+                          name={row.icon}
+                          className="h-3 w-3 text-[var(--text-2)]"
+                          color={row.accentColor}
+                        />
+                      )}
+                    </span>
+                    <span className="min-w-0 flex-1 truncate text-[10px] font-medium text-[var(--text)]">
+                      {row.name}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-[3px]">
+                    {row.cells.map((cell, cellIndex) => {
+                      const isToday = cellIndex === row.cells.length - 1;
+                      return (
+                        <motion.span
+                          key={`${row.habitId}-dot-${cellIndex}`}
+                          initial={{ scale: 0.6, opacity: 0.4 }}
+                          animate={{ scale: 1, opacity: 1 }}
+                          transition={{ delay: 0.1 + cellIndex * 0.03 }}
+                          className="h-[6px] flex-1 rounded-full"
+                          style={{
+                            background:
+                              cell === 'done'
+                                ? 'var(--accent)'
+                                : cell === 'partial'
+                                ? 'color-mix(in srgb, var(--accent) 45%, transparent)'
+                                : 'var(--border-strong)',
+                            outline: isToday ? '1px solid var(--accent-fg)' : 'none',
+                            outlineOffset: '1px',
+                          }}
+                        />
+                      );
+                    })}
+                  </div>
+                </motion.button>
+              );
+            })}
+          </div>
+
+          {/* The same week as a matrix: density is easier to read than it is to count. */}
+          <div className="mt-2 flex items-center gap-2">
             <div className="min-w-0 flex-1">
               {rows.map((row) => (
                 <div key={row.habitId} className="flex items-center gap-1.5 py-[3px]">
@@ -327,9 +451,7 @@ export function HabitsShowcase({
                           className="h-[13px] w-[13px] rounded-[3px] border"
                           style={{
                             background: CELL_STYLE[cell].bg,
-                            borderColor: isToday
-                              ? 'var(--accent-fg)'
-                              : CELL_STYLE[cell].border,
+                            borderColor: isToday ? 'var(--accent-fg)' : CELL_STYLE[cell].border,
                           }}
                           aria-hidden="true"
                         />
@@ -348,7 +470,11 @@ export function HabitsShowcase({
               <Numeric value={matrix.bestStreak} variant="geo" className="text-[var(--text-2)]" />
               روز
             </span>
-            {hidden > 0 && <span>و {hidden} عادت دیگر</span>}
+            {hidden > 0 ? (
+              <span>و {hidden} عادت دیگر</span>
+            ) : (
+              <span>برای ثبت، روی کارت عادت بزن</span>
+            )}
           </div>
         </>
       )}

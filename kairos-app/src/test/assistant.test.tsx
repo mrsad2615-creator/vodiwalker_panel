@@ -159,10 +159,18 @@ describe('home intelligence', () => {
 
     // The change is on the ledger and has an undo entry, because the planner is
     // only allowed to write through the normal path.
-    const events = await db.eventHistory.toArray();
-    expect(events.some((event) => event.kind === 'task.updated' && event.entityId === 'tsk-plan-1')).toBe(true);
-    const undo = await db.undoHistory.toArray();
-    expect(undo.some((entry) => entry.entityId === 'tsk-plan-1')).toBe(true);
+    // The ledger and the undo entry are written just after the row itself, so
+    // they are awaited rather than read once — a fast machine hid that race.
+    await waitFor(async () => {
+      const events = await db.eventHistory.toArray();
+      expect(
+        events.some((event) => event.kind === 'task.updated' && event.entityId === 'tsk-plan-1')
+      ).toBe(true);
+    });
+    await waitFor(async () => {
+      const undo = await db.undoHistory.toArray();
+      expect(undo.some((entry) => entry.entityId === 'tsk-plan-1')).toBe(true);
+    });
   });
 });
 

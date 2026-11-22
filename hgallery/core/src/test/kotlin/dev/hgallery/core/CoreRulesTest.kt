@@ -2,6 +2,7 @@ package dev.hgallery.core
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class DurationFormatterTest {
@@ -83,10 +84,11 @@ class SearchFiltersTest {
      * call: `item(1, size = 5)` and `item(1, mime = "video/mp4")` compiled happily
      * while testing something nobody had intended.
      */
-    private companion object {
-        /** A fixed instant, so date assertions do not depend on when tests run. */
-        const val NOW_MS = 1_767_225_600_000L
-    }
+    /**
+     * A fixed instant, so a "last 7 days" assertion does not depend on when the
+     * suite happens to run.
+     */
+    private val NOW_MS = 1_767_225_600_000L
 
     private class ItemBuilder(val id: Long) {
         var name: String = "IMG_$id.jpg"
@@ -167,61 +169,6 @@ class SearchFiltersTest {
         assertEquals("1 result", SearchFilters.summary(1))
         assertEquals("0 results", SearchFilters.summary(0))
     }
-}
-
-class AlbumBuilderTest {
-
-    private fun item(id: Long, bucket: Long, name: String, date: Long, video: Boolean = false, fav: Boolean = false) =
-        MediaItem(
-            id = id,
-            uri = "content://media/$id",
-            displayName = "f$id",
-            mimeType = if (video) "video/mp4" else "image/jpeg",
-            sizeBytes = 10,
-            dateTakenMs = date,
-            width = 1,
-            height = 1,
-            durationMs = if (video) 1000 else 0,
-            bucketId = bucket,
-            bucketName = name,
-            isFavorite = fav,
-        )
-
-    private val items = listOf(
-        item(1, 10, "Camera", 300),
-        item(2, 10, "Camera", 100),
-        item(3, 20, "Screenshots", 200, video = true),
-        item(4, 20, "Screenshots", 250, fav = true),
-    )
-
-    @Test
-    fun `synthetic albums count what they say they count`() {
-        val albums = AlbumBuilder.fromItems(items).associateBy { it.id }
-        assertEquals(4, albums.getValue(AlbumBuilder.ALL_PHOTOS).count)
-        assertEquals(1, albums.getValue(AlbumBuilder.VIDEOS).count)
-        assertEquals(1, albums.getValue(AlbumBuilder.FAVORITES).count)
-    }
-
-    @Test
-    fun `an album cover is its newest item`() {
-        val camera = AlbumBuilder.fromItems(items).first { it.id == 10L }
-        assertEquals("content://media/1", camera.coverUri)
-        assertEquals(2, camera.count)
-    }
-
-    @Test
-    fun `sorting by name is case-insensitive and by count is descending`() {
-        val albums = AlbumBuilder.fromItems(items)
-        assertEquals(listOf("All photos", "Camera", "Favourites", "Screenshots", "Videos"),
-            AlbumBuilder.sort(albums, AlbumSort.NAME).map { it.name })
-        assertEquals(4, AlbumBuilder.sort(albums, AlbumSort.COUNT).first().count)
-    }
-
-    @Test
-    fun `empty albums are hidden`() {
-        val albums = AlbumBuilder.fromItems(items)
-        assertTrue(AlbumBuilder.visible(albums).none { it.count == 0 })
-    }
 
     @Test
     fun `size buckets are contiguous and leave nothing out`() {
@@ -286,6 +233,61 @@ class AlbumBuilderTest {
             listOf(1L),
             SearchFilters.apply(listOf(yes, notFavourite, tooOld), query).map { it.id },
         )
+    }
+}
+
+class AlbumBuilderTest {
+
+    private fun item(id: Long, bucket: Long, name: String, date: Long, video: Boolean = false, fav: Boolean = false) =
+        MediaItem(
+            id = id,
+            uri = "content://media/$id",
+            displayName = "f$id",
+            mimeType = if (video) "video/mp4" else "image/jpeg",
+            sizeBytes = 10,
+            dateTakenMs = date,
+            width = 1,
+            height = 1,
+            durationMs = if (video) 1000 else 0,
+            bucketId = bucket,
+            bucketName = name,
+            isFavorite = fav,
+        )
+
+    private val items = listOf(
+        item(1, 10, "Camera", 300),
+        item(2, 10, "Camera", 100),
+        item(3, 20, "Screenshots", 200, video = true),
+        item(4, 20, "Screenshots", 250, fav = true),
+    )
+
+    @Test
+    fun `synthetic albums count what they say they count`() {
+        val albums = AlbumBuilder.fromItems(items).associateBy { it.id }
+        assertEquals(4, albums.getValue(AlbumBuilder.ALL_PHOTOS).count)
+        assertEquals(1, albums.getValue(AlbumBuilder.VIDEOS).count)
+        assertEquals(1, albums.getValue(AlbumBuilder.FAVORITES).count)
+    }
+
+    @Test
+    fun `an album cover is its newest item`() {
+        val camera = AlbumBuilder.fromItems(items).first { it.id == 10L }
+        assertEquals("content://media/1", camera.coverUri)
+        assertEquals(2, camera.count)
+    }
+
+    @Test
+    fun `sorting by name is case-insensitive and by count is descending`() {
+        val albums = AlbumBuilder.fromItems(items)
+        assertEquals(listOf("All photos", "Camera", "Favourites", "Screenshots", "Videos"),
+            AlbumBuilder.sort(albums, AlbumSort.NAME).map { it.name })
+        assertEquals(4, AlbumBuilder.sort(albums, AlbumSort.COUNT).first().count)
+    }
+
+    @Test
+    fun `empty albums are hidden`() {
+        val albums = AlbumBuilder.fromItems(items)
+        assertTrue(AlbumBuilder.visible(albums).none { it.count == 0 })
     }
 
     @Test

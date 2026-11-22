@@ -31,8 +31,14 @@
     <string name="error_media_title">خواندن رسانه‌های این دستگاه ممکن نشد</string>
     <string name="not_implemented">%1$s هنوز پیاده‌سازی نشده است</string>
 
-    <string name="photo_count">%1$d تصویر</string>
-    <string name="video_count">%1$d ویدیو</string>
+    <plurals name="photo_count">
+        <item quantity="one">%1$d تصویر</item>
+        <item quantity="other">%1$d تصویر</item>
+    </plurals>
+    <plurals name="video_count">
+        <item quantity="one">%1$d ویدیو</item>
+        <item quantity="other">%1$d ویدیو</item>
+    </plurals>
     <string name="media_summary">%1$s و %2$s</string>
 
     <string name="viewer_position">%1$d از %2$d</string>
@@ -45,7 +51,10 @@
     <!-- انتخاب چندگانه، مطابق تصویر مرجع R3 -->
     <string name="select">انتخاب</string>
     <string name="exit_selection">خروج از انتخاب</string>
-    <string name="items_selected">%1$d مورد انتخاب شده</string>
+    <plurals name="items_selected">
+        <item quantity="one">%1$d مورد انتخاب شده</item>
+        <item quantity="other">%1$d مورد انتخاب شده</item>
+    </plurals>
     <string name="select_all">انتخاب همه</string>
     <string name="select_none">لغو انتخاب همه</string>
     <string name="share_selected">اشتراک‌گذاری موارد انتخاب‌شده</string>
@@ -57,12 +66,12 @@
         <item quantity="other">%1$d مورد حذف شود؟</item>
     </plurals>
     <plurals name="delete_trash_body">
-        <item quantity="one">به سبد بازیافت سیستم منتقل می‌شود و تا ۳۰ روز از سبد بازیافت همین گوشی قابل بازگردانی است.</item>
-        <item quantity="other">به سبد بازیافت سیستم منتقل می‌شوند و تا ۳۰ روز از سبد بازیافت همین گوشی قابل بازگردانی هستند.</item>
+        <item quantity="one">%1$d مورد به سبد بازیافت سیستم منتقل می‌شود و تا ۳۰ روز از سبد بازیافت همین گوشی قابل بازگردانی است.</item>
+        <item quantity="other">%1$d مورد به سبد بازیافت سیستم منتقل می‌شوند و تا ۳۰ روز از سبد بازیافت همین گوشی قابل بازگردانی هستند.</item>
     </plurals>
     <plurals name="delete_permanent_body">
-        <item quantity="one">از این دستگاه حذف می‌شود. این کار برگشت‌پذیر نیست.</item>
-        <item quantity="other">از این دستگاه حذف می‌شوند. این کار برگشت‌پذیر نیست.</item>
+        <item quantity="one">%1$d مورد از این دستگاه حذف می‌شود. این کار برگشت‌پذیر نیست.</item>
+        <item quantity="other">%1$d مورد از این دستگاه حذف می‌شوند. این کار برگشت‌پذیر نیست.</item>
     </plurals>
     <string name="delete_system_body">اندروید پیش از حذف هر چیزی از شما تأیید می‌گیرد.</string>
 
@@ -74,7 +83,10 @@
         <item quantity="one">%1$d مورد حذف شد</item>
         <item quantity="other">%1$d مورد حذف شد</item>
     </plurals>
-    <string name="delete_partial">%1$d از %2$d مورد حذف نشد</string>
+    <plurals name="delete_partial">
+        <item quantity="one">%1$d از %2$d مورد حذف نشد</item>
+        <item quantity="other">%1$d از %2$d مورد حذف نشد</item>
+    </plurals>
     <string name="delete_failed">هیچ موردی حذف نشد</string>
     <string name="delete_needs_permission">برای حذف، دسترسی لازم است</string>
     <string name="share_nothing">چیزی برای اشتراک‌گذاری نیست</string>

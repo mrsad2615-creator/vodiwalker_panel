@@ -26,8 +26,14 @@
     <string name="error_media_title">Could not read this device\'s media</string>
     <string name="not_implemented">%1$s is not implemented yet</string>
 
-    <string name="photo_count">%1$d photos</string>
-    <string name="video_count">%1$d videos</string>
+    <plurals name="photo_count">
+        <item quantity="one">%1$d photo</item>
+        <item quantity="other">%1$d photos</item>
+    </plurals>
+    <plurals name="video_count">
+        <item quantity="one">%1$d video</item>
+        <item quantity="other">%1$d videos</item>
+    </plurals>
     <string name="media_summary">%1$s and %2$s</string>
 
     <string name="viewer_position">%1$d / %2$d</string>
@@ -40,7 +46,10 @@
     <!-- Selection, as in reference R3: close glyph, "N items selected", batch actions. -->
     <string name="select">Select</string>
     <string name="exit_selection">Exit selection</string>
-    <string name="items_selected">%1$d selected</string>
+    <plurals name="items_selected">
+        <item quantity="one">%1$d selected</item>
+        <item quantity="other">%1$d selected</item>
+    </plurals>
     <string name="select_all">Select all</string>
     <string name="select_none">Deselect all</string>
     <string name="share_selected">Share selected items</string>
@@ -69,7 +78,10 @@
         <item quantity="one">Deleted %1$d item</item>
         <item quantity="other">Deleted %1$d items</item>
     </plurals>
-    <string name="delete_partial">%1$d of %2$d items could not be removed</string>
+    <plurals name="delete_partial">
+        <item quantity="one">%1$d of %2$d items could not be removed</item>
+        <item quantity="other">%1$d of %2$d items could not be removed</item>
+    </plurals>
     <string name="delete_failed">Nothing was removed</string>
     <string name="delete_needs_permission">A permission is required before this can be deleted</string>
     <string name="share_nothing">There is nothing to share</string>

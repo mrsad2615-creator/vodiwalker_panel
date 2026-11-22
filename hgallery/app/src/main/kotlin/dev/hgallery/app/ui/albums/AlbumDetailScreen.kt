@@ -26,6 +26,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -86,7 +87,7 @@ fun AlbumDetailScreen(
                     overflow = TextOverflow.Ellipsis,
                 )
                 Text(
-                    text = stringResource(R.string.photo_count, contents.size),
+                    text = pluralStringResource(R.plurals.photo_count, contents.size, contents.size),
                     style = MaterialTheme.typography.bodySmall,
                     color = palette.textSecondary,
                 )

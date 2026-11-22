@@ -36,6 +36,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -103,8 +104,8 @@ private fun SelectionAwarePhotos(
 
     // Counts come from the resources rather than from concatenation, so a
     // language with different plural rules reads correctly.
-    val photoLabel = stringResource(R.string.photo_count, photos)
-    val videoLabel = stringResource(R.string.video_count, videos)
+    val photoLabel = pluralStringResource(R.plurals.photo_count, photos, photos)
+    val videoLabel = pluralStringResource(R.plurals.video_count, videos, videos)
     val summary = when {
         photos > 0 && videos > 0 -> stringResource(R.string.media_summary, photoLabel, videoLabel)
         photos > 0 -> photoLabel
@@ -139,7 +140,9 @@ private fun SelectionAwarePhotos(
         selection = selection.exit()
         val message = when {
             outcome.removed == 0 -> context.getString(R.string.delete_failed)
-            outcome.failed > 0 -> context.getString(R.string.delete_partial, outcome.failed, outcome.total)
+            outcome.failed > 0 -> context.resources.getQuantityString(
+                R.plurals.delete_partial, outcome.total, outcome.failed, outcome.total,
+            )
             outcome.trashed > 0 -> context.resources.getQuantityString(
                 R.plurals.moved_to_trash, outcome.trashed, outcome.trashed,
             )

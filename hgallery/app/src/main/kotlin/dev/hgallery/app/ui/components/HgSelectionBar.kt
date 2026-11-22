@@ -29,6 +29,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -70,7 +71,7 @@ fun HgSelectionHeader(
             modifier = Modifier.testTag(HgTestTags.EXIT_SELECTION),
         )
         Text(
-            text = stringResource(R.string.items_selected, selection.count),
+            text = pluralStringResource(R.plurals.items_selected, selection.count, selection.count),
             style = MaterialTheme.typography.titleLarge,
             color = palette.textPrimary,
             maxLines = 1,

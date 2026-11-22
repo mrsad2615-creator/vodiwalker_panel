@@ -52,9 +52,9 @@ val statusBarPadding: androidx.compose.foundation.layout.PaddingValues
 @Composable
 fun HgScreenTitle(
     title: String,
+    modifier: Modifier = Modifier,
     subtitle: String? = null,
     subtitleCentred: Boolean = false,
-    modifier: Modifier = Modifier,
 ) {
     val palette = hgPalette
     Column(modifier = modifier.fillMaxWidth()) {
@@ -88,8 +88,8 @@ fun HgIconButton(
     contentDescription: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    tint: Color? = null,
     enabled: Boolean = true,
+    tint: Color? = null,
 ) {
     val palette = hgPalette
     Box(
@@ -115,10 +115,10 @@ fun HgIconButton(
 /** Top row of icon actions, as in "Photos" and "Albums". */
 @Composable
 fun HgToolbar(
+    modifier: Modifier = Modifier,
     onSearch: (() -> Unit)? = null,
     onMore: (() -> Unit)? = null,
     viewAction: (@Composable () -> Unit)? = null,
-    modifier: Modifier = Modifier,
 ) {
     Row(
         modifier = modifier.fillMaxWidth().height(HgMetrics.MinTouchTarget),
@@ -140,9 +140,9 @@ fun HgToolbar(
 @Composable
 fun HgSectionHeader(
     label: String,
+    modifier: Modifier = Modifier,
     action: String? = null,
     onAction: (() -> Unit)? = null,
-    modifier: Modifier = Modifier,
 ) {
     val palette = hgPalette
     // The row is as tall as the 48 dp touch target it has to contain. Forcing a

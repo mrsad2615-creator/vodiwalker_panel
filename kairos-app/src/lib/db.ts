@@ -47,6 +47,12 @@ export const DEFAULT_SETTINGS: UserSettings = {
   hapticsEnabled: true,
   hasSampleData: false,
   sampleBannerDismissed: false,
+  aiEnabled: false,
+  aiBaseUrl: 'https://openrouter.ai/api/v1',
+  aiModel: '',
+  aiKey: '',
+  aiAutoApply: false,
+  aiConsentAt: null,
   updatedAt: new Date().toISOString(),
 };
 
@@ -829,7 +835,9 @@ export async function exportBackup(): Promise<KairosBackupPayload> {
     habitLogs,
     focusSessions,
     goals,
-    settings,
+    // The API key is a device secret, not user data: a backup is a file the user
+    // may hand to someone else, so the key never enters it.
+    settings: { ...settings, aiKey: '' },
     journal,
     projects,
     projectStages,

@@ -7,6 +7,7 @@ import {
   RefreshCw,
   ShieldCheck,
   Smartphone,
+  Sparkles,
   TableIcon,
   Trash2,
   Upload,
@@ -41,6 +42,7 @@ import { useFocusSessions, useHabitLogs, useHabits, useTasks } from '@/lib/queri
 import { exportBackupFile, readBackupFile, saveTextFile } from '@/lib/backup';
 import { tasksToCsv, habitLogsToCsv, focusSessionsToCsv } from '@/lib/csv';
 import { APP_VERSION, BUILD_NUMBER, BUILD_SHA } from '@/lib/buildInfo';
+import { AI_MODEL_HINT, testAiConnection } from '@/lib/ai/client';
 
 export function SettingsPage() {
   const { settings, pushToast } = useApp();
@@ -54,6 +56,14 @@ export function SettingsPage() {
   const [dailyTaskGoal, setDailyTaskGoal] = useState(settings.dailyTaskGoal);
   const [permState, setPermState] = useState<NotificationPermissionState>('prompt');
   const [confirmWipe, setConfirmWipe] = useState(false);
+  // The cloud manager. Every field starts from what is stored, and nothing is
+  // written until «ذخیره» is pressed — the key is a secret, not a live control.
+  const [aiEnabled, setAiEnabled] = useState(settings.aiEnabled);
+  const [aiBaseUrl, setAiBaseUrl] = useState(settings.aiBaseUrl);
+  const [aiModel, setAiModel] = useState(settings.aiModel);
+  const [aiKey, setAiKey] = useState(settings.aiKey);
+  const [aiAutoApply, setAiAutoApply] = useState(settings.aiAutoApply);
+  const [aiTesting, setAiTesting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -71,6 +81,60 @@ export function SettingsPage() {
   useEffect(() => {
     void getNotificationPermission().then(setPermState);
   }, []);
+
+  useEffect(() => {
+    setAiEnabled(settings.aiEnabled);
+    setAiBaseUrl(settings.aiBaseUrl);
+    setAiModel(settings.aiModel);
+    setAiKey(settings.aiKey);
+    setAiAutoApply(settings.aiAutoApply);
+  }, [settings.aiEnabled, settings.aiBaseUrl, settings.aiModel, settings.aiKey, settings.aiAutoApply]);
+
+  const handleSaveAi = async () => {
+    const enabled = aiEnabled && aiKey.trim().length > 0 && aiModel.trim().length > 0;
+    await updateSettings({
+      aiEnabled: enabled,
+      aiBaseUrl: aiBaseUrl.trim() || 'https://openrouter.ai/api/v1',
+      aiModel: aiModel.trim(),
+      aiKey: aiKey.trim(),
+      aiAutoApply: enabled ? aiAutoApply : false,
+      aiConsentAt: enabled ? new Date().toISOString() : null,
+    });
+    if (aiEnabled && !enabled) {
+      pushToast({
+        title: 'مدیر ابری روشن نشد',
+        description: 'کلید API و نام مدل لازم است؛ تا آن موقع مدیر آفلاین جواب می‌دهد.',
+        tone: 'warning',
+      });
+      return;
+    }
+    pushToast({
+      title: enabled ? 'مدیر ابری فعال شد' : 'مدیر ابری خاموش شد',
+      description: enabled
+        ? 'فقط سؤال و خلاصهٔ داده‌هایت به همین آدرس فرستاده می‌شود.'
+        : 'همه‌چیز مثل قبل آفلاین کار می‌کند.',
+      tone: 'success',
+    });
+  };
+
+  const handleTestAi = async () => {
+    setAiTesting(true);
+    const result = await testAiConnection({
+      settings: {
+        ...settings,
+        aiEnabled: true,
+        aiBaseUrl: aiBaseUrl.trim(),
+        aiModel: aiModel.trim(),
+        aiKey: aiKey.trim(),
+      },
+    });
+    setAiTesting(false);
+    pushToast({
+      title: result.ok ? 'اتصال برقرار است' : 'اتصال برقرار نشد',
+      description: result.message,
+      tone: result.ok ? 'success' : 'warning',
+    });
+  };
 
   const dbCounts = useLiveQuery(async () => {
     const [tasks, habits, logs, sessions, goals] = await Promise.all([
@@ -363,6 +427,125 @@ export function SettingsPage() {
             }`}
           >
             ارسال اعلان آزمایشی
+          </button>
+        </div>
+      </LuxuryCard>
+
+      {/* THE CLOUD MANAGER — optional, off by default */}
+      <LuxuryCard className="space-y-3.5 p-4" data-testid="ai-settings">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex items-center gap-2 text-xs font-bold text-[var(--text)]">
+            <Sparkles className="h-4 w-4 text-[var(--accent-fg)]" />
+            <span>مدیر ابری (اختیاری)</span>
+          </div>
+          <button
+            type="button"
+            aria-pressed={aiEnabled}
+            onClick={() => setAiEnabled((value) => !value)}
+            className={`rounded-full px-3 py-1 text-[10.5px] font-semibold transition-colors ${
+              aiEnabled
+                ? 'bg-[var(--accent)] text-[var(--accent-on)]'
+                : 'border border-[var(--border)] text-[var(--text-2)]'
+            }`}
+          >
+            {aiEnabled ? 'روشن' : 'خاموش'}
+          </button>
+        </div>
+
+        <p className="text-[10.5px] leading-5 text-[var(--text-3)]">
+          خاموش که باشد، هیچ‌چیز از گوشی بیرون نمی‌رود و همان مدیر آفلاین جواب می‌دهد. روشن که باشد،
+          فقط جملهٔ تو و خلاصهٔ همان چیزی که لازم است (کارها، عادت‌ها، تمرکز) به آدرسی که خودت
+          می‌نویسی فرستاده می‌شود. کلید API فقط روی همین دستگاه ذخیره می‌شود و{' '}
+          <span className="text-[var(--text-2)]">در فایل پشتیبان نوشته نمی‌شود</span>.
+        </p>
+
+        <div>
+          <label htmlFor="ai-base" className="mb-1.5 block text-[11px] text-[var(--text-2)]">
+            آدرس سرویس (سازگار با OpenAI)
+          </label>
+          <input
+            id="ai-base"
+            dir="ltr"
+            value={aiBaseUrl}
+            onChange={(event) => setAiBaseUrl(event.target.value)}
+            placeholder="https://openrouter.ai/api/v1"
+            className="luxury-input text-xs"
+          />
+        </div>
+
+        <div>
+          <label htmlFor="ai-model" className="mb-1.5 block text-[11px] text-[var(--text-2)]">
+            نام مدل
+          </label>
+          <input
+            id="ai-model"
+            dir="ltr"
+            value={aiModel}
+            onChange={(event) => setAiModel(event.target.value)}
+            placeholder="openai/gpt-4o-mini"
+            className="luxury-input text-xs"
+          />
+          <p className="num-geo mt-1 text-[9.5px] text-[var(--text-3)]" dir="ltr">
+            {AI_MODEL_HINT}
+          </p>
+        </div>
+
+        <div>
+          <label htmlFor="ai-key" className="mb-1.5 block text-[11px] text-[var(--text-2)]">
+            کلید API
+          </label>
+          <input
+            id="ai-key"
+            type="password"
+            dir="ltr"
+            autoComplete="off"
+            value={aiKey}
+            onChange={(event) => setAiKey(event.target.value)}
+            placeholder="sk-..."
+            className="luxury-input text-xs"
+          />
+        </div>
+
+        <button
+          type="button"
+          aria-pressed={aiAutoApply}
+          onClick={() => setAiAutoApply((value) => !value)}
+          className="flex w-full items-center justify-between gap-2 rounded-xl border border-[var(--border)] px-3 py-2 text-start text-[11px] text-[var(--text-2)]"
+        >
+          <span>
+            تغییرات سطح ۲ را بدون پرسیدن انجام بده
+            <span className="mt-0.5 block text-[9.5px] text-[var(--text-3)]">
+              ساخت و ویرایش کار، تیک مرحله، ثبت عادت. حذف هیچ‌وقت در دسترس مدیر نیست.
+            </span>
+          </span>
+          <span
+            className={`grid h-5 w-9 shrink-0 place-items-center rounded-full ${
+              aiAutoApply ? 'bg-[var(--accent)]' : 'bg-[var(--surface-3)]'
+            }`}
+          >
+            <span
+              className={`h-3.5 w-3.5 rounded-full bg-[var(--bg)] transition-transform ${
+                aiAutoApply ? '-translate-x-2' : 'translate-x-2'
+              }`}
+            />
+          </span>
+        </button>
+
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() => void handleSaveAi()}
+            className="btn-royal rounded-xl py-2.5 text-xs font-semibold"
+          >
+            ذخیرهٔ مدیر ابری
+          </button>
+          <button
+            type="button"
+            onClick={() => void handleTestAi()}
+            disabled={aiTesting}
+            className="btn-ghost-luxury rounded-xl py-2.5 text-xs font-medium text-[var(--text)] disabled:opacity-50"
+          >
+            {aiTesting ? 'در حال آزمودن…' : 'آزمودن اتصال'}
           </button>
         </div>
       </LuxuryCard>

@@ -219,6 +219,19 @@ export interface UserSettings {
   /** Tracks whether starter sample dataset is currently active */
   hasSampleData: boolean;
   sampleBannerDismissed: boolean;
+  /* ── The optional cloud manager (3.7) ──────────────────────────────────────
+     Off by default. With it off, the offline engine answers and nothing ever
+     leaves the device. With it on, only the conversation and a compact summary
+     of the user's rows are sent, and only to the endpoint the user typed. */
+  aiEnabled: boolean;
+  aiBaseUrl: string;
+  aiModel: string;
+  /** Stored locally in IndexedDB. Never written to a backup file. */
+  aiKey: string;
+  /** Apply the assistant's level-2 writes without asking first. Level 3 is never exposed. */
+  aiAutoApply: boolean;
+  /** When the user last said, in plain terms, that data may leave the device. */
+  aiConsentAt: string | null;
   updatedAt: string;
 }
 

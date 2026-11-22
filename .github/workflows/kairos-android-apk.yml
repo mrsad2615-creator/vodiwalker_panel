@@ -15,8 +15,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: '3.6.0'
-  TAG: 'kairos-v3.6.0'
+  VERSION: '3.7.0'
+  TAG: 'kairos-v3.7.0'
 
 jobs:
   build-android-apk:

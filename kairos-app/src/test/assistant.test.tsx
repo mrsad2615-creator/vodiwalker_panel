@@ -210,6 +210,34 @@ describe('the manager', () => {
   });
 });
 
+describe('brain switch', () => {
+  it('appears only when the cloud manager is configured', async () => {
+    await boot();
+    fireEvent.click(screen.getByRole('button', { name: 'مرکز فرمان' }));
+    await screen.findByTestId('manager-brief');
+    expect(screen.queryByTestId('brain-switch')).toBeNull();
+  });
+
+  it('offers both brains once a key is saved', async () => {
+    await db.settings.put({
+      ...(await db.settings.get('default'))!,
+      aiEnabled: true,
+      aiKey: 'sk-test',
+      aiModel: 'test/model',
+      aiBaseUrl: 'https://example.test/v1',
+    });
+    await boot();
+    fireEvent.click(screen.getByRole('button', { name: 'مرکز فرمان' }));
+
+    const brainSwitch = await screen.findByTestId('brain-switch');
+    expect(brainSwitch.textContent).toContain('آفلاین');
+    expect(brainSwitch.textContent).toContain('ابر');
+    // Switching to the cloud shows the chat surface, not the command list.
+    fireEvent.click(within(brainSwitch).getByRole('button', { name: 'ابر' }));
+    expect(await screen.findByTestId('cloud-chat')).toBeInTheDocument();
+  });
+});
+
 describe('command centre', () => {
   it('answers a real question from real rows', async () => {
     await db.tasks.put({

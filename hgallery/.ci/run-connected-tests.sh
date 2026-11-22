@@ -134,6 +134,36 @@ H=$(echo "$SIZE" | cut -d' ' -f2)
 echo "screen ${W}x${H}"
 Y=$((H - 55))
 
+# Tap a control by its Compose test tag.
+#
+# This exists because guessing pixel coordinates produced four wrong screenshots
+# in a row: a tap 4% too high hits white space and the shot silently shows the
+# previous screen. MainActivity exposes test tags as accessibility resource ids,
+# so `uiautomator dump` can locate the real bounds and we tap the centre of them.
+# Returns non-zero (and reports why) when the tag is not on screen, which is far
+# more useful than a screenshot of the wrong page.
+tap_tag() {
+  TAG="$1"
+  adb shell uiautomator dump /sdcard/ui.xml >/dev/null 2>&1
+  adb shell cat /sdcard/ui.xml > "$OUT_DIR/diag/ui-$TAG.xml" 2>/dev/null
+  BOUNDS=$(adb shell cat /sdcard/ui.xml 2>/dev/null \
+    | tr '>' '\n' \
+    | grep "resource-id=\"$PKG:id/$TAG\"" \
+    | sed -n 's/.*bounds="\[\([0-9]*\),\([0-9]*\)\]\[\([0-9]*\),\([0-9]*\)\]".*/\1 \2 \3 \4/p' \
+    | head -1)
+  if [ -z "$BOUNDS" ]; then
+    echo "::warning title=e2e::no node with tag $TAG on screen"
+    return 1
+  fi
+  set -- $BOUNDS
+  CX=$(( ($1 + $3) / 2 ))
+  CY=$(( ($2 + $4) / 2 ))
+  echo "tap_tag $TAG -> centre ($CX,$CY) from bounds [$1,$2][$3,$4]"
+  adb shell input tap "$CX" "$CY"
+  sleep 3
+  return 0
+}
+
 tap_and_shot() {
   adb shell input tap "$1" "$Y"
   sleep 4
@@ -211,27 +241,37 @@ cat "$OUT_DIR/diag/view-change.txt" | head -2
 # The video player. Reached through Albums -> Videos -> first tile, which is the
 # path a user takes and does not depend on a MediaStore id.
 echo "== photographing the video player =="
-# Anchors measured from 11-albums-for-video.png, not guessed: the Videos tile is
-# the second of three in the smart row, and its centre sits at 0.61 of the width,
-# 0.605 of the height. Two earlier attempts guessed and photographed the same
-# Albums screen three times.
+# Every tap from here on is by tag, never by coordinate.
 adb shell input tap $((W / 8 * 3)) $((H - 55))
 sleep 3
 shot 11-albums-for-video.png
-adb shell input tap $((W * 61 / 100)) $((H * 605 / 1000))
-sleep 4
-shot 12-videos-album.png
-# The first tile of the Videos album grid.
-adb shell input tap $((W * 17 / 100)) $((H * 315 / 1000))
-sleep 8
-shot 13-video-player.png
-# Tap the surface once so the chrome toggles off, proving the player really is
-# playing behind its own bars rather than showing a paused first frame.
-adb shell input tap $((W / 2)) $((H / 2))
-sleep 2
-shot 14-video-player-no-chrome.png
-adb shell input keyevent KEYCODE_BACK
-sleep 2
+
+if tap_tag "album-Videos"; then
+  sleep 2
+  shot 12-videos-album.png
+  # The first tile in the album grid, again by tag.
+  FIRST_VID=$(adb shell cat /sdcard/ui.xml 2>/dev/null | tr '>' '\n' \
+    | grep -o 'resource-id="[^"]*:id/thumb-[0-9]*"' | head -1 \
+    | sed 's/.*id\/thumb-//;s/"//')
+  if [ -n "$FIRST_VID" ]; then
+    tap_tag "thumb-$FIRST_VID" || true
+    sleep 8
+    shot 13-video-player.png
+    # One tap on the surface toggles the chrome off; the shot proves the surface
+    # is really playing behind its own bars.
+    adb shell input tap $((W / 2)) $((H / 2))
+    sleep 2
+    shot 14-video-player-no-chrome.png
+    adb shell input keyevent KEYCODE_BACK
+    sleep 2
+  else
+    echo "::warning title=e2e::the Videos album showed no tiles"
+  fi
+  adb shell input keyevent KEYCODE_BACK
+  sleep 2
+else
+  echo "::warning title=e2e::Videos album tile not found; player not photographed"
+fi
 
 echo "== pulling screenshots =="
 adb pull "$DEVICE_DIR" "$OUT_DIR" >/dev/null 2>&1

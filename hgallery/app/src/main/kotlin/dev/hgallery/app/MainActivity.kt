@@ -39,6 +39,13 @@ class MainActivity : ComponentActivity() {
         }
 
         setContent {
+            // Exposes Compose test tags as accessibility resource ids, so an
+            // external harness (adb/UiAutomator) can find a control by name.
+            // Without this the screenshots script had to guess pixel coordinates,
+            // which produced four wrong photographs in a row.
+            androidx.compose.ui.platform.CompositionLocalProvider(
+                androidx.compose.ui.semantics.testTagsAsResourceId provides true,
+            ) {
             HgTheme {
                 // Edge-to-edge means the app paints behind the status bar, so
                 // the system bar icons must be dark on the light background.
@@ -46,6 +53,7 @@ class MainActivity : ComponentActivity() {
                     .isAppearanceLightStatusBars = true
                 val appContainer = remember { container }
                 HGalleryApp(container = appContainer)
+            }
             }
         }
     }

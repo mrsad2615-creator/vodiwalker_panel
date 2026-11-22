@@ -318,7 +318,9 @@ private fun ThumbnailCell(
             .clip(RoundedCornerShape(3.dp))
             .semantics {
                 contentDescription = label
-                if (selected) selected = true
+                // `this.` is required: the enclosing scope has a `selected`
+                // Boolean for the tint, and the plain name resolves to it.
+                this.selected = selected
             }
             .combinedClickable(
                 onClick = onClick,

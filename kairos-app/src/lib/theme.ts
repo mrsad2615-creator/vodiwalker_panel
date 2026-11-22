@@ -23,10 +23,10 @@ export interface AccentPreset {
 
 /** Curated starting points. The user can still pick any colour. */
 export const ACCENT_PRESETS: AccentPreset[] = [
-  // Default. Brass on ink is the "paper & ink" signature: warm, uncommon for a
-  // productivity app, and quiet enough that it can be used for "now" only.
-  { id: 'brass', label: 'برنجی', hex: '#C9A063' },
+  // Default. The violet ladder (indigo → violet → lilac) is the product's light:
+  // the aurora field, the ring, the gradient text all read from this one hue.
   { id: 'kairos', label: 'بنفش کایروس', hex: '#6D4AFF' },
+  { id: 'brass', label: 'برنجی', hex: '#C9A063' },
   { id: 'indigo', label: 'نیلی الکتریک', hex: '#4B6BFF' },
   { id: 'aurora', label: 'فیروزه‌ای', hex: '#0FB5A6' },
   { id: 'jade', label: 'یشمی', hex: '#2FA36B' },

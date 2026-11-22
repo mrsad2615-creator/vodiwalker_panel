@@ -100,10 +100,46 @@ describe('KAIROS Paper — visual rules', () => {
     for (const size of sizes) expect(size).toBeGreaterThanOrEqual(11);
   });
 
-  it('keeps the home screen free of gradients and glows', () => {
-    expect(HOME).not.toMatch(/linear-gradient|radial-gradient/i);
-    expect(HOME).not.toMatch(/--accent-glow/);
-    expect(HOME).not.toMatch(/backdrop-blur/);
+  it('draws the gradient from one hue family only', () => {
+    // Aurora allows gradients; it does not allow a second hue. Every stop in the
+    // violet gradients must come from the violet ladder or a violet rgba.
+    const ladder = new Set([
+      '#0f0725', '#170c3a', '#241057', '#321a80', '#4526b4',
+      '#6d4aff', '#8b6bff', '#a78bfa', '#c4b5fd', '#e9d5ff', '#2a1670',
+    ]);
+    const gradients = [...CSS.matchAll(/--grad-[a-z-]+:\s*([^;]+);/g)].map((m) => m[1]);
+    expect(gradients.length).toBeGreaterThanOrEqual(4);
+
+    for (const gradient of gradients) {
+      const hexes = [...gradient.matchAll(/#([0-9a-fA-F]{6})/g)].map((m) => `#${m[1].toLowerCase()}`);
+      for (const hex of hexes) {
+        // Violet's RGB channels: red < green < blue is the family signature.
+        const r = parseInt(hex.slice(1, 3), 16);
+        const g = parseInt(hex.slice(3, 5), 16);
+        const b = parseInt(hex.slice(5, 7), 16);
+        expect(ladder.has(hex) || (b > r && b > g)).toBe(true);
+      }
+    }
+  });
+
+  it('lights the home screen with glass plates and choreographed entrances', () => {
+    // The lift comes from the plate, not from a picture: a blur, a lit edge, and
+    // an arrival order. If these disappear the page goes back to being a list.
+    // The blur is deliberately limited to the two plates that own the top of the
+    // screen; the depth of the rest comes from the layered fill and lit edge.
+    expect(CSS).toMatch(/\.aurora-card--glass\s*\{[^}]*backdrop-filter:\s*blur/);
+    expect(CSS).toMatch(/\.aurora-card\s*\{[^}]*var\(--glass-fill\)/);
+    expect(CSS).toMatch(/\[data-motion='standard'\] \.aurora-card--glass\s*\{[^}]*backdrop-filter:\s*none/);
+    expect(CSS).toMatch(/\.aurora-card::before\s*\{[^}]*mask-composite:\s*exclude/);
+    expect(CSS).toMatch(/\.aurora-field \.blob-a\s*\{[^}]*animation:\s*aurora-drift-a/);
+
+    const rises = [...HOME.matchAll(/rise rise-\d/g)];
+    expect(rises.length).toBeGreaterThanOrEqual(6);
+  });
+
+  it('keeps the aurora field and the entrance honest to the motion setting', () => {
+    expect(CSS).toMatch(/\[data-motion='standard'\] \.aurora-field \.blob/);
+    expect(CSS).toMatch(/@media \(prefers-reduced-motion: reduce\)/);
   });
 
   it('uses tone, not borders, for groups', () => {

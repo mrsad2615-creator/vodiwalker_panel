@@ -1,7 +1,7 @@
 {
   "name": "kairos-android-app",
   "private": true,
-  "version": "3.0.0",
+  "version": "3.1.0",
   "description": "KAIROS — Luxury Minimal Cinematic Productivity Android App (Persian RTL)",
   "type": "module",
   "scripts": {

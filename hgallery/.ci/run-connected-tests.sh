@@ -147,6 +147,15 @@ adb shell input tap $((W / 2)) $((H / 2))
 sleep 3
 shot 07-viewer-chrome-hidden.png
 
+# Back out of the viewer, then pinch out to reach month view. This is the
+# behaviour Huawei's manual describes, so it has to be photographed, not assumed.
+adb shell input keyevent KEYCODE_BACK
+sleep 3
+adb shell input swipe $((W / 2 - 60)) $((H / 2)) $((W / 2 - 200)) $((H / 2)) 300
+adb shell input swipe $((W / 2 + 60)) $((H / 2)) $((W / 2 + 200)) $((H / 2)) 300
+sleep 4
+shot 08-month-view.png
+
 echo "== pulling screenshots =="
 adb pull "$DEVICE_DIR" "$OUT_DIR" >/dev/null 2>&1
 find "$OUT_DIR" -name '*.png' -exec ls -l {} \;

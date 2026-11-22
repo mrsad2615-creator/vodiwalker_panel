@@ -236,12 +236,20 @@ class ReadViewModel(private val container: AppContainer) : ViewModel() {
     fun submitQuiz() {
         val current = _state.value
         if (current.phase != ReadPhase.QUIZ) return
-        if (current.answers.getOrNull(current.questionIndex) == null) return
+        val chosen = current.answers.getOrNull(current.questionIndex) ?: return
+        val q = current.questions.getOrNull(current.questionIndex)
+        if (q != null) {
+            container.audioEngine.playSfx(
+                if (chosen == q.correctIndex) dev.mrsad.app.audio.SfxType.TARGET_HIT
+                else dev.mrsad.app.audio.SfxType.TARGET_MISS,
+            )
+        }
         if (current.questionIndex < current.questions.lastIndex) {
             _state.update { it.copy(questionIndex = current.questionIndex + 1) }
             return
         }
         val result = ReadingEngine.score(current.answers, current.questions)
+        container.audioEngine.playSfx(dev.mrsad.app.audio.SfxType.SESSION_COMPLETE)
         val effective = ReadingEngine.effectiveWpm(
             wordsRead = current.wordsRead,
             elapsedMillis = current.readingMillis,

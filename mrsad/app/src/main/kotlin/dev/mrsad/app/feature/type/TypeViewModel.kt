@@ -200,6 +200,12 @@ class TypeViewModel(private val container: AppContainer) : ViewModel() {
         if (firstKeyAt == null) firstKeyAt = engineTime
         val outcome = active.type(ch, engineTime)
 
+        if (outcome == TypingSession.KeyOutcome.INCORRECT) {
+            container.audioEngine.playSfx(dev.mrsad.app.audio.SfxType.KEY_ERROR)
+        } else {
+            container.audioEngine.playSfx(dev.mrsad.app.audio.SfxType.KEY_THOCK)
+        }
+
         _state.update {
             it.copy(
                 typedPrefixLength = active.cursor,
@@ -287,6 +293,7 @@ class TypeViewModel(private val container: AppContainer) : ViewModel() {
             return
         }
         val result = active.result(engineNow(), completed = completed && active.isFinished)
+        container.audioEngine.playSfx(dev.mrsad.app.audio.SfxType.SESSION_COMPLETE)
         _state.update { it.copy(phase = TypePhase.FINISHED, result = result, isSaving = true) }
         viewModelScope.launch {
             val nowEpoch = MrsadClock.nowEpochMillis()

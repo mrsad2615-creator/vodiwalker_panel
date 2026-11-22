@@ -309,6 +309,9 @@ class MindViewModel(private val container: AppContainer) : ViewModel() {
     fun submitNumberMemory() {
         val current = _state.value
         val correct = current.entry == current.digits
+        container.audioEngine.playSfx(
+            if (correct) dev.mrsad.app.audio.SfxType.TARGET_HIT else dev.mrsad.app.audio.SfxType.TARGET_MISS,
+        )
         val stageScore = if (correct) 1.0 else 0.0
         val updatedScores = current.stageScores + stageScore
         val nextIndex = current.questionIndex + 1
@@ -366,6 +369,9 @@ class MindViewModel(private val container: AppContainer) : ViewModel() {
         val hits = selection.count { it in grid.litCells }
         val misses = selection.count { it !in grid.litCells }
         val stageScore = ((hits - misses).toDouble() / grid.litCells.size).coerceIn(0.0, 1.0)
+        container.audioEngine.playSfx(
+            if (stageScore >= 0.75) dev.mrsad.app.audio.SfxType.TARGET_HIT else dev.mrsad.app.audio.SfxType.TARGET_MISS,
+        )
         val updatedScores = current.stageScores + stageScore
         val nextIndex = current.questionIndex + 1
 
@@ -404,6 +410,9 @@ class MindViewModel(private val container: AppContainer) : ViewModel() {
         val missed = grid.targetIndices.size - hits
         val total = grid.targetIndices.size
         val stageScore = ((total - missed - falsePositives).toDouble() / total).coerceIn(0.0, 1.0)
+        container.audioEngine.playSfx(
+            if (stageScore >= 0.75) dev.mrsad.app.audio.SfxType.TARGET_HIT else dev.mrsad.app.audio.SfxType.TARGET_MISS,
+        )
         val updatedScores = current.stageScores + stageScore
         val nextIndex = current.questionIndex + 1
 
@@ -490,6 +499,9 @@ class MindViewModel(private val container: AppContainer) : ViewModel() {
     }
 
     private fun advanceReaction(correct: Boolean, reactionMillis: Long, feedbackFa: String) {
+        container.audioEngine.playSfx(
+            if (correct) dev.mrsad.app.audio.SfxType.TARGET_HIT else dev.mrsad.app.audio.SfxType.TARGET_MISS,
+        )
         val current = _state.value
         val nextIndex = current.questionIndex + 1
         val newCorrect = current.correctAnswers + if (correct) 1 else 0
@@ -516,6 +528,9 @@ class MindViewModel(private val container: AppContainer) : ViewModel() {
     }
 
     private fun advanceQueue(correct: Boolean, reactionMillis: Long) {
+        container.audioEngine.playSfx(
+            if (correct) dev.mrsad.app.audio.SfxType.TARGET_HIT else dev.mrsad.app.audio.SfxType.TARGET_MISS,
+        )
         val current = _state.value
         val nextIndex = current.questionIndex + 1
         val newCorrect = current.correctAnswers + if (correct) 1 else 0
@@ -543,6 +558,7 @@ class MindViewModel(private val container: AppContainer) : ViewModel() {
     // ---------------- Round lifecycle ----------------
 
     private fun finishSingleRound(score: Double, detail: String) {
+        container.audioEngine.playSfx(dev.mrsad.app.audio.SfxType.SESSION_COMPLETE)
         val normalizedScore = score.coerceIn(0.0, 1.0)
         val current = _state.value
         val exercise = current.exercise

@@ -234,6 +234,7 @@ class EyeTrainingViewModel(
                 val dist = hypot(normalizedX - s.currentPoint.x, normalizedY - s.currentPoint.y)
                 val hitRadius = 0.17f
                 if (dist <= hitRadius) {
+                    container.audioEngine.playSfx(dev.mrsad.app.audio.SfxType.TARGET_HIT)
                     val nextStep = (s.currentPoint.stepIndex + 1) % saccadePoints.size.coerceAtLeast(1)
                     val nextPt = saccadePoints.getOrElse(nextStep) { s.currentPoint }
                     _state.update {
@@ -246,6 +247,7 @@ class EyeTrainingViewModel(
                         )
                     }
                 } else {
+                    container.audioEngine.playSfx(dev.mrsad.app.audio.SfxType.TARGET_MISS)
                     _state.update {
                         it.copy(
                             misses = it.misses + 1,
@@ -263,6 +265,7 @@ class EyeTrainingViewModel(
                 if (dist <= hitRadius) {
                     if (lastScoredStepIndex != s.currentPoint.stepIndex) {
                         lastScoredStepIndex = s.currentPoint.stepIndex
+                        container.audioEngine.playSfx(dev.mrsad.app.audio.SfxType.TARGET_HIT)
                         _state.update {
                             it.copy(
                                 hits = it.hits + 1,
@@ -273,6 +276,7 @@ class EyeTrainingViewModel(
                         }
                     }
                 } else {
+                    container.audioEngine.playSfx(dev.mrsad.app.audio.SfxType.TARGET_MISS)
                     _state.update {
                         it.copy(
                             misses = it.misses + 1,
@@ -287,6 +291,7 @@ class EyeTrainingViewModel(
             DrillType.GAZE_STABILITY -> {
                 val distFromCenter = hypot(normalizedX - 0.5f, normalizedY - 0.5f)
                 if (distFromCenter > 0.24f) {
+                    container.audioEngine.playSfx(dev.mrsad.app.audio.SfxType.TARGET_MISS)
                     _state.update {
                         it.copy(
                             misses = it.misses + 1,
@@ -299,6 +304,7 @@ class EyeTrainingViewModel(
                 }
                 if (s.stabilitySignalActive && lastScoredStepIndex != s.currentPoint.stepIndex) {
                     lastScoredStepIndex = s.currentPoint.stepIndex
+                    container.audioEngine.playSfx(dev.mrsad.app.audio.SfxType.TARGET_HIT)
                     _state.update {
                         it.copy(
                             hits = it.hits + 1,
@@ -308,6 +314,7 @@ class EyeTrainingViewModel(
                         )
                     }
                 } else if (!s.stabilitySignalActive) {
+                    container.audioEngine.playSfx(dev.mrsad.app.audio.SfxType.TARGET_MISS)
                     _state.update {
                         it.copy(
                             misses = it.misses + 1,
@@ -340,6 +347,7 @@ class EyeTrainingViewModel(
         val s = _state.value
         if (s.phase != EyePhase.RUNNING || s.selectedDrill != DrillType.PERIPHERAL_SPAN) return
         if (number == s.nextSchulteNumber) {
+            container.audioEngine.playSfx(dev.mrsad.app.audio.SfxType.TARGET_HIT)
             val next = s.nextSchulteNumber + 1
             val completedBoard = next > s.schulteBoard.totalCells
             if (completedBoard) {
@@ -368,6 +376,7 @@ class EyeTrainingViewModel(
                 }
             }
         } else {
+            container.audioEngine.playSfx(dev.mrsad.app.audio.SfxType.TARGET_MISS)
             _state.update {
                 it.copy(
                     misses = it.misses + 1,
@@ -386,6 +395,7 @@ class EyeTrainingViewModel(
             _state.update { it.copy(phase = EyePhase.SETUP) }
             return
         }
+        container.audioEngine.playSfx(dev.mrsad.app.audio.SfxType.SESSION_COMPLETE)
         val effectiveTargets = maxOf(s.totalTargets, s.hits + s.misses, 1)
         val report = EyeTrainingEngine.evaluateSession(
             drill = s.selectedDrill,

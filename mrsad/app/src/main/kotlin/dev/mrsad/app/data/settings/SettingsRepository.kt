@@ -63,7 +63,7 @@ data class MrsadSettings(
     val quality: GraphicsQuality = GraphicsQuality.BALANCED,
     val persianNumerals: Boolean = true,
     val hapticsEnabled: Boolean = true,
-    val soundEnabled: Boolean = false,
+    val soundEnabled: Boolean = true,
     val reduceMotion: Boolean = false,
     val fontScale: Float = 1.0f,
 ) {
@@ -88,7 +88,7 @@ class SettingsRepository(private val context: Context) {
         val quality = stringPreferencesKey("quality")
         val persianNumerals = booleanPreferencesKey("persian_numerals")
         val haptics = booleanPreferencesKey("haptics")
-        val sound = booleanPreferencesKey("sound")
+        val sound = booleanPreferencesKey("sound_v2")
         val reduceMotion = booleanPreferencesKey("reduce_motion")
         val fontScale = stringPreferencesKey("font_scale")
         val defaultsSeeded = booleanPreferencesKey("defaults_seeded")
@@ -104,7 +104,7 @@ class SettingsRepository(private val context: Context) {
                 quality = GraphicsQuality.fromId(prefs[Keys.quality]),
                 persianNumerals = prefs[Keys.persianNumerals] ?: true,
                 hapticsEnabled = prefs[Keys.haptics] ?: true,
-                soundEnabled = prefs[Keys.sound] ?: false,
+                soundEnabled = prefs[Keys.sound] ?: true,
                 reduceMotion = prefs[Keys.reduceMotion] ?: false,
                 fontScale = prefs[Keys.fontScale]?.toFloatOrNull()?.coerceIn(0.85f, 1.3f) ?: 1.0f,
             )

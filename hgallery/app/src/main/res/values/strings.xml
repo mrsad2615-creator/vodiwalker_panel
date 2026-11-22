@@ -105,6 +105,8 @@
     <string name="search_no_results">No matches</string>
     <string name="search_no_results_body">Nothing in your library matches that name.</string>
     <string name="search_no_results_filters">Nothing matches with these filters. Try clearing one.</string>
+    <string name="search_no_results_both">No match for that name with these filters. Try clearing one.</string>
+    <string name="search_clear_filters">Clear filters</string>
     <string name="filter_photos">Photos</string>
     <string name="filter_videos">Videos</string>
     <string name="filter_favourites">Favourites</string>

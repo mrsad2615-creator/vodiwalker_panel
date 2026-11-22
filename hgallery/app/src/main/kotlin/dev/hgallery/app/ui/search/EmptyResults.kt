@@ -24,10 +24,16 @@ import dev.hgallery.core.SearchChips
 /**
  * What to say when nothing matched.
  *
- * The two cases carry different advice, so they get different sentences. Filters
- * with no text means the filters are too narrow, and the answer is to clear a chip.
- * Text with no filters means the library has no such file, and the answer is to
- * check where it was saved. One generic "no results" would tell the user neither.
+ * Three cases, because the useful advice differs in each:
+ *
+ *  - filters and no text: the filters are too narrow, so clear a chip;
+ *  - text and no filters: the library has no such file, so check where it was saved;
+ *  - text *and* filters: the name may be fine and the filters may be wrong, so the
+ *    guidance has to mention the filters without asserting which one is at fault.
+ *
+ * The third case exists because the first two left it untold. A screenshot caught
+ * "Nothing matches with these filters. Try clearing one." over a query that also
+ * had a search term in it, and the sentence named only half of what the user typed.
  */
 @Composable
 fun EmptyResults(chips: SearchChips) {
@@ -52,10 +58,11 @@ fun EmptyResults(chips: SearchChips) {
             Spacer(Modifier.height(6.dp))
             Text(
                 text = stringResource(
-                    if (chips.hasFilters) {
-                        R.string.search_no_results_filters
-                    } else {
-                        R.string.search_no_results_body
+                    when {
+                        chips.hasFilters && chips.text.isNotBlank() ->
+                            R.string.search_no_results_both
+                        chips.hasFilters -> R.string.search_no_results_filters
+                        else -> R.string.search_no_results_body
                     },
                 ),
                 style = MaterialTheme.typography.bodySmall,

@@ -1,5 +1,15 @@
 package dev.hgallery.app.ui.search
 
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.Role
+import dev.hgallery.app.ui.theme.hgPalette
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -41,12 +51,54 @@ fun SearchChipRows(
     Column {
         KindChips(chips = chips, onChange = onChange)
 
+        // The empty state tells the user to clear a filter. Every chip does clear
+        // itself when pressed again, but that asks the user to work out which chip
+        // is lit and that pressing it again goes backwards; one visible "Clear"
+        // answers the sentence directly. It is absent until there is something to
+        // clear, so it never takes space from a search that has no filters.
+        if (chips.hasFilters) {
+            ClearFilters(
+                // A fresh SearchChips, not a copy with fields zeroed: adding a new
+                // axis to the type then cannot leave it set after "Clear" without
+                // the compiler noticing the constructor call.
+                onClear = { onChange(SearchChips(text = chips.text)) },
+            )
+        }
+
         if (albums.isNotEmpty()) {
             Spacer(Modifier.height(8.dp))
             AlbumChips(chips = chips, albums = albums, onChange = onChange)
         }
 
         Spacer(Modifier.height(4.dp))
+    }
+}
+
+/**
+ * "Clear" for the chips, not for the typed text.
+ *
+ * The text is the thing the user deliberately typed and can delete with the
+ * keyboard's own backspace; the chips are what they cannot see all of. Clearing
+ * keeps the text, so "clip" survives clearing and the results narrow back from
+ * nothing to the two clips.
+ */
+@Composable
+private fun ClearFilters(onClear: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = HgMetrics.Gutter, vertical = 2.dp),
+        horizontalArrangement = Arrangement.End,
+    ) {
+        Text(
+            text = stringResource(R.string.search_clear_filters),
+            style = MaterialTheme.typography.labelLarge,
+            color = hgPalette.accent,
+            modifier = Modifier
+                .clip(RoundedCornerShape(8.dp))
+                .clickable(role = Role.Button, onClick = onClear)
+                .padding(horizontal = 8.dp, vertical = 6.dp),
+        )
     }
 }
 

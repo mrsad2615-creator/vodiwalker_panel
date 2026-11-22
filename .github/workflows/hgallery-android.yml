@@ -161,15 +161,13 @@ jobs:
           api-level: 33
           arch: x86_64
           target: google_apis
-          emulator-boot-timeout: 480
+          emulator-boot-timeout: 600
+          cores: 2
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot
           disable-animations: true
-          script: |
-            cd hgallery
-            chmod +x .ci/run-connected-tests.sh
-            sh .ci/run-connected-tests.sh
-      # Whatever happened, say what the harness actually produced. Without this
-      # a failing emulator run is indistinguishable from a run whose script never
-      # started.
+          # Kept as a single command: the runner passes `script` straight to
+          # `sh -c`, and a multi-line block mixed up the shell it used.
+          script: cd hgallery && chmod +x .ci/run-connected-tests.sh && sh .ci/run-connected-tests.sh
       - name: Report what the emulator produced
         if: always()
         shell: bash

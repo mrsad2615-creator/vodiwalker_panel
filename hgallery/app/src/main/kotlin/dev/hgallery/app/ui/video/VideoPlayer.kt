@@ -146,15 +146,21 @@ fun VideoPlayerScreen(
             PlayerSkipHint(controller.hintMs)
         }
 
-        PlayerCentreButton(
-            visible = chrome.visible &&
-                (chrome.showReplay || (!controller.state.isPlaying && !controller.state.hasError)),
-            showReplay = chrome.showReplay,
-            onClick = {
-                if (chrome.showReplay) controller.replay() else controller.togglePlay()
-                chromeVisible = true
-            },
-        )
+        // The align() is not decoration. Without it this child is laid out at the
+        // parent Box's top-start, so the 68 dp replay disc was drawn on top of the
+        // close button in the top bar — visible in evidence/13-video-player.png,
+        // where a restore glyph and an X occupy the same square.
+        Box(Modifier.align(Alignment.Center)) {
+            PlayerCentreButton(
+                visible = chrome.visible &&
+                    (chrome.showReplay || (!controller.state.isPlaying && !controller.state.hasError)),
+                showReplay = chrome.showReplay,
+                onClick = {
+                    if (chrome.showReplay) controller.replay() else controller.togglePlay()
+                    chromeVisible = true
+                },
+            )
+        }
 
         Box(Modifier.align(Alignment.TopCenter)) {
             PlayerTopBar(

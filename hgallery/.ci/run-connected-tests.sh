@@ -287,21 +287,27 @@ if tap_tag_or_text "videos-album" 'content-desc="Videos|text="Videos'; then
   shot 12-videos-album.png
   # The album's first tile: the only nodes whose label starts with "Video,".
   # Tapping the first match avoids depending on test tags, which are not exposed.
-  if tap_tag_or_text "first-video" 'content-desc="Video, |text="Video, '; then
-    sleep 9
+  if tap_tag_or_text "first-video" 'content-desc="Video, '; then
+    # Mid-playback with the chrome up: the clip is six seconds, so two seconds in
+    # catches a real frame with a real timecode instead of the first image.
+    sleep 2
     shot 13-video-player.png
-    # One tap on the surface toggles the chrome off; this shot proves the surface
-    # is genuinely playing behind its own bars and not a paused first frame.
+    # One tap hides the chrome; this is the shot that proves the surface really is
+    # playing behind its own bars.
     adb shell input tap $((W / 2)) $((H / 2))
     sleep 2
     shot 14-video-player-no-chrome.png
+    # Let it reach the end, then bring the chrome back: the transport must offer
+    # replay rather than a play button that does nothing.
+    sleep 6
+    adb shell input tap $((W / 2)) $((H / 2))
+    sleep 2
+    shot 15-video-player-ended.png
     adb shell input keyevent KEYCODE_BACK
     sleep 2
   else
     echo "::warning title=e2e::the Videos album showed no video tiles"
   fi
-  adb shell input keyevent KEYCODE_BACK
-  sleep 2
 else
   echo "::warning title=e2e::Videos album tile not found; player not photographed"
 fi

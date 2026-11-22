@@ -94,9 +94,9 @@
     <string name="video_cannot_play">این ویدیو پخش نمی‌شود</string>
     <string name="video_cannot_play_body">ممکن است کدک این فایل روی این دستگاه پشتیبانی نشود.</string>
     <string name="video_speed">سرعت پخش</string>
-    <string name="media_desc_photo">عکس، {0}</string>
-    <string name="media_desc_video">ویدیو، {0}، {1}</string>
-    <string name="media_desc_video_no_length">ویدیو، {0}</string>
+    <string name="media_desc_photo">عکس، %1$s</string>
+    <string name="media_desc_video">ویدیو، %1$s، %2$s</string>
+    <string name="media_desc_video_no_length">ویدیو، %1$s</string>
     <plurals name="media_length_seconds">
         <item quantity="one">%d ثانیه</item>
         <item quantity="other">%d ثانیه</item>

@@ -49,6 +49,7 @@ export {
   PencilSimple as Edit3,
   DownloadSimple as Download,
   UploadSimple as Upload,
+  Table as TableIcon,
   ArrowCounterClockwise as RotateCcw,
   ArrowsClockwise as RefreshCw,
   ArrowCounterClockwise as ArchiveRestore,

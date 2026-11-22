@@ -216,6 +216,24 @@ export interface ToastMessage {
   tone: 'default' | 'success' | 'warning' | 'reminder';
 }
 
+/**
+ * A day, as the person who lived it remembers it.
+ *
+ * One row per date (`id = journal-<dateKey>`) so writing twice edits rather than
+ * stacks. `mood` is 1–5 — the only scale a human answers honestly in one second
+ * — and `highlight` is the one line worth keeping from the day.
+ */
+export interface JournalEntry {
+  id: string;
+  dateKey: string;
+  /** 1 = بد … 5 = عالی */
+  mood: number;
+  note: string;
+  highlight: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface KairosBackupPayload {
   version: number;
   exportedAt: string;
@@ -226,4 +244,6 @@ export interface KairosBackupPayload {
   focusSessions: FocusSession[];
   goals: Goal[];
   settings: UserSettings;
+  /** v3.2+. Older backups simply do not carry it. */
+  journal?: JournalEntry[];
 }

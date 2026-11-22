@@ -7,6 +7,7 @@ import {
   RefreshCw,
   ShieldCheck,
   Smartphone,
+  TableIcon,
   Trash2,
   Upload,
   User,
@@ -36,11 +37,18 @@ import { NumericInput } from '@/components/ui/NumericInput';
 import { KairosLogoMark } from '@/components/ui/KairosMark';
 import { SafeAreaDiagnostics } from '@/components/ui/SafeAreaDiagnostics';
 import { AppearanceStudio } from '@/components/settings/AppearanceStudio';
-import { exportBackupFile, readBackupFile } from '@/lib/backup';
+import { useFocusSessions, useHabitLogs, useHabits, useTasks } from '@/lib/queries';
+import { exportBackupFile, readBackupFile, saveTextFile } from '@/lib/backup';
+import { tasksToCsv, habitLogsToCsv, focusSessionsToCsv } from '@/lib/csv';
 import { APP_VERSION, BUILD_NUMBER, BUILD_SHA } from '@/lib/buildInfo';
 
 export function SettingsPage() {
   const { settings, pushToast } = useApp();
+  // The CSV export reads the same live rows the rest of the app draws from.
+  const tasks = useTasks();
+  const habits = useHabits();
+  const habitLogs = useHabitLogs();
+  const focusSessions = useFocusSessions();
   const [displayName, setDisplayName] = useState(settings.displayName);
   const [dailyFocusGoal, setDailyFocusGoal] = useState(settings.dailyFocusGoalMinutes);
   const [dailyTaskGoal, setDailyTaskGoal] = useState(settings.dailyTaskGoal);
@@ -134,6 +142,40 @@ export function SettingsPage() {
           : 'فایل JSON در پوشهٔ دانلود ذخیره شد.',
       tone: 'success',
     });
+  };
+
+  /**
+   * CSV export: the honest counterpart to the JSON backup. A backup is for coming
+   * back; the CSV is for the spreadsheet where the user actually thinks about
+   * their week. Three files, named by content, so they never overwrite each other.
+   */
+  const handleCsvExport = async () => {
+    const stamp = new Date().toISOString().slice(0, 10);
+    const files: [string, string][] = [
+      [`kairos-tasks-${stamp}.csv`, tasksToCsv(tasks)],
+      [`kairos-habits-${stamp}.csv`, habitLogsToCsv(habits, habitLogs)],
+      [`kairos-focus-${stamp}.csv`, focusSessionsToCsv(focusSessions)],
+    ];
+
+    let saved = 0;
+    for (const [name, csv] of files) {
+      const result = await saveTextFile(name, csv, 'text/csv;charset=utf-8', 'خروجی CSV کایروس');
+      if (result.ok) saved++;
+    }
+
+    pushToast(
+      saved === files.length
+        ? {
+            title: 'خروجی CSV آماده است',
+            description: 'سه فایل: وظایف، عادت‌ها و جلسه‌های تمرکز — هر ردیف یک رکورد.',
+            tone: 'success',
+          }
+        : {
+            title: 'خروجی ناقص ماند',
+            description: `${saved} فایل از ${files.length} ذخیره شد؛ دوباره تلاش کنید.`,
+            tone: 'warning',
+          }
+    );
   };
 
   const handleImportFile = async (file: File) => {
@@ -371,6 +413,14 @@ export function SettingsPage() {
           >
             <Upload className="h-3.5 w-3.5 text-[var(--accent-fg)]" />
             <span>بازیابی پشتیبان</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => void handleCsvExport()}
+            className="btn-ghost-luxury col-span-2 flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-xs font-medium text-[var(--text)]"
+          >
+            <TableIcon className="h-3.5 w-3.5 text-[var(--accent-fg)]" />
+            <span>خروجی جدول (CSV) برای اکسل</span>
           </button>
           <input
             ref={fileInputRef}

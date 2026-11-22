@@ -148,15 +148,6 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="kairos-ambient-bg h-full w-full">
-      {/* Light source for the whole product: three slow violet bodies and one
-          band of light. Pure transform/opacity, painted behind the shell, and
-          switched off by the motion setting or the OS reduce-motion flag. */}
-      <div className="aurora-field" aria-hidden="true">
-        <span className="blob blob-a" />
-        <span className="blob blob-b" />
-        <span className="blob blob-c" />
-        <span className="sweep" />
-      </div>
       <ToastHost toasts={toasts} onDismiss={dismissToast} />
       <SearchSheet open={searchOpen} onClose={() => setSearchOpen(false)} />
 

@@ -9,6 +9,7 @@ import type {
   Habit,
   HabitLog,
   HabitLogStatus,
+  JournalEntry,
   KairosBackupPayload,
   Task,
   TaskStatus,
@@ -53,6 +54,7 @@ class KairosDatabase extends Dexie {
   settings!: Table<UserSettings, string>;
   /** Exactly one row (`id: 'active'`): the session that is not finished yet. */
   activeRun!: Table<ActiveRunRecord, string>;
+  journal!: Table<JournalEntry, string>;
 
   constructor() {
     super('KairosLuxuryProductivityDB');
@@ -70,6 +72,12 @@ class KairosDatabase extends Dexie {
     // block. Only the one row is kept; history still lives in `focusSessions`.
     this.version(2).stores({
       activeRun: 'id, updatedAt',
+    });
+
+    // v3.2 — the journal. One row per day, keyed by its date so the app can ask
+    // "what did today look like?" in a single get(), and range over a month.
+    this.version(3).stores({
+      journal: 'id, dateKey',
     });
   }
 }
@@ -403,16 +411,17 @@ export async function deleteGoal(id: string): Promise<void> {
 // ==================== BACKUP / RESTORE / WIPE ====================
 
 export async function exportBackup(): Promise<KairosBackupPayload> {
-  const [tasks, habits, habitLogs, focusSessions, goals, settings] = await Promise.all([
+  const [tasks, habits, habitLogs, focusSessions, goals, settings, journal] = await Promise.all([
     db.tasks.toArray(),
     db.habits.toArray(),
     db.habitLogs.toArray(),
     db.focusSessions.toArray(),
     db.goals.toArray(),
     ensureSettings(),
+    db.journal.toArray(),
   ]);
   return {
-    version: 1,
+    version: 2,
     exportedAt: new Date().toISOString(),
     app: 'KAIROS',
     tasks,
@@ -421,6 +430,7 @@ export async function exportBackup(): Promise<KairosBackupPayload> {
     focusSessions,
     goals,
     settings,
+    journal,
   };
 }
 
@@ -430,7 +440,7 @@ export async function importBackup(payload: KairosBackupPayload): Promise<void> 
   }
   await db.transaction(
     'rw',
-    [db.tasks, db.habits, db.habitLogs, db.focusSessions, db.goals, db.settings],
+    [db.tasks, db.habits, db.habitLogs, db.focusSessions, db.goals, db.settings, db.journal],
     async () => {
       await Promise.all([
         db.tasks.clear(),
@@ -438,12 +448,14 @@ export async function importBackup(payload: KairosBackupPayload): Promise<void> 
         db.habitLogs.clear(),
         db.focusSessions.clear(),
         db.goals.clear(),
+        db.journal.clear(),
       ]);
       if (payload.tasks.length) await db.tasks.bulkPut(payload.tasks);
       if (payload.habits?.length) await db.habits.bulkPut(payload.habits);
       if (payload.habitLogs?.length) await db.habitLogs.bulkPut(payload.habitLogs);
       if (payload.focusSessions?.length) await db.focusSessions.bulkPut(payload.focusSessions);
       if (payload.goals?.length) await db.goals.bulkPut(payload.goals);
+      if (payload.journal?.length) await db.journal.bulkPut(payload.journal);
       if (payload.settings) {
         await db.settings.put({ ...DEFAULT_SETTINGS, ...payload.settings, id: 'default' });
       }
@@ -455,7 +467,7 @@ export async function clearAllUserData(): Promise<void> {
   const current = await ensureSettings();
   await db.transaction(
     'rw',
-    [db.tasks, db.habits, db.habitLogs, db.focusSessions, db.goals, db.settings],
+    [db.tasks, db.habits, db.habitLogs, db.focusSessions, db.goals, db.settings, db.journal],
     async () => {
       await Promise.all([
         db.tasks.clear(),
@@ -463,6 +475,7 @@ export async function clearAllUserData(): Promise<void> {
         db.habitLogs.clear(),
         db.focusSessions.clear(),
         db.goals.clear(),
+        db.journal.clear(),
       ]);
       await db.settings.put({
         ...current,
@@ -472,4 +485,36 @@ export async function clearAllUserData(): Promise<void> {
       });
     }
   );
+}
+
+/* ── Journal ────────────────────────────────────────────────────────────────── */
+
+/**
+ * Writes (or rewrites) the entry for one day. The row is keyed by date, so the
+ * second write of a day is an edit — never a second entry in the list.
+ */
+export async function upsertJournalEntry(
+  dateKey: string,
+  patch: { mood?: number; note?: string; highlight?: string }
+): Promise<JournalEntry> {
+  const id = `journal-${dateKey}`;
+  const existing = await db.journal.get(id);
+  const now = new Date().toISOString();
+
+  const entry: JournalEntry = {
+    id,
+    dateKey,
+    mood: patch.mood ?? existing?.mood ?? 3,
+    note: patch.note ?? existing?.note ?? '',
+    highlight: patch.highlight ?? existing?.highlight ?? '',
+    createdAt: existing?.createdAt ?? now,
+    updatedAt: now,
+  };
+
+  await db.journal.put(entry);
+  return entry;
+}
+
+export async function deleteJournalEntry(dateKey: string): Promise<void> {
+  await db.journal.delete(`journal-${dateKey}`);
 }

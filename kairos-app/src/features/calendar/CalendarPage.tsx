@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import {
   ArrowLeftRight,
   CalendarDays,
@@ -42,6 +42,10 @@ import { sectionEyebrow } from '@/lib/sections';
 import { ModalSheet } from '@/components/ui/ModalSheet';
 import { JalaliDatePicker } from '@/components/ui/JalaliDatePicker';
 import { EmptyState } from '@/components/ui/EmptyState';
+import { Upload } from '@/components/ui/icons';
+import { parseIcs } from '@/lib/ics';
+import { readFileText } from '@/lib/backup';
+import { importCalendarEvents } from '@/lib/calendarImport';
 import { YearOverview } from './YearOverview';
 
 type CalendarViewMode = 'year' | 'month' | 'week' | 'day';
@@ -56,6 +60,8 @@ export function CalendarPage() {
   const [viewYear, setViewYear] = useState(todayJ.jy);
   const [viewMonth, setViewMonth] = useState(todayJ.jm);
   const [rescheduleTask, setRescheduleTask] = useState<Task | null>(null);
+  const [importing, setImporting] = useState(false);
+  const icsInput = useRef<HTMLInputElement | null>(null);
 
   const tasks = useTasks();
   const habits = useHabits();
@@ -193,21 +199,85 @@ export function CalendarPage() {
     setRescheduleTask(null);
   };
 
+  /**
+   * Google Calendar (and every other calendar) exports .ics. Reading that file
+   * needs no account, no token and no network — which is exactly why it belongs
+   * in an offline-first app. The toast reports three numbers so the user can tell
+   * an import from a re-import at a glance.
+   */
+  const handleIcsFile = async (file: File) => {
+    setImporting(true);
+    try {
+      const text = await readFileText(file);
+      const events = parseIcs(text);
+      if (events.length === 0) {
+        pushToast({
+          title: 'رویدادی پیدا نشد',
+          description: 'فایل تقویم خالی بود یا فرمت آن خوانده نشد.',
+          tone: 'warning',
+        });
+        return;
+      }
+      const plan = await importCalendarEvents(events, tasks, todayKey);
+      const parts = [`${plan.toCreate.length} رویداد اضافه شد`];
+      if (plan.duplicates > 0) parts.push(`${plan.duplicates} تکراری رد شد`);
+      if (plan.skippedPast > 0) parts.push(`${plan.skippedPast} رویداد گذشته نادیده گرفته شد`);
+      if (plan.truncated > 0) parts.push(`${plan.truncated} مورد باقی ماند برای بار بعد`);
+      pushToast({
+        title: 'ورود تقویم انجام شد',
+        description: parts.join(' · '),
+        tone: 'success',
+      });
+    } catch {
+      pushToast({
+        title: 'فایل خوانده نشد',
+        description: 'یک فایل ics معتبر انتخاب کنید.',
+        tone: 'warning',
+      });
+    } finally {
+      setImporting(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
+      <input
+        ref={icsInput}
+        type="file"
+        accept=".ics,text/calendar"
+        className="hidden"
+        aria-label="انتخاب فایل تقویم"
+        onChange={(event) => {
+          const file = event.target.files?.[0];
+          event.target.value = '';
+          if (file) void handleIcsFile(file);
+        }}
+      />
       <SectionHeader
         eyebrow={sectionEyebrow('calendar')}
         title="تقویم و برنامه‌ریزی"
         meta={<span>تقویم شمسی دقیق · جابه‌جایی سریع برنامه‌ها</span>}
         action={
-          <button
-            type="button"
-            onClick={() => openCreateTask({ defaultDueDate: selectedDateKey })}
-            className="btn-royal flex items-center gap-1.5 rounded-[var(--r-field)] px-3 py-2 text-[11px] font-semibold"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            <span>رویداد جدید</span>
-          </button>
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => icsInput.current?.click()}
+              disabled={importing}
+              aria-label="ورود تقویم از فایل ics"
+              className="flex items-center gap-1.5 rounded-[var(--r-field)] border border-[var(--border)] px-2.5 py-2 text-[11px] font-semibold text-[var(--text-2)] disabled:opacity-50"
+            >
+              <Upload className="h-3.5 w-3.5" />
+              <span>{importing ? 'در حال ورود' : 'ورود ics'}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => openCreateTask({ defaultDueDate: selectedDateKey })}
+              className="btn-royal flex items-center gap-1.5 rounded-[var(--r-field)] px-3 py-2 text-[11px] font-semibold"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              <span>رویداد جدید</span>
+            </button>
+          </div>
         }
       />
 

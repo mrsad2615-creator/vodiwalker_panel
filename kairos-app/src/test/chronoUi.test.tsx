@@ -2,7 +2,6 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import App from '@/App';
 import { db } from '@/lib/db';
-import { BOOT_TIMEOUT } from './utils';
 
 /**
  * The Chrono UI as a reader meets it: four modes on a rule, the plan laid out as a
@@ -12,7 +11,7 @@ import { BOOT_TIMEOUT } from './utils';
 async function openFocus() {
   render(<App />);
   fireEvent.click(screen.getByRole('status', { name: /kairos/i }));
-  await waitFor(() => expect(screen.getByTestId('home-ready')).toBeInTheDocument(), { timeout: BOOT_TIMEOUT });
+  await waitFor(() => expect(screen.getByText('پیشرفت امروز')).toBeInTheDocument());
   fireEvent.click(screen.getByRole('button', { name: 'تمرکز' }));
   await waitFor(() => expect(screen.getByText('محیط تمرکز')).toBeInTheDocument());
 }

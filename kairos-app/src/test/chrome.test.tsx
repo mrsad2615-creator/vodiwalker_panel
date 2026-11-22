@@ -4,7 +4,6 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import App from '@/App';
 import { db } from '@/lib/db';
-import { BOOT_TIMEOUT } from './utils';
 
 /** Reads the collapsible wrapper the top bar lives in. */
 function headerWrapper(): HTMLElement {
@@ -35,7 +34,7 @@ describe('Top bar behaves like a product, not a fixed slab', () => {
   it('tucks itself away on scroll down and returns on scroll up', async () => {
     render(<App />);
     fireEvent.click(screen.getByRole('status', { name: /kairos/i }));
-    await waitFor(() => expect(screen.getByTestId('home-ready')).toBeInTheDocument(), { timeout: BOOT_TIMEOUT });
+    await waitFor(() => expect(screen.getByText('پیشرفت امروز')).toBeInTheDocument());
 
     expect(document.querySelector('main.app-scroll')).not.toBeNull();
     expect(headerWrapper().dataset.chrome).toBe('visible');

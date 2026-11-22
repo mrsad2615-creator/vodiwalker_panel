@@ -32,25 +32,31 @@ function toBase64(text: string): string {
   return btoa(binary);
 }
 
-export async function exportBackupFile(payload: KairosBackupPayload): Promise<BackupSaveResult> {
-  const fileName = buildBackupFileName();
-  const json = JSON.stringify(payload, null, 2);
-
+/**
+ * Saving a text file the way Android actually allows: write to cache, hand the
+ * URI to the share sheet. Used by the JSON backup and by the CSV export, because
+ * both have to survive the same WebView limitation.
+ */
+export async function saveTextFile(
+  fileName: string,
+  text: string,
+  mime: string,
+  shareTitle: string
+): Promise<BackupSaveResult> {
   if (Capacitor.isNativePlatform()) {
     try {
       const written = await Filesystem.writeFile({
         path: fileName,
-        data: toBase64(json),
+        data: toBase64(text),
         directory: Directory.Cache,
         recursive: true,
       });
 
       try {
         await Share.share({
-          title: 'پشتیبان KAIROS',
-          text: 'پشتیبان کامل کایروس — وظایف، عادت‌ها، تمرکز و تنظیمات',
+          title: shareTitle,
           url: written.uri,
-          dialogTitle: 'ذخیره یا ارسال فایل پشتیبان',
+          dialogTitle: 'ذخیره یا ارسال فایل',
         });
         return { ok: true, via: 'share', location: written.uri };
       } catch {
@@ -63,7 +69,7 @@ export async function exportBackupFile(payload: KairosBackupPayload): Promise<Ba
   }
 
   try {
-    const blob = new Blob([json], { type: 'application/json' });
+    const blob = new Blob([text], { type: mime });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
     anchor.href = url;
@@ -79,8 +85,17 @@ export async function exportBackupFile(payload: KairosBackupPayload): Promise<Ba
   }
 }
 
+export async function exportBackupFile(payload: KairosBackupPayload): Promise<BackupSaveResult> {
+  return saveTextFile(
+    buildBackupFileName(),
+    JSON.stringify(payload, null, 2),
+    'application/json',
+    'پشتیبان KAIROS'
+  );
+}
+
 /** `File.text()` is missing in older WebViews and in jsdom — fall back to FileReader. */
-async function readFileText(file: File): Promise<string> {
+export async function readFileText(file: File): Promise<string> {
   if (typeof file.text === 'function') return file.text();
   return new Promise((resolve, reject) => {
     const reader = new FileReader();

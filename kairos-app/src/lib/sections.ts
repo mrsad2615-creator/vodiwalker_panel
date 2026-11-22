@@ -20,17 +20,13 @@ export interface SectionIdentity {
 }
 
 export const SECTION_IDENTITIES: Record<NavTab, SectionIdentity> = {
-  // Persian labels. The 2.x app announced every screen with 8.5px uppercase
-  // Latin (+0.26em tracking), which is the exact texture that makes a Persian
-  // interface feel foreign and machine-made. The room still has a name; it is
-  // now the name its readers use.
-  dashboard: { id: 'dashboard', eyebrow: 'امروز' },
-  focus: { id: 'focus', eyebrow: 'تمرکز' },
-  tasks: { id: 'tasks', eyebrow: 'برنامه' },
-  habits: { id: 'habits', eyebrow: 'آیین‌ها' },
-  calendar: { id: 'calendar', eyebrow: 'تقویم' },
-  analytics: { id: 'analytics', eyebrow: 'بینش' },
-  settings: { id: 'settings', eyebrow: 'استودیو' },
+  dashboard: { id: 'dashboard', eyebrow: 'TODAY' },
+  focus: { id: 'focus', eyebrow: 'FOCUS' },
+  tasks: { id: 'tasks', eyebrow: 'PLANNER' },
+  habits: { id: 'habits', eyebrow: 'RITUALS' },
+  calendar: { id: 'calendar', eyebrow: 'CALENDAR' },
+  analytics: { id: 'analytics', eyebrow: 'INSIGHT' },
+  settings: { id: 'settings', eyebrow: 'STUDIO' },
 };
 
 export const SECTION_LIST: SectionIdentity[] = Object.values(SECTION_IDENTITIES);

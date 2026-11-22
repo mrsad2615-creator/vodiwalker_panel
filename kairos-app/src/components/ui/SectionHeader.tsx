@@ -40,14 +40,14 @@ export function SectionHeader({
           id={id}
           className={
             isPage
-              ? `mt-1.5 t-title text-[var(--text)]`
-              : `mt-1 t-item font-semibold text-[var(--text)]`
+              ? `mt-1.5 text-[19px] font-bold leading-tight tracking-tight text-[var(--text)]`
+              : `mt-1 text-[13px] font-bold leading-tight text-[var(--text)]`
           }
         >
           {title}
         </h1>
         {meta && (
-          <p className="mt-1.5 flex flex-wrap items-center gap-1 text-[var(--t-2)] leading-5 text-[var(--text-3)]">
+          <p className="mt-1 flex flex-wrap items-center gap-1 text-[10.5px] leading-4 text-[var(--text-3)]">
             {meta}
           </p>
         )}

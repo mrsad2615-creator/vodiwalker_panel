@@ -1,5 +1,13 @@
 import { useLiveQuery } from 'dexie-react-hooks';
-import type { FocusSession, Goal, Habit, HabitLog, Task, UserSettings } from '@/types/domain';
+import type {
+  FocusSession,
+  Goal,
+  Habit,
+  HabitLog,
+  JournalEntry,
+  Task,
+  UserSettings,
+} from '@/types/domain';
 import { db, DEFAULT_SETTINGS } from './db';
 
 const EMPTY_TASKS: Task[] = [];
@@ -40,4 +48,10 @@ export function useSettings(): UserSettings {
     [],
     DEFAULT_SETTINGS
   );
+}
+
+const EMPTY_JOURNAL: JournalEntry[] = [];
+
+export function useJournal(): JournalEntry[] {
+  return useLiveQuery(() => db.journal.toArray(), [], EMPTY_JOURNAL);
 }

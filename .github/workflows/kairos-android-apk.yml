@@ -52,13 +52,23 @@ jobs:
           path: ~/.android/debug.keystore
           key: kairos-debug-keystore-v1
 
-      - name: Quality gates (typecheck, lint, tests)
+      # Split into four steps on purpose: when one fails, the failing step's name
+      # is the diagnosis. A single combined step only says "quality gates failed".
+      - name: Install dependencies
         working-directory: kairos-app
-        run: |
-          npm ci --no-audit --no-fund
-          npm run typecheck
-          npm run lint
-          npm test
+        run: npm ci --no-audit --no-fund
+
+      - name: Typecheck
+        working-directory: kairos-app
+        run: npm run typecheck
+
+      - name: Lint
+        working-directory: kairos-app
+        run: npm run lint
+
+      - name: Tests
+        working-directory: kairos-app
+        run: npm test
 
       - name: Build web bundle and sync Capacitor
         working-directory: kairos-app

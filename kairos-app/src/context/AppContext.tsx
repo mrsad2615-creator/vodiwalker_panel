@@ -355,7 +355,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (!result.completedPhase) return;
 
     const s = settingsRef.current;
-    playLuxuryChime(s.soundEnabled);
+    // On Android the bell is rung by the native service, at the exact end time,
+    // screen off or not. Ringing here as well would double it.
+    if (!Capacitor.isNativePlatform()) playLuxuryChime(s.soundEnabled);
     void triggerHaptic('success', s.hapticsEnabled);
 
     if (result.completedPhase === 'focus') {
@@ -594,7 +596,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       false
     );
     if (saved) {
-      playLuxuryChime(settingsRef.current.soundEnabled);
+      if (!Capacitor.isNativePlatform()) playLuxuryChime(settingsRef.current.soundEnabled);
       void triggerHaptic('success', settingsRef.current.hapticsEnabled);
       const mins = Math.max(1, Math.round(liveElapsed / 60));
       pushToast({
@@ -669,6 +671,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
       if (action === 'pause' && current.isRunning) pauseFocus();
       if (action === 'resume' && !current.isRunning) startOrResumeFocus();
+      // 'complete' comes from the native end-of-session alarm. The clock in this
+      // page is still the authority on what a completed phase means (it decides
+      // focus vs break, and banks the seconds), so we let the next tick do it
+      // rather than save a session from a background event.
     }).then((cleanup) => {
       if (cancelled) cleanup();
       else dispose = cleanup;

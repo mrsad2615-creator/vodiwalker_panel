@@ -97,7 +97,7 @@ export async function stopChronoNotification(): Promise<void> {
  * Returns a cleanup function (no-op on web).
  */
 export async function onChronoControl(
-  handler: (action: 'pause' | 'resume' | 'stop') => void
+  handler: (action: 'pause' | 'resume' | 'stop' | 'complete') => void
 ): Promise<() => void> {
   if (!chronoNativeAvailable()) return () => {};
   try {

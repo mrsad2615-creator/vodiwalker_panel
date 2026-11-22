@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Pause, Play, Volume2, Waves } from '@/components/ui/icons';
 import { Numeric } from '@/components/ui/Numeric';
-import { soundStudio } from '@/lib/audio/engine';
+import { audioController } from '@/lib/audio/controller';
 import {
   LAYERS,
   SLEEP_TIMER_PRESETS,
@@ -107,11 +107,9 @@ export function SoundStudio() {
   // Start/stop owns the graph's lifetime…
   useEffect(() => {
     if (!playing) return;
-    void soundStudio.unlock().then((running) => {
-      if (running) soundStudio.apply(mix, master);
-    });
+    void audioController.start(mix, master);
     return () => {
-      soundStudio.stop();
+      void audioController.stop();
     };
     // `mix`/`master` are read through refs below: a slider drag must not restart
     // the graph, it must crossfade *inside* it.
@@ -121,7 +119,7 @@ export function SoundStudio() {
   // …and level changes only move the faders.
   useEffect(() => {
     if (!playing) return;
-    soundStudio.apply(mix, master);
+    void audioController.update(mix, master);
   }, [playing, mix, master]);
 
   // ── sleep timer ───────────────────────────────────────────────────────────
@@ -136,7 +134,7 @@ export function SoundStudio() {
         if (left <= 1) {
           window.clearInterval(timer);
           setPlaying(false);
-          soundStudio.stop(1.2);
+          void audioController.stop();
           return 0;
         }
         return left - 1;
@@ -159,7 +157,7 @@ export function SoundStudio() {
       if (lastPhaseRef.current !== key) {
         lastPhaseRef.current = key;
         // A soft cue on each phase change; 396 Hz settles, 528 Hz lifts.
-        soundStudio.cue(state.phase === 'inhale' ? 528 : state.phase === 'exhale' ? 396 : 330, 0.35, 0.1);
+        audioController.cue(state.phase === 'inhale' ? 528 : state.phase === 'exhale' ? 396 : 330, 0.35, 0.1);
       }
       frame = window.requestAnimationFrame(tick);
     };
@@ -191,13 +189,13 @@ export function SoundStudio() {
   const clearAll = useCallback(() => {
     setMix({});
     setPlaying(false);
-    soundStudio.stop();
+    void audioController.stop();
   }, []);
 
   const togglePlay = () => {
     if (playing) {
       setPlaying(false);
-      soundStudio.stop();
+      void audioController.stop();
       return;
     }
     if (layerCount === 0) {
@@ -250,6 +248,15 @@ export function SoundStudio() {
             : 'در حال پخش'}
         </span>
       </div>
+
+      {/* Which engine is actually making the sound, stated plainly. On Android the
+          audio lives in a foreground service, so it keeps playing with the screen
+          off and the headset buttons work. */}
+      <p className="text-[9.5px] leading-4 text-[var(--text-3)]">
+        {audioController.isNative
+          ? 'موتور نیتیو: با قفل‌شدن صفحه قطع نمی‌شود و از دکمه‌های هدفون فرمان می‌گیرد.'
+          : 'موتور مرورگر: صدا تا وقتی این صفحه باز است پخش می‌شود.'}
+      </p>
 
       {/* Transport + master */}
       <div className="flex items-center gap-2">

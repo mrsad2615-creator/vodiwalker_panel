@@ -38,6 +38,7 @@ public class MainActivity extends BridgeActivity {
     protected void onCreate(Bundle savedInstanceState) {
         // Registered before super.onCreate so the bridge picks it up during init.
         registerPlugin(ChronoPlugin.class);
+        registerPlugin(KairosAudioPlugin.class);
         super.onCreate(savedInstanceState);
 
         Window window = getWindow();

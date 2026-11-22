@@ -51,10 +51,25 @@ public class ChronoService extends Service {
     public static final String EXTRA_RUNNING = "running";
 
     private static final String CHANNEL_ID = "kairos_chrono";
+    private static final String ALERT_CHANNEL_ID = "kairos_chrono_alert";
     private static final String PREFS = "kairos_chrono";
     private static final int NOTIFICATION_ID = 4417;
+    private static final int ALERT_NOTIFICATION_ID = 4419;
 
     private static boolean sRunning = false;
+
+    /** Fires when the countdown reaches zero, whatever the page is doing. */
+    private final Handler endHandler = new Handler(Looper.getMainLooper());
+    private final Runnable endRunnable = new Runnable() {
+        @Override
+        public void run() {
+            if (!sRunning) return;
+            sRunning = false;
+            getSharedPreferences(PREFS, MODE_PRIVATE).edit().putBoolean("running", false).apply();
+            SoundscapeBus.playBell();
+            announceCompletion();
+        }
+    };
 
     /** Refreshes the home-screen widget once a minute while the session runs. */
     private final Handler widgetHandler = new Handler(Looper.getMainLooper());
@@ -91,6 +106,7 @@ public class ChronoService extends Service {
 
         String action = intent.getAction();
         if (ACTION_STOP.equals(action)) {
+            endHandler.removeCallbacks(endRunnable);
             stopForeground(true);
             stopSelf();
             return START_NOT_STICKY;
@@ -98,6 +114,7 @@ public class ChronoService extends Service {
 
         if (ACTION_TOGGLE.equals(action)) {
             sRunning = !sRunning;
+            scheduleEnd();
             getSharedPreferences(PREFS, MODE_PRIVATE).edit().putBoolean("running", sRunning).apply();
             publish();
             // Let the page know, if it is alive. When it is not, the clock is
@@ -127,7 +144,78 @@ public class ChronoService extends Service {
                 .apply();
 
         publish();
+        scheduleEnd();
         return START_STICKY;
+    }
+
+    /**
+     * The bell has to ring at the end of the session, not at the end of the
+     * notification. The shade's chronometer is drawn by the system and tells us
+     * nothing, so the service arms its own timer against the saved end time —
+     * and because this is a foreground service, that timer survives a locked
+     * screen and a backgrounded WebView.
+     */
+    private void scheduleEnd() {
+        endHandler.removeCallbacks(endRunnable);
+        if (!sRunning) return;
+
+        long endAt = getSharedPreferences(PREFS, MODE_PRIVATE).getLong("endAt", 0L);
+        long delay = endAt - System.currentTimeMillis();
+        if (delay <= 0) return;
+        endHandler.postDelayed(endRunnable, Math.min(delay, 24L * 60L * 60L * 1000L));
+    }
+
+    /** A high-importance "time is up" card, separate from the running mirror. */
+    private void announceCompletion() {
+        if (Build.VERSION.SDK_INT >= 26) {
+            NotificationManager manager =
+                    (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+            if (manager != null) {
+                NotificationChannel alert = new NotificationChannel(
+                        ALERT_CHANNEL_ID,
+                        "پایان جلسهٔ تمرکز",
+                        NotificationManager.IMPORTANCE_HIGH);
+                alert.setDescription("اعلان پایان جلسه با زنگ کایروس");
+                // The bell is played by the audio engine, so the channel itself
+                // stays silent: two bells at the same instant sound like a bug.
+                alert.setSound(null, null);
+                alert.enableVibration(true);
+                manager.createNotificationChannel(alert);
+            }
+        }
+
+        Intent open = new Intent(this, MainActivity.class);
+        open.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        int flags = PendingIntent.FLAG_UPDATE_CURRENT;
+        if (Build.VERSION.SDK_INT >= 23) flags |= PendingIntent.FLAG_IMMUTABLE;
+        PendingIntent contentIntent = PendingIntent.getActivity(this, 3, open, flags);
+
+        Notification notification = new NotificationCompat.Builder(this, ALERT_CHANNEL_ID)
+                .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
+                .setContentTitle("زمان تمرکز تمام شد")
+                .setContentText("کایروس زنگ زد — چند لحظه نفس بکش، بعد ادامه بده.")
+                .setContentIntent(contentIntent)
+                .setAutoCancel(true)
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setCategory(NotificationCompat.CATEGORY_ALARM)
+                .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+                .setDefaults(NotificationCompat.DEFAULT_VIBRATE)
+                .build();
+
+        try {
+            NotificationManagerCompat.from(this).notify(ALERT_NOTIFICATION_ID, notification);
+        } catch (SecurityException ignored) {
+            // no notification permission: the bell already rang
+        }
+
+        // The page may still be alive and wants to move to the break phase.
+        Intent control = new Intent(ChronoPlugin.EVENT_CONTROL);
+        control.setPackage(getPackageName());
+        control.putExtra("action", "complete");
+        sendBroadcast(control);
+
+        stopForeground(true);
+        stopSelf();
     }
 
     /** Pushes the current mirror state into the notification shade. */

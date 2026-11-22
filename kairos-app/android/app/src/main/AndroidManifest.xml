@@ -35,6 +35,13 @@
                 android:value="user_initiated_focus_timer" />
         </service>
 
+        <!-- Native soundscape: a foreground service so the audio (and the bell at
+             the end of a session) survives a locked screen. -->
+        <service
+            android:name=".SoundscapeService"
+            android:exported="false"
+            android:foregroundServiceType="mediaPlayback" />
+
         <receiver
             android:name=".ChronoWidgetProvider"
             android:exported="false">
@@ -65,6 +72,8 @@
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
     <!-- Do-not-disturb during a focus session. The user grants this explicitly in
          system settings; without it the switch stays off and nothing changes. -->
     <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY" />

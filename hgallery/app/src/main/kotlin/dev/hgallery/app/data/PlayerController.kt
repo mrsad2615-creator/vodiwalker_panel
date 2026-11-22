@@ -123,7 +123,14 @@ class PlayerController(context: Context, private val uri: String) {
         hintMs = 0L
     }
 
-    fun setSpeed(value: Float) {
+    /**
+     * Applies a playback speed.
+     *
+     * Named `changeSpeed` rather than `setSpeed` on purpose: `var speed` already
+     * generates a `setSpeed(F)V` accessor on the JVM, and two declarations with
+     * that signature is a platform clash the compiler rejects.
+     */
+    fun changeSpeed(value: Float) {
         speed = value
         player.setPlaybackSpeed(value)
     }

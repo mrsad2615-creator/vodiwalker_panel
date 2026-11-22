@@ -187,7 +187,7 @@ fun VideoPlayerScreen(
                     onScrubStart = { controller.beginScrub() },
                     onScrubMove = { controller.moveScrub(it) },
                     onScrubEnd = { controller.endScrub() },
-                    onSpeed = { controller.setSpeed(it) },
+                    onSpeed = { controller.changeSpeed(it) },
                     onFillScreen = { fillScreen = !fillScreen },
                 ),
             )

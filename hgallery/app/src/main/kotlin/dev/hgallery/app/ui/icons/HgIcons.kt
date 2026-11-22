@@ -96,8 +96,9 @@ object HgIcons {
      * two shallow arcs reads as the same object at 24 dp.
      */
     val Discover: ImageVector = icon("HG.Discover") {
-        moveTo(12f, 20.8f)
-        arcToRelative(8.8f, 8.8f, 0f, true, false, 0.001f, 0f)
+        moveTo(20.8f, 12f)
+        arcToRelative(8.8f, 8.8f, 0f, true, true, -17.6f, 0f)
+        arcToRelative(8.8f, 8.8f, 0f, true, true, 17.6f, 0f)
         close()
         moveTo(6.4f, 6.2f)
         curveTo(9.6f, 10.2f, 9.6f, 13.8f, 6.4f, 17.8f)
@@ -121,11 +122,14 @@ object HgIcons {
     }
 
     val Search: ImageVector = icon("HG.Search") {
-        moveTo(10.8f, 18.2f)
-        arcToRelative(7.4f, 7.4f, 0f, true, false, 0.001f, 0f)
+        // Lens: a full ring, drawn as two half arcs so the stroke closes.
+        moveTo(16.9f, 10.3f)
+        arcToRelative(6.6f, 6.6f, 0f, true, true, -13.2f, 0f)
+        arcToRelative(6.6f, 6.6f, 0f, true, true, 13.2f, 0f)
         close()
-        moveTo(16.2f, 16.2f)
-        lineTo(20.8f, 20.8f)
+        // Handle.
+        moveTo(15.3f, 15.3f)
+        lineTo(20.4f, 20.4f)
     }
 
     val More: ImageVector = solid("HG.More") {

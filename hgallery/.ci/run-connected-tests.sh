@@ -47,11 +47,21 @@ if [ "$INSTALL_STATUS" -ne 0 ]; then
   exit 1
 fi
 
+# Fixtures are split across two device folders so the Albums tab has more than
+# one bucket to draw, and their EXIF dates differ so the timeline must group
+# them into separate day sections rather than collapsing everything into Today.
 echo "== pushing fixture media so the timeline has real content =="
 adb shell rm -rf "$DEVICE_DIR" >/dev/null 2>&1
-adb shell mkdir -p "$DEVICE_DIR" >/dev/null 2>&1
+adb shell mkdir -p "$DEVICE_DIR/Camera" >/dev/null 2>&1
+adb shell mkdir -p "$DEVICE_DIR/Screenshots" >/dev/null 2>&1
+n=0
 for f in .ci/fixtures/*.jpg; do
-  adb push "$f" "$DEVICE_DIR/" >/dev/null 2>&1
+  n=$((n + 1))
+  if [ $((n % 4)) -eq 0 ]; then
+    adb push "$f" "$DEVICE_DIR/Screenshots/" >/dev/null 2>&1
+  else
+    adb push "$f" "$DEVICE_DIR/Camera/" >/dev/null 2>&1
+  fi
 done
 # MediaStore only notices new files once someone asks it to index them.
 adb shell content call --uri content://media/external --method scan_volume --arg external_primary >/dev/null 2>&1

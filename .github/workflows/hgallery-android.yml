@@ -38,7 +38,7 @@ jobs:
       - name: Core unit tests
         run: |
           set -o pipefail
-          ./gradlew --console=plain --no-daemon :core:test 2>&1 | tee core.log
+          ./gradlew --console=plain --no-daemon --stacktrace :core:test 2>&1 | tee core.log
       # Echo the whole log when it is short: a configuration failure produces a
       # handful of lines and the cause is often one that matches no keyword.
       - name: Report failure details
@@ -46,13 +46,17 @@ jobs:
         shell: bash
         run: |
           set -uo pipefail
-          if [ -f core.log ] && [ "$(wc -l < core.log)" -lt 120 ]; then
-            while IFS= read -r line; do
-              echo "::error title=core::$line"
-            done < core.log
+          # Facts about the log before interpreting it. A previous attempt reported
+          # eight Gradle banner lines and nothing else, which is not enough to tell
+          # an out-of-memory kill from a compile error.
+          if [ -f core.log ]; then
+            echo "::error title=core-log::core.log is $(wc -c < core.log) bytes, $(wc -l < core.log) lines"
+            echo "::error title=core-head::$(head -c 700 core.log | tr '\n' '|')"
           else
-            python3 ../.github/scripts/annotate.py core.log "core tests"
+            echo "::error title=core-log::core.log was never created"
           fi
+          free -m | head -3 | tr '\n' '|' | sed 's/^/::error title=memory::/'
+          python3 ../.github/scripts/annotate.py core.log "core tests" || true
       - name: Upload core test reports
         if: always()
         uses: actions/upload-artifact@v4

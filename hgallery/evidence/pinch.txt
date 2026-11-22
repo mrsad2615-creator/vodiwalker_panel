@@ -1,0 +1,2 @@
+touch device: event12
+month view differs from day view

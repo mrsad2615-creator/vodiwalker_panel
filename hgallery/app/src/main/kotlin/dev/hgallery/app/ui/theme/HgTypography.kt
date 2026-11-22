@@ -46,36 +46,32 @@ import dev.hgallery.app.R
  *    label is far too tight.
  */
 /**
- * Inter for Latin glyphs. The variable file carries the whole weight axis, so
- * each declaration below is a real weight rather than a synthesised one.
+ * The one family every style in the app uses.
+ *
+ * Inter is listed first and Vazirmatn immediately after, at each weight. Compose
+ * resolves a glyph by walking this list, so:
+ *
+ *  - Latin text hits Inter, whose x-height, open apertures and humanist skeleton
+ *    sit within a few percent of Huawei's HarmonyOS Sans;
+ *  - Persian/Arabic text falls through to Vazirmatn, because Inter carries no
+ *    Arabic-script coverage at all;
+ *  - a single mixed-script string (a filename containing both, an album called
+ *    "2024 سفر") resolves per glyph, in one family, at one line height.
+ *
+ * That last point is why this is a flat list rather than a per-locale branch: a
+ * `Locale`-driven switch would pick one face for the whole string and leave the
+ * other script to whatever the device happens to substitute.
  */
-private val InterLatin = FontFamily(
+val HgFontFamily = FontFamily(
     Font(R.font.inter_variable, FontWeight.Normal),
     Font(R.font.inter_variable, FontWeight.Medium),
     Font(R.font.inter_variable, FontWeight.SemiBold),
     Font(R.font.inter_variable, FontWeight.Bold),
-)
-
-/**
- * Vazirmatn for Arabic-script glyphs. Inter has no Arabic coverage, so Persian
- * previously fell back to whatever the device shipped — on a POCO that is often a
- * heavier, differently-metricked face than the Latin text beside it.
- */
-val Vazirmatn = FontFamily(
     Font(R.font.vazirmatn_regular, FontWeight.Normal),
     Font(R.font.vazirmatn_medium, FontWeight.Medium),
     Font(R.font.vazirmatn_semibold, FontWeight.SemiBold),
     Font(R.font.vazirmatn_bold, FontWeight.Bold),
 )
-
-/**
- * The family every style uses: Latin first, Arabic-script second.
- *
- * Compose resolves per glyph, walking the families in order, so one mixed-script
- * string renders Inter for its Latin run and Vazirmatn for its Persian run at the
- * same line height. That is why this is not a `Locale`-driven branch.
- */
-val HgFontFamily = FontFamily(listOf(InterLatin, Vazirmatn))
 
 private val trim = LineHeightStyle(
     alignment = LineHeightStyle.Alignment.Center,

@@ -54,35 +54,70 @@ export async function requestNotificationPermission(): Promise<NotificationPermi
 }
 
 /**
- * Plays a refined minimal harmonic bell chime using Web Audio API (no external audio files needed).
+ * The end-of-session bell.
+ *
+ * The 1.7 chime was two sine partials at 0.08 gain — effectively inaudible on a
+ * phone speaker next to a desk fan, which is why sessions "finished silently".
+ * This is a struck bell instead: a warm fundamental, a partial a fifth above, and
+ * a shimmer an octave up, each with its own decay and a 70 ms stagger, so the
+ * strike reads as one gesture rather than three beeps. It runs through a limiter
+ * so it is loud without clipping.
+ *
+ * Still Web Audio, so the APK carries no licensed audio. A backgrounded WebView
+ * is suspended by Android — that case belongs to the native notification
+ * channel, not to this function.
  */
 export function playLuxuryChime(enabled: boolean = true): void {
   if (!enabled) return;
   try {
-    // Shared singleton: creating one context per chime used to exhaust the
-    // WebView's context budget and kill the sound after a few sessions.
     const ctx = getAudioContext();
     if (!ctx) return;
+    if (ctx.state === 'suspended') void ctx.resume().catch(() => undefined);
+
     const now = ctx.currentTime;
 
-    const freqs = [528, 792];
-    freqs.forEach((freq, idx) => {
+    const limiter = ctx.createDynamicsCompressor();
+    limiter.threshold.value = -8;
+    limiter.knee.value = 4;
+    limiter.ratio.value = 10;
+    limiter.attack.value = 0.003;
+    limiter.release.value = 0.3;
+    limiter.connect(ctx.destination);
+
+    // Frequency · delay · gain · decay — a major triad, struck low to high.
+    const partials: [number, number, number, number][] = [
+      [264, 0, 0.34, 2.6],
+      [396, 0.07, 0.24, 2.1],
+      [528, 0.13, 0.17, 1.7],
+      [792, 0.2, 0.1, 1.2],
+    ];
+
+    for (const [frequency, delay, level, decay] of partials) {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.type = 'sine';
-      osc.frequency.setValueAtTime(freq, now + idx * 0.14);
+      osc.frequency.setValueAtTime(frequency, now + delay);
+      // A hair of detune gives the partial its struck-metal shimmer.
+      osc.detune.setValueAtTime(4, now + delay);
 
-      gain.gain.setValueAtTime(0.0001, now + idx * 0.14);
-      gain.gain.exponentialRampToValueAtTime(0.08, now + idx * 0.14 + 0.03);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + idx * 0.14 + 0.9);
+      gain.gain.setValueAtTime(0.0001, now + delay);
+      gain.gain.exponentialRampToValueAtTime(level, now + delay + 0.012);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + delay + decay);
 
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start(now + idx * 0.14);
-      osc.stop(now + idx * 0.14 + 0.95);
-    });
+      osc.connect(gain).connect(limiter);
+      osc.start(now + delay);
+      osc.stop(now + delay + decay + 0.05);
+    }
+
+    window.setTimeout(() => {
+      try {
+        limiter.disconnect();
+      } catch {
+        // already gone
+      }
+    }, 3600);
   } catch {
-    // Audio playback optional if blocked by browser autoplay policy
+    // Audio playback is optional; a blocked context must never break a session.
   }
 }
 

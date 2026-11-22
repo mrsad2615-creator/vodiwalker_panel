@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ModalSheet } from '@/components/ui/ModalSheet';
 import { Numeric } from '@/components/ui/Numeric';
 import { upsertJournalEntry } from '@/lib/db';
@@ -26,14 +26,23 @@ export function JournalSheet({ open, dateKey = getTodayKey(), entry, onClose }: 
   const [note, setNote] = useState(entry?.note ?? '');
   const [saving, setSaving] = useState(false);
 
-  // The sheet is keyed by day by its parent, but a late `entry` (live query) must
-  // still land in the fields without wiping what the user is typing.
+  // Hydrate exactly once per opening. The live query pushes a new `entry` the
+  // instant the mood is stored, and an effect that watched every field would
+  // then overwrite the sentence the user is still typing — a bug that showed up
+  // as "my note disappeared" (and as a flaky test).
+  const hydratedRef = useRef<string | null>(null);
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      hydratedRef.current = null;
+      return;
+    }
+    const key = entry?.id ?? `new-${dateKey}`;
+    if (hydratedRef.current === key) return;
+    hydratedRef.current = key;
     setMood(entry?.mood ?? 3);
     setHighlight(entry?.highlight ?? '');
     setNote(entry?.note ?? '');
-  }, [open, entry?.id, entry?.mood, entry?.highlight, entry?.note]);
+  }, [open, entry?.id, entry?.mood, entry?.highlight, entry?.note, dateKey]);
 
   const dateInfo = formatJalaaliFull(dateKey);
 

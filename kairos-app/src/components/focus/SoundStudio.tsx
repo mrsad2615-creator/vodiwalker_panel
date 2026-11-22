@@ -31,14 +31,23 @@ interface PersistedSound {
 }
 
 function loadPersisted(): PersistedSound {
-  const fallback: PersistedSound = { mix: {}, master: 0.8, patternId: BREATH_PATTERNS[0].id };
+  // Opening the studio on an empty mixer is what made the first press of play
+  // feel broken: the engine had nothing to play. It now opens on the deep
+  // profile — audible in one tap, and still fully editable.
+  const fallback: PersistedSound = {
+    mix: normalizeMix(SOUND_PROFILES[0].mix),
+    master: 0.8,
+    patternId: BREATH_PATTERNS[0].id,
+  };
   if (typeof window === 'undefined') return fallback;
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return fallback;
     const parsed = JSON.parse(raw) as Partial<PersistedSound>;
+    const storedMix = normalizeMix(parsed.mix);
     return {
-      mix: normalizeMix(parsed.mix),
+      // An explicitly emptied mixer stays empty; a missing one gets the default.
+      mix: parsed.mix ? storedMix : fallback.mix,
       master:
         typeof parsed.master === 'number' ? Math.min(1, Math.max(0, parsed.master)) : fallback.master,
       patternId:
@@ -95,12 +104,24 @@ export function SoundStudio() {
   }, [mix, master, patternId]);
 
   // ── engine ────────────────────────────────────────────────────────────────
+  // Start/stop owns the graph's lifetime…
   useEffect(() => {
     if (!playing) return;
-    soundStudio.apply(mix, master);
+    void soundStudio.unlock().then((running) => {
+      if (running) soundStudio.apply(mix, master);
+    });
     return () => {
       soundStudio.stop();
     };
+    // `mix`/`master` are read through refs below: a slider drag must not restart
+    // the graph, it must crossfade *inside* it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [playing]);
+
+  // …and level changes only move the faders.
+  useEffect(() => {
+    if (!playing) return;
+    soundStudio.apply(mix, master);
   }, [playing, mix, master]);
 
   // ── sleep timer ───────────────────────────────────────────────────────────

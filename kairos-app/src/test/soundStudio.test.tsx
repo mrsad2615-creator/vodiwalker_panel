@@ -61,7 +61,8 @@ describe('Sound Studio', () => {
   it('sets a sleep timer without pretending sound is playing', () => {
     render(<SoundStudio />);
     fireEvent.click(screen.getByText('30د'));
-    // Nothing is playing yet, so the status stays honest.
-    expect(screen.getByText('خاموش')).toBeInTheDocument();
+    // A sleep timer on a loaded-but-silent mixer says «آماده», not «در حال پخش»:
+    // the studio never pretends to be playing before the user presses play.
+    expect(screen.getByText('آماده')).toBeInTheDocument();
   });
 });

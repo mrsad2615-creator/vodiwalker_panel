@@ -221,6 +221,7 @@ function buildLayer(ctx: AudioContext, id: LayerId, handleTimers: number[]): Cha
 class SoundStudioEngine {
   private ctx: AudioContext | null = null;
   private master: GainNode | null = null;
+  private limiter: DynamicsCompressorNode | null = null;
   private layers = new Map<LayerId, LayerHandle>();
   private masterLevel = 0.8;
 
@@ -247,7 +248,9 @@ class SoundStudioEngine {
 
     const now = ctx.currentTime;
     this.master.gain.cancelScheduledValues(now);
-    this.master.gain.setTargetAtTime(this.masterLevel * 0.9, now, 0.05);
+    // 0.9 → 1.0 of the user's level: the limiter absorbs the peaks, so the
+    // slider's top is actually loud instead of politely quiet.
+    this.master.gain.setTargetAtTime(Math.max(0.0001, this.masterLevel), now, 0.08);
 
     // Remove layers that are no longer wanted.
     for (const [id, handle] of [...this.layers.entries()]) {
@@ -270,7 +273,8 @@ class SoundStudioEngine {
         this.layers.set(id, handle);
       }
       handle.gain.gain.cancelScheduledValues(now);
-      handle.gain.gain.setTargetAtTime(level * 0.55, now, 0.08);
+      // 0.24 s time constant: a slider drag becomes a crossfade, never a click.
+      handle.gain.gain.setTargetAtTime(Math.max(0.0001, level * 0.95), now, 0.24);
     }
   }
 
@@ -317,6 +321,26 @@ class SoundStudioEngine {
     }, Math.round(fadeSeconds * 1000) + 40);
   }
 
+  /** Exposes the live context state so the UI can say "silent" honestly. */
+  state(): AudioContextState | 'unsupported' {
+    if (!this.ctx) return getAudioContext() ? 'suspended' : 'unsupported';
+    return this.ctx.state;
+  }
+
+  /** Called from a real gesture (the play button) — resume and warm the graph. */
+  async unlock(): Promise<boolean> {
+    const ctx = this.ensureContext();
+    if (!ctx) return false;
+    if (ctx.state === 'suspended') {
+      try {
+        await ctx.resume();
+      } catch {
+        return false;
+      }
+    }
+    return ctx.state === 'running';
+  }
+
   /** Short, gentle cue used by the breathing pacer and phase changes. */
   cue(frequency = 440, seconds = 0.5, level = 0.12): void {
     const ctx = this.ensureContext();
@@ -329,7 +353,7 @@ class SoundStudioEngine {
     gain.gain.setValueAtTime(0.0001, now);
     gain.gain.exponentialRampToValueAtTime(level, now + 0.06);
     gain.gain.exponentialRampToValueAtTime(0.0001, now + seconds);
-    osc.connect(gain).connect(ctx.destination);
+    osc.connect(gain).connect(this.master ?? ctx.destination);
     osc.start(now);
     osc.stop(now + seconds + 0.05);
   }
@@ -360,12 +384,24 @@ class SoundStudioEngine {
     if (!this.ctx) {
       this.ctx = getAudioContext();
       if (this.ctx && !this.master) {
+        // master → limiter → output. The limiter is the difference between
+        // "noise in a tab" and a soundscape: it lets each layer sit at a real
+        // level without the sum clipping when four of them play at once.
         this.master = this.ctx.createGain();
         this.master.gain.value = 0.0001;
-        this.master.connect(this.ctx.destination);
+
+        this.limiter = this.ctx.createDynamicsCompressor();
+        this.limiter.threshold.value = -10;
+        this.limiter.knee.value = 6;
+        this.limiter.ratio.value = 12;
+        this.limiter.attack.value = 0.004;
+        this.limiter.release.value = 0.22;
+
+        this.master.connect(this.limiter);
+        this.limiter.connect(this.ctx.destination);
       }
     }
-    if (this.ctx?.state === 'suspended') void this.ctx.resume();
+    if (this.ctx?.state === 'suspended') void this.ctx.resume().catch(() => undefined);
     return this.ctx;
   }
 }

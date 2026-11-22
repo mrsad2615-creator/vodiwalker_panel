@@ -2,7 +2,6 @@ package dev.hgallery.app.ui.photos
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -25,7 +24,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -94,7 +92,6 @@ fun PhotosScreen(
     }
 
     var monthView by remember { mutableStateOf(false) }
-    val pinch = remember { mutableFloatStateOf(1f) }
 
     val columns = if (monthView) HgMetrics.MonthColumns else HgMetrics.PhotosColumns
     val thumbnails = remember { container.thumbnails }
@@ -125,7 +122,38 @@ fun PhotosScreen(
                 stringResource(R.string.empty_photos_title),
                 stringResource(R.string.empty_photos_body),
             )
-            else -> LazyVerticalGrid(
+            else -> Box(
+                Modifier
+                    .fillMaxSize()
+                    .pointerInput(Unit) {
+                        awaitPointerEventScope {
+                            while (true) {
+                                val down = awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Initial)
+                                val pressed = down.changes.filter { it.pressed }
+                                if (pressed.size >= 2) {
+                                    val start = (pressed[0].position - pressed[1].position).getDistance()
+                                    var current = start
+                                    // Follow both pointers until one lifts.
+                                    while (true) {
+                                        val move = awaitPointerEvent(
+                                            androidx.compose.ui.input.pointer.PointerEventPass.Initial,
+                                        )
+                                        val still = move.changes.filter { it.pressed }
+                                        if (still.size < 2) break
+                                        current = (still[0].position - still[1].position).getDistance()
+                                    }
+                                    val ratio = if (start > 0f) current / start else 1f
+                                    if (ratio > 1.35f && !monthView) {
+                                        monthView = true
+                                    } else if (ratio < 0.7f && monthView) {
+                                        monthView = false
+                                    }
+                                }
+                            }
+                        }
+                    },
+            ) {
+            LazyVerticalGrid(
                 columns = GridCells.Fixed(columns),
                 horizontalArrangement = Arrangement.spacedBy(HgMetrics.GridGap),
                 verticalArrangement = Arrangement.spacedBy(HgMetrics.GridGap),
@@ -136,21 +164,7 @@ fun PhotosScreen(
                 ),
                 modifier = Modifier
                     .fillMaxSize()
-                    .testTag(HgTestTags.PHOTOS_GRID)
-                    // The zoom threshold is deliberately coarse: a pinch that is
-                    // still in progress must not flip the level back and forth.
-                    .pointerInput(Unit) {
-                        detectTransformGestures { _, _, zoom, _ ->
-                            pinch.value *= zoom
-                            if (pinch.value > 1.35f && !monthView) {
-                                monthView = true
-                                pinch.value = 1f
-                            } else if (pinch.value < 0.7f && monthView) {
-                                monthView = false
-                                pinch.value = 1f
-                            }
-                        }
-                    },
+                    .testTag(HgTestTags.PHOTOS_GRID),
             ) {
                 if (monthView) {
                     monthSections.forEach { section ->
@@ -167,6 +181,7 @@ fun PhotosScreen(
                         }
                     }
                 }
+            }
             }
         }
     }

@@ -58,9 +58,15 @@ Persian uses Vazirmatn at the same sizes; digits follow the locale.
 
 ## Spacing scale
 
-`4 8 12 16 20 24 32` dp. Screen gutter is **20 dp** (measured from R1: the title
-and the first thumbnail column share the same left edge). Grid gutter is **2 dp**,
-matching the near-seamless Huawei masonry.
+`4 8 12 16 20 24 32` dp. Screen gutter is **20 dp**, and this figure is an
+**estimate, not a measurement**. R1 puts the title's left edge at 24 of 341 px,
+i.e. ≈7 % of the width, which is ≈29 dp on a 412 dp-wide screen; the value was
+rounded down after comparing the rendered result against the reference by eye.
+The reference corpus contains no clean full-screen capture, so the true gutter
+cannot be recovered — see `MEASURED_COMPARISON.txt`.
+
+Grid gutter is **2 dp**, which matches the near-seamless appearance of the
+reference grid at the resolution available.
 
 ## Grid
 

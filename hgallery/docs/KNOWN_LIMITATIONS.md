@@ -1,0 +1,62 @@
+# KNOWN_LIMITATIONS.md
+
+This file exists so that no reader of this project can mistake an unfinished
+feature for a finished one. Every item below was a deliberate choice, not an
+oversight that went unnoticed.
+
+## Cannot be verified at all in this environment
+
+| Limitation | Why |
+|---|---|
+| **No physical-device testing.** The POCO X3 Pro was never available to this build. | No ADB access to the phone. Everything was verified on an x86_64 emulator. |
+| **No 120 Hz or thermal measurement.** | The emulator does not report a 120 Hz mode, and thermal behaviour is a property of the phone's SoC. |
+| **No Android Studio / Layout Inspector session.** | The sandbox has no Android SDK and cannot download one; the build runs in GitHub Actions. |
+| **Single AI model.** The brief asks for eight specialised engines. | This agent is one model. Research, implementation, audit and verification were performed as *separate passes* — which is what the brief allows when only one engine exists — but no second model reviewed this code. Claims of multi-model orchestration would be false. |
+
+## Reference gaps (behaviour inferred, not captured)
+
+| Screen | What is inferred |
+|---|---|
+| Full-screen viewer | The exact icon order of the bottom action row. Implemented as Share · Favourite · Edit · Delete · Details. |
+| Month view | That it uses 6 columns. The *existence* of the mode is documented by Huawei; the column count is an inference. |
+| Dark theme | Huawei's dark Gallery was never captured. The palette follows the light palette's structure and is not pixel-verified. |
+
+## Implemented but unverified
+
+* **Pinch to switch views** compiles and is wired, but a synthetic two-finger
+  gesture could not be delivered to the app from the CI harness (`sendevent`
+  produced a 0.0 % frame change). The toolbar switch performs the same state change
+  and *is* verified. The pinch remains unverified.
+* **Favourites** write `IS_FAVORITE` on API 30+; the write path was not exercised
+  against a failure case (e.g. a read-only volume).
+* **Deletion** asks for confirmation and then deletes through MediaStore. On
+  Android 11+ this also requires a system confirmation dialog, which was not
+  observed in a screenshot.
+* **Partial media access** (Android 14 "selected photos") is detected and reported,
+  but the UI that explains it was not built.
+
+## Not implemented
+
+Photos: multi-selection, sharing, photo details/EXIF, storage info.
+Albums: custom album creation, renaming, cover selection, move/copy, hidden albums,
+recently deleted, sort UI.
+Viewer: metadata panel.
+Editor: **entirely** — crop, rotate, flip, exposure, contrast, filters, drawing,
+text, undo/redo. A slider that does not change pixels would be fake functionality,
+so the editor is absent and its button is disabled rather than pretending.
+Video: **entirely** — no Media3 integration.
+Discover and Highlights: *entirely* — both tabs say so on screen.
+Search: the filtering logic exists and is unit-tested, but there is no search screen.
+Duplicate detection: the algorithm exists and is unit-tested, but no worker scans the
+library and no UI shows results.
+Persian calendar: dates use the Gregorian calendar in both languages.
+
+## Deliberate non-claims
+
+* This is **not** a Huawei product and contains no Huawei code, fonts or image
+  assets. The icons are original vector geometry drawn to the same optical weight.
+* Hidden or recently-deleted albums are **not** encrypted storage, and this project
+  never describes them as such.
+* No visual-similarity percentage is claimed for any screen. `tools/compare_reference.py`
+  reports individual structural measurements instead, because the two images contain
+  different photographs and a single score would mostly measure content.

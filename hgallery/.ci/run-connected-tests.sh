@@ -187,7 +187,7 @@ print("%.4f %.0f" % (diff, diff * 100))
 PYEOF
 )
 CHANGED=$(echo "$VERDICT" | cut -d' ' -f1)
-echo "changed-pixel fraction below the status bar: $CHANGED" >> "$OUT_DIR/diag/pinch.txt"
+echo "changed-pixel fraction below the status bar: $CHANGED" | tee -a "$OUT_DIR/diag/pinch.txt"
 python3 - "$CHANGED" <<'PYEOF'
 import sys
 fraction = float(sys.argv[1]) if sys.argv[1] else 0.0

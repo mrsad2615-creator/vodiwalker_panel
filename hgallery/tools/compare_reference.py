@@ -10,6 +10,21 @@ to the image width, so captures at different resolutions can be compared.
 
 Usage:
     python3 tools/compare_reference.py REFERENCE.png IMPLEMENTATION.png
+
+KNOWN LIMITATION — read before trusting the numbers
+---------------------------------------------------
+This tool assumes both images are *full-screen device captures*. None of the
+available Huawei references are:
+
+  * R1 is a 341x750 press image. Its photographs run to x=0 while the title
+    starts at x=24, which is only possible if the capture was cropped.
+  * R2 and R3 are marketing compositions: the phone is drawn at an angle,
+    surrounded by callout circles, on a coloured background.
+
+Feeding those images in produces figures that look precise and are not. Only the
+measurements that survive this — flat-region colours, and the title cap height
+relative to image height — should be read as findings. Absolute gutters cannot be
+recovered from the available corpus, and this file will not pretend otherwise.
 """
 
 from __future__ import annotations
@@ -38,102 +53,69 @@ def row_is_content(img: np.ndarray, y: int, threshold: int = 6) -> bool:
 
 
 def measure(img: np.ndarray) -> dict:
+    """Measure the layout structure that is comparable between two captures.
+
+    Every measurement is confined to a row band that provably contains the
+    feature being measured. An earlier version scanned whole images and happily
+    reported the status bar as the "leftmost text", which produced numbers that
+    looked precise and were nonsense.
+    """
     h, w, _ = img.shape
     out: dict[str, float | int | None] = {"width": w, "height": h}
 
-    # Vertical profile: which rows contain anything at all.
-    content_rows = [y for y in range(h) if row_is_content(img, y)]
+    max_c = img.max(axis=2)
+    min_c = img.min(axis=2)
+    saturated = (max_c - min_c) > 30          # photographic
+    dark = max_c < 170                        # text or glyph
 
-    # --- Left gutter -----------------------------------------------------
-    # Find the leftmost content column in the widest content band. The reference
-    # aligns the title and the first grid column on the same gutter.
-    #
-    # Coloured (non-grey) pixels are photographs; grey/black pixels are text.
-    rgb = img
-    max_c = rgb.max(axis=2)
-    min_c = rgb.min(axis=2)
-    saturated = (max_c - min_c) > 28          # a photograph, not text
-    text_like = (~saturated) & (max_c < 200)  # dark, low-saturation
+    # ---- Grid band: rows whose saturated coverage exceeds 40 % of the width.
+    coverage = saturated.sum(axis=1) / w
+    grid_rows = np.where(coverage > 0.40)[0]
+    if len(grid_rows) >= 3:
+        grid_top, grid_bottom = int(grid_rows.min()), int(grid_rows.max())
+        out["grid_top_ratio"] = round(grid_top / h, 4)
+        out["grid_bottom_ratio"] = round(grid_bottom / h, 4)
 
-    # The status bar and the toolbar sit above the page content and would win
-    # any "leftmost pixel" contest, so the grid gutter is measured only inside
-    # the densest photographic band, and the title gutter only inside the title's
-    # own row range.
-    content_top = int(h * 0.06)
-    sat_below = saturated[content_top:]
-    densities = sat_below.sum(axis=1)
-    if densities.max() > w * 0.25:
-        grid_start = content_top + int(np.argmax(densities > w * 0.25))
-        grid_rows = saturated[grid_start:]
-        photo_cols = np.where(grid_rows.any(axis=0))[0]
-    else:
-        photo_cols = np.where(saturated.any(axis=0))[0]
+        band = saturated[grid_top:grid_bottom + 1]
+        cols = np.where(band.any(axis=0))[0]
+        if len(cols):
+            out["grid_left_ratio"] = round(int(cols.min()) / w, 4)
+            out["grid_right_margin_ratio"] = round((w - 1 - int(cols.max())) / w, 4)
+        # A seam is a column that is *never* photographic inside the band, i.e. a
+        # real gap between cells rather than a dark patch in one photograph.
+        seams = int((~band).all(axis=0).sum())
+        out["seam_ratio"] = round(seams / w, 4)
 
-    # Text bands, ignoring everything above the status bar.
-    text_band = text_like[content_top:]
-    band_rows = np.where(text_band.any(axis=1))[0]
-    title_cols = np.array([], dtype=int)
-    if len(band_rows):
-        # The title is the first tall text block; take its first 40 rows.
-        first = band_rows[0]
-        block = text_band[first:first + min(40, len(text_band) - first)]
-        title_cols = np.where(block.any(axis=0))[0]
+    # ---- Title: the first tall dark band below the status bar and above the grid.
+    limit = int(out.get("grid_top_ratio", 1.0) * h)
+    top_of_page = int(h * 0.05)
+    search_band = dark[top_of_page:max(limit, top_of_page + 1)]
+    if search_band.size:
+        rows_with_text = np.where(search_band.any(axis=1))[0]
+        if len(rows_with_text):
+            # Group consecutive rows into blocks, then take the block that is at
+            # least 8 rows tall: that is a title, not an icon.
+            blocks, start = [], rows_with_text[0]
+            for previous, row in zip(rows_with_text, rows_with_text[1:]):
+                if row - previous > 3:
+                    blocks.append((start, previous))
+                    start = row
+            blocks.append((start, rows_with_text[-1]))
+            tall = [b for b in blocks if b[1] - b[0] >= 8] or blocks
+            first = tall[0]
+            block = search_band[first[0]:first[1] + 1]
+            cols = np.where(block.any(axis=0))[0]
+            if len(cols):
+                out["title_left_ratio"] = round(int(cols.min()) / w, 4)
+            out["title_height_ratio"] = round((first[1] - first[0] + 1) / h, 4)
+            out["title_top_ratio"] = round((top_of_page + first[0]) / h, 4)
 
-    out["first_photo_col"] = int(photo_cols.min()) if len(photo_cols) else None
-    out["first_text_col"] = int(title_cols.min()) if len(title_cols) else None
-    if out["first_photo_col"] is not None:
-        out["photo_gutter_ratio"] = round(out["first_photo_col"] / w, 4)
-    if out["first_text_col"] is not None:
-        out["title_gutter_ratio"] = round(out["first_text_col"] / w, 4)
-
-    # --- Grid seams ------------------------------------------------------
-    # The reference grid is near-seamless, so what matters is how wide the seams
-    # are, not how many coloured blobs appear: photographs that happen to be
-    # similar in tone would otherwise be counted as one cell. A column counts as
-    # a seam when it is background for the whole grid band.
-    if len(photo_cols):
-        band = saturated[grid_start:]
-        seam_cols = int((~band).all(axis=0).sum())
-        out["grid_seam_cols"] = seam_cols
-        out["grid_seam_ratio"] = round(seam_cols / w, 4)
-
-    # --- Title band ------------------------------------------------------
-    # The largest vertical run of text-only rows near the top is the title.
-    bands: list[tuple[int, int]] = []
-    start = None
-    for y in range(h):
-        has_text = bool(text_like[y].any())
-        has_photo = bool(saturated[y].any())
-        if has_text and not has_photo:
-            if start is None:
-                start = y
-        else:
-            if start is not None:
-                bands.append((start, y))
-                start = None
-    if start is not None:
-        bands.append((start, h))
-    if bands:
-        # tallest band in the top third is the screen title
-        top_bands = [b for b in bands if b[1] < h * 0.45] or bands
-        biggest = max(top_bands, key=lambda b: b[1] - b[0])
-        out["title_band_px"] = biggest[1] - biggest[0]
-        out["title_height_ratio"] = round((biggest[1] - biggest[0]) / h, 4)
-        out["title_top_ratio"] = round(biggest[0] / h, 4)
-
-    # --- Bottom bar ------------------------------------------------------
-    # The bar is the lowest content band that spans nearly the full width.
-    if content_rows:
-        out["last_content_row_ratio"] = round(content_rows[-1] / h, 4)
-
-    # --- Accent colour ---------------------------------------------------
-    # Sample the most saturated blue, which is the accent in both images.
-    blue = rgb[(rgb[:, :, 2] > 180) & (rgb[:, :, 0] < 120) & (rgb[:, :, 1] > 90)]
+    # ---- Colours.
+    blue = img[(img[:, :, 2] > 170) & (img[:, :, 0] < 130) & (img[:, :, 1] > 80)]
     if len(blue):
         med = np.median(blue, axis=0).astype(int)
         out["accent_rgb"] = "#%02X%02X%02X" % (med[0], med[1], med[2])
 
-    # --- Page background --------------------------------------------------
     corners = np.concatenate([
         img[2:12, 2:12].reshape(-1, 3),
         img[2:12, -12:-2].reshape(-1, 3),
@@ -146,12 +128,13 @@ def measure(img: np.ndarray) -> dict:
 def compare(ref: dict, impl: dict) -> list[tuple[str, object, object, str]]:
     rows = []
     for key, label in [
-        ("photo_gutter_ratio", "photo grid gutter / width"),
-        ("title_gutter_ratio", "title gutter / width"),
-        ("grid_seam_ratio", "grid seam width / width"),
-        ("title_height_ratio", "title band / height"),
+        ("grid_left_ratio", "grid left gutter / width"),
+        ("grid_right_margin_ratio", "grid right margin / width"),
+        ("title_left_ratio", "title left gutter / width"),
+        ("seam_ratio", "grid seam width / width"),
+        ("title_height_ratio", "title cap height / height"),
+        ("grid_top_ratio", "grid top / height"),
         ("page_rgb", "page colour"),
-        ("accent_rgb", "accent colour"),
     ]:
         a, b = ref.get(key), impl.get(key)
         if a is None or b is None:

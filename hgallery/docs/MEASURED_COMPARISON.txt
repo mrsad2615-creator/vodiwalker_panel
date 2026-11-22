@@ -1,0 +1,54 @@
+MEASURED COMPARISON — reference versus implementation
+=====================================================
+
+Method
+------
+`tools/compare_reference.py` measures structural geometry on both images and
+scales it to image width, so captures at different resolutions can be compared.
+It deliberately reports individual measurements and no combined similarity score:
+the two images contain different photographs, so pixel distance would measure the
+content rather than the design.
+
+What the reference corpus actually is
+-------------------------------------
+    R1  photos-emui11.jpg            341 x 750    press image, cropped
+    R2  albums-official.png         1354 x 1285   marketing composition
+    R3  recently-deleted-official.png 1354 x 1163 marketing composition
+
+None of the three is a clean full-screen capture. R1's photographs reach x=0
+while its title begins at x=24, which is only possible if the capture was
+cropped; R2 and R3 draw the phone at an angle among callout circles. Absolute
+gutters therefore cannot be recovered from this corpus, and are not claimed.
+
+Measurements that survive the caveat
+------------------------------------
+    metric                          reference     ours        reading
+    ------------------------------  ------------  ----------  -----------------
+    title cap height / height       0.0280        0.0281      matches (0.4 %)
+    page colour                     #FFFFFF       #FFFFFF     matches
+    accent (ADD ALBUM interior)     #0080FC       #0080FF     1/255 difference
+    secondary text                  #8C8C8C       #8C8C8C     matches
+    primary text (glyph core)       #242020       #1A1A1A     set slightly darker
+                                                              than the measured
+                                                              anti-aliased edge
+
+Title cap height is the one geometry measurement that is robust to cropping,
+because it is a ratio within a single glyph block. It agrees to within 0.4 %,
+which is the strongest evidence in this project that the type ramp is right.
+
+What is not measured, and why
+-----------------------------
+  * Screen margins. Not recoverable — see above. The 20 dp gutter used in the
+    implementation is an estimate from R1's 24/341 ratio (≈7 % of width, ≈29 dp on
+    a 412 dp-wide screen), rounded down. DESIGN_SYSTEM.md states this as an
+    estimate rather than a measurement.
+  * Grid pillarboxing (4 columns versus edge-to-edge). The reference is too low
+    resolution and too cropped for the cell boundaries to be resolved; the
+    luminance edges along the grid are dominated by photographic content.
+  * Dark theme. No dark capture exists.
+
+How to close these gaps
+-----------------------
+A clean full-screen capture from a real Huawei device at native resolution would
+make every one of these measurable. Until one exists, the honest position is that
+the geometry is approximate and the colours and type scale are verified.

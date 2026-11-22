@@ -62,3 +62,19 @@ exists to show, so no overall figure is given.
 | Function above 8 | multi-selection, sharing, search, EXIF details |
 | Performance above 7 | Macrobenchmark and `FrameMetrics` on the POCO X3 Pro |
 | Compatibility above 8 | a run on API 29 and API 34, not only 33 |
+
+## Revision — 2026-11-22 (multi-selection, trash, share)
+
+| Category | Weight | Score | Evidence |
+|---|---|---|---|
+| Huawei visual fidelity | 30% | 7.5/10 | Selection header, tick, receding tiles and the bottom action row follow R3. The action row's icon order is still an inference for the viewer. |
+| Functional completeness | 25% | 5.5/10 | Selection, batch share and recoverable delete are real and tested. Editor, video, search screen, Discover and custom albums remain absent and are labelled absent on screen. |
+| Code quality | 15% | 8/10 | Platform-specific work isolated in `MediaActions`; the two rules that could corrupt state (selection, delete path) are pure and unit-tested; lint is fatal and currently clean. |
+| Performance | 15% | 5/10 | Bitmap budget is capped and deleted tiles are evicted, but nothing has been profiled on a real device. No 120 Hz claim is made. |
+| Interactions and animations | 10% | 7/10 | Fade on the selection chrome, tick fade, 120 ms transitions. No measured frame timing. |
+| Compatibility | 5% | 7/10 | API 26–35 paths for permissions and deletion, each unit-tested at the decision level; only an API 33 emulator was actually run. |
+
+The score is deliberately not higher: "functional completeness" is measured
+against the brief's full feature list, and the editor and video playback are a
+large part of it and are missing. Nothing here was profiled on the POCO X3 Pro,
+which is the device this project exists for.

@@ -29,15 +29,21 @@ oversight that went unnoticed.
   and *is* verified. The pinch remains unverified.
 * **Favourites** write `IS_FAVORITE` on API 30+; the write path was not exercised
   against a failure case (e.g. a read-only volume).
-* **Deletion** asks for confirmation and then deletes through MediaStore. On
-  Android 11+ this also requires a system confirmation dialog, which was not
-  observed in a screenshot.
+* **Deletion** confirms, then routes through `MediaStore.createTrashRequest` on
+  API 30+, so the items are recoverable from the phone's own Recycle bin. The
+  app's side of this is tested and photographed; the *system's* own second
+  confirmation was not observed end to end, because the emulator image has no
+  Recycle bin UI. The decision logic that chooses between trash, system-delete
+  and direct-delete is unit-tested for every API level.
+* **Persian plurals.** Lint's `ImpliedQuantity` check found that Persian's
+  singular form also covers zero, so the delete bodies now carry the count in
+  both variants. The wording was reviewed by inspection, not by a native speaker.
 * **Partial media access** (Android 14 "selected photos") is detected and reported,
   but the UI that explains it was not built.
 
 ## Not implemented
 
-Photos: multi-selection, sharing, photo details/EXIF, storage info.
+Photos: photo details/EXIF, storage info, batch *move/copy* (share and delete are done).
 Albums: custom album creation, renaming, cover selection, move/copy, hidden albums,
 recently deleted, sort UI.
 Viewer: metadata panel.

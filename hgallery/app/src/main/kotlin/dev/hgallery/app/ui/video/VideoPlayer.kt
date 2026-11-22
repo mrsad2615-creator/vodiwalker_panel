@@ -149,7 +149,8 @@ fun VideoPlayerScreen(
         }
 
         PlayerCentreButton(
-            visible = chrome.visible && (chrome.showReplay || (!controller.state.isPlaying && !controller.state.hasError)),
+            visible = chrome.visible &&
+                (chrome.showReplay || (!controller.state.isPlaying && !controller.state.hasError)),
             showReplay = chrome.showReplay,
             onClick = {
                 if (chrome.showReplay) controller.replay() else controller.togglePlay()

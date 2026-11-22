@@ -9,7 +9,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.platform.LocalContext
 import android.app.Activity
 import android.widget.Toast
-import dev.hgallery.app.data.AppContainer
 import dev.hgallery.app.ui.components.HgDeleteDialog
 import kotlinx.coroutines.launch
 
@@ -27,7 +26,6 @@ import kotlinx.coroutines.launch
  */
 @Composable
 fun PhotosSelectionEffects(
-    container: AppContainer,
     model: PhotosSelectionModel,
     onDeleted: () -> Unit,
 ) {
@@ -36,7 +34,7 @@ fun PhotosSelectionEffects(
 
     suspend fun finish() {
         val outcome = model.applyDelete()
-        Toast.makeText(context, outcome.message(context, model.deletePath), Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, outcome.message(context), Toast.LENGTH_SHORT).show()
         onDeleted()
     }
 

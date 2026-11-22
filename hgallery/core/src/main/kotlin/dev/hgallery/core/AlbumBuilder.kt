@@ -47,9 +47,27 @@ object AlbumBuilder {
         val newest = items.maxByOrNull { it.dateTakenMs }
 
         val synthetic = listOf(
-            Album(ALL_PHOTOS, "All photos", images.size, newest?.uri, newest?.dateTakenMs ?: 0L, isSynthetic = true),
-            Album(VIDEOS, "Videos", videos.size, videos.maxByOrNull { it.dateTakenMs }?.uri, videos.maxOfOrNull { it.dateTakenMs } ?: 0L, isSynthetic = true),
-            Album(FAVORITES, "Favourites", favourites.size, favourites.maxByOrNull { it.dateTakenMs }?.uri, favourites.maxOfOrNull { it.dateTakenMs } ?: 0L, isSynthetic = true),
+            Album(
+                ALL_PHOTOS,
+                "All photos",
+                images.size,
+                newest?.uri,
+                newest?.dateTakenMs ?: 0L,
+            ),
+            Album(
+                VIDEOS,
+                "Videos",
+                videos.size,
+                videos.maxByOrNull { it.dateTakenMs }?.uri,
+                videos.maxByOrNull { it.dateTakenMs }?.dateTakenMs ?: 0L,
+            ),
+            Album(
+                FAVORITES,
+                "Favourites",
+                favourites.size,
+                favourites.maxByOrNull { it.dateTakenMs }?.uri,
+                favourites.maxByOrNull { it.dateTakenMs }?.dateTakenMs ?: 0L,
+            ),
         )
         return synthetic + buckets
     }

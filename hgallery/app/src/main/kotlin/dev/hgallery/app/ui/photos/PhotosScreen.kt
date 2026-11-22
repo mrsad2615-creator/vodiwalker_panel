@@ -293,7 +293,7 @@ private fun SelectionAwarePhotos(
         }
     }
 
-    PhotosSelectionEffects(container = container, model = model, onDeleted = {})
+    PhotosSelectionEffects(model = model, onDeleted = {})
 }
 
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)

@@ -17,6 +17,12 @@ import androidx.core.content.ContextCompat
  */
 object MediaPermissions {
 
+    /** Android 14: partial ("selected photos") access became a real state. */
+    private const val API_UPSIDE_DOWN_CAKE = 34
+
+    /** Android 13: the granular READ_MEDIA_* permissions replaced one grant. */
+    private const val API_TIRAMISU = 33
+
     /** Result of asking the platform whether the gallery may read media. */
     enum class State {
         GRANTED,
@@ -26,12 +32,12 @@ object MediaPermissions {
 
     val required: Array<String>
         get() = when {
-            Build.VERSION.SDK_INT >= 34 -> arrayOf(
+            Build.VERSION.SDK_INT >= API_UPSIDE_DOWN_CAKE -> arrayOf(
                 Manifest.permission.READ_MEDIA_IMAGES,
                 Manifest.permission.READ_MEDIA_VIDEO,
                 Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED,
             )
-            Build.VERSION.SDK_INT >= 33 -> arrayOf(
+            Build.VERSION.SDK_INT >= API_TIRAMISU -> arrayOf(
                 Manifest.permission.READ_MEDIA_IMAGES,
                 Manifest.permission.READ_MEDIA_VIDEO,
             )
@@ -45,7 +51,9 @@ object MediaPermissions {
 
         // A partial selection on Android 14+ still lets the app show something,
         // so it is reported separately instead of as a flat denial.
-        if (Build.VERSION.SDK_INT >= 34 && has(context, Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED)) {
+        if (Build.VERSION.SDK_INT >= API_UPSIDE_DOWN_CAKE &&
+            has(context, Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED)
+        ) {
             return State.PARTIAL
         }
         return State.DENIED

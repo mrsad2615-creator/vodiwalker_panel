@@ -15,7 +15,6 @@ import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
-import dev.hgallery.app.ui.theme.HgMetrics
 import dev.hgallery.core.PlayerPolicy
 import dev.hgallery.core.PlayerState
 import dev.hgallery.core.Scrub
@@ -185,11 +184,4 @@ fun rememberPlayerController(uri: String): PlayerController {
     LaunchedEffect(controller) { controller.pollPosition() }
 
     return controller
-}
-
-/** Shared so the top and bottom chrome agree about how tall the rows are. */
-internal object PlayerLayout {
-    val TopRowHeight = HgMetrics.MinTouchTarget
-    val BottomRowHeight = 48
-    val ProgressHeight = 30
 }

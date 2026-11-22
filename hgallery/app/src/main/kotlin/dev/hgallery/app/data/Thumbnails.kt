@@ -62,7 +62,7 @@ class ThumbnailStore(
 
     private fun decode(uri: String): Bitmap? {
         val parsed = Uri.parse(uri)
-        if (Build.VERSION.SDK_INT >= 29) {
+        if (Build.VERSION.SDK_INT >= API_Q) {
             // loadThumbnail handles both kinds and honours the requested size.
             return context.contentResolver.loadThumbnail(parsed, Size(cellPx, cellPx), null)
         }
@@ -90,10 +90,22 @@ class ThumbnailStore(
     fun sizeBytes(): Int = memory.size()
 
     companion object {
-        /** A quarter of the heap: enough for a screen and a half, never a crash. */
+        /** Android 10: `loadThumbnail` exists and honours the requested size. */
+        private const val API_Q = 29
+
+        /** A quarter of the heap is enough for a screen and a half. */
+        private const val HEAP_FRACTION = 4
+
+        /** Hard ceiling, in MiB. A 3 GB phone never reaches it; a 2 GB one does. */
+        private const val MAX_BUDGET_MIB = 48L
+
+        private const val BYTES_PER_MIB = 1024L * 1024L
+
         fun defaultBudget(): Int {
             val heap = Runtime.getRuntime().maxMemory()
-            return (heap / 4).coerceAtMost(48L * 1024 * 1024).toInt()
+            return (heap / HEAP_FRACTION)
+                .coerceAtMost(MAX_BUDGET_MIB * BYTES_PER_MIB)
+                .toInt()
         }
 
         /**

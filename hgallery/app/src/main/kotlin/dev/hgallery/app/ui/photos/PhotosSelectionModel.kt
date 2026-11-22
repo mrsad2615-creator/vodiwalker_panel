@@ -112,7 +112,7 @@ class PhotosSelectionModel(private val container: AppContainer) {
 }
 
 /** Messages derived once from an outcome, so two call sites cannot disagree. */
-fun DeleteOutcome.message(context: Context, path: DeletePath): String = when {
+fun DeleteOutcome.message(context: Context): String = when {
     removed == 0 -> context.getString(dev.hgallery.app.R.string.delete_failed)
     failed > 0 -> context.resources.getQuantityString(
         dev.hgallery.app.R.plurals.delete_partial, total, failed, total,

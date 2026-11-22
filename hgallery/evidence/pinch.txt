@@ -1,2 +1,1 @@
-touch device: event12
 changed-pixel fraction below the status bar: 

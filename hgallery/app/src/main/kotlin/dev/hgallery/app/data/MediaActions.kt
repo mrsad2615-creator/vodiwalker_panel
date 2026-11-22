@@ -1,10 +1,13 @@
 package dev.hgallery.app.data
 
+import android.app.PendingIntent
 import android.content.ClipData
 import android.content.Context
 import android.content.Intent
+import android.content.IntentSender
 import android.net.Uri
 import android.os.Build
+import android.provider.MediaStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import dev.hgallery.core.DeleteOutcome
@@ -19,13 +22,12 @@ import java.util.concurrent.atomic.AtomicInteger
  * Two platform realities drive the shape of this class:
  *
  *  1. **Deleting other apps' media needs a user decision.** From API 29 the
- *     platform offers `createTrashRequest` (recoverable, API 30+) and
- *     `createDeleteRequest` (permanent, API 29+). Both return a `PendingIntent`
- *     that the activity must launch; the app cannot simply delete. Rows the app
- *     owns can be deleted directly, but those are only the rows this app inserted.
+ *     platform offers a trash request (recoverable, API 30+) and a delete request
+ *     (permanent, API 29+). Both hand back a `PendingIntent` that only the
+ *     activity can launch; the app cannot quietly delete someone else's photo.
  *  2. **Sharing needs a grant.** A `content://` URI handed to another app is
- *     useless without `FLAG_GRANT_READ_URI_PERMISSION`, and a batch share needs
- *     every URI in the clip data or only the first item arrives.
+ *     useless without the read grant, and a batch share needs every URI in the
+ *     clip data or only the first item arrives.
  */
 class MediaActions(context: Context) {
 
@@ -33,11 +35,11 @@ class MediaActions(context: Context) {
     private val resolver get() = appContext.contentResolver
 
     /**
-     * The request code for the system delete/trash dialog.
+     * Request codes for the system dialogs.
      *
-     * Fresh on every call: two pending requests launched with the same code are
+     * Fresh on every call: two pending requests launched under the same code are
      * indistinguishable when the result comes back, and applying the wrong batch
-     * to the wrong outcome is how an item gets deleted that the user cancelled.
+     * to an outcome is how an item gets deleted that the user cancelled.
      */
     private val nextRequestCode = AtomicInteger(0x1F00)
 
@@ -47,33 +49,34 @@ class MediaActions(context: Context) {
     fun pathFor(): DeletePath = deletePathFor(Build.VERSION.SDK_INT, canWriteDirectly = false)
 
     /**
-     * Builds the intent that shows the system's own trash or delete dialog.
+     * The `IntentSender` that shows Android's own trash or delete dialog.
      *
-     * Returns `null` when the platform has no such API (API < 29), in which case
-     * the caller falls back to a direct delete.
+     * Returns `null` when the platform has no such API (below 29), in which case
+     * the caller falls back to deleting directly after its own confirmation.
      */
-    fun buildDeleteRequest(uris: List<Uri>, path: DeletePath, requestCode: Int): Intent? {
+    fun buildDeleteRequest(uris: List<Uri>, path: DeletePath): IntentSender? {
         if (uris.isEmpty()) return null
-        val pending = when (path) {
+        val pending: PendingIntent = when (path) {
             DeletePath.SYSTEM_TRASH -> {
                 if (Build.VERSION.SDK_INT < 30) return null
-                android.provider.MediaStore.createTrashRequest(resolver, uris, true)
+                MediaStore.createTrashRequest(resolver, uris, true)
             }
             DeletePath.SYSTEM_DELETE_REQUEST -> {
                 if (Build.VERSION.SDK_INT < 29) return null
-                android.provider.MediaStore.createDeleteRequest(resolver, uris)
+                MediaStore.createDeleteRequest(resolver, uris)
             }
             DeletePath.DIRECT_DELETE -> return null
         }
-        return IntentSenderLauncher.wrap(pending, requestCode)
+        return pending.intentSender
     }
 
     /**
      * Applies a delete after the system (or the app's own dialog) has approved it.
      *
-     * On API 30+ the trash request has already done the work by the time the
-     * result arrives, so this reports the batch as trashed. Below that, the rows
-     * are removed here and counted as permanent.
+     * On API 30+ the trash request has already moved the items by the time the
+     * result arrives, so the batch is reported as trashed — which is what lets the
+     * UI say "can be restored". Below that the rows are removed here and counted
+     * as permanent.
      */
     suspend fun applyDelete(uris: List<Uri>, path: DeletePath): DeleteOutcome =
         withContext(Dispatchers.IO) {
@@ -94,14 +97,13 @@ class MediaActions(context: Context) {
     /**
      * The system share sheet for a batch of media.
      *
-     * `ClipData` carries every URI so a multi-selection shares all of it; the
-     * read grant is what lets the receiving app actually open the files.
+     * The clip data carries every URI so a multi-selection shares all of it, and
+     * the read flag is what lets the receiving app open the files at all.
      */
     fun buildShareIntent(uris: List<Uri>, mimeTypes: List<String>): Intent? {
         if (uris.isEmpty()) return null
-        val mime = sharedMimeType(mimeTypes)
         val send = Intent(Intent.ACTION_SEND).apply {
-            type = mime
+            type = sharedMimeType(mimeTypes)
             putParcelableArrayListExtra(Intent.EXTRA_STREAM, ArrayList(uris))
             clipData = ClipData.newUri(resolver, "media", uris.first()).apply {
                 uris.drop(1).forEach { addItem(ClipData.Item(it)) }
@@ -109,7 +111,8 @@ class MediaActions(context: Context) {
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
         return Intent.createChooser(send, null).apply {
-            // The chooser itself has to be launchable from a non-activity context.
+            // Launched from the app's own activity, so no NEW_TASK is needed; it is
+            // set anyway for the case where a caller hands this to a service.
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
     }
@@ -117,9 +120,8 @@ class MediaActions(context: Context) {
     /**
      * One MIME type for the whole batch.
      *
-     * A mixed batch has to be advertised as `*​/*` or many targets refuse it,
-     * while a single-type batch should keep its precise type so the right apps
-     * appear in the sheet.
+     * A mixed batch has to be advertised as a wildcard or many targets refuse it,
+     * while a single-family batch keeps its family so the right apps appear.
      */
     private fun sharedMimeType(mimeTypes: List<String>): String {
         val families = mimeTypes.map { it.substringBefore('/') + "/*" }.toSet()
@@ -129,19 +131,4 @@ class MediaActions(context: Context) {
             else -> "*/*"
         }
     }
-}
-
-/**
- * `PendingIntent` → `IntentSender` without pulling `androidx.core` into the
- * signature of every caller.
- */
-internal object IntentSenderLauncher {
-    fun wrap(pending: android.app.PendingIntent, @Suppress("UNUSED_PARAMETER") requestCode: Int): Intent =
-        android.content.Intent().apply {
-            // The sender travels as an extra because an Intent cannot carry a
-            // bare IntentSender; the activity pulls it back out by this key.
-            putExtra(EXTRA_SENDER, pending.intentSender)
-        }
-
-    const val EXTRA_SENDER = "dev.hgallery.app.extra.SENDER"
 }

@@ -1,10 +1,8 @@
 package dev.hgallery.app.ui.photos
 
-import androidx.activity.compose.LocalActivityResultRegistryOwner
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -27,6 +25,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.mutableStateOf
@@ -48,15 +47,14 @@ import dev.hgallery.app.ui.components.HgDeleteDialog
 import dev.hgallery.app.ui.components.HgScreenTitle
 import dev.hgallery.app.ui.components.HgSelectionActions
 import dev.hgallery.app.ui.components.HgSelectionHeader
-import dev.hgallery.app.ui.components.SelectionBadge
 import dev.hgallery.app.ui.components.HgIconButton
+import dev.hgallery.app.ui.components.SelectionBadge
 import dev.hgallery.app.ui.components.HgTestTags
 import dev.hgallery.app.ui.components.HgToolbar
 import dev.hgallery.app.ui.components.MediaThumbnail
 import dev.hgallery.app.ui.icons.HgIcons
 import dev.hgallery.app.ui.theme.HgMetrics
 import dev.hgallery.app.ui.theme.hgPalette
-import dev.hgallery.core.DeletePath
 import dev.hgallery.core.MediaItem
 import dev.hgallery.core.Selection
 import kotlinx.coroutines.launch
@@ -85,6 +83,7 @@ fun PhotosScreen(
     SelectionAwarePhotos(container = container, onOpenItem = onOpenItem, modifier = modifier)
 }
 
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 private fun SelectionAwarePhotos(
     container: AppContainer,
@@ -129,6 +128,25 @@ private fun SelectionAwarePhotos(
     val context = androidx.compose.ui.platform.LocalContext.current
     val deletePath = remember { container.mediaStore.deletePath() }
 
+    /**
+     * Applies a delete the user has already approved and reports the result.
+     *
+     * One function for both routes on purpose: the local toast previously had to
+     * be written twice, and two copies of a message derived from an outcome is
+     * exactly how a UI ends up claiming an item was trashed when it was deleted.
+     */
+    suspend fun finishDelete(ids: Set<Long>) {
+        val outcome = container.mediaStore.applyDelete(ids)
+        selection = selection.exit()
+        val message = when {
+            outcome.removed == 0 -> context.getString(R.string.delete_failed)
+            outcome.failed > 0 -> context.getString(R.string.delete_partial, outcome.failed, outcome.total)
+            outcome.trashed > 0 -> context.getString(R.string.moved_to_trash, outcome.trashed)
+            else -> context.getString(R.string.deleted_permanently, outcome.deleted)
+        }
+        android.widget.Toast.makeText(context, message, android.widget.Toast.LENGTH_SHORT).show()
+    }
+
     // The system trash dialog returns through the activity result registry: the
     // app may *ask* for a delete, only the platform may perform one.
     val deleteLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
@@ -136,21 +154,7 @@ private fun SelectionAwarePhotos(
     ) { result ->
         val ids = selection.ids
         if (result.resultCode == android.app.Activity.RESULT_OK && ids.isNotEmpty()) {
-            scope.launch {
-                val outcome = container.mediaStore.applyDelete(ids)
-                selection = selection.exit()
-                val message = when {
-                    outcome.removed == 0 -> context.getString(R.string.delete_failed)
-                    outcome.failed > 0 -> context.getString(
-                        R.string.delete_partial,
-                        outcome.failed,
-                        outcome.total,
-                    )
-                    outcome.trashed > 0 -> context.getString(R.string.moved_to_trash, outcome.trashed)
-                    else -> context.getString(R.string.deleted_permanently, outcome.deleted)
-                }
-                android.widget.Toast.makeText(context, message, android.widget.Toast.LENGTH_SHORT).show()
-            }
+            scope.launch { finishDelete(ids) }
         }
     }
 
@@ -159,46 +163,25 @@ private fun SelectionAwarePhotos(
         val ids = selection.ids
         if (ids.isEmpty()) return
         pendingDelete = false
-        val request = container.mediaStore.buildDeleteRequest(ids)
-        if (request != null) {
-            // The sender must travel inside the request the registry launches.
-            @Suppress("DEPRECATION")
-            val sender = request.getParcelableExtra<android.content.IntentSender>(
-                dev.hgallery.app.data.IntentSenderLauncher.EXTRA_SENDER,
-            )
-            if (sender != null) {
+        val sender = container.mediaStore.buildDeleteRequest(ids)
+        if (sender != null) {
+            val launched = runCatching {
                 deleteLauncher.launch(IntentSenderRequest.Builder(sender).build())
-                return
-            }
+            }.isSuccess
+            if (launched) return
+            // A sender can be refused (e.g. the grant was revoked). The direct
+            // path keeps the action working rather than failing silently.
         }
-        scope.launch {
-            val outcome = container.mediaStore.applyDelete(ids)
-            selection = selection.exit()
-            val message = when {
-                outcome.removed == 0 -> context.getString(R.string.delete_failed)
-                outcome.failed > 0 -> context.getString(
-                    R.string.delete_partial,
-                    outcome.failed,
-                    outcome.total,
-                )
-                outcome.trashed > 0 -> context.getString(R.string.moved_to_trash, outcome.trashed)
-                else -> context.getString(R.string.deleted_permanently, outcome.deleted)
-            }
-            android.widget.Toast.makeText(context, message, android.widget.Toast.LENGTH_SHORT).show()
-        }
+        scope.launch { finishDelete(ids) }
     }
 
     fun share() {
         val ids = selection.ids
-        if (ids.isEmpty()) {
-            android.widget.Toast.makeText(context, R.string.share_nothing, android.widget.Toast.LENGTH_SHORT).show()
-            return
-        }
-        val intent = container.mediaStore.buildShareIntent(ids)
+        val intent = if (ids.isEmpty()) null else container.mediaStore.buildShareIntent(ids)
         if (intent == null) {
             android.widget.Toast.makeText(context, R.string.share_nothing, android.widget.Toast.LENGTH_SHORT).show()
         } else {
-            context.startActivity(intent)
+            runCatching { context.startActivity(intent) }
         }
     }
 

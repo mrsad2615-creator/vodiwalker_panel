@@ -117,6 +117,7 @@ fun HgIconButton(
 fun HgToolbar(
     onSearch: (() -> Unit)? = null,
     onMore: (() -> Unit)? = null,
+    viewAction: (@Composable () -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     Row(
@@ -124,6 +125,7 @@ fun HgToolbar(
         horizontalArrangement = Arrangement.End,
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        viewAction?.invoke()
         if (onSearch != null) {
             HgIconButton(HgIcons.Search, stringResource(R.string.search), onSearch)
         }

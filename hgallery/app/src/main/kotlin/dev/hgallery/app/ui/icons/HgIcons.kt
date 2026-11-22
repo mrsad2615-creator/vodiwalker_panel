@@ -328,6 +328,30 @@ object HgIcons {
         close()
     }
 
+    /** Month view: a 3x3 grid of cells. */
+    val GridMonth: ImageVector = icon("HG.GridMonth") {
+        moveTo(4.4f, 6.4f)
+        horizontalLineToRelative(15.2f)
+        moveTo(4.4f, 12f)
+        horizontalLineToRelative(15.2f)
+        moveTo(4.4f, 17.6f)
+        horizontalLineToRelative(15.2f)
+        moveTo(8.2f, 4.4f)
+        verticalLineToRelative(15.2f)
+        moveTo(15.8f, 4.4f)
+        verticalLineToRelative(15.2f)
+    }
+
+    /** Day view: a single wide cell with a header line. */
+    val GridDay: ImageVector = icon("HG.GridDay") {
+        moveTo(4.4f, 6.2f)
+        horizontalLineToRelative(15.2f)
+        moveTo(4.4f, 11f)
+        horizontalLineToRelative(15.2f)
+        moveTo(4.4f, 16f)
+        horizontalLineToRelative(9.2f)
+    }
+
     val Rotate: ImageVector = icon("HG.Rotate") {
         moveTo(12f, 5.4f)
         lineTo(12f, 18.6f)

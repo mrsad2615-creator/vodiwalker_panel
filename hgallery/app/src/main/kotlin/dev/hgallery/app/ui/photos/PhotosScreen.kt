@@ -40,9 +40,11 @@ import dev.hgallery.app.R
 import dev.hgallery.app.data.AppContainer
 import dev.hgallery.app.data.ThumbnailStore
 import dev.hgallery.app.ui.components.HgScreenTitle
+import dev.hgallery.app.ui.components.HgIconButton
 import dev.hgallery.app.ui.components.HgTestTags
 import dev.hgallery.app.ui.components.HgToolbar
 import dev.hgallery.app.ui.components.MediaThumbnail
+import dev.hgallery.app.ui.icons.HgIcons
 import dev.hgallery.app.ui.theme.HgMetrics
 import dev.hgallery.app.ui.theme.hgPalette
 import dev.hgallery.core.MediaItem
@@ -102,6 +104,19 @@ fun PhotosScreen(
             HgToolbar(
                 onSearch = {},
                 onMore = {},
+                viewAction = {
+                    // A pinch alone is undiscoverable, and a gesture that cannot
+                    // be driven from a test is a gesture nobody checks. The
+                    // switch is the primary control; pinching remains available.
+                    HgIconButton(
+                        icon = if (monthView) HgIcons.GridDay else HgIcons.GridMonth,
+                        contentDescription = stringResource(
+                            if (monthView) R.string.view_day else R.string.view_month,
+                        ),
+                        onClick = { monthView = !monthView },
+                        modifier = Modifier.testTag(HgTestTags.VIEW_SWITCH),
+                    )
+                },
                 modifier = Modifier.padding(end = 6.dp),
             )
             HgScreenTitle(

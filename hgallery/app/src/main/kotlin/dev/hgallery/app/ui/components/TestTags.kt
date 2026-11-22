@@ -14,4 +14,5 @@ object HgTestTags {
     fun album(name: String) = "album-$name"
     const val VIEWER = "viewer"
     const val PHOTOS_GRID = "photos-grid"
+    const val VIEW_SWITCH = "photos-view-switch"
 }

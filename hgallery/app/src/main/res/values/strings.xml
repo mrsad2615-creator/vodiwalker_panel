@@ -34,4 +34,6 @@
     <string name="delete_confirm_title">Delete this item?</string>
     <string name="delete_confirm_body">%1$s will be removed from this device.</string>
     <string name="cancel">Cancel</string>
+    <string name="view_month">Switch to month view</string>
+    <string name="view_day">Switch to day view</string>
 </resources>

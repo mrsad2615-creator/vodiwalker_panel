@@ -39,4 +39,6 @@
     <string name="delete_confirm_title">این مورد حذف شود؟</string>
     <string name="delete_confirm_body">%1$s از این دستگاه حذف خواهد شد.</string>
     <string name="cancel">لغو</string>
+    <string name="view_month">نمای ماهانه</string>
+    <string name="view_day">نمای روزانه</string>
 </resources>

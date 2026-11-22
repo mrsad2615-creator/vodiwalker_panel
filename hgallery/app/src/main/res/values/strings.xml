@@ -36,4 +36,26 @@
     <string name="cancel">Cancel</string>
     <string name="view_month">Switch to month view</string>
     <string name="view_day">Switch to day view</string>
+
+    <!-- Selection, as in reference R3: close glyph, "N items selected", batch actions. -->
+    <string name="select">Select</string>
+    <string name="exit_selection">Exit selection</string>
+    <string name="items_selected">%1$d selected</string>
+    <string name="select_all">Select all</string>
+    <string name="select_none">Deselect all</string>
+    <string name="share_selected">Share selected items</string>
+    <string name="delete_selected">Delete selected items</string>
+    <string name="selection_hint">Long-press a photo to select it</string>
+
+    <string name="delete_selected_title">Delete %1$d items?</string>
+    <string name="delete_trash_body">They will move to the system trash and can be restored from this phone\'s Recycle bin for up to 30 days.</string>
+    <string name="delete_permanent_body">They will be removed from this device. This cannot be undone.</string>
+    <string name="delete_system_body">Android will ask you to confirm before anything is removed.</string>
+
+    <string name="moved_to_trash">Moved %1$d items to the trash</string>
+    <string name="deleted_permanently">Deleted %1$d items</string>
+    <string name="delete_partial">%1$d of %2$d items could not be removed</string>
+    <string name="delete_failed">Nothing was removed</string>
+    <string name="delete_needs_permission">A permission is required before this can be deleted</string>
+    <string name="share_nothing">There is nothing to share</string>
 </resources>

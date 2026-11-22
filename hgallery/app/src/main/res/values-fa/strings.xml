@@ -41,4 +41,26 @@
     <string name="cancel">لغو</string>
     <string name="view_month">نمای ماهانه</string>
     <string name="view_day">نمای روزانه</string>
+
+    <!-- انتخاب چندگانه، مطابق تصویر مرجع R3 -->
+    <string name="select">انتخاب</string>
+    <string name="exit_selection">خروج از انتخاب</string>
+    <string name="items_selected">%1$d مورد انتخاب شده</string>
+    <string name="select_all">انتخاب همه</string>
+    <string name="select_none">لغو انتخاب همه</string>
+    <string name="share_selected">اشتراک‌گذاری موارد انتخاب‌شده</string>
+    <string name="delete_selected">حذف موارد انتخاب‌شده</string>
+    <string name="selection_hint">برای انتخاب، انگشت خود را روی تصویر نگه دارید</string>
+
+    <string name="delete_selected_title">%1$d مورد حذف شود؟</string>
+    <string name="delete_trash_body">آنها به سبد بازیافت سیستم منتقل می‌شوند و تا ۳۰ روز از سبد بازیافت همین گوشی قابل بازگردانی هستند.</string>
+    <string name="delete_permanent_body">آنها از این دستگاه حذف می‌شوند. این کار برگشت‌پذیر نیست.</string>
+    <string name="delete_system_body">اندروید پیش از حذف هر چیزی از شما تأیید می‌گیرد.</string>
+
+    <string name="moved_to_trash">%1$d مورد به سبد بازیافت منتقل شد</string>
+    <string name="deleted_permanently">%1$d مورد حذف شد</string>
+    <string name="delete_partial">%1$d از %2$d مورد حذف نشد</string>
+    <string name="delete_failed">هیچ موردی حذف نشد</string>
+    <string name="delete_needs_permission">برای حذف، دسترسی لازم است</string>
+    <string name="share_nothing">چیزی برای اشتراک‌گذاری نیست</string>
 </resources>

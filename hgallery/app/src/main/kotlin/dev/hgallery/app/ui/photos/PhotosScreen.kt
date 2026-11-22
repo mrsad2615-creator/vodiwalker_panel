@@ -1,7 +1,11 @@
 package dev.hgallery.app.ui.photos
 
+import androidx.activity.compose.LocalActivityResultRegistryOwner
+import androidx.activity.result.IntentSenderRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -24,6 +28,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -39,7 +44,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.hgallery.app.R
 import dev.hgallery.app.data.AppContainer
 import dev.hgallery.app.data.ThumbnailStore
+import dev.hgallery.app.ui.components.HgDeleteDialog
 import dev.hgallery.app.ui.components.HgScreenTitle
+import dev.hgallery.app.ui.components.HgSelectionActions
+import dev.hgallery.app.ui.components.HgSelectionHeader
+import dev.hgallery.app.ui.components.SelectionBadge
 import dev.hgallery.app.ui.components.HgIconButton
 import dev.hgallery.app.ui.components.HgTestTags
 import dev.hgallery.app.ui.components.HgToolbar
@@ -47,7 +56,10 @@ import dev.hgallery.app.ui.components.MediaThumbnail
 import dev.hgallery.app.ui.icons.HgIcons
 import dev.hgallery.app.ui.theme.HgMetrics
 import dev.hgallery.app.ui.theme.hgPalette
+import dev.hgallery.core.DeletePath
 import dev.hgallery.core.MediaItem
+import dev.hgallery.core.Selection
+import kotlinx.coroutines.launch
 import java.util.Locale
 
 /**
@@ -69,6 +81,15 @@ fun PhotosScreen(
     container: AppContainer,
     onOpenItem: (Long) -> Unit,
     modifier: Modifier = Modifier,
+) {
+    SelectionAwarePhotos(container = container, onOpenItem = onOpenItem, modifier = modifier)
+}
+
+@Composable
+private fun SelectionAwarePhotos(
+    container: AppContainer,
+    onOpenItem: (Long) -> Unit,
+    modifier: Modifier,
 ) {
     val palette = hgPalette
     val items by container.mediaStore.items.collectAsStateWithLifecycle()
@@ -95,16 +116,119 @@ fun PhotosScreen(
 
     var monthView by remember { mutableStateOf(false) }
 
+    // Selection lives on the screen that owns the grid, so leaving the tab drops
+    // it. The `prune` keeps it honest when a delete removes rows.
+    var selection by remember { mutableStateOf(Selection.None) }
+    var pendingDelete by remember { mutableStateOf(false) }
+    val existingIds = remember(daySections, monthSections) {
+        (daySections.flatMap { it.items } + monthSections.flatMap { it.items }).map { it.id }.toSet()
+    }
+    LaunchedEffect(existingIds) { selection = selection.prune(existingIds) }
+
+    val scope = rememberCoroutineScope()
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val deletePath = remember { container.mediaStore.deletePath() }
+
+    // The system trash dialog returns through the activity result registry: the
+    // app may *ask* for a delete, only the platform may perform one.
+    val deleteLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartIntentSenderForResult(),
+    ) { result ->
+        val ids = selection.ids
+        if (result.resultCode == android.app.Activity.RESULT_OK && ids.isNotEmpty()) {
+            scope.launch {
+                val outcome = container.mediaStore.applyDelete(ids)
+                selection = selection.exit()
+                val message = when {
+                    outcome.removed == 0 -> context.getString(R.string.delete_failed)
+                    outcome.failed > 0 -> context.getString(
+                        R.string.delete_partial,
+                        outcome.failed,
+                        outcome.total,
+                    )
+                    outcome.trashed > 0 -> context.getString(R.string.moved_to_trash, outcome.trashed)
+                    else -> context.getString(R.string.deleted_permanently, outcome.deleted)
+                }
+                android.widget.Toast.makeText(context, message, android.widget.Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    /** Confirm, then delete through whichever route this Android version offers. */
+    fun performDelete() {
+        val ids = selection.ids
+        if (ids.isEmpty()) return
+        pendingDelete = false
+        val request = container.mediaStore.buildDeleteRequest(ids)
+        if (request != null) {
+            // The sender must travel inside the request the registry launches.
+            @Suppress("DEPRECATION")
+            val sender = request.getParcelableExtra<android.content.IntentSender>(
+                dev.hgallery.app.data.IntentSenderLauncher.EXTRA_SENDER,
+            )
+            if (sender != null) {
+                deleteLauncher.launch(IntentSenderRequest.Builder(sender).build())
+                return
+            }
+        }
+        scope.launch {
+            val outcome = container.mediaStore.applyDelete(ids)
+            selection = selection.exit()
+            val message = when {
+                outcome.removed == 0 -> context.getString(R.string.delete_failed)
+                outcome.failed > 0 -> context.getString(
+                    R.string.delete_partial,
+                    outcome.failed,
+                    outcome.total,
+                )
+                outcome.trashed > 0 -> context.getString(R.string.moved_to_trash, outcome.trashed)
+                else -> context.getString(R.string.deleted_permanently, outcome.deleted)
+            }
+            android.widget.Toast.makeText(context, message, android.widget.Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    fun share() {
+        val ids = selection.ids
+        if (ids.isEmpty()) {
+            android.widget.Toast.makeText(context, R.string.share_nothing, android.widget.Toast.LENGTH_SHORT).show()
+            return
+        }
+        val intent = container.mediaStore.buildShareIntent(ids)
+        if (intent == null) {
+            android.widget.Toast.makeText(context, R.string.share_nothing, android.widget.Toast.LENGTH_SHORT).show()
+        } else {
+            context.startActivity(intent)
+        }
+    }
+
     val columns = if (monthView) HgMetrics.MonthColumns else HgMetrics.PhotosColumns
     val thumbnails = remember { container.thumbnails }
 
     Column(modifier = modifier.fillMaxSize().background(palette.page)) {
         Spacer(Modifier.statusBarsPadding())
+
+        // In selection mode the title is replaced by the count, exactly as R3
+        // draws it, so the grid itself does not move.
+        if (selection.active) {
+            HgSelectionHeader(
+                selection = selection,
+                onExit = { selection = selection.exit() },
+            )
+        } else {
         Column(Modifier.fillMaxWidth()) {
             HgToolbar(
                 onSearch = {},
                 onMore = {},
                 viewAction = {
+                    // Selection is reachable without a long press, so the feature
+                    // is discoverable and can be driven by a test.
+                    HgIconButton(
+                        icon = HgIcons.SelectAll,
+                        contentDescription = stringResource(R.string.select),
+                        onClick = { selection = selection.selectAll(existingIds) },
+                        modifier = Modifier.testTag(HgTestTags.SELECT_BUTTON),
+                    )
                     // A pinch alone is undiscoverable, and a gesture that cannot
                     // be driven from a test is a gesture nobody checks. The
                     // switch is the primary control; pinching remains available.
@@ -125,6 +249,7 @@ fun PhotosScreen(
                 subtitleCentred = true,
             )
             Spacer(Modifier.height(14.dp))
+            }
         }
 
         when {
@@ -185,20 +310,70 @@ fun PhotosScreen(
                     monthSections.forEach { section ->
                         item(span = { GridItemSpan(maxLineSpan) }) { SectionHeader(section.header, true) }
                         items(section.items, key = { it.id }) { item ->
-                            ThumbnailCell(item, thumbnails) { onOpenItem(item.id) }
+                            ThumbnailCell(
+                                item = item,
+                                store = thumbnails,
+                                selection = selection,
+                                onClick = {
+                                    if (selection.active) {
+                                        selection = selection.toggle(item.id)
+                                    } else {
+                                        onOpenItem(item.id)
+                                    }
+                                },
+                                onLongClick = { selection = selection.beginWith(item.id) },
+                            )
                         }
                     }
                 } else {
                     daySections.forEach { section ->
                         item(span = { GridItemSpan(maxLineSpan) }) { SectionHeader(section.header, false) }
                         items(section.items, key = { it.id }) { item ->
-                            ThumbnailCell(item, thumbnails) { onOpenItem(item.id) }
+                            ThumbnailCell(
+                                item = item,
+                                store = thumbnails,
+                                selection = selection,
+                                onClick = {
+                                    if (selection.active) {
+                                        selection = selection.toggle(item.id)
+                                    } else {
+                                        onOpenItem(item.id)
+                                    }
+                                },
+                                onLongClick = { selection = selection.beginWith(item.id) },
+                            )
                         }
                     }
                 }
             }
             }
         }
+
+        if (selection.active) {
+            HgSelectionActions(
+                selection = selection,
+                allIds = existingIds,
+                onShare = { share() },
+                onDelete = { pendingDelete = true },
+                onToggleSelectAll = {
+                    selection = if (selection.isAllSelected(existingIds)) {
+                        selection.exit()
+                    } else {
+                        selection.selectAll(existingIds)
+                    }
+                },
+                modifier = Modifier.testTag(HgTestTags.SELECTION_BAR),
+            )
+        }
+    }
+
+    if (pendingDelete) {
+        HgDeleteDialog(
+            count = selection.count,
+            path = deletePath,
+            onConfirm = { performDelete() },
+            onDismiss = { pendingDelete = false },
+        )
     }
 }
 
@@ -206,18 +381,48 @@ fun PhotosScreen(
 private fun ThumbnailCell(
     item: MediaItem,
     store: ThumbnailStore,
+    selection: Selection,
     onClick: () -> Unit,
+    onLongClick: () -> Unit,
 ) {
-    MediaThumbnail(
-        item = item,
-        store = store,
-        cornerRadius = 3,
+    val selected = selection.contains(item.id)
+    Box(
         modifier = Modifier
             .testTag(HgTestTags.thumbnail(item.id))
             .aspectRatio(1f)
             .clip(RoundedCornerShape(3.dp))
-            .clickable(onClick = onClick),
-    )
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick,
+            ),
+    ) {
+        MediaThumbnail(
+            item = item,
+            store = store,
+            cornerRadius = 3,
+            modifier = Modifier.fillMaxSize(),
+        )
+
+        // Unselected tiles recede while a selection is running, as in R3: the
+        // chosen ones have to be readable at a glance in a dense grid.
+        androidx.compose.animation.AnimatedVisibility(
+            visible = selection.active,
+            enter = androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(120)),
+            exit = androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(120)),
+        ) {
+            if (!selected) {
+                Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Color.White.copy(alpha = 0.55f)))
+            }
+        }
+
+        SelectionBadge(
+            selected = selected,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(4.dp)
+                .testTag(HgTestTags.tick(item.id)),
+        )
+    }
 }
 
 @Composable

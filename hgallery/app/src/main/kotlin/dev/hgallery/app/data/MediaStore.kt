@@ -21,6 +21,7 @@ import kotlinx.coroutines.sync.withLock
 class MediaStore(
     private val repository: MediaRepository,
     private val thumbnails: ThumbnailStore,
+    private val actions: MediaActions,
 ) {
 
     private val _items = MutableStateFlow<List<MediaItem>>(emptyList())
@@ -78,6 +79,43 @@ class MediaStore(
             _items.value = _items.value.filterNot { it.id in gone }
         }
         return removed
+    }
+
+    /** The mechanism this device offers for a delete. */
+    fun deletePath(): dev.hgallery.core.DeletePath = actions.pathFor()
+
+    fun newRequestCode(): Int = actions.newRequestCode()
+
+    /**
+     * The intent that shows Android's own trash / delete confirmation.
+     *
+     * `null` means the platform has no such dialog and the caller should apply
+     * the delete directly after its own confirmation.
+     */
+    fun buildDeleteRequest(ids: Set<Long>, requestCode: Int): android.content.Intent? {
+        val uris = _items.value.filter { it.id in ids }.map { android.net.Uri.parse(it.uri) }
+        return actions.buildDeleteRequest(uris, deletePath(), requestCode)
+    }
+
+    /** Applies the approved delete and drops the rows from every screen at once. */
+    suspend fun applyDelete(ids: Set<Long>): dev.hgallery.core.DeleteOutcome {
+        val targets = _items.value.filter { it.id in ids }
+        val outcome = actions.applyDelete(targets.map { android.net.Uri.parse(it.uri) }, deletePath())
+        if (outcome.removed > 0) {
+            val gone = targets.map { it.id }.toSet()
+            _items.value = _items.value.filterNot { it.id in gone }
+            thumbnails.invalidate(gone.map { id -> targets.first { it.id == id }.uri })
+        }
+        return outcome
+    }
+
+    /** Builds the system share sheet for the selected items. */
+    fun buildShareIntent(ids: Set<Long>): android.content.Intent? {
+        val targets = _items.value.filter { it.id in ids }
+        return actions.buildShareIntent(
+            targets.map { android.net.Uri.parse(it.uri) },
+            targets.map { it.mimeType },
+        )
     }
 
     fun itemById(id: Long): MediaItem? = _items.value.firstOrNull { it.id == id }

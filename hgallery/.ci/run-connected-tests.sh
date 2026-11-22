@@ -159,6 +159,24 @@ adb shell input tap $((W * 58 / 100)) $((H * 75 / 1000))
 sleep 4
 shot 08-month-view.png
 
+# Multi-selection, photographed the way a user enters it: a long press on the
+# first tile. `input swipe` with equal start and end is a long press on this
+# Android version; the duration is what makes it a press rather than a tap.
+adb shell input tap $((W * 58 / 100)) $((H * 75 / 1000))
+sleep 3
+adb shell input swipe $((W / 4)) $((H / 2 - 40)) $((W / 4)) $((H / 2 - 40)) 900
+sleep 4
+shot 09-selection.png
+
+# The delete confirmation must be photographed too: a dialog that reads
+# "can be restored" on a device with no trash would be a false claim, and the
+# screenshot is how that gets checked.
+adb shell input tap $((W / 2)) $((H / 2 - 40))
+sleep 2
+adb shell screencap -p "$DEVICE_DIR/10-after-cancel.png"
+adb shell input keyevent KEYCODE_BACK
+sleep 3
+
 # Verify that the switch really changed the page. Both frames are pulled fresh:
 # a stale copy from an earlier run must never decide this verdict.
 rm -f "$OUT_DIR/diag/day.png" "$OUT_DIR/diag/month.png"

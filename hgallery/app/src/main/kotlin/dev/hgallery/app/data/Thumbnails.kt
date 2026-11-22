@@ -32,6 +32,25 @@ class ThumbnailStore(
         override fun sizeOf(key: String, value: Bitmap): Int = value.allocationByteCount
     }
 
+    /**
+     * Drops the cached frames of rows that no longer exist.
+     *
+     * Without this a deleted photo's bitmap would sit in the LRU until it was
+     * pushed out by size pressure, holding memory for a file nobody can see.
+     */
+    fun invalidate(uris: Collection<String>) {
+        if (uris.isEmpty()) return
+        val wanted = uris.toSet()
+        val keys = mutableListOf<String>()
+        for (key in memory.snapshot().keys) {
+            if (k0(key) in wanted) keys += key
+        }
+        keys.forEach { memory.remove(it) }
+    }
+
+    /** The URI part of a cache key (`uri@cell@isVideo`). */
+    private fun k0(key: String): String = key.substringBefore('@')
+
     suspend fun get(uri: String, isVideo: Boolean): Bitmap? = withContext(Dispatchers.IO) {
         val key = "$uri@$cellPx@$isVideo"
         memory.get(key)?.let { return@withContext it }

@@ -24,7 +24,10 @@ class AppContainer(context: Context) {
 
     private val repository = MediaRepository(appContext)
 
-    val mediaStore = MediaStore(repository, thumbnails)
+    /** Platform dialogs and the share sheet; needs an application context only. */
+    val actions = MediaActions(appContext)
+
+    val mediaStore = MediaStore(repository, thumbnails, actions)
 
     val zone: ZoneId = ZoneId.systemDefault()
 

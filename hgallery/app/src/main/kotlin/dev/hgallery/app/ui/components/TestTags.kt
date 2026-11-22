@@ -10,9 +10,20 @@ package dev.hgallery.app.ui.components
  */
 object HgTestTags {
     fun tab(name: String) = "tab-$name"
-    fun thumbnail(id: Long) = "thumb-$id"
+    const val thumbPrefix = "thumb-"
+    fun thumbnail(id: Long) = "$thumbPrefix$id"
     fun album(name: String) = "album-$name"
     const val VIEWER = "viewer"
     const val PHOTOS_GRID = "photos-grid"
     const val VIEW_SWITCH = "photos-view-switch"
+
+    // Selection, from reference R3.
+    const val EXIT_SELECTION = "selection-exit"
+    const val SELECTION_COUNT = "selection-count"
+    const val SELECTION_SHARE = "selection-share"
+    const val SELECTION_DELETE = "selection-delete"
+    const val SELECTION_SELECT_ALL = "selection-select-all"
+    const val SELECTION_BAR = "selection-bar"
+    const val SELECT_BUTTON = "photos-select-button"
+    fun tick(id: Long) = "tick-$id"
 }

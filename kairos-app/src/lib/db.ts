@@ -17,6 +17,9 @@ import type {
 } from '@/types/domain';
 import { computeNextRecurrenceDate, getTodayKey } from './date';
 import { createId } from './format';
+import type { Authority, EventEntity, EventKind, EventSource, KairosEvent } from './events';
+import type { PermissionGrant } from './permissions';
+import type { UndoEntry, UndoKind } from './undo';
 
 export const DEFAULT_SETTINGS: UserSettings = {
   id: 'default',
@@ -55,6 +58,14 @@ class KairosDatabase extends Dexie {
   /** Exactly one row (`id: 'active'`): the session that is not finished yet. */
   activeRun!: Table<ActiveRunRecord, string>;
   journal!: Table<JournalEntry, string>;
+  /** Append-only ledger (v4). Reads live in `lib/events.ts`. */
+  eventHistory!: Table<KairosEvent, string>;
+  /** One "before" snapshot per restorable change (v4). Reads live in `lib/undo.ts`. */
+  undoHistory!: Table<UndoEntry, string>;
+  /** Time-boxed, use-limited permissions (v4). Logic lives in `lib/permissions.ts`. */
+  permissionGrants!: Table<PermissionGrant, string>;
+  /** One row per schema upgrade: what the migration saw and what it did (v4). */
+  migrationLog!: Table<MigrationLogRecord, string>;
 
   constructor() {
     super('KairosLuxuryProductivityDB');
@@ -79,6 +90,33 @@ class KairosDatabase extends Dexie {
     this.version(3).stores({
       journal: 'id, dateKey',
     });
+
+    // v3.4 — Stage 1 infrastructure. Four new tables, and *no change to any
+    // existing table or index*: the audit trail, the undo stack, the permission
+    // grants, and a log of the upgrade itself. Everything the app already knew
+    // stays exactly where it was.
+    this.version(4)
+      .stores({
+        eventHistory: 'id, at, kind, entity, entityId',
+        undoHistory: 'id, at, kind, entityId',
+        permissionGrants: 'id, action, expiresAt, revokedAt',
+        migrationLog: 'id, at',
+      })
+      .upgrade(async (tx) => {
+        // Count what exists so the migration can be proven, not assumed.
+        const counts: Record<string, number> = {};
+        for (const name of ['tasks', 'habits', 'habitLogs', 'focusSessions', 'goals', 'journal', 'settings']) {
+          counts[name] = await tx.table(name).count();
+        }
+        await tx.table('migrationLog').put({
+          id: `mig-${Date.now()}`,
+          at: new Date().toISOString(),
+          from: 3,
+          to: 4,
+          counts,
+          ok: true,
+        });
+      });
   }
 }
 
@@ -107,6 +145,19 @@ export interface ActiveRunRecord {
   linkedTaskId: string | null;
   sessionStartedAt: string | null;
   updatedAt: string;
+}
+
+/**
+ * One row per schema upgrade. The migration writes it inside its own transaction,
+ * so a half-finished upgrade cannot leave an optimistic "ok" behind.
+ */
+export interface MigrationLogRecord {
+  id: string;
+  at: string;
+  from: number;
+  to: number;
+  counts: Record<string, number>;
+  ok: boolean;
 }
 
 export function makeHabitLogId(habitId: string, dateKey: string): string {
@@ -140,7 +191,75 @@ export async function updateSettings(patch: Partial<Omit<UserSettings, 'id'>>): 
     updatedAt: new Date().toISOString(),
   };
   await db.settings.put(next);
+  await logEvent('settings.updated', 'settings', 'default', {
+    level: 2,
+    data: { keys: Object.keys(patch).join(',').slice(0, 200) },
+  });
   return next;
+}
+
+// ==================== LEDGER: EVENTS + UNDO ====================
+//
+// Every restorable write leaves two traces: a small append-only event (what
+// happened, who did it, at which authority level) and, for edits, a "before"
+// snapshot that `lib/undo.ts` can replay. Both are best-effort: a logging failure
+// must never turn a successful save into a failed one, so every call is guarded.
+
+let writeCounter = 0;
+
+export async function logEvent(
+  kind: EventKind,
+  entity: EventEntity,
+  entityId: string,
+  options: {
+    source?: EventSource;
+    level?: Authority;
+    data?: KairosEvent['data'];
+  } = {}
+): Promise<void> {
+  try {
+    await db.eventHistory.put({
+      id: createId('evt'),
+      at: new Date().toISOString(),
+      kind,
+      entity,
+      entityId,
+      source: options.source ?? 'user',
+      level: options.level ?? 1,
+      ...(options.data ? { data: options.data } : {}),
+    });
+    writeCounter += 1;
+    if (writeCounter % 64 === 0) {
+      const { pruneEvents } = await import('./events');
+      void pruneEvents().catch(() => undefined);
+    }
+  } catch {
+    // never let the ledger break the write it describes
+  }
+}
+
+async function pushUndo(entry: {
+  kind: UndoKind;
+  entity: EventEntity;
+  entityId: string;
+  label: string;
+  before: unknown | null;
+  after: unknown | null;
+}): Promise<void> {
+  try {
+    await db.undoHistory.put({
+      id: createId('und'),
+      at: new Date().toISOString(),
+      undoneAt: null,
+      ...entry,
+    });
+    if ((writeCounter += 1) % 64 === 0) {
+      const { pruneUndo } = await import('./undo');
+      void pruneUndo().catch(() => undefined);
+    }
+  } catch {
+    // the edit still stands; the safety net is a bonus, not a condition
+  }
 }
 
 // ==================== TASKS ====================
@@ -161,6 +280,9 @@ export async function createTask(
     completedDate: isDone ? getTodayKey() : null,
   };
   await db.tasks.put(task);
+  await logEvent('task.created', 'task', task.id, {
+    data: { status: task.status, hasDueDate: task.dueDate !== null, quadrant: task.quadrant },
+  });
   return task;
 }
 
@@ -204,6 +326,29 @@ export async function updateTask(
     updatedAt: now,
   };
   await db.tasks.put(next);
+
+  const postponed = postponeCount > existing.postponeCount;
+  await pushUndo({
+    kind: patch.status && patch.status !== existing.status ? 'task.status' : 'task.update',
+    entity: 'task',
+    entityId: id,
+    label: patch.status && patch.status !== existing.status ? 'تغییر وضعیت وظیفه' : 'ویرایش وظیفه',
+    before: existing,
+    after: next,
+  });
+  await logEvent('task.updated', 'task', id, { level: 2 });
+  if (postponed) {
+    await logEvent('task.postponed', 'task', id, {
+      level: 2,
+      data: { count: postponeCount },
+    });
+  }
+  if (patch.status && patch.status !== existing.status) {
+    await logEvent('task.status', 'task', id, {
+      level: 2,
+      data: { from: existing.status, to: patch.status },
+    });
+  }
   return next;
 }
 
@@ -268,10 +413,13 @@ export async function setTaskStatus(
 
 export async function archiveTask(id: string, archived: boolean): Promise<void> {
   await updateTask(id, { archived });
+  await logEvent('task.archived', 'task', id, { level: 2, data: { archived } });
 }
 
 export async function deleteTask(id: string): Promise<void> {
   await db.tasks.delete(id);
+  // Deletion is level 3 on purpose: it is confirmed, logged, and *not* undoable.
+  await logEvent('task.deleted', 'task', id, { level: 3 });
 }
 
 // ==================== HABITS & LOGS ====================
@@ -288,6 +436,7 @@ export async function createHabit(
     updatedAt: now,
   };
   await db.habits.put(habit);
+  await logEvent('habit.created', 'habit', habit.id, { data: { scheduleType: habit.scheduleType } });
   return habit;
 }
 
@@ -303,6 +452,15 @@ export async function updateHabit(
     updatedAt: new Date().toISOString(),
   };
   await db.habits.put(next);
+  await pushUndo({
+    kind: 'habit.update',
+    entity: 'habit',
+    entityId: id,
+    label: 'ویرایش عادت',
+    before: existing,
+    after: next,
+  });
+  await logEvent('habit.updated', 'habit', id, { level: 2 });
   return next;
 }
 
@@ -311,6 +469,7 @@ export async function deleteHabit(id: string): Promise<void> {
     await db.habits.delete(id);
     await db.habitLogs.where('habitId').equals(id).delete();
   });
+  await logEvent('habit.deleted', 'habit', id, { level: 3 });
 }
 
 /**
@@ -333,7 +492,20 @@ export async function upsertHabitLog(
     note,
     updatedAt: new Date().toISOString(),
   };
+  const previous = await db.habitLogs.get(log.id);
   await db.habitLogs.put(log);
+  await pushUndo({
+    kind: 'habit.log',
+    entity: 'habitLog',
+    entityId: log.id,
+    label: 'ثبت عادت',
+    before: previous ?? null,
+    after: log,
+  });
+  await logEvent('habit.logged', 'habitLog', log.id, {
+    level: 2,
+    data: { habitId, dateKey, status, value },
+  });
   return log;
 }
 
@@ -342,7 +514,20 @@ export async function upsertHabitLog(
  * (distinct from explicitly missed!).
  */
 export async function clearHabitLog(habitId: string, dateKey: string): Promise<void> {
-  await db.habitLogs.delete(makeHabitLogId(habitId, dateKey));
+  const id = makeHabitLogId(habitId, dateKey);
+  const previous = await db.habitLogs.get(id);
+  await db.habitLogs.delete(id);
+  if (previous) {
+    await pushUndo({
+      kind: 'habit.log',
+      entity: 'habitLog',
+      entityId: id,
+      label: 'برداشتن ثبت عادت',
+      before: previous,
+      after: null,
+    });
+  }
+  await logEvent('habit.unlogged', 'habitLog', id, { level: 2, data: { habitId, dateKey } });
 }
 
 // ==================== FOCUS SESSIONS ====================
@@ -355,11 +540,15 @@ export async function recordFocusSession(
     id: createId('foc'),
   };
   await db.focusSessions.put(session);
+  await logEvent('focus.recorded', 'focusSession', session.id, {
+    data: { minutes: Math.round(session.durationMinutes), mode: session.mode, natural: session.completedNaturally },
+  });
   return session;
 }
 
 export async function deleteFocusSession(id: string): Promise<void> {
   await db.focusSessions.delete(id);
+  await logEvent('focus.deleted', 'focusSession', id, { level: 3 });
 }
 
 // ==================== GOALS ====================
@@ -377,6 +566,7 @@ export async function createGoal(
     updatedAt: now,
   };
   await db.goals.put(goal);
+  await logEvent('goal.created', 'goal', goal.id, { data: { target: goal.targetValue } });
   return goal;
 }
 
@@ -401,11 +591,24 @@ export async function updateGoal(
     updatedAt: new Date().toISOString(),
   };
   await db.goals.put(next);
+  await pushUndo({
+    kind: 'goal.update',
+    entity: 'goal',
+    entityId: id,
+    label: 'ویرایش هدف',
+    before: existing,
+    after: next,
+  });
+  await logEvent('goal.updated', 'goal', id, {
+    level: 2,
+    data: { current: next.currentValue, target: next.targetValue, completed: next.completed },
+  });
   return next;
 }
 
 export async function deleteGoal(id: string): Promise<void> {
   await db.goals.delete(id);
+  await logEvent('goal.deleted', 'goal', id, { level: 3 });
 }
 
 // ==================== BACKUP / RESTORE / WIPE ====================
@@ -461,6 +664,15 @@ export async function importBackup(payload: KairosBackupPayload): Promise<void> 
       }
     }
   );
+  // Level 3: a restore overwrites everything, so it is always on the record.
+  await logEvent('data.imported', 'system', 'backup', {
+    level: 3,
+    data: {
+      tasks: payload.tasks.length,
+      habits: payload.habits?.length ?? 0,
+      journal: payload.journal?.length ?? 0,
+    },
+  });
 }
 
 export async function clearAllUserData(): Promise<void> {
@@ -485,6 +697,7 @@ export async function clearAllUserData(): Promise<void> {
       });
     }
   );
+  await logEvent('data.cleared', 'system', 'all', { level: 3 });
 }
 
 /* ── Journal ────────────────────────────────────────────────────────────────── */
@@ -512,9 +725,24 @@ export async function upsertJournalEntry(
   };
 
   await db.journal.put(entry);
+  await pushUndo({
+    kind: 'journal.save',
+    entity: 'journal',
+    entityId: id,
+    label: existing ? 'ویرایش ژورنال' : 'نوشتن ژورنال',
+    before: existing ?? null,
+    after: entry,
+  });
+  // Overwriting an existing day is level 3 in the spec; the first write is not.
+  await logEvent('journal.saved', 'journal', id, {
+    level: existing ? 3 : 2,
+    data: { dateKey, mood: entry.mood, isOverwrite: Boolean(existing) },
+  });
   return entry;
 }
 
 export async function deleteJournalEntry(dateKey: string): Promise<void> {
-  await db.journal.delete(`journal-${dateKey}`);
+  const id = `journal-${dateKey}`;
+  await db.journal.delete(id);
+  await logEvent('journal.deleted', 'journal', id, { level: 3, data: { dateKey } });
 }

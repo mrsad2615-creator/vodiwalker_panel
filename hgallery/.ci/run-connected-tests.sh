@@ -318,21 +318,32 @@ if tap_tag_or_text "search-button" 'content-desc="Search"'; then
   shot 18-search-empty.png
   type_text "clip"
   shot 19-search-text.png
-  if tap_tag_or_text "chip-videos" 'content-desc="Videos"|text="Videos"'; then
+  # Photos first: "clip" matches two videos, so choosing Photos must drop to one
+  # still result. That is the shot that proves the kind axis filters rather than
+  # merely highlights.
+  if tap_tag_or_text "chip-photos" 'content-desc="Photos"'; then
     sleep 2
-    shot 20-search-videos.png
+    shot 20-search-photos.png
   fi
-  if tap_tag_or_text "chip-large" 'content-desc="Large"|text="Large"'; then
+  if tap_tag_or_text "chip-videos" 'content-desc="Videos"'; then
+    sleep 2
+    shot 21-search-videos.png
+  fi
+  # The chip row is a horizontal scroll, so Large is off the right edge until the
+  # row is swiped. Swiping is what a user does; the row cannot be widened.
+  adb shell input swipe $((W * 85 / 100)) $((H * 16 / 100)) $((W * 20 / 100)) $((H * 16 / 100)) 250
+  sleep 2
+  if tap_tag_or_text "chip-large" 'content-desc="Large"'; then
     sleep 2
     # "clip" AND Videos AND Large: the fixtures are 1.5-1.9 MB, so this must find
-    # nothing. Photographing the empty state proves the axes AND rather than OR.
-    shot 21-search-no-results.png
+    # nothing. Photographing the empty state is the proof that the axes AND, not OR.
+    shot 22-search-no-results.png
   else
-    echo "::warning title=e2e::the Large chip was not on screen"
+    echo "::warning title=e2e::the Large chip was not on screen after swiping"
   fi
   adb shell input keyevent KEYCODE_BACK
   sleep 2
-  shot 22-after-search.png
+  shot 23-after-search.png
 else
   echo "::warning title=e2e::search button not found"
 fi

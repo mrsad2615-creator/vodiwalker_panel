@@ -46,6 +46,14 @@ oversight that went unnoticed.
   reveal tap and rotation. Double-tap seek, drag-to-seek, the speed menu and the
   fill toggle are implemented and unit-tested at the policy layer but were **not**
   driven by the harness.
+* **Search is now a real screen, but only four of its axes were driven.** The
+  magnifier was wired to an empty lambda and is now a screen with a field, kind
+  chips, size, recency and album chips, filtering through the tested
+  `core/SearchFilters`. Photographed: empty, mid-typing ("clip" → 2 results) and
+  with the Videos chip lit. Not driven by the harness: the Large/size axis, the
+  recency chips, the album chips, and the empty state, because the chip row scrolls
+  and the harness only recently learned to swipe it. The filtering rules themselves
+  are unit-tested; what is unverified is the screen's behaviour on those axes.
 * **Persian plurals.** Lint's `ImpliedQuantity` check found that Persian's
   singular form also covers zero, so the delete bodies now carry the count in
   both variants. The wording was reviewed by inspection, not by a native speaker.

@@ -20,15 +20,23 @@ Verify the download against `SHA256SUMS.txt`.
 * **Album detail** — tap an album to see its contents, back to return.
 * **Viewer** — full-screen on black, paged swiping, pinch and double-tap zoom with
   clamped panning, favourite toggle, delete behind a confirmation.
+* **Video playback** — Media3, with tap-to-toggle chrome, a scrubber, skip, a speed
+  menu, pause-at-end with a replay control, and full screen in landscape.
+* **Multi-selection** — long-press to select, batch share, and delete behind a
+  confirmation that offers an undo snackbar.
+* **Search** — a field that filters as you type, with chips for kind, size, recency
+  and album that AND together, and an empty state that distinguishes "too narrow"
+  from "nothing matches".
 * **English and Persian**, with the right-to-left layout verified on a device.
-* 25 unit tests over the domain logic; instrumented Compose tests over navigation,
-  album drill-down, localisation and view switching.
+* 77 unit tests over the domain logic (grouping, sorting, byte and duration
+  formatting, selection, delete policy, player chrome policy, search); instrumented
+  Compose tests over navigation, album drill-down, localisation and view switching.
 
 ## What does **not** work yet
 
-The photo editor, video playback, multi-selection, sharing, search, Discover,
-Highlights, custom albums, recently-deleted and the duplicate-finder UI are **not
-implemented**. Controls that lead nowhere are disabled rather than silently inert.
+The photo editor, EXIF details, Discover and Highlights content, custom albums,
+recently-deleted and the duplicate-finder UI are **not implemented**. Controls that
+lead nowhere are disabled rather than silently inert.
 `docs/FEATURE_PARITY_MATRIX.md` lists every feature and its true status;
 `docs/KNOWN_LIMITATIONS.md` explains each gap.
 

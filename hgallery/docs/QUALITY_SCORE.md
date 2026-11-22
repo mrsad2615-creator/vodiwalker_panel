@@ -44,7 +44,7 @@ which is implemented and photographed.
 | Photo editor | **0** | absent; its control is disabled rather than faked |
 | Video playback | **6** | a real Media3 player exists and is screenshotted in four states (mid-playback, chrome hidden, ended, landscape). Gestures beyond tap and rotation were not driven by the harness, and no clip longer than six seconds or other codec was tried. |
 | Discover / Highlights | **0** | absent; the tabs say so |
-| Search screen | **2** | filtering logic exists and is tested; no screen |
+| Search screen | **6** | a real screen: field, kind/size/recency/album chips, results grid reusing the photos cell, distinct empty states, unit-tested filtering. Three of the four axes were photographed; size, recency and album chips were not driven, and no result-of-a-chip-differs shot exists yet. |
 | Duplicate finder | **2** | algorithm exists and is tested; no worker, no UI |
 | Recently deleted | **0** | absent, and deletion is therefore permanent |
 | Multi-selection / share | **8** | selection, batch share and recoverable delete are implemented, tested and photographed on API 33. |
@@ -59,7 +59,7 @@ exists to show, so no overall figure is given.
 | Score | Needs |
 |---|---|
 | Fidelity above 8 | a clean native-resolution capture from a real Huawei device, then pixel comparison of margins and cell boundaries |
-| Function above 8 | multi-selection, sharing, search, EXIF details |
+| Function above 8 | EXIF details, a photo editor, and search across size/recency/album axes that the harness has actually driven |
 | Performance above 7 | Macrobenchmark and `FrameMetrics` on the POCO X3 Pro |
 | Compatibility above 8 | a run on API 29 and API 34, not only 33 |
 
@@ -98,3 +98,20 @@ Weighted: **6.95/10** (0.30×7.5 + 0.25×6.5 + 0.15×8.5 + 0.15×5.0 + 0.10×7.0
 0.05×7.0). An earlier draft of this paragraph said 7.3, which the arithmetic does
 not support; the figure is corrected rather than left flattering. The two low
 scores are honest, not modest: nothing has run on the phone the project is for.
+
+## Revision — 2026-11-22 (search screen exists)
+
+| Category | Weight | Score | Evidence |
+|---|---|---|---|
+| Huawei visual fidelity | 30% | 7.5/10 | The search screen is photographed for the first time and reads as the reference: a bordered field with the magnifier inside, chips beneath it, a plain result count, then the same 4-column grid as Photos. Unchanged from the previous revision because nothing was re-measured against a native capture. |
+| Functional completeness | 25% | 7.5/10 | Search went from 2 to 6. The field filters as you type ("clip" → 2 videos), chips AND together in tested code, and the empty state differs for "filters too wide" versus "no such file". Still absent: editor, Discover content, EXIF, custom albums. |
+| Code quality | 15% | 8.5/10 | `SearchChips.toQuery(nowMs)` takes the clock as a parameter instead of reading it, so the date buckets are testable; four new tests cover bucket contiguity, span arithmetic, chip emptiness and AND-ing. detekt rejected the first two attempts — unnamed byte and time literals — and both were fixed rather than suppressed. |
+| Performance | 15% | 5/10 | Unchanged and unmeasured. Search filters in-memory over the already-loaded item list, which is fine for 8 fixtures and unknown for 20 000 photos; nobody has measured it. |
+| Interactions and animations | 10% | 7/10 | The field takes focus on arrival, the Back key leaves search, and a chip visibly lights in the accent colour when chosen. No transition on the search/results switch and no measured frame timing. |
+| Compatibility | 5% | 7/10 | Unchanged. Only an API 33 emulator was run; the chip row scrolls horizontally, which was exercised only as a swipe in the harness. |
+
+Weighted: **7.20/10** (0.30×7.5 + 0.25×7.5 + 0.15×8.5 + 0.15×5.0 + 0.10×7.0 +
+0.05×7.0). Functional completeness rises because one of the brief's named absent
+screens was replaced by a working one, not because more was claimed. Performance
+staying at 5 is what keeps the total from moving further: the single largest weight
+after fidelity is the one nobody has measured.

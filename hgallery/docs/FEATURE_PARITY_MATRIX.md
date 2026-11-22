@@ -63,7 +63,7 @@ change pixels is the clearest possible example of fake functionality.
 
 | Feature | Status |
 |---|---|
-| Playback, seeking, speed, full screen | **no** — Media3 is not yet integrated |
+| Playback, seeking, speed, full screen | partial — Media3 player, scrubber, 10 s skip, 0.25×–2× menu, landscape full screen and pause-at-end are implemented and photographed; double-tap seek and drag-to-seek were never driven by the harness |
 
 ## Discover / Highlights / Search / Advanced
 
@@ -71,7 +71,7 @@ change pixels is the clearest possible example of fake functionality.
 |---|---|
 | Discover content | **no** — tab shows an explicit "not implemented" message |
 | Highlights | **no** — same |
-| Search | partial — filtering logic exists and is unit-tested (`SearchFiltersTest`), no search screen |
+| Search | partial — real screen with a field, kind/size/recency/album chips and a results grid; filtering is unit-tested. Size, recency and album axes are not yet driven by the screenshot harness. |
 | Duplicate detection (exact hash + dHash clustering) | partial — algorithm implemented and unit-tested, no UI/worker |
 | Large-file discovery, storage info | **no** |
 | Batch operations | **no** |

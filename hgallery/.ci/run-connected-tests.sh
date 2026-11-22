@@ -308,19 +308,34 @@ fi
 # one on a tile. The harness taps the first cell, long-presses is the selection path,
 # and the heart is toggled from the viewer - which is exactly the path a user takes.
 echo "== photographing favourite overlay =="
-adb shell input keyevent KEYCODE_BACK
-sleep 2
-# From the Photos tab, open the first photo, favourite it, come back.
-tap_and_shot $((W / 8)) $((H * 22 / 100)) 23-photos-before-favourite.png
+# The app must be in front before a tap means anything. An earlier version pressed
+# BACK unconditionally here, which popped the empty search and then the app itself,
+# so the next tap landed on the launcher and opened a browser.
+adb shell am start -W -n "$PKG/$ACTIVITY" > /dev/null 2>&1
 sleep 3
-if tap_tag_or_text "viewer-favourite" 'content-desc="Favourite"|content-desc="Add to favourites"'; then
+# Tap the tile by its description rather than by a coordinate: every cell announces
+# "Photo, <name>", so the first one is addressable no matter where the grid puts it.
+if tap_tag_or_text "first-photo" 'content-desc="Photo, '; then
   sleep 2
+  shot 23-viewer-before-favourite.png
+  if tap_tag_or_text "viewer-favourite" 'content-desc="Add to favourites"'; then
+    sleep 2
+    shot 24-viewer-favourited.png
+    if tap_tag_or_text "viewer-back" 'content-desc="Back"'; then
+      sleep 2
+      # The heart is drawn on the tile; this is the shot that proves it.
+      shot 25-photos-favourite-heart.png
+    else
+      echo "::warning title=e2e::no Back control in the viewer"
+    fi
+  else
+    echo "::warning title=e2e::the favourite control was not on screen in the viewer"
+  fi
 else
-  echo "::warning title=e2e::the favourite control was not on screen in the viewer"
+  echo "::warning title=e2e::no photo tile was addressable on the Photos tab"
 fi
-adb shell input keyevent KEYCODE_BACK
-sleep 3
-shot 24-photos-favourite-heart.png
+adb shell am start -W -n "$PKG/$ACTIVITY" > /dev/null 2>&1
+sleep 2
 
 echo "== photographing search =="
 adb shell input keyevent KEYCODE_BACK

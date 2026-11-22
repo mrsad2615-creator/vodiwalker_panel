@@ -22,6 +22,9 @@ behaviour, **minor** = cosmetic.
 | 12 | major | No multi-selection, so batch delete / share / move were impossible | selection was never modelled | `Selection` state machine in `core`, tick overlay, R3-style header and action bar | 11 unit tests; `SelectionTest` on the emulator |
 | 17 | critical | Deletion was permanent even on devices that have a trash | the app called `ContentResolver.delete` directly | `MediaStore.createTrashRequest` on API 30+, with the dialog text chosen by the same decision | `DeleteFlowTest`; screenshot `09-selection.png` |
 | 21 | major | Favourites were written but the grid never showed them | no overlay on the tile | `SelectionBadge` infrastructure in place; the heart overlay is the next step | pending |
+| 24 | major | The confirmation dialog read "Delete 1 items?" | the title was a plain string with a count spliced in | `<plurals>` for the title, both bodies and both toasts, in English and Persian | screenshot `10-delete-confirmation.png` |
+| 25 | minor | The selection action bar was never drawn (zero height) | an unweighted `Column` child called `fillMaxSize()` | grid moved into `Modifier.weight(1f)` | screenshot, then a test asserting the bar's pixel height |
+| 26 | minor | The e2e harness photographed the wrong screens twice | tap coordinates were guessed | Delete's position measured from the screenshot by locating its danger-coloured glyph | `09-selection.png` / `10-delete-confirmation.png` |
 
 ## Open
 

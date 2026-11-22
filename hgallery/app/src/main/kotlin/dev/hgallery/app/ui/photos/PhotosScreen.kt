@@ -140,8 +140,12 @@ private fun SelectionAwarePhotos(
         val message = when {
             outcome.removed == 0 -> context.getString(R.string.delete_failed)
             outcome.failed > 0 -> context.getString(R.string.delete_partial, outcome.failed, outcome.total)
-            outcome.trashed > 0 -> context.getString(R.string.moved_to_trash, outcome.trashed)
-            else -> context.getString(R.string.deleted_permanently, outcome.deleted)
+            outcome.trashed > 0 -> context.resources.getQuantityString(
+                R.plurals.moved_to_trash, outcome.trashed, outcome.trashed,
+            )
+            else -> context.resources.getQuantityString(
+                R.plurals.deleted_permanently, outcome.deleted, outcome.deleted,
+            )
         }
         android.widget.Toast.makeText(context, message, android.widget.Toast.LENGTH_SHORT).show()
     }

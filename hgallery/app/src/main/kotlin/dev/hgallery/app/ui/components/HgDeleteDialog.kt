@@ -5,6 +5,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import dev.hgallery.app.R
 import dev.hgallery.app.ui.theme.hgPalette
@@ -27,10 +28,13 @@ fun HgDeleteDialog(
     onDismiss: () -> Unit,
 ) {
     val palette = hgPalette
+    // Plural resources rather than concatenation: "Delete 1 items?" is the kind
+    // of wording that was actually shipped in the first build of this dialog and
+    // caught by reading its own screenshot.
     val body = when (path) {
-        DeletePath.SYSTEM_TRASH -> stringResource(R.string.delete_trash_body)
+        DeletePath.SYSTEM_TRASH -> pluralStringResource(R.plurals.delete_trash_body, count, count)
         DeletePath.SYSTEM_DELETE_REQUEST -> stringResource(R.string.delete_system_body)
-        DeletePath.DIRECT_DELETE -> stringResource(R.string.delete_permanent_body)
+        DeletePath.DIRECT_DELETE -> pluralStringResource(R.plurals.delete_permanent_body, count, count)
     }
 
     AlertDialog(
@@ -40,7 +44,7 @@ fun HgDeleteDialog(
         textContentColor = palette.textSecondary,
         title = {
             Text(
-                text = stringResource(R.string.delete_selected_title, count),
+                text = pluralStringResource(R.plurals.delete_selected_title, count, count),
                 style = MaterialTheme.typography.headlineSmall,
             )
         },

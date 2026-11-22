@@ -234,6 +234,11 @@ private fun SelectionAwarePhotos(
             }
         }
 
+        // `weight(1f)` is what reserves room for the selection bar: with an
+        // unweighted child calling fillMaxSize(), the bar was measured to zero
+        // height and was simply not drawn — visible in the first screenshot of
+        // this feature, which is why the weight is here and commented.
+        Box(Modifier.weight(1f)) {
         when {
             loading && items.isEmpty() -> LoadingState()
             error != null && items.isEmpty() -> MessageState(
@@ -329,6 +334,7 @@ private fun SelectionAwarePhotos(
                 }
             }
             }
+        }
         }
 
         if (selection.active) {

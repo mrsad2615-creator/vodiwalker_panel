@@ -171,9 +171,12 @@ shot 09-selection.png
 # The delete confirmation must be photographed too: a dialog that reads
 # "can be restored" on a device with no trash would be a false claim, and the
 # screenshot is how that gets checked.
-adb shell input tap $((W / 2)) $((H / 2 - 40))
-sleep 2
-adb shell screencap -p "$DEVICE_DIR/10-after-cancel.png"
+# Open the confirmation dialog and photograph it, then dismiss with Back: the
+# shot proves the dialog exists and that its wording matches the device's real
+# delete path.
+adb shell input tap $((W / 2)) $((H - 70))
+sleep 3
+shot 10-delete-confirmation.png
 adb shell input keyevent KEYCODE_BACK
 sleep 3
 

@@ -8,6 +8,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTouchInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import dev.hgallery.app.ui.components.HgTestTags
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -78,6 +79,30 @@ class SelectionTest {
         rule.onNodeWithTag(HgTestTags.SELECTION_SELECT_ALL).performClick()
         rule.waitForIdle()
         rule.onNodeWithTag(HgTestTags.PHOTOS_GRID).assertExists()
+    }
+
+    /**
+     * The action bar must actually be *laid out on screen*, not merely present in
+     * the tree.
+     *
+     * An earlier build produced a selection screenshot with the header and the
+     * ticks but no bottom bar at all: the grid was unweighted, so `fillMaxSize()`
+     * left the bar zero height. `assertIsDisplayed()` alone would not have caught
+     * it reliably, so the height of the node is asserted as well.
+     */
+    @Test
+    fun theActionBarIsLaidOutWithRealHeight() {
+        openPhotos()
+        val tag = firstTileTag() ?: return
+        rule.onNodeWithTag(tag).performTouchInput { longClick() }
+        rule.waitForIdle()
+        rule.onNodeWithTag(HgTestTags.SELECTION_BAR).assertIsDisplayed()
+        val height = rule.onNodeWithTag(HgTestTags.SELECTION_BAR)
+            .fetchSemanticsNode().size.height
+        assertTrue(
+            height > 40 * rule.density.density,
+            "the selection action bar was $height px tall, so it is not really on screen",
+        )
     }
 
     @Test

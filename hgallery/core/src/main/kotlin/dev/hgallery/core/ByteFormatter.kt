@@ -13,6 +13,9 @@ object ByteFormatter {
     /** Binary prefixes, which is what every file manager and Android itself show. */
     private const val BYTES_PER_UNIT = 1024L
 
+    /** Decimal base, for turning a decimal count into a multiplier. */
+    private const val DECIMAL_BASE = 10.0
+
     fun format(bytes: Long): String {
         if (bytes < 0) return "0 B"
         if (bytes < BYTES_PER_UNIT) return "$bytes B"
@@ -33,7 +36,7 @@ object ByteFormatter {
 
     private fun roundToString(value: Double, decimals: Int): String {
         var factor = 1.0
-        repeat(decimals) { factor *= 10.0 }
+        repeat(decimals) { factor *= DECIMAL_BASE }
         val scaled = kotlin.math.round(value * factor) / factor
         val whole = scaled.toLong()
         val fraction = kotlin.math.round((scaled - whole) * factor).toLong()

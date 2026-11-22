@@ -24,6 +24,11 @@ fun mediaDescription(item: MediaItem): String = when {
         item.displayName,
     )
     item.isVideo -> stringResource(R.string.media_desc_video_no_length, item.displayName)
+    // A favourite is marked with a small heart in the corner. The heart is drawn
+    // over the thumbnail and conveys nothing to a screen reader, so the state has to
+    // be in the sentence as well, or the Favourites album would be the only place a
+    // user could discover which items are in it.
+    item.isFavorite -> stringResource(R.string.media_desc_favourite_photo, item.displayName)
     else -> stringResource(R.string.media_desc_photo, item.displayName)
 }
 

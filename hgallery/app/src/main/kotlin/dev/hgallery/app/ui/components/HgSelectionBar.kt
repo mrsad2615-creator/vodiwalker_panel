@@ -7,6 +7,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -26,6 +27,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
@@ -183,6 +185,34 @@ private fun SelectionAction(
             color = effective,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+/**
+ * The heart on a favourited tile.
+ *
+ * Drawn as a white glyph with a soft shadow rather than a coloured badge: favourites
+ * are decor, not state that changes what a tap does, so the mark must not compete
+ * with the selection tick that appears in the same corner. It stays visible while a
+ * selection runs, because "which of these are favourites" is exactly the question a
+ * batch operation raises.
+ */
+@Composable
+fun FavouriteBadge(favourite: Boolean, modifier: Modifier = Modifier) {
+    AnimatedVisibility(
+        visible = favourite,
+        enter = fadeIn(tween(120)),
+        exit = fadeOut(tween(120)),
+        modifier = modifier,
+    ) {
+        Icon(
+            imageVector = HgIcons.FavoriteFilled,
+            contentDescription = stringResource(R.string.favourite_badge),
+            tint = Color.White,
+            modifier = Modifier
+                .size(14.dp)
+                .shadow(elevation = 2.dp, shape = CircleShape),
         )
     }
 }

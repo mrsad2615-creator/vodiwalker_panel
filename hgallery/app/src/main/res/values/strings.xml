@@ -90,6 +90,7 @@
     <string name="video_cannot_play_body">The file may use a codec this device does not support.</string>
     <string name="video_speed">Playback speed</string>
     <string name="media_desc_photo">Photo, %1$s</string>
+    <string name="media_desc_favourite_photo">Favourite photo, %1$s</string>
     <string name="media_desc_video">Video, %1$s, %2$s</string>
     <string name="media_desc_video_no_length">Video, %1$s</string>
     <plurals name="media_length_seconds">
@@ -107,6 +108,7 @@
     <string name="search_no_results_filters">Nothing matches with these filters. Try clearing one.</string>
     <string name="search_no_results_both">No match for that name with these filters. Try clearing one.</string>
     <string name="search_clear_filters">Clear filters</string>
+    <string name="favourite_badge">Favourite</string>
     <string name="filter_photos">Photos</string>
     <string name="filter_videos">Videos</string>
     <string name="filter_favourites">Favourites</string>

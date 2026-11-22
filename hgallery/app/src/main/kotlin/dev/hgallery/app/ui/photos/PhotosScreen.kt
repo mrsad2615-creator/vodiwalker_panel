@@ -50,6 +50,7 @@ import dev.hgallery.app.ui.components.HgSelectionHeader
 import dev.hgallery.app.ui.components.HgTestTags
 import dev.hgallery.app.ui.components.HgToolbar
 import dev.hgallery.app.ui.components.MediaThumbnail
+import dev.hgallery.app.ui.components.FavouriteBadge
 import dev.hgallery.app.ui.components.SelectionBadge
 import dev.hgallery.app.ui.components.mediaDescription
 import dev.hgallery.app.ui.icons.HgIcons
@@ -353,6 +354,15 @@ internal fun ThumbnailCell(
                 Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Color.White.copy(alpha = 0.55f)))
             }
         }
+
+        // Bottom-left: the top-right corner belongs to the selection tick, and the
+        // two states can hold at once.
+        FavouriteBadge(
+            favourite = item.isFavorite,
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .padding(4.dp),
+        )
 
         SelectionBadge(
             selected = selected,

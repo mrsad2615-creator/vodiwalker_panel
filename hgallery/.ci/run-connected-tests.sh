@@ -303,6 +303,25 @@ fi
 
 # Search: the magnifier used to be wired to an empty lambda, so this is the first
 # run in which the screen it should have opened can be photographed at all.
+# Favourites: mark one grid item, then photograph the heart it should draw.
+# The heart is a decor overlay, so the only honest evidence that it works is to see
+# one on a tile. The harness taps the first cell, long-presses is the selection path,
+# and the heart is toggled from the viewer - which is exactly the path a user takes.
+echo "== photographing favourite overlay =="
+adb shell input keyevent KEYCODE_BACK
+sleep 2
+# From the Photos tab, open the first photo, favourite it, come back.
+tap_and_shot $((W / 8)) $((H * 22 / 100)) 23-photos-before-favourite.png
+sleep 3
+if tap_tag_or_text "viewer-favourite" 'content-desc="Favourite"|content-desc="Add to favourites"'; then
+  sleep 2
+else
+  echo "::warning title=e2e::the favourite control was not on screen in the viewer"
+fi
+adb shell input keyevent KEYCODE_BACK
+sleep 3
+shot 24-photos-favourite-heart.png
+
 echo "== photographing search =="
 adb shell input keyevent KEYCODE_BACK
 sleep 2

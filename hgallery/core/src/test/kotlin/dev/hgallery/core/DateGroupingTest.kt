@@ -33,7 +33,14 @@ class DateGroupingTest {
 
         val sections = DateGrouping.group(items, zone, today)
 
-        assertEquals(listOf(LocalDate.of(2026, 11, 21), LocalDate.of(2026, 11, 20), LocalDate.of(2026, 11, 19)), sections.map { it.date })
+        assertEquals(
+            listOf(
+                LocalDate.of(2026, 11, 21),
+                LocalDate.of(2026, 11, 20),
+                LocalDate.of(2026, 11, 19),
+            ),
+            sections.map { it.date },
+        )
         assertEquals(listOf("Today", "Yesterday", "2026-11-19"), sections.map { it.header })
     }
 

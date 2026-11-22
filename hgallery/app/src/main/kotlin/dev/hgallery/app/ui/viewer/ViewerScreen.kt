@@ -126,7 +126,12 @@ fun ViewerScreen(
                         .padding(horizontal = 4.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    HgIconButton(HgIcons.Close, stringResource(R.string.close), onClose, tint = Color.White)
+                    HgIconButton(
+                        icon = HgIcons.Close,
+                        contentDescription = stringResource(R.string.close),
+                        onClick = onClose,
+                        tint = Color.White,
+                    )
                     Spacer(Modifier.weight(1f))
                     Text(
                         text = current?.let {
@@ -136,7 +141,12 @@ fun ViewerScreen(
                         color = Color.White,
                     )
                     Spacer(Modifier.weight(1f))
-                    HgIconButton(HgIcons.More, stringResource(R.string.more_options), {}, tint = Color.White)
+                    HgIconButton(
+                        icon = HgIcons.More,
+                        contentDescription = stringResource(R.string.more_options),
+                        onClick = {},
+                        tint = Color.White,
+                    )
                 }
                 if (current != null) {
                     Text(
@@ -212,13 +222,22 @@ fun ViewerScreen(
                         )
                         HgIconButton(
                             icon = if (current.isFavorite) HgIcons.FavoriteFilled else HgIcons.Favorite,
-                            contentDescription = stringResource(if (current.isFavorite) R.string.remove_favourite else R.string.add_favourite),
+                            contentDescription = stringResource(
+                                if (current.isFavorite) R.string.remove_favourite else R.string.add_favourite,
+                            ),
                             onClick = {
                                 coroutine.launch { container.mediaStore.toggleFavorite(current.id) }
                             },
                             tint = if (current.isFavorite) Color(0xFFFF6B5A) else Color.White,
                         )
-                        HgIconButton(HgIcons.Edit, stringResource(R.string.edit), {}, tint = Color.White.copy(alpha = 0.35f), enabled = false)
+                        // Not implemented: disabled rather than misleading.
+                        HgIconButton(
+                            icon = HgIcons.Edit,
+                            contentDescription = stringResource(R.string.edit),
+                            onClick = {},
+                            enabled = false,
+                            tint = Color.White.copy(alpha = 0.35f),
+                        )
                         HgIconButton(
                             icon = HgIcons.Delete,
                             contentDescription = stringResource(R.string.delete),
@@ -227,7 +246,13 @@ fun ViewerScreen(
                             onClick = { pendingDelete = current },
                             tint = Color.White,
                         )
-                        HgIconButton(HgIcons.Info, stringResource(R.string.details), {}, tint = Color.White.copy(alpha = 0.35f), enabled = false)
+                        HgIconButton(
+                            icon = HgIcons.Info,
+                            contentDescription = stringResource(R.string.details),
+                            onClick = {},
+                            enabled = false,
+                            tint = Color.White.copy(alpha = 0.35f),
+                        )
                     }
                 }
             }

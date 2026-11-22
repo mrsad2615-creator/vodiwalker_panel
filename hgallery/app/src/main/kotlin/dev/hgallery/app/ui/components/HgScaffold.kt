@@ -30,6 +30,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.hgallery.app.ui.icons.HgIcons
@@ -75,7 +76,7 @@ fun HgScreenTitle(
                     .then(
                         if (subtitleCentred) Modifier else Modifier.padding(start = HgMetrics.Gutter),
                     ),
-                textAlign = if (subtitleCentred) androidx.compose.ui.text.style.TextAlign.Center else androidx.compose.ui.text.style.TextAlign.Start,
+                textAlign = if (subtitleCentred) TextAlign.Center else TextAlign.Start,
             )
         }
     }

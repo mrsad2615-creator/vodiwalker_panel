@@ -115,7 +115,6 @@ fun HGalleryApp(container: AppContainer) {
             val media = items.firstOrNull { it.id == playingId }
             if (media != null) {
                 VideoPlayerScreen(
-                    container = container,
                     item = media,
                     onClose = { playerId = null },
                 )

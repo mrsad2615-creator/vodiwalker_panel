@@ -69,7 +69,11 @@ fun AlbumsScreen(
     val palette = hgPalette
     val items by container.mediaStore.items.collectAsStateWithLifecycle()
 
-    val albums = remember(items) { AlbumBuilder.visible(AlbumBuilder.sort(AlbumBuilder.fromItems(items), AlbumSort.DATE)) }
+    val albums = remember(items) {
+        AlbumBuilder.visible(
+            AlbumBuilder.sort(AlbumBuilder.fromItems(items), AlbumSort.DATE),
+        )
+    }
     val smart = albums.filter { it.isSynthetic }
     val folders = albums.filterNot { it.isSynthetic }
 

@@ -21,7 +21,6 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
-import dev.hgallery.app.data.AppContainer
 import dev.hgallery.app.data.rememberPlayerController
 import dev.hgallery.app.ui.components.HgTestTags
 import dev.hgallery.core.MediaItem
@@ -61,7 +60,6 @@ import kotlinx.coroutines.delay
 @UnstableApi
 @Composable
 fun VideoPlayerScreen(
-    container: AppContainer,
     item: MediaItem,
     onClose: () -> Unit,
 ) {

@@ -8,6 +8,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import dev.hgallery.app.ui.theme.hgPalette
+import androidx.compose.ui.res.stringResource
+import dev.hgallery.app.R
 
 /**
  * Explicit, honest placeholder.
@@ -20,7 +22,7 @@ import dev.hgallery.app.ui.theme.hgPalette
 fun PlaceholderScreen(name: String) {
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Text(
-            text = "$name is not implemented yet",
+            text = stringResource(R.string.not_implemented, name),
             style = MaterialTheme.typography.bodyMedium,
             color = hgPalette.textSecondary,
         )

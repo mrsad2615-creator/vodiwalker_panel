@@ -32,13 +32,16 @@ import dev.hgallery.app.ui.components.HgTestTags
 import dev.hgallery.app.ui.icons.HgIcons
 import dev.hgallery.app.ui.theme.HgMetrics
 import dev.hgallery.app.ui.theme.hgPalette
+import androidx.compose.ui.res.stringResource
+import dev.hgallery.app.R
+import androidx.annotation.StringRes
 
 /** The four destinations of the reference's bottom bar, in order. */
-enum class HgTab(val label: String, val icon: ImageVector) {
-    Photos("Photos", HgIcons.Photos),
-    Albums("Albums", HgIcons.Albums),
-    Highlights("Highlights", HgIcons.Highlights),
-    Discover("Discover", HgIcons.Discover),
+enum class HgTab(@StringRes val label: Int, val icon: ImageVector) {
+    Photos(R.string.tab_photos, HgIcons.Photos),
+    Albums(R.string.tab_albums, HgIcons.Albums),
+    Highlights(R.string.tab_highlights, HgIcons.Highlights),
+    Discover(R.string.tab_discover, HgIcons.Discover),
 }
 
 /**
@@ -121,7 +124,7 @@ private fun TabItem(
         )
         Spacer(Modifier.height(3.dp))
         Text(
-            text = tab.label,
+            text = stringResource(tab.label),
             style = MaterialTheme.typography.labelSmall,
             color = tint,
             maxLines = 1,

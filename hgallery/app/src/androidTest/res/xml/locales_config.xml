@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Test-only locale configuration: the instrumented run forces Persian so the
+  right-to-left layout is exercised on a real device. It is deliberately not part
+  of the app's own manifest.
+-->
+<locale-config xmlns:android="http://schemas.android.com/apk/res/android">
+    <locale android:name="fa" />
+</locale-config>

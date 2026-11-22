@@ -91,11 +91,3 @@ class MediaStore(
 
     fun albums(): List<dev.hgallery.core.Album> = AlbumBuilder.fromItems(_items.value)
 }
-
-/** Description of the Photos subtitle in the reference's exact phrasing. */
-fun photosSubtitle(photos: Int, videos: Int): String = when {
-    photos > 0 && videos > 0 -> "$photos photos and $videos ${if (videos == 1) "video" else "videos"}"
-    photos > 0 -> "$photos ${if (photos == 1) "photo" else "photos"}"
-    videos > 0 -> "$videos ${if (videos == 1) "video" else "videos"}"
-    else -> "No photos yet"
-}

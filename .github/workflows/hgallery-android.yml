@@ -321,8 +321,9 @@ jobs:
             echo "* Real MediaStore access with scoped-storage permissions."
             echo "* Photos timeline grouped by day, seamless 4-column grid."
             echo "* Albums with mosaic covers, counts and MORE ALBUMS."
-            echo "* Full-screen viewer with pinch/double-tap zoom and paged swiping."
-            echo "* Persian and English, light and dark themes."
+            echo "* Full-screen viewer with pinch and double-tap zoom, paged swiping, favourites and delete."
+            echo "* Persian (RTL) and English strings, both selected by the platform."
+            echo "* Light and dark palettes; the light theme is the one measured against the reference."
             echo "* No INTERNET permission: nothing leaves the device."
             echo
             echo "Commit \`${GITHUB_SHA:0:7}\` · CI run $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"

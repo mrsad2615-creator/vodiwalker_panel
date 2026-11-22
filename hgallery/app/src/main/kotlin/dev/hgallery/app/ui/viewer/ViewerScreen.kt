@@ -50,6 +50,8 @@ import dev.hgallery.app.ui.components.HgIconButton
 import dev.hgallery.app.ui.components.HgTestTags
 import dev.hgallery.core.MediaItem
 import kotlinx.coroutines.launch
+import androidx.compose.ui.res.stringResource
+import dev.hgallery.app.R
 
 /**
  * Full-screen viewer.
@@ -121,15 +123,17 @@ fun ViewerScreen(
                         .padding(horizontal = 4.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    HgIconButton(HgIcons.Close, "Close", onClose, tint = Color.White)
+                    HgIconButton(HgIcons.Close, stringResource(R.string.close), onClose, tint = Color.White)
                     Spacer(Modifier.weight(1f))
                     Text(
-                        text = current?.let { "${pagerState.currentPage + 1} / ${items.size}" } ?: "",
+                        text = current?.let {
+                            stringResource(R.string.viewer_position, pagerState.currentPage + 1, items.size)
+                        } ?: "",
                         style = MaterialTheme.typography.titleSmall,
                         color = Color.White,
                     )
                     Spacer(Modifier.weight(1f))
-                    HgIconButton(HgIcons.More, "More options", {}, tint = Color.White)
+                    HgIconButton(HgIcons.More, stringResource(R.string.more_options), {}, tint = Color.White)
                 }
                 if (current != null) {
                     Text(
@@ -165,23 +169,23 @@ fun ViewerScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceEvenly,
                     ) {
-                        HgIconButton(HgIcons.Share, "Share", {}, tint = Color.White)
+                        HgIconButton(HgIcons.Share, stringResource(R.string.share), {}, tint = Color.White)
                         HgIconButton(
                             icon = if (current.isFavorite) HgIcons.FavoriteFilled else HgIcons.Favorite,
-                            contentDescription = if (current.isFavorite) "Remove from favourites" else "Add to favourites",
+                            contentDescription = stringResource(if (current.isFavorite) R.string.remove_favourite else R.string.add_favourite),
                             onClick = {
                                 coroutine.launch { container.mediaStore.toggleFavorite(current.id) }
                             },
                             tint = if (current.isFavorite) Color(0xFFFF6B5A) else Color.White,
                         )
-                        HgIconButton(HgIcons.Edit, "Edit", {}, tint = Color.White)
+                        HgIconButton(HgIcons.Edit, stringResource(R.string.edit), {}, tint = Color.White)
                         HgIconButton(
                             icon = HgIcons.Delete,
-                            contentDescription = "Delete",
+                            contentDescription = stringResource(R.string.delete),
                             onClick = { coroutine.launch { container.mediaStore.delete(setOf(current.id)) } },
                             tint = Color.White,
                         )
-                        HgIconButton(HgIcons.Info, "Details", {}, tint = Color.White)
+                        HgIconButton(HgIcons.Info, stringResource(R.string.details), {}, tint = Color.White)
                     }
                 }
             }

@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Persian. The directory name `values-fa` is what makes Android choose this file
+  on a Persian device, and it also switches the layout direction to RTL for the
+  whole activity, because `supportsRtl` is declared in the manifest.
+-->
+<resources>
+    <string name="app_name">گالری</string>
+
+    <string name="tab_photos">تصاویر</string>
+    <string name="tab_albums">آلبوم‌ها</string>
+    <string name="tab_highlights">برجسته‌ها</string>
+    <string name="tab_discover">کشف</string>
+
+    <string name="search">جستجو</string>
+    <string name="more_options">گزینه‌های بیشتر</string>
+    <string name="close">بستن</string>
+    <string name="back">بازگشت</string>
+    <string name="share">اشتراک‌گذاری</string>
+    <string name="delete">حذف</string>
+    <string name="edit">ویرایش</string>
+    <string name="details">جزئیات</string>
+    <string name="add_favourite">افزودن به موردعلاقه‌ها</string>
+    <string name="remove_favourite">حذف از موردعلاقه‌ها</string>
+
+    <string name="section_more_albums">آلبوم‌های بیشتر</string>
+    <string name="action_add_album">افزودن آلبوم</string>
+
+    <string name="empty_photos_title">هنوز تصویری نیست</string>
+    <string name="empty_photos_body">تصاویر و ویدیوهای این دستگاه اینجا نمایش داده می‌شوند</string>
+    <string name="error_media_title">خواندن رسانه‌های این دستگاه ممکن نشد</string>
+    <string name="not_implemented">%1$s هنوز پیاده‌سازی نشده است</string>
+
+    <string name="photo_count">%1$d تصویر</string>
+    <string name="video_count">%1$d ویدیو</string>
+    <string name="media_summary">%1$s و %2$s</string>
+
+    <string name="viewer_position">%1$d از %2$d</string>
+</resources>

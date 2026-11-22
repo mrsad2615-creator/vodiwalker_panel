@@ -33,7 +33,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.hgallery.app.data.AppContainer
 import dev.hgallery.app.data.ThumbnailStore
-import dev.hgallery.app.data.photosSubtitle
 import dev.hgallery.app.ui.components.HgScreenTitle
 import dev.hgallery.app.ui.components.HgToolbar
 import dev.hgallery.app.ui.components.HgTestTags
@@ -42,6 +41,8 @@ import dev.hgallery.app.ui.theme.HgMetrics
 import dev.hgallery.app.ui.theme.hgPalette
 import dev.hgallery.core.MediaItem
 import java.util.Locale
+import androidx.compose.ui.res.stringResource
+import dev.hgallery.app.R
 
 /**
  * The Photos timeline.
@@ -71,6 +72,19 @@ fun PhotosScreen(
         (items.size - v) to v
     }
 
+    // Counts are pluralised by the resources, not by string concatenation, so a
+    // language with different plural rules reads correctly.
+    val photoLabel = stringResource(R.string.photo_count, photos)
+    val videoLabel = stringResource(R.string.video_count, videos)
+    val summary = { p: Int, v: Int ->
+        when {
+            p > 0 && v > 0 -> stringResource(R.string.media_summary, photoLabel, videoLabel)
+            p > 0 -> photoLabel
+            v > 0 -> videoLabel
+            else -> ""
+        }
+    }
+
     val cell = remember { 256 }
     val thumbnails = remember { container.thumbnails }
 
@@ -87,8 +101,8 @@ fun PhotosScreen(
                 modifier = Modifier.padding(end = 6.dp),
             )
             HgScreenTitle(
-                title = "Photos",
-                subtitle = if (items.isNotEmpty()) photosSubtitle(photos, videos) else null,
+                title = stringResource(R.string.tab_photos),
+                subtitle = if (items.isNotEmpty()) summary(photos, videos) else null,
                 subtitleCentred = true,
             )
             Spacer(Modifier.height(14.dp))
@@ -96,8 +110,14 @@ fun PhotosScreen(
 
         when {
             loading && items.isEmpty() -> LoadingState()
-            error != null && items.isEmpty() -> MessageState("Could not read this device's media", error ?: "")
-            items.isEmpty() -> MessageState("No photos yet", "Photos and videos on this device will appear here")
+            error != null && items.isEmpty() -> MessageState(
+                stringResource(R.string.error_media_title),
+                error ?: "",
+            )
+            items.isEmpty() -> MessageState(
+                stringResource(R.string.empty_photos_title),
+                stringResource(R.string.empty_photos_body),
+            )
             else -> LazyVerticalGrid(
                 columns = GridCells.Fixed(HgMetrics.PhotosColumns),
                 horizontalArrangement = Arrangement.spacedBy(HgMetrics.GridGap),

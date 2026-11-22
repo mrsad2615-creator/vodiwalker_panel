@@ -49,6 +49,8 @@ import dev.hgallery.core.Album
 import dev.hgallery.core.AlbumBuilder
 import dev.hgallery.core.AlbumSort
 import dev.hgallery.core.MediaItem
+import androidx.compose.ui.res.stringResource
+import dev.hgallery.app.R
 
 /**
  * The Albums tab, built to reference R2.
@@ -74,7 +76,7 @@ fun AlbumsScreen(
     Column(modifier = modifier.fillMaxSize().background(palette.page)) {
         Spacer(Modifier.statusBarsPadding())
         HgToolbar(onSearch = {}, onMore = {}, modifier = Modifier.padding(end = 6.dp))
-        HgScreenTitle(title = "Albums")
+        HgScreenTitle(title = stringResource(R.string.tab_albums))
         Spacer(Modifier.height(18.dp))
 
         LazyVerticalGrid(
@@ -95,8 +97,8 @@ fun AlbumsScreen(
             if (folders.isNotEmpty()) {
                 item(span = { GridItemSpan(maxLineSpan) }) {
                     HgSectionHeader(
-                        label = "MORE ALBUMS",
-                        action = "ADD ALBUM",
+                        label = stringResource(R.string.section_more_albums),
+                        action = stringResource(R.string.action_add_album),
                         onAction = {},
                     )
                 }

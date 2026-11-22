@@ -35,6 +35,8 @@ import androidx.compose.ui.unit.dp
 import dev.hgallery.app.ui.icons.HgIcons
 import dev.hgallery.app.ui.theme.HgMetrics
 import dev.hgallery.app.ui.theme.hgPalette
+import androidx.compose.ui.res.stringResource
+import dev.hgallery.app.R
 
 /** Space reserved for the status bar, since every screen draws edge to edge. */
 val statusBarPadding: androidx.compose.foundation.layout.PaddingValues
@@ -123,10 +125,10 @@ fun HgToolbar(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (onSearch != null) {
-            HgIconButton(HgIcons.Search, "Search", onSearch)
+            HgIconButton(HgIcons.Search, stringResource(R.string.search), onSearch)
         }
         if (onMore != null) {
-            HgIconButton(HgIcons.More, "More options", onMore)
+            HgIconButton(HgIcons.More, stringResource(R.string.more_options), onMore)
         }
         Spacer(Modifier.width(8.dp))
     }

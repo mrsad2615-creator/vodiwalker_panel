@@ -1,4 +1,34 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Gallery</string>
+
+    <string name="tab_photos">Photos</string>
+    <string name="tab_albums">Albums</string>
+    <string name="tab_highlights">Highlights</string>
+    <string name="tab_discover">Discover</string>
+
+    <string name="search">Search</string>
+    <string name="more_options">More options</string>
+    <string name="close">Close</string>
+    <string name="back">Back</string>
+    <string name="share">Share</string>
+    <string name="delete">Delete</string>
+    <string name="edit">Edit</string>
+    <string name="details">Details</string>
+    <string name="add_favourite">Add to favourites</string>
+    <string name="remove_favourite">Remove from favourites</string>
+
+    <string name="section_more_albums">MORE ALBUMS</string>
+    <string name="action_add_album">ADD ALBUM</string>
+
+    <string name="empty_photos_title">No photos yet</string>
+    <string name="empty_photos_body">Photos and videos on this device will appear here</string>
+    <string name="error_media_title">Could not read this device\'s media</string>
+    <string name="not_implemented">%1$s is not implemented yet</string>
+
+    <string name="photo_count">%1$d photos</string>
+    <string name="video_count">%1$d videos</string>
+    <string name="media_summary">%1$s and %2$s</string>
+
+    <string name="viewer_position">%1$d / %2$d</string>
 </resources>

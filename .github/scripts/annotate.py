@@ -9,7 +9,7 @@ error.
 import sys
 from pathlib import Path
 
-MAX_ANNOTATIONS = 20
+MAX_ANNOTATIONS = 40
 KEYWORDS = (
     "error:",
     "e: ",
@@ -55,7 +55,17 @@ def main() -> int:
 
     for line in chosen:
         print(f"::error title={title}::{escape(line.strip())[:900]}")
+
     print(f"::notice title={title}::{len(lines)} log lines, {len(hits)} matched a failure keyword")
+
+    # Keyword matching is a heuristic and silently returns nothing useful when it
+    # misses. That cost several CI cycles: a run failed with an empty annotation
+    # set because the real cause ("Could not resolve all files for configuration")
+    # was one line above the 40-line window. So when nothing matched, always emit
+    # the tail verbatim. The tail is where Gradle puts a configuration failure.
+    if not hits:
+        for line in lines[-25:]:
+            print(f"::error title={title} tail::{escape(line.strip())[:900]}")
     return 0
 
 

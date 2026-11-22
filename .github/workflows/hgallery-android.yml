@@ -222,3 +222,116 @@ jobs:
             hgallery/ui-test.log
             hgallery/app/build/reports/androidTests/**
           if-no-files-found: ignore
+
+  release:
+    name: Signed release APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: [core-tests, build]
+    permissions:
+      contents: write
+    defaults:
+      run:
+        working-directory: hgallery
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Make the wrapper executable
+        run: chmod +x ./gradlew
+
+      # The key lives in the Actions cache, never in the repository. Caching it
+      # instead of generating one per run keeps the signing identity stable,
+      # which is what lets a new APK install over an old one without the user
+      # losing anything. A repository secret wins when one exists.
+      - name: Restore the signing key
+        id: keystore
+        uses: actions/cache@v4
+        with:
+          path: hgallery/.keystore
+          key: hgallery-release-keystore-v1
+
+      - name: Write the stored signing key
+        if: env.HG_KEYSTORE_BASE64 != ''
+        shell: bash
+        working-directory: hgallery
+        env:
+          HG_KEYSTORE_BASE64: ${{ secrets.HG_KEYSTORE_BASE64 }}
+          HG_KEYSTORE_PASSWORD: ${{ secrets.HG_KEYSTORE_PASSWORD }}
+        run: |
+          set -euo pipefail
+          mkdir -p .keystore
+          printf '%s' "$HG_KEYSTORE_BASE64" | base64 -d > .keystore/hgallery-release.jks
+          printf '%s' "$HG_KEYSTORE_PASSWORD" > .keystore/password.txt
+
+      - name: Create the signing key
+        if: steps.keystore.outputs.cache-hit != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .keystore
+          PASS=$(head -c 48 /dev/urandom | base64 | tr -dc 'A-Za-z0-9' | cut -c1-40)
+          printf '%s' "$PASS" > .keystore/password.txt
+          keytool -genkeypair -v \
+            -keystore .keystore/hgallery-release.jks \
+            -alias hgallery \
+            -keyalg RSA -keysize 4096 -validity 10950 \
+            -storepass "$PASS" -keypass "$PASS" \
+            -dname "CN=HGallery, OU=Personal, O=HGallery, C=DE"
+
+      - name: Build the signed release APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          PASS=$(cat .keystore/password.txt)
+          export ORG_GRADLE_PROJECT_HG_KEYSTORE="$GITHUB_WORKSPACE/hgallery/.keystore/hgallery-release.jks"
+          export ORG_GRADLE_PROJECT_HG_KEYSTORE_PASSWORD="$PASS"
+          export ORG_GRADLE_PROJECT_HG_KEY_ALIAS="hgallery"
+          export ORG_GRADLE_PROJECT_HG_KEY_PASSWORD="$PASS"
+          ./gradlew --console=plain --no-daemon :app:assembleRelease
+
+      - name: Verify the APK is signed and well formed
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK=$(find app/build/outputs/apk/release -name '*.apk' | head -1)
+          echo "apk: $APK"
+          ls -l "$APK"
+          BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
+          "$BT/aapt2" dump badging "$APK" | head -8
+          "$BT/apksigner" verify --print-certs "$APK" | head -6
+          sha256sum "$APK" | tee SHA256SUMS.txt
+
+      - name: Publish the release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ github.run_number }}
+        run: |
+          set -uo pipefail
+          APK=$(find app/build/outputs/apk/release -name '*.apk' | head -1)
+          cp "$APK" hgallery.apk
+          TAG="hgallery-v0.1.${VERSION}"
+          {
+            echo "HGallery — a personal, local-only recreation of Huawei Gallery."
+            echo
+            echo "* Real MediaStore access with scoped-storage permissions."
+            echo "* Photos timeline grouped by day, seamless 4-column grid."
+            echo "* Albums with mosaic covers, counts and MORE ALBUMS."
+            echo "* Full-screen viewer with pinch/double-tap zoom and paged swiping."
+            echo "* Persian and English, light and dark themes."
+            echo "* No INTERNET permission: nothing leaves the device."
+            echo
+            echo "Commit \`${GITHUB_SHA:0:7}\` · CI run $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+            echo
+            echo "Install \`hgallery.apk\` on Android 8.0+ (allow installs from unknown sources)."
+            echo "Verify the download against \`SHA256SUMS.txt\`."
+            echo
+            echo "The signing key must not change between releases: Android refuses to"
+            echo "install a build over an older one when the signature differs."
+          } > notes.md
+          gh release create "$TAG" hgallery.apk SHA256SUMS.txt \
+            --title "HGallery 0.1.$VERSION" --notes-file notes.md

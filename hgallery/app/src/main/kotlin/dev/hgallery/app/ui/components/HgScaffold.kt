@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -140,10 +141,13 @@ fun HgSectionHeader(
     modifier: Modifier = Modifier,
 ) {
     val palette = hgPalette
+    // The row is as tall as the 48 dp touch target it has to contain. Forcing a
+    // shorter row here clipped the descenders of the trailing action, which is
+    // visible in a screenshot long before it is visible in code.
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .height(HgMetrics.SectionHeaderHeight),
+            .heightIn(min = HgMetrics.MinTouchTarget),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
@@ -155,17 +159,21 @@ fun HgSectionHeader(
             modifier = Modifier.weight(1f),
         )
         if (action != null && onAction != null) {
-            Text(
-                text = action,
-                style = androidx.compose.material3.MaterialTheme.typography.labelMedium,
-                color = palette.accent,
+            Box(
                 modifier = Modifier
-                    .height(HgMetrics.MinTouchTarget)
                     .clip(RoundedCornerShape(8.dp))
                     .clickable(onClick = onAction)
-                    .padding(horizontal = 6.dp, vertical = 14.dp)
+                    .padding(horizontal = 6.dp, vertical = 12.dp)
                     .semantics { role = Role.Button },
-            )
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = action,
+                    style = androidx.compose.material3.MaterialTheme.typography.labelMedium,
+                    color = palette.accent,
+                    maxLines = 1,
+                )
+            }
         }
     }
 }

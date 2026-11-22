@@ -25,6 +25,18 @@ android {
         buildConfig = true
     }
 
+    signingConfigs {
+        val keystorePath = providers.gradleProperty("HG_KEYSTORE").orNull
+        if (keystorePath != null) {
+            maybeCreate("release").apply {
+                storeFile = rootProject.file(keystorePath)
+                storePassword = providers.gradleProperty("HG_KEYSTORE_PASSWORD").orNull
+                keyAlias = providers.gradleProperty("HG_KEY_ALIAS").orNull
+                keyPassword = providers.gradleProperty("HG_KEY_PASSWORD").orNull
+            }
+        }
+    }
+
     buildTypes {
         debug {
             applicationIdSuffix = ".debug"
@@ -36,6 +48,7 @@ android {
             // worth taking for a personal build.
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            signingConfigs.findByName("release")?.let { signingConfig = it }
         }
     }
 

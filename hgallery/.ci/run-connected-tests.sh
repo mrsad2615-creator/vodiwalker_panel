@@ -166,12 +166,13 @@ tap_tag_or_text() {
   dump_ui "$TAG"
   BOUNDS=$(node_centre "$PATTERN")
   if [ -z "$BOUNDS" ]; then
-    echo "::warning title=e2e::no node matching $PATTERN on screen"
+    NODES=$(adb shell cat /sdcard/ui.xml 2>/dev/null | grep -o 'content-desc="[^"]\+"' | sort -u | head -6 | tr '\n' ' ')
+    echo "::warning title=e2e::no node matching $PATTERN. labels on screen: ${NODES:-none}"
     return 1
   fi
   set -- $BOUNDS
   CX=$(( ($1 + $3) / 2 )); CY=$(( ($2 + $4) / 2 ))
-  echo "tap $PATTERN -> centre ($CX,$CY) bounds [$1,$2][$3,$4]"
+  echo "::notice title=e2e::tapped $PATTERN at ($CX,$CY) bounds [$1,$2][$3,$4]"
   adb shell input tap "$CX" "$CY"
   sleep 3
   return 0
@@ -281,12 +282,12 @@ adb shell input tap $((W / 8 * 3)) $((H - 55))
 sleep 3
 shot 11-albums-for-video.png
 
-if tap_tag_or_text "videos-album" 'content-desc="Videos, [0-9]*"'; then
+if tap_tag_or_text "videos-album" 'content-desc="Videos|text="Videos'; then
   sleep 2
   shot 12-videos-album.png
   # The album's first tile: the only nodes whose label starts with "Video,".
   # Tapping the first match avoids depending on test tags, which are not exposed.
-  if tap_tag_or_text "first-video" 'content-desc="Video, [^"]*"'; then
+  if tap_tag_or_text "first-video" 'content-desc="Video, |text="Video, '; then
     sleep 9
     shot 13-video-player.png
     # One tap on the surface toggles the chrome off; this shot proves the surface

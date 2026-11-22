@@ -15,14 +15,19 @@
 9. Viewer — paged swiping, pinch and double-tap zoom, favourites, confirmed delete.
 10. Localisation — English and Persian, verified on device.
 11. Release — signed APK, `apksigner`-verified, published with a SHA-256.
+12. Multi-selection — long press and toolbar entry, R3-style header, ticks,
+    receding unselected tiles.
+13. Safe deletion — confirmation, then the platform trash on API 30+, with the
+    dialog text derived from the same decision so it cannot over-promise.
+14. Share — batch and single, real `ACTION_SEND` with clip data and a grant.
 
 ## Next, in order of value
 
 | Order | Work | Why it is next |
 |---|---|---|
-| 1 | Multi-selection + batch delete/share | the single most conspicuous missing interaction; the reference's toolbar is documented in R3 |
-| 2 | Search screen | the filtering logic is written and tested; only the screen is missing |
-| 3 | Recently deleted | deletion is irreversible today, which is a safety problem before it is a parity problem |
+| 1 | Search screen | the filtering logic is written and tested; only the screen is missing |
+| 2 | Recently-deleted *album view* | deletion is now safe at the platform level; an in-app album would show what is in the trash |
+| 3 | Selection in album detail and the viewer | `Selection` is reusable; the screens are the work |
 | 4 | Favourites reflected in the grid | the data is already tracked |
 | 5 | Photo details / EXIF panel | needs a projected EXIF read |
 | 6 | Media3 video playback | a gallery without video playback is incomplete |

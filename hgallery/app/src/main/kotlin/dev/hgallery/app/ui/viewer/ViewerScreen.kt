@@ -75,6 +75,7 @@ fun ViewerScreen(
     onClose: () -> Unit,
 ) {
     val coroutine = rememberCoroutineScope()
+    val viewerContext = androidx.compose.ui.platform.LocalContext.current
     val initialIndex = remember(startId, items) {
         items.indexOfFirst { it.id == startId }.coerceAtLeast(0)
     }
@@ -199,11 +200,23 @@ fun ViewerScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceEvenly,
                     ) {
-                        // Share and Edit are not implemented yet. They are
+                        // Edit and Details are not implemented yet. They are
                         // disabled rather than silently doing nothing when
                         // tapped, because a control that looks usable and is not
                         // is worse than one that reads as unavailable.
-                        HgIconButton(HgIcons.Share, stringResource(R.string.share), {}, tint = Color.White.copy(alpha = 0.35f), enabled = false)
+                        // Sharing one item is the same code path as sharing a
+                        // selection, so it is genuinely wired, not a placeholder.
+                        HgIconButton(
+                            icon = HgIcons.Share,
+                            contentDescription = stringResource(R.string.share),
+                            onClick = {
+                                val intent = container.mediaStore.buildShareIntent(setOf(current.id))
+                                if (intent != null) {
+                                    runCatching { viewerContext.startActivity(intent) }
+                                }
+                            },
+                            tint = Color.White,
+                        )
                         HgIconButton(
                             icon = if (current.isFavorite) HgIcons.FavoriteFilled else HgIcons.Favorite,
                             contentDescription = stringResource(if (current.isFavorite) R.string.remove_favourite else R.string.add_favourite),

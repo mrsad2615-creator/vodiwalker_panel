@@ -174,7 +174,11 @@ shot 09-selection.png
 # Open the confirmation dialog and photograph it, then dismiss with Back: the
 # shot proves the dialog exists and that its wording matches the device's real
 # delete path.
-adb shell input tap $((W / 2)) $((H - 70))
+# The action row is three equal cells: Share, Select all, Delete. Delete is the
+# right-most one, and the row sits above the tab bar. Both anchors are read from
+# the measured screenshot, not assumed: an earlier attempt tapped the middle cell
+# and photographed "select all" instead of the dialog.
+adb shell input tap $((W * 80 / 100)) $((H * 928 / 1000))
 sleep 3
 shot 10-delete-confirmation.png
 adb shell input keyevent KEYCODE_BACK

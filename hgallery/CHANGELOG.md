@@ -1,5 +1,40 @@
 # CHANGELOG
 
+## 2026-11-22 — multi-selection, real trash, working share
+
+### Added
+* Multi-selection on the Photos timeline, entered by a long press or by the new
+  toolbar control. The header shows a close glyph and `N selected`, the shape of
+  Huawei's own multi-select capture (R3). Unselected tiles recede; selected ones
+  carry a blue circular tick.
+* Batch action row: **Share · Select all · Delete**, Delete in the danger colour.
+* Real sharing from both the batch row and the full-screen viewer, via
+  `ACTION_SEND` with clip data for every URI and a read grant.
+* A confirmation dialog whose body text depends on whether this Android version
+  actually has a trash.
+
+### Changed
+* Deletion is no longer irreversible on Android 11+. It goes through
+  `MediaStore.createTrashRequest`, so items land in the phone's own Recycle bin
+  and can be restored for up to 30 days. The dialog says so only there; on API
+  26-29 the same dialog says the deletion is permanent. That is the difference
+  between a safety feature and a false promise.
+* Deleted thumbnails are evicted from the bitmap cache instead of lingering in
+  the LRU until size pressure pushed them out.
+
+### Fixed
+* The selection action bar was measured to zero height and never drawn: the grid
+  sat in an unweighted `Column` child calling `fillMaxSize()`. Caught by looking
+  at the feature's own screenshot, then pinned by a test that asserts the bar's
+  pixel height.
+
+### Verified
+* 17 new unit tests (11 for `Selection`, 6 for the delete-path decision).
+* 6 instrumented tests on the emulator, including the height assertion.
+* CI run green end to end: core tests, debug build, lint, emulator UI tests,
+  signed release APK. Evidence: `evidence/09-selection.png`,
+  `evidence/10-delete-confirmation.png`.
+
 ## 0.1.41
 
 The first build that is genuinely usable on a phone.

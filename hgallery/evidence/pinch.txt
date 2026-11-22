@@ -1,1 +1,1 @@
-changed-pixel fraction below the status bar: 
+view switch did NOT change the page

@@ -306,21 +306,29 @@ fi
 echo "== photographing search =="
 adb shell input keyevent KEYCODE_BACK
 sleep 2
+# Start from the Photos tab: both Photos and Albums now open search, but only Photos
+# has nothing else to tap in that corner, so the sequence stays deterministic.
+adb shell input tap $((W / 8)) $((H - 55))
+sleep 3
 tap_and_shot $((W / 8 * 3)) 17-albums-before-search.png
+adb shell input tap $((W / 8)) $((H - 55))
+sleep 2
 if tap_tag_or_text "search-button" 'content-desc="Search"'; then
   sleep 2
   shot 18-search-empty.png
   type_text "clip"
   shot 19-search-text.png
-  if tap_tag_or_text "chip-videos" 'text="Videos"'; then
+  if tap_tag_or_text "chip-videos" 'content-desc="Videos"|text="Videos"'; then
     sleep 2
     shot 20-search-videos.png
   fi
-  if tap_tag_or_text "chip-large" 'text="Large"'; then
+  if tap_tag_or_text "chip-large" 'content-desc="Large"|text="Large"'; then
     sleep 2
-    # "clip" AND Videos AND Large: the fixtures are 1.5-1.9 MB, so this must be
-    # empty. Photographing it proves the axes AND rather than OR.
+    # "clip" AND Videos AND Large: the fixtures are 1.5-1.9 MB, so this must find
+    # nothing. Photographing the empty state proves the axes AND rather than OR.
     shot 21-search-no-results.png
+  else
+    echo "::warning title=e2e::the Large chip was not on screen"
   fi
   adb shell input keyevent KEYCODE_BACK
   sleep 2

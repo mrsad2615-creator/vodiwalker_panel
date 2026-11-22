@@ -51,6 +51,8 @@ import dev.hgallery.core.AlbumSort
 import dev.hgallery.core.MediaItem
 import androidx.compose.ui.res.stringResource
 import dev.hgallery.app.R
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 
 /**
  * The Albums tab, built to reference R2.
@@ -64,6 +66,7 @@ import dev.hgallery.app.R
 fun AlbumsScreen(
     container: AppContainer,
     onOpenAlbum: (Album) -> Unit,
+    onSearch: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val palette = hgPalette
@@ -79,7 +82,7 @@ fun AlbumsScreen(
 
     Column(modifier = modifier.fillMaxSize().background(palette.page)) {
         Spacer(Modifier.statusBarsPadding())
-        HgToolbar(onSearch = {}, onMore = {}, modifier = Modifier.padding(end = 6.dp))
+        HgToolbar(onSearch = onSearch, onMore = {}, modifier = Modifier.padding(end = 6.dp))
         HgScreenTitle(title = stringResource(R.string.tab_albums))
         Spacer(Modifier.height(18.dp))
 
@@ -133,7 +136,17 @@ private fun AlbumTile(
             .take(4)
     }
 
-    Column(modifier = Modifier.testTag(HgTestTags.album(album.name)).clickable(onClick = onClick)) {
+    Column(
+        modifier = Modifier
+            .testTag(HgTestTags.album(album.name))
+            // The tile's own name is its accessible label. Without it the tile is
+            // an unlabelled clickable box and the only text inside it is a count,
+            // which tells a screen-reader user nothing about which album it opens.
+            .semantics(mergeDescendants = true) {
+                contentDescription = "${album.name}, ${album.count}"
+            }
+            .clickable(onClick = onClick),
+    ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()

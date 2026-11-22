@@ -127,6 +127,7 @@ fun HGalleryApp(container: AppContainer) {
                             HgTab.Albums -> AlbumsScreen(
                                 container = container,
                                 onOpenAlbum = { openAlbum = it },
+                                onSearch = { searchOpen = true },
                             )
                             HgTab.Highlights -> PlaceholderScreen(stringResource(R.string.tab_highlights))
                             HgTab.Discover -> PlaceholderScreen(stringResource(R.string.tab_discover))

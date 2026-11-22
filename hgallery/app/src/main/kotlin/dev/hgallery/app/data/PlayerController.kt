@@ -40,6 +40,17 @@ import kotlinx.coroutines.delay
 class PlayerController(context: Context, private val uri: String) {
 
     val player: ExoPlayer = ExoPlayer.Builder(context).build().apply {
+        // Without a declared usage the platform files this stream under "unknown":
+        // the volume keys then adjust the ringtone, and unplugging headphones does
+        // not pause playback. Movies with sound need the media usage declared.
+        setAudioAttributes(
+            androidx.media3.common.AudioAttributes.Builder()
+                .setUsage(androidx.media3.common.C.USAGE_MEDIA)
+                .setContentType(androidx.media3.common.C.AUDIO_CONTENT_TYPE_MOVIE)
+                .build(),
+            /* handleAudioFocus = */ true,
+        )
+        setHandleAudioBecomingNoisy(true)
         setMediaItem(Media3Item.fromUri(uri))
         prepare()
         playWhenReady = true

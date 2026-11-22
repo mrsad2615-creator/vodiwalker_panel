@@ -15,6 +15,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
@@ -42,7 +43,13 @@ fun HgChip(
     val palette = hgPalette
     Box(
         modifier = modifier
-            .semantics { this.selected = selected }
+            .semantics {
+                this.selected = selected
+                // The label doubles as the accessible name, so the chip can be
+                // addressed as "Videos" rather than as an unlabelled box with a
+                // child Text node.
+                contentDescription = label
+            }
             .clip(RoundedCornerShape(50))
             .background(if (selected) palette.accentMuted else palette.chipBackground)
             .clickable(role = Role.Button, onClick = onClick)
@@ -75,6 +82,7 @@ fun HgRemovableChip(
     val palette = hgPalette
     Row(
         modifier = modifier
+            .semantics { contentDescription = label }
             .clip(RoundedCornerShape(50))
             .background(palette.accentMuted)
             .clickable(role = Role.Button, onClick = onRemove)

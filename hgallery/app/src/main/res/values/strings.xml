@@ -89,4 +89,15 @@
     <string name="video_cannot_play">This video cannot be played</string>
     <string name="video_cannot_play_body">The file may use a codec this device does not support.</string>
     <string name="video_speed">Playback speed</string>
+    <string name="media_desc_photo">Photo, {0}</string>
+    <string name="media_desc_video">Video, {0}, {1}</string>
+    <string name="media_desc_video_no_length">Video, {0}</string>
+    <plurals name="media_length_seconds">
+        <item quantity="one">%d second</item>
+        <item quantity="other">%d seconds</item>
+    </plurals>
+    <plurals name="media_length_minutes">
+        <item quantity="one">%d minute</item>
+        <item quantity="other">%d minutes</item>
+    </plurals>
 </resources>

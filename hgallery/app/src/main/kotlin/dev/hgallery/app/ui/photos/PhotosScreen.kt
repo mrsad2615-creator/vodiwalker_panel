@@ -34,20 +34,24 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.hgallery.app.R
 import dev.hgallery.app.data.AppContainer
 import dev.hgallery.app.data.ThumbnailStore
+import dev.hgallery.app.ui.components.HgIconButton
 import dev.hgallery.app.ui.components.HgScreenTitle
 import dev.hgallery.app.ui.components.HgSelectionActions
 import dev.hgallery.app.ui.components.HgSelectionHeader
-import dev.hgallery.app.ui.components.HgIconButton
-import dev.hgallery.app.ui.components.SelectionBadge
 import dev.hgallery.app.ui.components.HgTestTags
 import dev.hgallery.app.ui.components.HgToolbar
 import dev.hgallery.app.ui.components.MediaThumbnail
+import dev.hgallery.app.ui.components.SelectionBadge
+import dev.hgallery.app.ui.components.mediaDescription
 import dev.hgallery.app.ui.icons.HgIcons
 import dev.hgallery.app.ui.theme.HgMetrics
 import dev.hgallery.app.ui.theme.hgPalette
@@ -306,11 +310,16 @@ private fun ThumbnailCell(
     onLongClick: () -> Unit,
 ) {
     val selected = selection.contains(item.id)
+    val label = mediaDescription(item)
     Box(
         modifier = Modifier
             .testTag(HgTestTags.thumbnail(item.id))
             .aspectRatio(1f)
             .clip(RoundedCornerShape(3.dp))
+            .semantics {
+                contentDescription = label
+                if (selected) selected = true
+            }
             .combinedClickable(
                 onClick = onClick,
                 onLongClick = onLongClick,
@@ -320,6 +329,7 @@ private fun ThumbnailCell(
             item = item,
             store = store,
             cornerRadius = 3,
+            describeImage = false,
             modifier = Modifier.fillMaxSize(),
         )
 

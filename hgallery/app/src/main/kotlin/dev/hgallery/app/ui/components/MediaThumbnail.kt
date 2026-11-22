@@ -42,6 +42,12 @@ fun MediaThumbnail(
     modifier: Modifier = Modifier,
     cornerRadius: Int = 0,
     showVideoBadge: Boolean = true,
+    /**
+     * Whether the image announces its own name. False whenever the caller wraps
+     * the tile in a clickable element that supplies a full description, so
+     * TalkBack does not read the name twice for one cell.
+     */
+    describeImage: Boolean = true,
 ) {
     val palette = hgPalette
     var bitmap by remember(item.uri) { mutableStateOf<android.graphics.Bitmap?>(null) }
@@ -63,7 +69,7 @@ fun MediaThumbnail(
         if (frame != null) {
             Image(
                 bitmap = frame.asImageBitmap(),
-                contentDescription = item.displayName,
+                contentDescription = if (describeImage) item.displayName else null,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize(),
             )

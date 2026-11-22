@@ -28,6 +28,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.hgallery.app.R
@@ -35,6 +37,7 @@ import dev.hgallery.app.data.AppContainer
 import dev.hgallery.app.ui.components.HgIconButton
 import dev.hgallery.app.ui.components.HgTestTags
 import dev.hgallery.app.ui.components.MediaThumbnail
+import dev.hgallery.app.ui.components.mediaDescription
 import dev.hgallery.app.ui.icons.HgIcons
 import dev.hgallery.app.ui.theme.HgMetrics
 import dev.hgallery.app.ui.theme.hgPalette
@@ -104,13 +107,16 @@ fun AlbumDetailScreen(
             modifier = Modifier.fillMaxSize(),
         ) {
             items(contents, key = { it.id }) { item ->
+                val label = mediaDescription(item)
                 MediaThumbnail(
                     item = item,
                     store = container.thumbnails,
+                    describeImage = false,
                     modifier = Modifier
                         .testTag(HgTestTags.thumbnail(item.id))
                         .aspectRatio(1f)
                         .clip(RoundedCornerShape(3.dp))
+                        .semantics { contentDescription = label }
                         .clickable { onOpenItem(item.id) },
                 )
             }

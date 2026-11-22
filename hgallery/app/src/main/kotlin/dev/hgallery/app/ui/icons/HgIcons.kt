@@ -95,15 +95,28 @@ object HgIcons {
      * Discover. The reference uses a faceted spherical mark; a circle crossed by
      * two shallow arcs reads as the same object at 24 dp.
      */
+    /**
+     * Discover: a four-pointed compass star in a ring.
+     *
+     * The previous drawing was a circle with two bowed vertical lines, which read
+     * unmistakably as a tennis ball. A compass is the convention for "explore a
+     * place", which is what this tab does, and the long-pointed star is legible at
+     * 24 dp where a fine map or globe is not.
+     */
     val Discover: ImageVector = icon("HG.Discover") {
         moveTo(20.8f, 12f)
         arcToRelative(8.8f, 8.8f, 0f, true, true, -17.6f, 0f)
         arcToRelative(8.8f, 8.8f, 0f, true, true, 17.6f, 0f)
         close()
-        moveTo(6.4f, 6.2f)
-        curveTo(9.6f, 10.2f, 9.6f, 13.8f, 6.4f, 17.8f)
-        moveTo(17.6f, 6.2f)
-        curveTo(14.4f, 10.2f, 14.4f, 13.8f, 17.6f, 17.8f)
+        // The needle: north-east, with the classic half-filled split implied by the
+        // two long spines meeting at the centre.
+        moveTo(12f, 7.2f)
+        lineTo(14.1f, 14.1f)
+        lineTo(12f, 12.6f)
+        lineTo(9.9f, 14.1f)
+        close()
+        moveTo(12f, 16.8f)
+        lineTo(9.9f, 9.9f)
     }
 
     /** Highlights: a five-point star, Huawei's favourites mark. */
@@ -328,28 +341,67 @@ object HgIcons {
         close()
     }
 
-    /** Month view: a 3x3 grid of cells. */
+    /**
+     * Month view: a calendar page with a bound top edge and a 3x3 body grid.
+     *
+     * The previous drawing was five crossing lines, which rendered as a hashtag —
+     * the control that switches between month and day grouping looked like a
+     * search operator. A bounding outline and the two binding ticks make it read
+     * as a calendar at 22 dp, which is the size it is actually used at.
+     */
     val GridMonth: ImageVector = icon("HG.GridMonth") {
-        moveTo(4.4f, 6.4f)
-        horizontalLineToRelative(15.2f)
-        moveTo(4.4f, 12f)
-        horizontalLineToRelative(15.2f)
-        moveTo(4.4f, 17.6f)
-        horizontalLineToRelative(15.2f)
-        moveTo(8.2f, 4.4f)
-        verticalLineToRelative(15.2f)
-        moveTo(15.8f, 4.4f)
-        verticalLineToRelative(15.2f)
+        moveTo(4.6f, 6.8f)
+        verticalLineTo(19.4f)
+        arcToRelative(1.4f, 1.4f, 0f, false, false, 1.4f, 1.4f)
+        horizontalLineTo(18f)
+        arcToRelative(1.4f, 1.4f, 0f, false, false, 1.4f, -1.4f)
+        verticalLineTo(6.8f)
+        arcToRelative(1.4f, 1.4f, 0f, false, false, -1.4f, -1.4f)
+        horizontalLineTo(6f)
+        arcToRelative(1.4f, 1.4f, 0f, false, false, -1.4f, 1.4f)
+        close()
+        // the two-page binding
+        moveTo(8.4f, 3.2f)
+        verticalLineTo(6.4f)
+        moveTo(15.6f, 3.2f)
+        verticalLineTo(6.4f)
+        // the body grid, inset so it does not touch the outline
+        moveTo(4.6f, 10.4f)
+        horizontalLineTo(19.4f)
+        moveTo(9.6f, 10.4f)
+        verticalLineTo(20.8f)
+        moveTo(14.4f, 10.4f)
+        verticalLineTo(20.8f)
     }
 
-    /** Day view: a single wide cell with a header line. */
+    /**
+     * Day view: the same calendar page with one wide cell standing for the day.
+     *
+     * The pair has to share a silhouette, otherwise the button appears to change
+     * shape when it is pressed rather than to change mode.
+     */
     val GridDay: ImageVector = icon("HG.GridDay") {
-        moveTo(4.4f, 6.2f)
-        horizontalLineToRelative(15.2f)
-        moveTo(4.4f, 11f)
-        horizontalLineToRelative(15.2f)
-        moveTo(4.4f, 16f)
-        horizontalLineToRelative(9.2f)
+        moveTo(4.6f, 6.8f)
+        verticalLineTo(19.4f)
+        arcToRelative(1.4f, 1.4f, 0f, false, false, 1.4f, 1.4f)
+        horizontalLineTo(18f)
+        arcToRelative(1.4f, 1.4f, 0f, false, false, 1.4f, -1.4f)
+        verticalLineTo(6.8f)
+        arcToRelative(1.4f, 1.4f, 0f, false, false, -1.4f, -1.4f)
+        horizontalLineTo(6f)
+        arcToRelative(1.4f, 1.4f, 0f, false, false, -1.4f, 1.4f)
+        close()
+        moveTo(8.4f, 3.2f)
+        verticalLineTo(6.4f)
+        moveTo(15.6f, 3.2f)
+        verticalLineTo(6.4f)
+        // one wide band: the day's single strip of photos
+        moveTo(4.6f, 11.2f)
+        horizontalLineTo(19.4f)
+        moveTo(9.6f, 11.2f)
+        verticalLineTo(20.8f)
+        moveTo(14.4f, 11.2f)
+        verticalLineTo(20.8f)
     }
 
     val Rotate: ImageVector = icon("HG.Rotate") {

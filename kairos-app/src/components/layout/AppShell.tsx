@@ -22,6 +22,8 @@ import { ToastHost } from '@/components/ui/ToastHost';
 import { formatTimerSeconds } from '@/lib/format';
 import { setupAndroidBackButton, triggerHaptic } from '@/lib/native';
 import { SearchSheet } from '@/components/search/SearchSheet';
+import { CommandCenter } from '@/features/assistant/CommandCenter';
+import { Folder as FolderOpen } from '@/components/ui/icons';
 
 type PrimaryTab = Extract<NavTab, 'dashboard' | 'tasks' | 'habits' | 'focus'>;
 
@@ -33,6 +35,7 @@ const PRIMARY_TABS: { id: PrimaryTab; label: string; icon: typeof LayoutDashboar
 ];
 
 const SECONDARY_TABS: { id: NavTab; label: string; hint: string; icon: typeof LayoutDashboard }[] = [
+  { id: 'projects', label: 'پروژه‌ها', hint: 'هدف ← پروژه ← مرحله ← کار', icon: FolderOpen },
   { id: 'calendar', label: 'تقویم', hint: 'نمای ماهانه شمسی و برنامه‌ی روز', icon: CalendarDays },
   { id: 'analytics', label: 'تحلیل عملکرد', hint: 'روند، گزارش ماهانه و سالانه', icon: BarChart3 },
   { id: 'settings', label: 'تنظیمات', hint: 'پروفایل، یادآوری و پشتیبان‌گیری', icon: Settings },
@@ -150,6 +153,9 @@ export function AppShell({ children }: { children: ReactNode }) {
     <div className="kairos-ambient-bg h-full w-full">
       <ToastHost toasts={toasts} onDismiss={dismissToast} />
       <SearchSheet open={searchOpen} onClose={() => setSearchOpen(false)} />
+      {/* One command surface, on every screen: a question box that answers from
+          local rows and says "I don't know" instead of guessing. */}
+      {activeTab !== 'focus' && <CommandCenter />}
 
       {/* Shell owns the viewport; only `.app-scroll` moves. */}
       <div className="app-shell app-safe-frame relative mx-auto w-full max-w-[480px]">

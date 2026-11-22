@@ -11,7 +11,7 @@ import type { EventEntity } from './events';
  * only thing that replays one.
  *
  * What is restorable: edits to an existing row (task, habit, habit-log, goal,
- * journal). What is *not*: deletions. Bringing a row back from nothing is a
+ * journal, project, project stage). What is *not*: deletions. Bringing a row back from nothing is a
  * different promise than undoing an edit, and quietly pretending otherwise is
  * how data-loss bugs are born. Deletions stay level 3 — they need confirmation
  * and a backup, never a hopeful undo button.
@@ -24,7 +24,11 @@ export type UndoKind =
   | 'habit.update'
   | 'habit.log'
   | 'goal.update'
-  | 'journal.save';
+  | 'journal.save'
+  | 'project.update'
+  | 'project.status'
+  | 'stage.update'
+  | 'stage.toggle';
 
 export interface UndoEntry {
   id: string;
@@ -53,6 +57,10 @@ export const RESTORABLE_KINDS: readonly UndoKind[] = [
   'habit.log',
   'goal.update',
   'journal.save',
+  'project.update',
+  'project.status',
+  'stage.update',
+  'stage.toggle',
 ];
 
 export function isRestorable(kind: string): kind is UndoKind {
@@ -73,6 +81,12 @@ function tableFor(kind: UndoKind) {
       return db.goals;
     case 'journal.save':
       return db.journal;
+    case 'project.update':
+    case 'project.status':
+      return db.projects;
+    case 'stage.update':
+    case 'stage.toggle':
+      return db.projectStages;
   }
 }
 

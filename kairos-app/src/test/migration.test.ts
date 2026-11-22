@@ -199,14 +199,21 @@ describe('schema v3 → v4 migration', () => {
     expect(await db.permissionGrants.count()).toBe(0);
   });
 
-  it('leaves one honest record of what the upgrade saw', async () => {
-    const logs = await db.migrationLog.toArray();
-    expect(logs).toHaveLength(1);
-    const [log] = logs;
-    expect(log).toMatchObject({ from: 3, to: 4, ok: true });
-    expect(log.counts.tasks).toBe(seededCounts.tasks);
-    expect(log.counts.habitLogs).toBe(seededCounts.habitLogs);
-    expect(new Date(log.at).getTime()).toBeGreaterThan(0);
+  it('leaves one honest record per upgrade step', async () => {
+    const logs = (await db.migrationLog.toArray()).sort((a, b) => a.at.localeCompare(b.at));
+    // v3 → v4 (new ledger tables) and v4 → v5 (projects + task fields).
+    expect(logs.map((log) => `${log.from}->${log.to}`)).toEqual(['3->4', '4->5']);
+    expect(logs.every((log) => log.ok)).toBe(true);
+
+    const first = logs[0];
+    expect(first.counts.tasks).toBe(seededCounts.tasks);
+    expect(first.counts.habitLogs).toBe(seededCounts.habitLogs);
+
+    // v5 is the version that rewrites rows, so it must carry a snapshot.
+    const second = logs[1];
+    expect(second.snapshot?.tasks).toHaveLength(seededCounts.tasks);
+    expect(second.snapshot?.goals).toHaveLength(seededCounts.goals);
+    expect(new Date(second.at).getTime()).toBeGreaterThan(0);
   });
 
   it('is usable immediately after the upgrade', async () => {
@@ -237,7 +244,7 @@ describe('schema v3 → v4 migration', () => {
   it('does not run the upgrade a second time', async () => {
     db.close();
     await db.open();
-    expect(await db.migrationLog.count()).toBe(1);
+    expect(await db.migrationLog.count()).toBe(2);
     expect(await db.tasks.count()).toBeGreaterThan(seededCounts.tasks);
   });
 });

@@ -5,6 +5,8 @@ import type {
   Habit,
   HabitLog,
   JournalEntry,
+  Project,
+  ProjectStage,
   Task,
   UserSettings,
 } from '@/types/domain';
@@ -15,6 +17,8 @@ const EMPTY_HABITS: Habit[] = [];
 const EMPTY_HABIT_LOGS: HabitLog[] = [];
 const EMPTY_FOCUS_SESSIONS: FocusSession[] = [];
 const EMPTY_GOALS: Goal[] = [];
+const EMPTY_PROJECTS: Project[] = [];
+const EMPTY_STAGES: ProjectStage[] = [];
 
 export function useTasks(): Task[] {
   return useLiveQuery(() => db.tasks.toArray(), [], EMPTY_TASKS);
@@ -51,6 +55,14 @@ export function useSettings(): UserSettings {
 }
 
 const EMPTY_JOURNAL: JournalEntry[] = [];
+
+export function useProjects(): Project[] {
+  return useLiveQuery(() => db.projects.toArray(), [], EMPTY_PROJECTS);
+}
+
+export function useProjectStages(): ProjectStage[] {
+  return useLiveQuery(() => db.projectStages.toArray(), [], EMPTY_STAGES);
+}
 
 export function useJournal(): JournalEntry[] {
   return useLiveQuery(() => db.journal.toArray(), [], EMPTY_JOURNAL);

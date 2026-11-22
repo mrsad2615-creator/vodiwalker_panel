@@ -16,6 +16,7 @@ export {
   Info,
   // navigation / structure
   Archive,
+  FolderSimple as Folder,
   ArrowDownRight,
   ArrowsLeftRight as ArrowLeftRight,
   ArrowRight,

@@ -11,6 +11,8 @@ import type {
   HabitLogStatus,
   JournalEntry,
   KairosBackupPayload,
+  Project,
+  ProjectStage,
   Task,
   TaskStatus,
   UserSettings,
@@ -66,6 +68,9 @@ class KairosDatabase extends Dexie {
   permissionGrants!: Table<PermissionGrant, string>;
   /** One row per schema upgrade: what the migration saw and what it did (v4). */
   migrationLog!: Table<MigrationLogRecord, string>;
+  /** goal → project → stage → task (v5). */
+  projects!: Table<Project, string>;
+  projectStages!: Table<ProjectStage, string>;
 
   constructor() {
     super('KairosLuxuryProductivityDB');
@@ -117,6 +122,55 @@ class KairosDatabase extends Dexie {
           ok: true,
         });
       });
+
+    // v3.5 — projects and stages, plus three optional fields on tasks
+    // (projectId, estimateMin, dependsOn). Existing rows are copied forward with
+    // a snapshot so the change is reversible even without a saved backup file.
+    this.version(5)
+      .stores({
+        projects: 'id, goalId, status, dueDate, createdAt',
+        projectStages: 'id, projectId, order, done',
+        tasks:
+          'id, dueDate, status, priority, quadrant, category, archived, completedDate, createdAt, goalId, projectId',
+      })
+      .upgrade(async (tx) => {
+        const tasks = await tx.table('tasks').toArray();
+        const goals = await tx.table('goals').toArray();
+        const habits = await tx.table('habits').count();
+        const habitLogs = await tx.table('habitLogs').count();
+        const focusSessions = await tx.table('focusSessions').count();
+        const journal = await tx.table('journal').count();
+
+        // Normalise the new optional fields so every consumer can rely on them
+        // existing, without guessing "undefined means null or means absent".
+        for (const task of tasks) {
+          const next = task as Record<string, unknown>;
+          if (next.projectId === undefined) next.projectId = null;
+          if (next.estimateMin === undefined) next.estimateMin = null;
+          if (next.dependsOn === undefined) next.dependsOn = [];
+          if (next.goalId === undefined) next.goalId = null;
+          await tx.table('tasks').put(next);
+        }
+
+        await tx.table('migrationLog').put({
+          id: `mig-${Date.now()}`,
+          at: new Date().toISOString(),
+          from: 4,
+          to: 5,
+          counts: {
+            tasks: tasks.length,
+            goals: goals.length,
+            habits,
+            habitLogs,
+            focusSessions,
+            journal,
+            projects: 0,
+            projectStages: 0,
+          },
+          ok: true,
+          snapshot: { tasks, goals },
+        });
+      });
   }
 }
 
@@ -158,6 +212,12 @@ export interface MigrationLogRecord {
   to: number;
   counts: Record<string, number>;
   ok: boolean;
+  /**
+   * A restore point for the rows a migration *touches*. v5 only adds fields, so
+   * the snapshot is small; when a future migration rewrites rows, this is the
+   * copy that makes the change reversible without asking the user for a file.
+   */
+  snapshot?: { tasks?: unknown[]; goals?: unknown[] };
 }
 
 export function makeHabitLogId(habitId: string, dateKey: string): string {
@@ -611,20 +671,157 @@ export async function deleteGoal(id: string): Promise<void> {
   await logEvent('goal.deleted', 'goal', id, { level: 3 });
 }
 
+// ==================== PROJECTS & STAGES ====================
+
+export async function createProject(
+  input: Omit<Project, 'id' | 'createdAt' | 'updatedAt' | 'status'> &
+    Partial<Pick<Project, 'status'>>
+): Promise<Project> {
+  const now = new Date().toISOString();
+  const project: Project = {
+    ...input,
+    status: input.status ?? 'active',
+    id: createId('prj'),
+    createdAt: now,
+    updatedAt: now,
+  };
+  await db.projects.put(project);
+  await logEvent('project.created', 'project', project.id, { level: 1 });
+  return project;
+}
+
+export async function updateProject(
+  id: string,
+  patch: Partial<Omit<Project, 'id' | 'createdAt'>>
+): Promise<Project | undefined> {
+  const existing = await db.projects.get(id);
+  if (!existing) return undefined;
+  const next: Project = { ...existing, ...patch, updatedAt: new Date().toISOString() };
+  await db.projects.put(next);
+  const statusChanged = patch.status !== undefined && patch.status !== existing.status;
+  await pushUndo({
+    kind: statusChanged ? 'project.status' : 'project.update',
+    entity: 'project',
+    entityId: id,
+    label: statusChanged ? 'تغییر وضعیت پروژه' : 'ویرایش پروژه',
+    before: existing,
+    after: next,
+  });
+  await logEvent(statusChanged ? 'project.archived' : 'project.updated', 'project', id, {
+    level: 2,
+    data: statusChanged ? { from: existing.status, to: next.status } : undefined,
+  });
+  return next;
+}
+
+export async function setProjectStatus(id: string, status: Project['status']): Promise<void> {
+  await updateProject(id, { status });
+}
+
+export async function deleteProject(id: string): Promise<void> {
+  await db.transaction('rw', db.projects, db.projectStages, db.tasks, async () => {
+    await db.projects.delete(id);
+    await db.projectStages.where('projectId').equals(id).delete();
+    // Tasks are never deleted with their project: the work happened.
+    const linked = await db.tasks.where('projectId').equals(id).toArray();
+    for (const task of linked) {
+      await db.tasks.put({ ...task, projectId: null, updatedAt: new Date().toISOString() });
+    }
+  });
+  // Not undoable by design: deletions are level 3 and need a backup, never a
+  // hopeful undo button. The tasks that pointed here are kept and unlinked.
+  await logEvent('project.deleted', 'project', id, { level: 3 });
+}
+
+export async function createStage(
+  input: Omit<ProjectStage, 'id' | 'createdAt' | 'updatedAt' | 'done' | 'completedAt'> &
+    Partial<Pick<ProjectStage, 'done'>>
+): Promise<ProjectStage> {
+  const now = new Date().toISOString();
+  const stage: ProjectStage = {
+    ...input,
+    done: input.done ?? false,
+    completedAt: input.done ? now : null,
+    id: createId('stg'),
+    createdAt: now,
+    updatedAt: now,
+  };
+  await db.projectStages.put(stage);
+  await logEvent('stage.created', 'project', stage.projectId, {
+    level: 2,
+    data: { stageId: stage.id },
+  });
+  return stage;
+}
+
+export async function updateStage(
+  id: string,
+  patch: Partial<Omit<ProjectStage, 'id' | 'projectId' | 'createdAt'>>
+): Promise<ProjectStage | undefined> {
+  const existing = await db.projectStages.get(id);
+  if (!existing) return undefined;
+  const done = patch.done ?? existing.done;
+  const next: ProjectStage = {
+    ...existing,
+    ...patch,
+    done,
+    completedAt: done ? existing.completedAt ?? new Date().toISOString() : null,
+    updatedAt: new Date().toISOString(),
+  };
+  await db.projectStages.put(next);
+  const toggled = done !== existing.done;
+  await pushUndo({
+    kind: toggled ? 'stage.toggle' : 'stage.update',
+    entity: 'project',
+    // The row itself is the restoration target, so the id is the stage's.
+    entityId: id,
+    label: toggled ? 'تیک مرحله' : 'ویرایش مرحله',
+    before: existing,
+    after: next,
+  });
+  await logEvent(toggled ? 'stage.toggled' : 'stage.created', 'project', next.projectId, {
+    level: 2,
+    data: { stageId: id, done },
+  });
+  return next;
+}
+
+export async function toggleStage(id: string): Promise<ProjectStage | undefined> {
+  const existing = await db.projectStages.get(id);
+  if (!existing) return undefined;
+  return updateStage(id, { done: !existing.done });
+}
+
+export async function deleteStage(id: string): Promise<void> {
+  const existing = await db.projectStages.get(id);
+  await db.projectStages.delete(id);
+  if (existing) {
+    await logEvent('stage.deleted', 'project', existing.projectId, {
+      level: 3,
+      data: { stageId: id },
+    });
+  }
+}
+
 // ==================== BACKUP / RESTORE / WIPE ====================
 
 export async function exportBackup(): Promise<KairosBackupPayload> {
-  const [tasks, habits, habitLogs, focusSessions, goals, settings, journal] = await Promise.all([
-    db.tasks.toArray(),
-    db.habits.toArray(),
-    db.habitLogs.toArray(),
-    db.focusSessions.toArray(),
-    db.goals.toArray(),
-    ensureSettings(),
-    db.journal.toArray(),
-  ]);
+  const [tasks, habits, habitLogs, focusSessions, goals, settings, journal, projects, projectStages] =
+    await Promise.all([
+      db.tasks.toArray(),
+      db.habits.toArray(),
+      db.habitLogs.toArray(),
+      db.focusSessions.toArray(),
+      db.goals.toArray(),
+      ensureSettings(),
+      db.journal.toArray(),
+      db.projects.toArray(),
+      db.projectStages.toArray(),
+    ]);
   return {
-    version: 2,
+    // v3 is the first format that carries projects; restore stays backward
+    // compatible, so an old file is still accepted with the same version check.
+    version: 3,
     exportedAt: new Date().toISOString(),
     app: 'KAIROS',
     tasks,
@@ -634,6 +831,8 @@ export async function exportBackup(): Promise<KairosBackupPayload> {
     goals,
     settings,
     journal,
+    projects,
+    projectStages,
   };
 }
 
@@ -643,7 +842,17 @@ export async function importBackup(payload: KairosBackupPayload): Promise<void> 
   }
   await db.transaction(
     'rw',
-    [db.tasks, db.habits, db.habitLogs, db.focusSessions, db.goals, db.settings, db.journal],
+    [
+      db.tasks,
+      db.habits,
+      db.habitLogs,
+      db.focusSessions,
+      db.goals,
+      db.settings,
+      db.journal,
+      db.projects,
+      db.projectStages,
+    ],
     async () => {
       await Promise.all([
         db.tasks.clear(),
@@ -652,8 +861,14 @@ export async function importBackup(payload: KairosBackupPayload): Promise<void> 
         db.focusSessions.clear(),
         db.goals.clear(),
         db.journal.clear(),
+        // Projects are restored wholesale: a stage without its project (or the
+        // reverse) would be a broken chain, not a partial restore.
+        db.projects.clear(),
+        db.projectStages.clear(),
       ]);
       if (payload.tasks.length) await db.tasks.bulkPut(payload.tasks);
+      if (payload.projects?.length) await db.projects.bulkPut(payload.projects);
+      if (payload.projectStages?.length) await db.projectStages.bulkPut(payload.projectStages);
       if (payload.habits?.length) await db.habits.bulkPut(payload.habits);
       if (payload.habitLogs?.length) await db.habitLogs.bulkPut(payload.habitLogs);
       if (payload.focusSessions?.length) await db.focusSessions.bulkPut(payload.focusSessions);
@@ -671,6 +886,7 @@ export async function importBackup(payload: KairosBackupPayload): Promise<void> 
       tasks: payload.tasks.length,
       habits: payload.habits?.length ?? 0,
       journal: payload.journal?.length ?? 0,
+      projects: payload.projects?.length ?? 0,
     },
   });
 }
@@ -679,7 +895,17 @@ export async function clearAllUserData(): Promise<void> {
   const current = await ensureSettings();
   await db.transaction(
     'rw',
-    [db.tasks, db.habits, db.habitLogs, db.focusSessions, db.goals, db.settings, db.journal],
+    [
+      db.tasks,
+      db.habits,
+      db.habitLogs,
+      db.focusSessions,
+      db.goals,
+      db.settings,
+      db.journal,
+      db.projects,
+      db.projectStages,
+    ],
     async () => {
       await Promise.all([
         db.tasks.clear(),
@@ -688,6 +914,8 @@ export async function clearAllUserData(): Promise<void> {
         db.focusSessions.clear(),
         db.goals.clear(),
         db.journal.clear(),
+        db.projects.clear(),
+        db.projectStages.clear(),
       ]);
       await db.settings.put({
         ...current,

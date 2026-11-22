@@ -13,6 +13,7 @@ import { CalendarPage } from '@/features/calendar/CalendarPage';
 import { FocusPage } from '@/features/focus/FocusPage';
 import { AnalyticsPage } from '@/features/analytics/AnalyticsPage';
 import { SettingsPage } from '@/features/settings/SettingsPage';
+import { ProjectsPage } from '@/features/projects/ProjectsPage';
 
 type SplashPhase = 'playing' | 'exiting' | 'done';
 
@@ -134,6 +135,7 @@ function KairosRouter() {
               {activeTab === 'dashboard' && <DashboardPage />}
               {activeTab === 'tasks' && <TasksPage />}
               {activeTab === 'habits' && <HabitsPage />}
+              {activeTab === 'projects' && <ProjectsPage />}
               {activeTab === 'calendar' && <CalendarPage />}
               {activeTab === 'focus' && <FocusPage />}
               {activeTab === 'analytics' && <AnalyticsPage />}

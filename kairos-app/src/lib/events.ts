@@ -35,6 +35,13 @@ export type EventKind =
   | 'goal.deleted'
   | 'journal.saved'
   | 'journal.deleted'
+  | 'project.created'
+  | 'project.updated'
+  | 'project.archived'
+  | 'project.deleted'
+  | 'stage.created'
+  | 'stage.toggled'
+  | 'stage.deleted'
   | 'settings.updated'
   | 'data.imported'
   | 'data.cleared'
@@ -49,6 +56,7 @@ export type EventEntity =
   | 'focusSession'
   | 'goal'
   | 'journal'
+  | 'project'
   | 'settings'
   | 'system';
 

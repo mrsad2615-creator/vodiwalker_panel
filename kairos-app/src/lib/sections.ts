@@ -24,6 +24,7 @@ export const SECTION_IDENTITIES: Record<NavTab, SectionIdentity> = {
   focus: { id: 'focus', eyebrow: 'FOCUS' },
   tasks: { id: 'tasks', eyebrow: 'PLANNER' },
   habits: { id: 'habits', eyebrow: 'RITUALS' },
+  projects: { id: 'projects', eyebrow: 'PROJECTS' },
   calendar: { id: 'calendar', eyebrow: 'CALENDAR' },
   analytics: { id: 'analytics', eyebrow: 'INSIGHT' },
   settings: { id: 'settings', eyebrow: 'STUDIO' },

@@ -7,6 +7,7 @@ import {
   clearHabitLog,
   setTaskStatus,
   updateGoal,
+  updateTask,
   updateSettings,
   upsertHabitLog,
 } from '@/lib/db';
@@ -15,6 +16,9 @@ import {
   useGoals,
   useHabitLogs,
   useHabits,
+  useJournal,
+  useProjectStages,
+  useProjects,
   useTasks,
 } from '@/lib/queries';
 import {
@@ -39,6 +43,8 @@ import {
   CalendarShowcase,
   FocusShowcase,
   HabitsShowcase,
+  InsightShowcase,
+  PlanShowcase,
   TasksShowcase,
 } from './Showcases';
 import {
@@ -53,6 +59,9 @@ import { SectionHeader } from '@/components/ui/SectionHeader';
 import { sectionEyebrow } from '@/lib/sections';
 import { GoalModal } from './GoalModal';
 import { JournalCard } from '@/features/journal/JournalCard';
+import { computeGoalProgress } from '@/lib/goals';
+import { nextDataStep, pickInsights } from '@/lib/insights';
+import { buildDayPlan, schedulePlan } from '@/lib/planner';
 
 export function DashboardPage() {
   const { setActiveTab, openCreateTask, openEditTask, settings, pushToast } = useApp();
@@ -146,6 +155,52 @@ export function DashboardPage() {
     [habits, habitLogs, todayKey]
   );
   const upcoming = useMemo(() => upcomingByDay(tasks, todayKey, 5), [tasks, todayKey]);
+
+  // ── Intelligence on the home board ────────────────────────────────────────
+  // Two things are computed here and nowhere else: the strongest insight the
+  // data supports, and the plan the measured capacity allows. Both are pure
+  // functions over the same rows the cards already show, so nothing can disagree.
+  const journal = useJournal();
+  const projects = useProjects();
+  const stages = useProjectStages();
+  const insights = useMemo(
+    () =>
+      pickInsights({ sessions: focusSessions, tasks, habits, habitLogs, journal, goals, todayKey }),
+    [focusSessions, tasks, habits, habitLogs, journal, goals, todayKey]
+  );
+  const dataStep = useMemo(
+    () =>
+      nextDataStep({ sessions: focusSessions, tasks, habits, habitLogs, journal, goals, todayKey }),
+    [focusSessions, tasks, habits, habitLogs, journal, goals, todayKey]
+  );
+  const plan = useMemo(
+    () =>
+      buildDayPlan({
+        tasks,
+        sessions: focusSessions,
+        todayKey,
+        goalMinutes: settings.dailyFocusGoalMinutes,
+      }),
+    [tasks, focusSessions, todayKey, settings.dailyFocusGoalMinutes]
+  );
+
+  const applyPlan = async () => {
+    const existing = new Map(tasks.map((task) => [task.id, task.dueTime]));
+    const { scheduled } = schedulePlan(plan, existing);
+    if (scheduled.length === 0) {
+      pushToast({ title: 'چیزی برای زمان‌بندی نبود', description: 'همهٔ کارها وقت داشتند.', tone: 'default' });
+      return;
+    }
+    for (const entry of scheduled) {
+      await updateTask(entry.taskId, { dueTime: entry.dueTime });
+    }
+    void triggerHaptic('success', settings.hapticsEnabled);
+    pushToast({
+      title: 'برنامه اعمال شد',
+      description: `${scheduled.length} کار زمان گرفت؛ هر کدام با یک بار «برگرد» قابل بازگشت است.`,
+      tone: 'success',
+    });
+  };
   const nextTasks = useMemo(
     () =>
       todayTasks
@@ -437,7 +492,8 @@ export function DashboardPage() {
         transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
       >
       {boardMode === 'compact' ? (
-        <div className="grid grid-cols-2 gap-2">
+        <div className="space-y-2">
+          <div className="grid grid-cols-2 gap-2">
           <FocusShowcase
             dense
             minutes={summary.todayFocusMinutes}
@@ -466,9 +522,34 @@ export function DashboardPage() {
             comparison={comparison}
             onOpen={() => setActiveTab('analytics')}
           />
+          </div>
+          <InsightShowcase
+            dense
+            insight={insights[0] ?? null}
+            nextStep={dataStep}
+            onAction={() => {
+              const tab = insights[0]?.action?.tab;
+              if (tab) setActiveTab(tab);
+            }}
+            onOpenAnalytics={() => setActiveTab('analytics')}
+          />
         </div>
       ) : (
         <div className="space-y-2.5">
+          <InsightShowcase
+            insight={insights[0] ?? null}
+            nextStep={dataStep}
+            onAction={() => {
+              const tab = insights[0]?.action?.tab;
+              if (tab) setActiveTab(tab);
+            }}
+            onOpenAnalytics={() => setActiveTab('analytics')}
+          />
+          <PlanShowcase
+            plan={plan}
+            onApply={() => void applyPlan()}
+            onOpenTasks={() => setActiveTab('tasks')}
+          />
           <FocusShowcase
             minutes={summary.todayFocusMinutes}
             goalMinutes={summary.focusGoalMinutes}
@@ -706,10 +787,10 @@ export function DashboardPage() {
         ) : (
           <Rail>
             {activeGoals.slice(0, 4).map((goal) => {
-              const pct =
-                goal.targetValue > 0
-                  ? Math.min(100, Math.round((goal.currentValue / goal.targetValue) * 100))
-                  : 0;
+              // Progress is earned from linked tasks when there are any, and
+              // self-reported only when the goal has no task-shaped work.
+              const progress = computeGoalProgress(goal, tasks, { projects, stages });
+              const pct = progress.percent;
               return (
                 <RailRow key={goal.id}>
                   <button
@@ -722,7 +803,16 @@ export function DashboardPage() {
                         {goal.title}
                       </span>
                       <span className="num-geo shrink-0 text-[9.5px] text-[var(--text-3)]">
-                        <Numeric value={`${goal.currentValue}/${goal.targetValue}`} variant="geo" />
+                        <Numeric
+                          value={`${progress.current}/${progress.target}`}
+                          variant="geo"
+                        />
+                        {progress.mode === 'linked' && (
+                          <span className="ms-1 text-[8.5px] text-[var(--text-3)]">کار</span>
+                        )}
+                        {progress.mode === 'projects' && (
+                          <span className="ms-1 text-[8.5px] text-[var(--text-3)]">از پروژه</span>
+                        )}
                       </span>
                     </span>
                     <span className="mt-1.5 flex items-center gap-2">

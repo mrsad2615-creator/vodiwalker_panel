@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowUpLeft, Check, Flame, Timer } from '@/components/ui/icons';
+import { ArrowUpLeft, Check, Flame, Sparkles, Timer } from '@/components/ui/icons';
 import { Numeric } from '@/components/ui/Numeric';
 import { HabitIcon } from '@/components/ui/KairosMark';
 import { getJalaaliMonthName, dateKeyToJalaali } from '@/lib/date';
@@ -11,6 +11,8 @@ import type {
   TaskBreakdown,
   WeekComparison,
 } from '@/lib/homeMetrics';
+import type { Insight } from '@/lib/insights';
+import type { DayPlan } from '@/lib/planner';
 
 /* ---------------------------------------------------------------------------
    Showcase shell
@@ -617,5 +619,178 @@ export function CalendarShowcase({
         })}
       </div>
     </ShowcaseCard>
+  );
+}
+
+/* ---------------------------------------------------------------------------
+   Insight — one honest sentence about the user's own data
+   --------------------------------------------------------------------------- */
+
+export function InsightShowcase({
+  insight,
+  nextStep,
+  onAction,
+  onOpenAnalytics,
+  dense = false,
+}: {
+  insight: Insight | null;
+  /** What the data needs before an insight is allowed to speak. */
+  nextStep: string;
+  onAction: () => void;
+  onOpenAnalytics: () => void;
+  dense?: boolean;
+}) {
+  return (
+    <article
+      className={`rail relative overflow-hidden ${dense ? 'p-3' : 'p-3.5'}`}
+      data-testid="insight-showcase"
+    >
+      <span
+        aria-hidden="true"
+        className="pointer-events-none absolute -end-8 -top-10 h-24 w-24 rounded-full opacity-25 blur-2xl"
+        style={{ background: 'var(--accent)' }}
+      />
+      <header className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-1.5">
+          <Sparkles className="h-3.5 w-3.5 text-[var(--accent-fg)]" />
+          <span className="eyebrow leading-none">INSIGHT</span>
+        </div>
+        <span className="text-[8.5px] text-[var(--text-3)]">از دادهٔ خودت</span>
+      </header>
+
+      {insight ? (
+        <>
+          <p className="mt-1.5 text-[12px] font-semibold leading-5 text-[var(--text)]">
+            {insight.title}
+          </p>
+          <p className="mt-1 text-[10.5px] leading-5 text-[var(--text-2)]">{insight.body}</p>
+          <div className="mt-2 flex items-center justify-between gap-2">
+            <span className="rounded-full border border-[var(--border)] px-2 py-0.5 text-[8.5px] text-[var(--text-3)]">
+              {insight.evidence}
+            </span>
+            {insight.action && (
+              <button
+                type="button"
+                onClick={onAction}
+                className="text-[10px] font-medium text-[var(--accent-fg)]"
+              >
+                {insight.action.label} ←
+              </button>
+            )}
+          </div>
+        </>
+      ) : (
+        <>
+          <p className="mt-1.5 text-[11.5px] font-medium leading-5 text-[var(--text-2)]">
+            هنوز چیزی برای گفتن ندارم
+          </p>
+          <p className="mt-1 text-[10.5px] leading-5 text-[var(--text-3)]">{nextStep}</p>
+          <button
+            type="button"
+            onClick={onOpenAnalytics}
+            className="mt-2 text-[10px] font-medium text-[var(--accent-fg)]"
+          >
+            تحلیل کامل ←
+          </button>
+        </>
+      )}
+    </article>
+  );
+}
+
+/* ---------------------------------------------------------------------------
+   Today's plan — measured capacity, reasons attached, nothing applied silently
+   --------------------------------------------------------------------------- */
+
+export function PlanShowcase({
+  plan,
+  onApply,
+  onOpenTasks,
+  dense = false,
+}: {
+  plan: DayPlan;
+  onApply: () => void;
+  onOpenTasks: () => void;
+  dense?: boolean;
+}) {
+  const totalMinutes = plan.plannedMinutes;
+
+  return (
+    <article className={`rail ${dense ? 'p-3' : 'p-3.5'}`} data-testid="plan-showcase">
+      <header className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <span className="eyebrow block leading-none">PLAN</span>
+          <div className="mt-1 flex items-baseline gap-1.5">
+            <h2 className="text-[12.5px] font-semibold text-[var(--text)]">برنامهٔ امروز</h2>
+            <span className="num-geo text-[9.5px] text-[var(--text-3)]">
+              <Numeric value={totalMinutes} variant="geo" /> دقیقه از{' '}
+              <Numeric value={plan.capacityMinutes} variant="geo" />
+            </span>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={onOpenTasks}
+          aria-label="همهٔ وظایف"
+          className="shrink-0 text-[10px] font-medium text-[var(--accent-fg)]"
+        >
+          همه
+        </button>
+      </header>
+
+      <p className="mt-1 text-[9.5px] leading-4 text-[var(--text-3)]">
+        {plan.capacityUnknown ? '⚠ ' : ''}
+        {plan.capacityNote}
+      </p>
+
+      {plan.blocks.length === 0 ? (
+        <button
+          type="button"
+          onClick={onOpenTasks}
+          className="mt-2 text-[10.5px] text-[var(--text-3)]"
+        >
+          کاری برای امروز پیدا نکردم؛ اگر چیزی هست اضافه‌اش کن.
+        </button>
+      ) : (
+        <>
+          <ol className="mt-2 space-y-1.5">
+            {plan.blocks.map((block, index) => (
+              <motion.li
+                key={block.taskId}
+                initial={{ opacity: 0, x: 6 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: index * 0.04 }}
+                className="flex items-start gap-2"
+              >
+                <span className="num-geo mt-0.5 grid h-4 w-4 shrink-0 place-items-center rounded-full bg-[color-mix(in_srgb,var(--accent)_18%,transparent)] text-[8.5px] font-bold text-[var(--accent-fg)]">
+                  <Numeric value={index + 1} variant="geo" />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[11px] text-[var(--text)]">{block.title}</span>
+                  <span className="num-geo block text-[9px] text-[var(--text-3)]">
+                    <Numeric value={block.minutes} variant="geo" /> دقیقه · {block.reason}
+                  </span>
+                </span>
+              </motion.li>
+            ))}
+          </ol>
+
+          {plan.overflow.length > 0 && (
+            <p className="mt-2 border-t border-[var(--border)] pt-1.5 text-[9px] text-[var(--text-3)]">
+              و <Numeric value={plan.overflow.length} variant="geo" /> کار که در ظرفیت امروز جا نمی‌شود — پنهانشان
+              نمی‌کنم.
+            </p>
+          )}
+
+          <button
+            type="button"
+            onClick={onApply}
+            className="mt-2.5 w-full rounded-[var(--r-field)] border border-[var(--accent-fg)]/35 py-1.5 text-[10.5px] font-semibold text-[var(--accent-fg)] transition-colors active:bg-[color-mix(in_srgb,var(--accent)_14%,transparent)]"
+          >
+            اعمال در برنامهٔ روز
+          </button>
+        </>
+      )}
+    </article>
   );
 }

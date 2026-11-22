@@ -22,10 +22,16 @@ import { triggerHaptic } from '@/lib/native';
 import { ModalSheet } from '@/components/ui/ModalSheet';
 import { JalaliDatePicker } from '@/components/ui/JalaliDatePicker';
 import { Numeric } from '@/components/ui/Numeric';
+import { useGoals, useProjects } from '@/lib/queries';
 
 export function TaskModal() {
   const { taskModal, closeTaskModal, pushToast, settings } = useApp();
   const editing = taskModal.task;
+  // A task can be the work that moves a goal. Optional on purpose: most tasks
+  // are just today, and forcing a goal on them would be a second inbox.
+  const goals = useGoals();
+  const openGoals = goals.filter((goal) => !goal.completed);
+  const projects = useProjects().filter((project) => project.status === 'active');
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -43,6 +49,9 @@ export function TaskModal() {
   const [reminderEnabled, setReminderEnabled] = useState(false);
   const [reminderOffsetMin, setReminderOffsetMin] = useState(15);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [goalId, setGoalId] = useState<string>('');
+  const [projectId, setProjectId] = useState<string>('');
+  const [estimateMin, setEstimateMin] = useState<string>('');
 
   useEffect(() => {
     if (!taskModal.open) return;
@@ -60,6 +69,9 @@ export function TaskModal() {
       setRecurrence(editing.recurrence);
       setReminderEnabled(editing.reminderEnabled);
       setReminderOffsetMin(editing.reminderOffsetMin);
+      setGoalId(editing.goalId ?? '');
+      setProjectId(editing.projectId ?? '');
+      setEstimateMin(editing.estimateMin ? String(editing.estimateMin) : '');
     } else {
       const defQ = taskModal.defaultQuadrant ?? 'q2';
       setTitle('');
@@ -75,6 +87,9 @@ export function TaskModal() {
       setRecurrence('none');
       setReminderEnabled(false);
       setReminderOffsetMin(15);
+      setGoalId('');
+      setProjectId('');
+      setEstimateMin('');
     }
     setTagInput('');
     setSubtaskInput('');
@@ -120,6 +135,9 @@ export function TaskModal() {
         recurrence,
         reminderEnabled,
         reminderOffsetMin,
+        goalId: goalId || null,
+        projectId: projectId || null,
+        estimateMin: estimateMin ? Math.max(5, Number(estimateMin) || 0) : null,
       });
       if (statusChanged) {
         await setTaskStatus(editing.id, status);
@@ -141,6 +159,9 @@ export function TaskModal() {
         recurrence,
         reminderEnabled,
         reminderOffsetMin,
+        goalId: goalId || null,
+        projectId: projectId || null,
+        estimateMin: estimateMin ? Math.max(5, Number(estimateMin) || 0) : null,
       });
       void triggerHaptic('success', settings.hapticsEnabled);
       pushToast({ title: 'وظیفه جدید ایجاد شد', tone: 'success' });
@@ -386,6 +407,79 @@ export function TaskModal() {
               ))}
             </select>
           </div>
+
+          {projects.length > 0 && (
+            <div>
+              <label
+                htmlFor="task-project"
+                className="mb-1.5 block text-xs font-medium text-[var(--text-2)]"
+              >
+                پروژه
+              </label>
+              <select
+                id="task-project"
+                value={projectId}
+                onChange={(e) => setProjectId(e.target.value)}
+                className="luxury-input py-2 text-xs"
+              >
+                <option value="" className="bg-[var(--surface-2)] text-[var(--text)]">
+                  بدون پروژه
+                </option>
+                {projects.map((project) => (
+                  <option key={project.id} value={project.id} className="bg-[var(--surface-2)] text-[var(--text)]">
+                    {project.title}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          <div>
+            <label
+              htmlFor="task-estimate"
+              className="mb-1.5 block text-xs font-medium text-[var(--text-2)]"
+            >
+              تخمین (دقیقه)
+            </label>
+            <input
+              id="task-estimate"
+              value={estimateMin}
+              onChange={(e) => setEstimateMin(e.target.value.replace(/[^0-9]/g, ''))}
+              inputMode="numeric"
+              placeholder="مثلاً 45"
+              className="luxury-input py-2 text-xs"
+              maxLength={4}
+            />
+          </div>
+
+          {openGoals.length > 0 && (
+            <div className="col-span-2">
+              <label
+                htmlFor="task-goal"
+                className="mb-1.5 flex items-center gap-1 text-xs font-medium text-[var(--text-2)]"
+              >
+                هدف مرتبط
+                <span className="text-[10px] font-normal text-[var(--text-3)]">
+                  (پیشرفت هدف از همین کارها ساخته می‌شود)
+                </span>
+              </label>
+              <select
+                id="task-goal"
+                value={goalId}
+                onChange={(e) => setGoalId(e.target.value)}
+                className="luxury-input py-2 text-xs"
+              >
+                <option value="" className="bg-[var(--surface-2)] text-[var(--text)]">
+                  بدون هدف
+                </option>
+                {openGoals.map((goal) => (
+                  <option key={goal.id} value={goal.id} className="bg-[var(--surface-2)] text-[var(--text)]">
+                    {goal.title}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
 
         {/* Subtasks */}

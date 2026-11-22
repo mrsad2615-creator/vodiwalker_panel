@@ -6,6 +6,7 @@ export type NavTab =
   | 'dashboard'
   | 'tasks'
   | 'habits'
+  | 'projects'
   | 'calendar'
   | 'focus'
   | 'analytics'
@@ -55,6 +56,18 @@ export interface Task {
   status: TaskStatus;
   subtasks: Subtask[];
   recurrence: RecurrenceRule;
+  /**
+   * Optional link to a goal. When set, the goal's progress is measured from the
+   * tasks that point at it instead of a number typed in by hand — that is the
+   * difference between a goal and a wish.
+   */
+  goalId?: string | null;
+  /** Optional link to the project this task belongs to. */
+  projectId?: string | null;
+  /** Estimated minutes, used by the planner before real history exists. */
+  estimateMin?: number | null;
+  /** Ids of tasks that must finish first. Blocked tasks are flagged, never hidden. */
+  dependsOn?: string[];
   /** Optional reminder enabled */
   reminderEnabled: boolean;
   /** Reminder lead time in minutes before dueTime (0 = exact time) */
@@ -234,6 +247,52 @@ export interface JournalEntry {
   updatedAt: string;
 }
 
+/**
+ * A project is the middle of the chain the product promised:
+ * goal → project → stage → task. A goal says *why*, a project says *what*, a
+ * stage says *in which order*, and a task says *today*.
+ */
+export type ProjectStatus = 'active' | 'paused' | 'done' | 'archived';
+
+export interface Project {
+  id: string;
+  /** Upward link. A project may exist without a goal — most do at first. */
+  goalId: string | null;
+  title: string;
+  description: string;
+  category: TaskCategory;
+  status: ProjectStatus;
+  /** Local YYYY-MM-DD. */
+  startDate: string | null;
+  dueDate: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * A stage is one ordered chunk of a project. A milestone is the same row with
+ * `kind: 'milestone'` — kept in one table because the difference is how it is
+ * read, not what it stores. Storing them separately would mean two migrations
+ * and two write paths for one concept.
+ */
+export type StageKind = 'stage' | 'milestone';
+
+export interface ProjectStage {
+  id: string;
+  projectId: string;
+  title: string;
+  kind: StageKind;
+  /** Ascending display order inside the project. */
+  order: number;
+  /** Optional weight for progress maths; defaults to 1. */
+  weight: number;
+  done: boolean;
+  dueDate: string | null;
+  completedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface KairosBackupPayload {
   version: number;
   exportedAt: string;
@@ -246,4 +305,7 @@ export interface KairosBackupPayload {
   settings: UserSettings;
   /** v3.2+. Older backups simply do not carry it. */
   journal?: JournalEntry[];
+  /** v3.5+. A backup from an older build has no projects and restores fine. */
+  projects?: Project[];
+  projectStages?: ProjectStage[];
 }

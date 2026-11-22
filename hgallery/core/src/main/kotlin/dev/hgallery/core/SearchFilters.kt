@@ -1,7 +1,25 @@
 package dev.hgallery.core
 
-/** One mebibyte, the unit these thresholds are expressed in. */
+/** One mebibyte, the unit the size thresholds are expressed in. */
 private const val MIB = 1024L * 1024L
+
+/** The "large" threshold: past this it is a long video or an edited panorama. */
+private const val LARGE_MIB = 15L
+
+private const val MS_PER_SECOND = 1000L
+private const val SECONDS_PER_MINUTE = 60L
+private const val MINUTES_PER_HOUR = 60L
+private const val HOURS_PER_DAY = 24L
+private const val DAYS_PER_WEEK = 7L
+
+/** The longest a month can be, so "this month" never excludes the first of it. */
+private const val MAX_DAYS_PER_MONTH = 31L
+
+/** A leap year, so "this year" includes 29 February. */
+private const val MAX_DAYS_PER_YEAR = 366L
+
+/** One hour in milliseconds: the step every span below is built from. */
+private const val HOUR_MS = MINUTES_PER_HOUR * SECONDS_PER_MINUTE * MS_PER_SECOND
 
 /**
  * The size buckets the search screen offers.
@@ -15,16 +33,16 @@ private const val MIB = 1024L * 1024L
  */
 enum class SizeBucket(val minBytes: Long?, val maxBytes: Long?) {
     SMALL(null, MIB),
-    MEDIUM(MIB, 15L * MIB),
-    LARGE(15L * MIB, null),
+    MEDIUM(MIB, LARGE_MIB * MIB),
+    LARGE(LARGE_MIB * MIB, null),
 }
 
 /** How far back the date buckets reach. */
 enum class DateBucket(val spanMs: Long) {
-    TODAY(24L * 60L * 60L * 1000L),
-    WEEK(7L * 24L * 60L * 60L * 1000L),
-    MONTH(31L * 24L * 60L * 60L * 1000L),
-    YEAR(366L * 24L * 60L * 60L * 1000L),
+    TODAY(HOURS_PER_DAY * HOUR_MS),
+    WEEK(DAYS_PER_WEEK * HOURS_PER_DAY * HOUR_MS),
+    MONTH(MAX_DAYS_PER_MONTH * HOURS_PER_DAY * HOUR_MS),
+    YEAR(MAX_DAYS_PER_YEAR * HOURS_PER_DAY * HOUR_MS),
 }
 
 /**

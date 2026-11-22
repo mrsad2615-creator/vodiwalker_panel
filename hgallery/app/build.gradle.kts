@@ -106,6 +106,14 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
 
     implementation("androidx.datastore:datastore-preferences:1.1.2")
+
+    // Media3 for video playback. ExoPlayer replaces MediaPlayer because the
+    // platform player cannot report buffered position or speed reliably, and its
+    // seeking on this class of hardware is visibly coarse. The UI module is
+    // *not* used: the reference's player chrome is custom, and Media3's default
+    // controller would have to be fought rather than configured.
+    implementation("androidx.media3:media3-exoplayer:1.5.1")
+    implementation("androidx.media3:media3-ui:1.5.1")
     implementation("androidx.core:core-splashscreen:1.0.1")
 
     debugImplementation("androidx.compose.ui:ui-tooling")

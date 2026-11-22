@@ -54,14 +54,23 @@ echo "== pushing fixture media so the timeline has real content =="
 adb shell rm -rf "$DEVICE_DIR" >/dev/null 2>&1
 adb shell mkdir -p "$DEVICE_DIR/Camera" >/dev/null 2>&1
 adb shell mkdir -p "$DEVICE_DIR/Screenshots" >/dev/null 2>&1
+# Real photographs, not flat test cards. The earlier fixtures were solid colour
+# blocks with a white circle, which made every screenshot of the app look like a
+# prototype regardless of how the layout underneath was built.
 n=0
-for f in .ci/fixtures/*.jpg; do
+for f in .ci/fixtures/real/*.jpg; do
   n=$((n + 1))
   if [ $((n % 4)) -eq 0 ]; then
     adb push "$f" "$DEVICE_DIR/Screenshots/" >/dev/null 2>&1
   else
     adb push "$f" "$DEVICE_DIR/Camera/" >/dev/null 2>&1
   fi
+done
+# Two real H.264/AAC clips so the Albums tab has a Videos bucket and the player
+# has something to actually decode.
+for f in .ci/fixtures/real/*.mp4; do
+  [ -f "$f" ] || continue
+  adb push "$f" "$DEVICE_DIR/Camera/" >/dev/null 2>&1
 done
 # MediaStore only notices new files once someone asks it to index them.
 adb shell content call --uri content://media/external --method scan_volume --arg external_primary >/dev/null 2>&1
@@ -198,6 +207,22 @@ else
   echo "view switch did NOT change the page" >> "$OUT_DIR/diag/pinch.txt"
 fi
 cat "$OUT_DIR/diag/view-change.txt" | head -2
+
+# The video player. Reached through Albums -> Videos -> first tile, which is the
+# path a user takes and does not depend on a MediaStore id.
+echo "== photographing the video player =="
+adb shell input tap $((W / 8 * 3)) $((H - 55))
+sleep 3
+adb shell screencap -p "$DEVICE_DIR/11-albums-for-video.png"
+# The Videos tile is the second cell of the smart row.
+adb shell input tap $((W / 2)) $((H * 145 / 1000))
+sleep 4
+shot 12-videos-album.png
+adb shell input tap $((W / 8)) $((H * 300 / 1000))
+sleep 6
+shot 13-video-player.png
+adb shell input keyevent KEYCODE_BACK
+sleep 2
 
 echo "== pulling screenshots =="
 adb pull "$DEVICE_DIR" "$OUT_DIR" >/dev/null 2>&1

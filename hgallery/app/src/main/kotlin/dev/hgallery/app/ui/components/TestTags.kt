@@ -26,4 +26,14 @@ object HgTestTags {
     const val SELECTION_BAR = "selection-bar"
     const val SELECT_BUTTON = "photos-select-button"
     fun tick(id: Long) = "tick-$id"
+
+    // Video player.
+    const val VIDEO_PLAYER = "video-player"
+    const val VIDEO_PLAY_PAUSE = "video-play-pause"
+    const val VIDEO_CENTRE_BUTTON = "video-centre-button"
+    const val VIDEO_PROGRESS = "video-progress"
+    const val VIDEO_TIMECODE = "video-timecode"
+    const val VIDEO_SPEED = "video-speed"
+    const val VIDEO_SPEED_MENU = "video-speed-menu"
+    const val VIDEO_FILL = "video-fill"
 }

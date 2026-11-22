@@ -90,4 +90,14 @@
     <string name="delete_failed">هیچ موردی حذف نشد</string>
     <string name="delete_needs_permission">برای حذف، دسترسی لازم است</string>
     <string name="share_nothing">چیزی برای اشتراک‌گذاری نیست</string>
+
+    <!-- پخش‌کنندهٔ ویدیو -->
+    <string name="video_play">پخش</string>
+    <string name="video_pause">توقف</string>
+    <string name="video_replay">پخش دوباره</string>
+    <string name="video_rotate">چرخش</string>
+    <string name="video_fill_screen">پر کردن صفحه</string>
+    <string name="video_cannot_play">این ویدیو پخش نمی‌شود</string>
+    <string name="video_cannot_play_body">ممکن است کدک این فایل روی این دستگاه پشتیبانی نشود.</string>
+    <string name="video_speed">سرعت پخش</string>
 </resources>

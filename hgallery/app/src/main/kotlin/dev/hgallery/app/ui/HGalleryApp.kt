@@ -28,6 +28,7 @@ import dev.hgallery.app.ui.placeholder.PlaceholderScreen
 import dev.hgallery.app.ui.shell.HgBottomBar
 import dev.hgallery.app.ui.shell.HgTab
 import dev.hgallery.app.ui.theme.hgPalette
+import dev.hgallery.app.ui.video.VideoPlayerScreen
 import dev.hgallery.app.ui.viewer.ViewerScreen
 import dev.hgallery.core.Album
 
@@ -49,6 +50,7 @@ fun HGalleryApp(container: AppContainer) {
     var tab by remember { mutableStateOf(HgTab.Photos) }
     var openAlbum by remember { mutableStateOf<Album?>(null) }
     var viewerId by remember { mutableStateOf<Long?>(null) }
+    var playerId by remember { mutableStateOf<Long?>(null) }
 
     val items by container.mediaStore.items.collectAsStateWithLifecycle()
 
@@ -56,8 +58,21 @@ fun HGalleryApp(container: AppContainer) {
 
     // Back closes the innermost layer first, which is what a user expects and
     // what the reference does.
-    BackHandler(enabled = viewerId != null) { viewerId = null }
-    BackHandler(enabled = viewerId == null && openAlbum != null) { openAlbum = null }
+    BackHandler(enabled = playerId != null) { playerId = null }
+    BackHandler(enabled = playerId == null && viewerId != null) { viewerId = null }
+    BackHandler(enabled = playerId == null && viewerId == null && openAlbum != null) { openAlbum = null }
+
+    // One entry point for "open this item": a video goes to the player, an image
+    // to the viewer. Deciding here means every grid in the app behaves the same
+    // way without repeating the rule.
+    val openItem: (Long) -> Unit = { id ->
+        val media = items.firstOrNull { it.id == id }
+        when {
+            media == null -> viewerId = id
+            media.isVideo -> playerId = id
+            else -> viewerId = id
+        }
+    }
 
     Box(Modifier.fillMaxSize().background(palette.page)) {
         Column(Modifier.fillMaxSize()) {
@@ -69,7 +84,7 @@ fun HGalleryApp(container: AppContainer) {
                         album = album,
                         items = items,
                         onBack = { openAlbum = null },
-                        onOpenItem = { viewerId = it },
+                        onOpenItem = openItem,
                     )
                 } else {
                     AnimatedContent(
@@ -80,7 +95,7 @@ fun HGalleryApp(container: AppContainer) {
                         when (current) {
                             HgTab.Photos -> PhotosScreen(
                                 container = container,
-                                onOpenItem = { viewerId = it },
+                                onOpenItem = openItem,
                             )
                             HgTab.Albums -> AlbumsScreen(
                                 container = container,
@@ -93,6 +108,18 @@ fun HGalleryApp(container: AppContainer) {
                 }
             }
             HgBottomBar(selected = tab, onSelect = { tab = it; openAlbum = null })
+        }
+
+        val playingId = playerId
+        if (playingId != null) {
+            val media = items.firstOrNull { it.id == playingId }
+            if (media != null) {
+                VideoPlayerScreen(
+                    container = container,
+                    item = media,
+                    onClose = { playerId = null },
+                )
+            }
         }
 
         val openId = viewerId

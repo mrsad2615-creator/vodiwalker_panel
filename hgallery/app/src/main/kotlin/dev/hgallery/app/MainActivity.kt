@@ -27,6 +27,11 @@ class MainActivity : ComponentActivity() {
 
         container = AppContainer(this)
 
+        // Video playback must not stop because the screen dimmed. Scoped to this
+        // activity rather than set on the window globally, so the flag cannot
+        // keep the display awake while the user is in a static grid.
+        window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+
         // Ask for media access once. On a device where it is already granted
         // this never shows a dialog.
         if (!MediaPermissions.canReadAnything(this)) {

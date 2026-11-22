@@ -85,4 +85,14 @@
     <string name="delete_failed">Nothing was removed</string>
     <string name="delete_needs_permission">A permission is required before this can be deleted</string>
     <string name="share_nothing">There is nothing to share</string>
+
+    <!-- Video player -->
+    <string name="video_play">Play</string>
+    <string name="video_pause">Pause</string>
+    <string name="video_replay">Replay</string>
+    <string name="video_rotate">Rotate</string>
+    <string name="video_fill_screen">Fill screen</string>
+    <string name="video_cannot_play">This video cannot be played</string>
+    <string name="video_cannot_play_body">The file may use a codec this device does not support.</string>
+    <string name="video_speed">Playback speed</string>
 </resources>

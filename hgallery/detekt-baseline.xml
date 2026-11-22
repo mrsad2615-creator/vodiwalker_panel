@@ -1,0 +1,14 @@
+<?xml version="1.0" ?>
+<!--
+  Empty on purpose.
+
+  A baseline is a list of accepted violations frozen at a point in time. This
+  project does not carry one, because the honest alternative to a baseline is to
+  fix the violation or to raise the rule's threshold in detekt.yml with a stated
+  reason. A baseline that arrives pre-populated is how a codebase acquires debt it
+  has decided to stop looking at.
+-->
+<SmellBaseline>
+  <ManuallySuppressedIssues></ManuallySuppressedIssues>
+  <CurrentIssues></CurrentIssues>
+</SmellBaseline>

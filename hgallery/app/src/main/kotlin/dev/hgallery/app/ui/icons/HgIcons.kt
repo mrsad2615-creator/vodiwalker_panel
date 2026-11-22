@@ -362,4 +362,104 @@ object HgIcons {
         moveTo(16.8f, 7.2f)
         lineTo(7.2f, 16.8f)
     }
+
+    // ---------------------------------------------------------------- player
+
+    /** Pause: two bars, optically matched to [Play]. */
+    val Pause: ImageVector = solid("HG.Pause") {
+        moveTo(7.6f, 5.4f)
+        lineTo(10.2f, 5.4f)
+        lineTo(10.2f, 18.6f)
+        lineTo(7.6f, 18.6f)
+        close()
+        moveTo(13.8f, 5.4f)
+        lineTo(16.4f, 5.4f)
+        lineTo(16.4f, 18.6f)
+        lineTo(13.8f, 18.6f)
+        close()
+    }
+
+    /** Back 10 s: a circular arrow turning anticlockwise with the digit 10. */
+    val Rewind10: ImageVector = icon("HG.Rewind10") {
+        moveTo(12f, 2.6f)
+        lineTo(7.2f, 2.6f)
+        moveTo(12f, 2.6f)
+        lineTo(12f, 7.4f)
+        moveTo(12f, 2.6f)
+        lineTo(8.4f, 6.2f)
+        arcTo(9.2f, 9.2f, 0f, isMoreThanHalf = false, isPositiveArc = true, 20.4f, 14.4f)
+        arcTo(9.2f, 9.2f, 0f, isMoreThanHalf = false, isPositiveArc = true, 3.6f, 14.4f)
+    }
+
+    /** Forward 10 s: the same arrow mirrored. */
+    val Forward10: ImageVector = icon("HG.Forward10") {
+        moveTo(12f, 2.6f)
+        lineTo(16.8f, 2.6f)
+        moveTo(12f, 2.6f)
+        lineTo(12f, 7.4f)
+        moveTo(12f, 2.6f)
+        lineTo(15.6f, 6.2f)
+        arcTo(9.2f, 9.2f, 0f, isMoreThanHalf = false, isPositiveArc = false, 3.6f, 14.4f)
+        arcTo(9.2f, 9.2f, 0f, isMoreThanHalf = false, isPositiveArc = false, 20.4f, 14.4f)
+    }
+
+    /** Expand/Maximise: an arrowhead in each corner. */
+    val FillScreen: ImageVector = icon("HG.FillScreen") {
+        moveTo(4f, 9f)
+        lineTo(4f, 4f)
+        lineTo(9f, 4f)
+        moveTo(15f, 4f)
+        lineTo(20f, 4f)
+        lineTo(20f, 9f)
+        moveTo(20f, 15f)
+        lineTo(20f, 20f)
+        lineTo(15f, 20f)
+        moveTo(9f, 20f)
+        lineTo(4f, 20f)
+        lineTo(4f, 15f)
+    }
+
+    /** Devices: a rotated screen with an arrow, for the orientation control. */
+    val Orientation: ImageVector = icon("HG.Orientation") {
+        moveTo(6.6f, 4.6f)
+        lineTo(14.4f, 4.6f)
+        arcTo(1.8f, 1.8f, 0f, isMoreThanHalf = false, isPositiveArc = true, 16.2f, 6.4f)
+        lineTo(16.2f, 17.6f)
+        arcTo(1.8f, 1.8f, 0f, isMoreThanHalf = false, isPositiveArc = true, 14.4f, 19.4f)
+        lineTo(6.6f, 19.4f)
+        arcTo(1.8f, 1.8f, 0f, isMoreThanHalf = false, isPositiveArc = true, 4.8f, 17.6f)
+        lineTo(4.8f, 6.4f)
+        arcTo(1.8f, 1.8f, 0f, isMoreThanHalf = false, isPositiveArc = true, 6.6f, 4.6f)
+        close()
+        moveTo(19.4f, 8.2f)
+        lineTo(21.4f, 12f)
+        lineTo(17.4f, 12f)
+    }
+
+    // ------------------------------------------------------------------ misc
+
+    /** A heart outline used for favourites in the grid. */
+    val HeartSmall: ImageVector = solid("HG.HeartSmall") {
+        moveTo(12f, 20.2f)
+        lineTo(10.6f, 18.9f)
+        arcTo(21f, 21f, 0f, isMoreThanHalf = false, isPositiveArc = true, 4.2f, 12.3f)
+        arcTo(4.6f, 4.6f, 0f, isMoreThanHalf = false, isPositiveArc = true, 12f, 6.6f)
+        arcTo(4.6f, 4.6f, 0f, isMoreThanHalf = false, isPositiveArc = true, 19.8f, 12.3f)
+        arcTo(21f, 21f, 0f, isMoreThanHalf = false, isPositiveArc = true, 13.4f, 18.9f)
+        close()
+    }
+
+    /** Diamond glyph used in place of a missing thumbnail for a folder. */
+    val ImageBroken: ImageVector = icon("HG.ImageBroken") {
+        moveTo(4f, 6f)
+        lineTo(20f, 6f)
+        lineTo(20f, 18f)
+        lineTo(4f, 18f)
+        close()
+        moveTo(4f, 15f)
+        lineTo(9f, 10.6f)
+        lineTo(13f, 14.2f)
+        lineTo(16f, 11.4f)
+        lineTo(20f, 15f)
+    }
 }

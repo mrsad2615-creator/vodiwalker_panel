@@ -1,5 +1,8 @@
 package dev.hgallery.core
 
+/** One mebibyte, the unit these thresholds are expressed in. */
+private const val MIB = 1024L * 1024L
+
 /**
  * The size buckets the search screen offers.
  *
@@ -11,9 +14,9 @@ package dev.hgallery.core
  * an edited panorama.
  */
 enum class SizeBucket(val minBytes: Long?, val maxBytes: Long?) {
-    SMALL(null, 1024L * 1024L),
-    MEDIUM(1024L * 1024L, 15L * 1024L * 1024L),
-    LARGE(15L * 1024L * 1024L, null),
+    SMALL(null, MIB),
+    MEDIUM(MIB, 15L * MIB),
+    LARGE(15L * MIB, null),
 }
 
 /** How far back the date buckets reach. */

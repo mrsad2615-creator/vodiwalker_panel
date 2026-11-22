@@ -88,7 +88,7 @@ class SearchFiltersTest {
      * A fixed instant, so a "last 7 days" assertion does not depend on when the
      * suite happens to run.
      */
-    private val NOW_MS = 1_767_225_600_000L
+    private val nowMs = 1_767_225_600_000L
 
     private class ItemBuilder(val id: Long) {
         var name: String = "IMG_$id.jpg"
@@ -176,7 +176,7 @@ class SearchFiltersTest {
         // file could vanish from a search that asked for its own size.
         assertEquals(SizeBucket.SMALL.maxBytes, SizeBucket.MEDIUM.minBytes)
         assertEquals(SizeBucket.MEDIUM.maxBytes, SizeBucket.LARGE.minBytes)
-        val query = SearchChips(size = SizeBucket.LARGE).toQuery(NOW_MS)
+        val query = SearchChips(size = SizeBucket.LARGE).toQuery(nowMs)
         val large = item(1) { size = 40L * 1024L * 1024L }
         val small = item(2) { size = 200L * 1024L }
         assertEquals(listOf(1L), SearchFilters.apply(listOf(large, small), query).map { it.id })
@@ -186,10 +186,10 @@ class SearchFiltersTest {
     fun `a date bucket reaches back from the clock it is given`() {
         // The conversion takes `now` rather than reading the system clock, which is
         // the only way "last 7 days" can be asserted at all.
-        val weekAgo = NOW_MS - 7L * 24L * 60L * 60L * 1000L
-        val query = SearchChips(within = DateBucket.WEEK).toQuery(NOW_MS)
+        val weekAgo = nowMs - 7L * 24L * 60L * 60L * 1000L
+        val query = SearchChips(within = DateBucket.WEEK).toQuery(nowMs)
         assertEquals(weekAgo, query.fromMs)
-        val recent = item(1) { date = NOW_MS - 60_000L }
+        val recent = item(1) { date = nowMs - 60_000L }
         val old = item(2) { date = weekAgo - 1L }
         assertEquals(listOf(1L), SearchFilters.apply(listOf(recent, old), query).map { it.id })
     }
@@ -213,21 +213,21 @@ class SearchFiltersTest {
             videosOnly = true,
             favouritesOnly = true,
             within = DateBucket.WEEK,
-        ).toQuery(NOW_MS)
+        ).toQuery(nowMs)
         val yes = item(1) {
             mime = "video/mp4"
             favourite = true
-            date = NOW_MS - 1_000L
+            date = nowMs - 1_000L
         }
         val notFavourite = item(2) {
             mime = "video/mp4"
             favourite = false
-            date = NOW_MS - 1_000L
+            date = nowMs - 1_000L
         }
         val tooOld = item(3) {
             mime = "video/mp4"
             favourite = true
-            date = NOW_MS - 30L * 24L * 60L * 60L * 1000L
+            date = nowMs - 30L * 24L * 60L * 60L * 1000L
         }
         assertEquals(
             listOf(1L),

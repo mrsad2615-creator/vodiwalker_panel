@@ -80,6 +80,7 @@ fun ViewerScreen(
     }
     val pagerState = rememberPagerState(initialPage = initialIndex) { items.size }
     var chromeVisible by remember { mutableStateOf(true) }
+    var pendingDelete by remember { mutableStateOf<MediaItem?>(null) }
 
     val current = items.getOrNull(pagerState.currentPage)
 
@@ -148,6 +149,35 @@ fun ViewerScreen(
             }
         }
 
+        val queued = pendingDelete
+        if (queued != null) {
+            androidx.compose.material3.AlertDialog(
+                onDismissRequest = { pendingDelete = null },
+                containerColor = Color(0xFF1C1C1E),
+                titleContentColor = Color.White,
+                textContentColor = Color.White.copy(alpha = 0.8f),
+                title = { Text(stringResource(R.string.delete_confirm_title)) },
+                text = { Text(stringResource(R.string.delete_confirm_body, queued.displayName)) },
+                confirmButton = {
+                    androidx.compose.material3.TextButton(onClick = {
+                        pendingDelete = null
+                        coroutine.launch {
+                            val removed = container.mediaStore.delete(setOf(queued.id))
+                            // Leave the viewer only once the item is really gone.
+                            if (removed > 0) onClose()
+                        }
+                    }) {
+                        Text(stringResource(R.string.delete), color = Color(0xFFFF5A5A))
+                    }
+                },
+                dismissButton = {
+                    androidx.compose.material3.TextButton(onClick = { pendingDelete = null }) {
+                        Text(stringResource(R.string.cancel), color = Color.White)
+                    }
+                },
+            )
+        }
+
         AnimatedVisibility(
             visible = chromeVisible,
             enter = fadeIn() + slideInVertically { it },
@@ -169,7 +199,11 @@ fun ViewerScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceEvenly,
                     ) {
-                        HgIconButton(HgIcons.Share, stringResource(R.string.share), {}, tint = Color.White)
+                        // Share and Edit are not implemented yet. They are
+                        // disabled rather than silently doing nothing when
+                        // tapped, because a control that looks usable and is not
+                        // is worse than one that reads as unavailable.
+                        HgIconButton(HgIcons.Share, stringResource(R.string.share), {}, tint = Color.White.copy(alpha = 0.35f), enabled = false)
                         HgIconButton(
                             icon = if (current.isFavorite) HgIcons.FavoriteFilled else HgIcons.Favorite,
                             contentDescription = stringResource(if (current.isFavorite) R.string.remove_favourite else R.string.add_favourite),
@@ -178,14 +212,16 @@ fun ViewerScreen(
                             },
                             tint = if (current.isFavorite) Color(0xFFFF6B5A) else Color.White,
                         )
-                        HgIconButton(HgIcons.Edit, stringResource(R.string.edit), {}, tint = Color.White)
+                        HgIconButton(HgIcons.Edit, stringResource(R.string.edit), {}, tint = Color.White.copy(alpha = 0.35f), enabled = false)
                         HgIconButton(
                             icon = HgIcons.Delete,
                             contentDescription = stringResource(R.string.delete),
-                            onClick = { coroutine.launch { container.mediaStore.delete(setOf(current.id)) } },
+                            // Never delete on a single tap: the reference asks
+                            // first, and so must this.
+                            onClick = { pendingDelete = current },
                             tint = Color.White,
                         )
-                        HgIconButton(HgIcons.Info, stringResource(R.string.details), {}, tint = Color.White)
+                        HgIconButton(HgIcons.Info, stringResource(R.string.details), {}, tint = Color.White.copy(alpha = 0.35f), enabled = false)
                     }
                 }
             }

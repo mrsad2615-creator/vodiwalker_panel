@@ -36,4 +36,7 @@
     <string name="media_summary">%1$s و %2$s</string>
 
     <string name="viewer_position">%1$d از %2$d</string>
+    <string name="delete_confirm_title">این مورد حذف شود؟</string>
+    <string name="delete_confirm_body">%1$s از این دستگاه حذف خواهد شد.</string>
+    <string name="cancel">لغو</string>
 </resources>

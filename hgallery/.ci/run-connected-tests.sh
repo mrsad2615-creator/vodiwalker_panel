@@ -153,14 +153,19 @@ shot 07-viewer-chrome-hidden.png
 # form that can be driven and therefore checked.
 adb shell input keyevent KEYCODE_BACK
 sleep 3
-adb shell input tap $((W - 44)) 172
+# The view switch is the first of three toolbar icons, measured from the
+# screenshot itself: its centre sits at 0.58 of the width, 0.075 of the height.
+adb shell input tap $((W * 58 / 100)) $((H * 75 / 1000))
 sleep 4
 shot 08-month-view.png
 
 # Compare against the day view: if the pinch worked, the grid shows more columns
 # and month headers, so the two images must differ.
 # Compare the two views with the status bar masked out: a clock that ticked is
-# otherwise enough to make "they differ" true and hide a pinch that did nothing.
+# otherwise enough to make "they differ" true and hide a view switch that did
+# nothing. Stale copies from an earlier run must not decide the verdict, so they
+# are removed first and a missing file is an error, not a silent pass.
+rm -f "$OUT_DIR/diag/day.png" "$OUT_DIR/diag/month.png"
 adb pull "$DEVICE_DIR/01-photos.png" "$OUT_DIR/diag/day.png" >/dev/null 2>&1
 adb pull "$DEVICE_DIR/08-month-view.png" "$OUT_DIR/diag/month.png" >/dev/null 2>&1
 VERDICT=$(python3 - <<'PYEOF'
@@ -170,7 +175,8 @@ try:
     a = np.asarray(Image.open("ui-shots/diag/day.png").convert("RGB")).astype(int)
     b = np.asarray(Image.open("ui-shots/diag/month.png").convert("RGB")).astype(int)
 except Exception as exc:
-    print("unreadable: %s" % exc); raise SystemExit
+    print("0.0 0")  # unreadable: treated as "no change", never as a pass
+    import sys; print("unreadable: %s" % exc, file=sys.stderr)
 h = min(a.shape[0], b.shape[0]); w = min(a.shape[1], b.shape[1])
 a, b = a[:h, :w], b[:h, :w]
 # mask the status bar (top 6%) and the gesture area (bottom 4%)

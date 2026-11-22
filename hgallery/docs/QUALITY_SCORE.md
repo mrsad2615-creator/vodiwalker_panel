@@ -42,12 +42,12 @@ which is implemented and photographed.
 | Feature | Score | Reason |
 |---|---|---|
 | Photo editor | **0** | absent; its control is disabled rather than faked |
-| Video playback | **0** | absent |
+| Video playback | **6** | a real Media3 player exists and is screenshotted in four states (mid-playback, chrome hidden, ended, landscape). Gestures beyond tap and rotation were not driven by the harness, and no clip longer than six seconds or other codec was tried. |
 | Discover / Highlights | **0** | absent; the tabs say so |
 | Search screen | **2** | filtering logic exists and is tested; no screen |
 | Duplicate finder | **2** | algorithm exists and is tested; no worker, no UI |
 | Recently deleted | **0** | absent, and deletion is therefore permanent |
-| Multi-selection / share | **0** | absent |
+| Multi-selection / share | **8** | selection, batch share and recoverable delete are implemented, tested and photographed on API 33. |
 | Custom albums | **0** | absent; the action is visible and inert |
 | Persian calendar | **0** | dates are Gregorian in both languages |
 
@@ -78,3 +78,23 @@ The score is deliberately not higher: "functional completeness" is measured
 against the brief's full feature list, and the editor and video playback are a
 large part of it and are missing. Nothing here was profiled on the POCO X3 Pro,
 which is the device this project exists for.
+
+## Revision — 2026-11-22 (first real render of the new player and type)
+
+This is the first revision whose visual numbers rest on a screenshot of the code
+in this repository rather than on design intent. The player, Inter + Vazirmatn and
+the eight fixture photos had never been rendered before this pass.
+
+| Category | Weight | Score | Evidence |
+|---|---|---|---|
+| Huawei visual fidelity | 30% | 7.5/10 | The photos grid, the toolbar and the player bottom bar now read as the reference. Two icons were wrong and were fixed after being seen: the month/day switch rendered as a hashtag, Discover as a tennis ball. Fidelity still cannot exceed this without a native-resolution capture from a real Huawei phone. |
+| Functional completeness | 25% | 6.5/10 | Video playback is real and photographed in four states, so the zero that dominated the previous revision is gone. Editor, search screen, Discover content, EXIF and custom albums are still absent. |
+| Code quality | 15% | 8.5/10 | detekt is fatal and clean across both modules after nine rounds of real decomposition; lint is fatal and clean. The delete-path enum lost a branch that named an API newer than the levels it claimed to serve. |
+| Performance | 15% | 5/10 | Unchanged and unmeasured. Nothing has been profiled on the POCO X3 Pro; no 120 Hz claim is made. |
+| Interactions and animations | 10% | 7/10 | The chrome fade, the auto-hide and the pause-at-end/replay cycle were observed on the emulator. Double-tap seek, drag-to-seek, the speed menu and fill were not. |
+| Compatibility | 5% | 7/10 | The delete decision is now exhaustively tested for API 26–35 including the corrected 30 boundary. Only an API 33 emulator was run. |
+
+Weighted: **6.95/10** (0.30×7.5 + 0.25×6.5 + 0.15×8.5 + 0.15×5.0 + 0.10×7.0 +
+0.05×7.0). An earlier draft of this paragraph said 7.3, which the arithmetic does
+not support; the figure is corrected rather than left flattering. The two low
+scores are honest, not modest: nothing has run on the phone the project is for.

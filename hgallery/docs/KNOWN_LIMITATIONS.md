@@ -33,8 +33,19 @@ oversight that went unnoticed.
   API 30+, so the items are recoverable from the phone's own Recycle bin. The
   app's side of this is tested and photographed; the *system's* own second
   confirmation was not observed end to end, because the emulator image has no
-  Recycle bin UI. The decision logic that chooses between trash, system-delete
-  and direct-delete is unit-tested for every API level.
+  Recycle bin UI. Below API 30 there is no trash and no `createDeleteRequest`
+  either — that API is 30, not 29, which lint's `NewApi` check caught and which
+  forced the decision to become two-way. A unit test walks every level from 26 to
+  35 and asserts the decision never names a mechanism the device cannot use.
+* **The video player is now rendered, and was wrong once.** It has been
+  screenshotted on the emulator mid-playback, with the chrome hidden, at end of
+  playback, and in landscape (`hgallery/evidence/13`–`16`). The first render
+  showed the replay disc drawn on top of the close button, because the disc was a
+  direct child of the player's `Box` with no `align()`; that is fixed. Everything
+  the player claims about gestures is still only exercised by two of them — the
+  reveal tap and rotation. Double-tap seek, drag-to-seek, the speed menu and the
+  fill toggle are implemented and unit-tested at the policy layer but were **not**
+  driven by the harness.
 * **Persian plurals.** Lint's `ImpliedQuantity` check found that Persian's
   singular form also covers zero, so the delete bodies now carry the count in
   both variants. The wording was reviewed by inspection, not by a native speaker.

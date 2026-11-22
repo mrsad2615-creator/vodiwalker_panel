@@ -108,15 +108,14 @@ object HgIcons {
         arcToRelative(8.8f, 8.8f, 0f, true, true, -17.6f, 0f)
         arcToRelative(8.8f, 8.8f, 0f, true, true, 17.6f, 0f)
         close()
-        // The needle: north-east, with the classic half-filled split implied by the
-        // two long spines meeting at the centre.
-        moveTo(12f, 7.2f)
-        lineTo(14.1f, 14.1f)
-        lineTo(12f, 12.6f)
-        lineTo(9.9f, 14.1f)
+        // The needle: one narrow kite running north-east to south-west. An earlier
+        // version added an extra spine to imply a half-filled needle, and at 24 dp
+        // the result read as a stray tick rather than a compass.
+        moveTo(16.4f, 7.6f)
+        lineTo(13.4f, 13.4f)
+        lineTo(7.6f, 16.4f)
+        lineTo(10.6f, 10.6f)
         close()
-        moveTo(12f, 16.8f)
-        lineTo(9.9f, 9.9f)
     }
 
     /** Highlights: a five-point star, Huawei's favourites mark. */

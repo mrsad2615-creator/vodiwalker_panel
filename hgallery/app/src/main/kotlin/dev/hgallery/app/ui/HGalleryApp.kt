@@ -10,6 +10,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.weight
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -17,8 +18,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import dev.hgallery.app.R
 import dev.hgallery.app.data.AppContainer
+import dev.hgallery.app.ui.albums.AlbumDetailScreen
 import dev.hgallery.app.ui.albums.AlbumsScreen
 import dev.hgallery.app.ui.photos.PhotosScreen
 import dev.hgallery.app.ui.placeholder.PlaceholderScreen
@@ -26,54 +30,74 @@ import dev.hgallery.app.ui.shell.HgBottomBar
 import dev.hgallery.app.ui.shell.HgTab
 import dev.hgallery.app.ui.theme.hgPalette
 import dev.hgallery.app.ui.viewer.ViewerScreen
+import dev.hgallery.core.Album
 
 /**
- * Application shell: four destinations behind one bottom bar.
+ * Application shell.
  *
- * A plain state switch is used rather than a navigation graph because the four
- * tabs are siblings with no back stack of their own. The viewer is a full-screen
- * overlay that hides the bar, which is how the reference behaves.
+ * Three layers, in the order the reference stacks them:
+ *   1. the four tabs, with the bottom bar always visible;
+ *   2. an album's contents, which keeps the bar and adds a back affordance;
+ *   3. the full-screen viewer, which covers everything including the bar.
+ *
+ * A plain state machine is used rather than a navigation graph: the tabs are
+ * siblings with no back stack, and the two overlays have exactly one entry point
+ * each. A graph here would be indirection without a benefit.
  */
 @Composable
 fun HGalleryApp(container: AppContainer) {
     val palette = hgPalette
     var tab by remember { mutableStateOf(HgTab.Photos) }
+    var openAlbum by remember { mutableStateOf<Album?>(null) }
     var viewerId by remember { mutableStateOf<Long?>(null) }
 
     val items by container.mediaStore.items.collectAsStateWithLifecycle()
 
     LaunchedEffect(Unit) { container.mediaStore.load() }
 
+    // Back closes the innermost layer first, which is what a user expects and
+    // what the reference does.
+    BackHandler(enabled = viewerId != null) { viewerId = null }
+    BackHandler(enabled = viewerId == null && openAlbum != null) { openAlbum = null }
+
     Box(Modifier.fillMaxSize().background(palette.page)) {
         Column(Modifier.fillMaxSize()) {
             Box(Modifier.weight(1f)) {
-                AnimatedContent(
-                    targetState = tab,
-                    transitionSpec = { fadeIn(tween(120)) togetherWith fadeOut(tween(120)) },
-                    label = "tab",
-                ) { current ->
-                    when (current) {
-                        HgTab.Photos -> PhotosScreen(
-                            container = container,
-                            onOpenItem = { viewerId = it },
-                        )
-                        HgTab.Albums -> AlbumsScreen(
-                            container = container,
-                            onOpenAlbum = { album ->
-                                viewerId = items.firstOrNull { it.bucketId == album.id }?.id
-                            },
-                        )
-                        HgTab.Highlights -> PlaceholderScreen("Highlights")
-                        HgTab.Discover -> PlaceholderScreen("Discover")
+                val album = openAlbum
+                if (album != null) {
+                    AlbumDetailScreen(
+                        container = container,
+                        album = album,
+                        items = items,
+                        onBack = { openAlbum = null },
+                        onOpenItem = { viewerId = it },
+                    )
+                } else {
+                    AnimatedContent(
+                        targetState = tab,
+                        transitionSpec = { fadeIn(tween(120)) togetherWith fadeOut(tween(120)) },
+                        label = "tab",
+                    ) { current ->
+                        when (current) {
+                            HgTab.Photos -> PhotosScreen(
+                                container = container,
+                                onOpenItem = { viewerId = it },
+                            )
+                            HgTab.Albums -> AlbumsScreen(
+                                container = container,
+                                onOpenAlbum = { openAlbum = it },
+                            )
+                            HgTab.Highlights -> PlaceholderScreen(stringResource(R.string.tab_highlights))
+                            HgTab.Discover -> PlaceholderScreen(stringResource(R.string.tab_discover))
+                        }
                     }
                 }
             }
-            HgBottomBar(selected = tab, onSelect = { tab = it })
+            HgBottomBar(selected = tab, onSelect = { tab = it; openAlbum = null })
         }
 
         val openId = viewerId
         if (openId != null) {
-            BackHandler { viewerId = null }
             ViewerScreen(
                 container = container,
                 startId = openId,

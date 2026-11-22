@@ -1,7 +1,16 @@
-import type { Goal, Habit, HabitLog, Project, ProjectStage, Task } from '@/types/domain';
+import type {
+  FocusSession,
+  Goal,
+  Habit,
+  HabitLog,
+  Project,
+  ProjectStage,
+  Task,
+} from '@/types/domain';
 import type { DailyPoint } from './homeMetrics';
 import { formatJalaaliShort } from './date';
-import { projectRisks, riskSentence } from './projects';
+import { computeProjectProgress, describeBasis, projectRisks, riskSentence } from './projects';
+import { buildDailyBrief, buildWeeklyReview, type ManagerInput } from './coach';
 
 /**
  * The Persian command engine — no model, on purpose.
@@ -25,6 +34,9 @@ export type CommandIntent =
   | 'projects.risk'
   | 'goals.status'
   | 'habits.status'
+  | 'project.status'
+  | 'brief.today'
+  | 'review.week'
   | 'why.suggestion'
   | 'help'
   | 'unknown';
@@ -50,8 +62,34 @@ export interface CommandContext {
   stages: ProjectStage[];
   series: DailyPoint[];
   todayKey: string;
+  /** Optional: the planner and the coach need real sessions to measure capacity. */
+  sessions?: FocusSession[];
+  goalMinutes?: number;
   /** Optional explanation of the last suggestion shown, for "چرا؟". */
   lastSuggestionReason?: string | null;
+}
+
+/**
+ * Finds the row a sentence is talking about, by name.
+ *
+ * "وضعیت پروژه کتاب" has to reach the project called «کتاب چاپ اول». The match
+ * is on normalised text and takes the longest name that the sentence contains,
+ * so a short project called «کار» cannot steal a question about «کارهای خانه».
+ */
+function matchByName<T extends { id: string }>(
+  query: string,
+  items: T[],
+  nameOf: (item: T) => string
+): T | null {
+  const text = ` ${normalizeCommand(query)} `;
+  let best: { item: T; length: number } | null = null;
+  for (const item of items) {
+    const name = normalizeCommand(nameOf(item));
+    if (name.length < 2) continue;
+    if (!text.includes(name)) continue;
+    if (!best || name.length > best.length) best = { item, length: name.length };
+  }
+  return best?.item ?? null;
 }
 
 const FA_DIGITS = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
@@ -80,7 +118,14 @@ export function normalizeCommand(input: string): string {
 const RULES: { intent: CommandIntent; patterns: RegExp[] }[] = [
   // Order is significance, not size: the first rule that matches wins, so a
   // sentence about a project is a project question even if it also says overdue.
+  { intent: 'brief.today', patterns: [/بریف/, /چی کار کنم/, /چه کار کنم/, /از کجا شروع/, /الان چه/, /اولویت امروز/, /brief/] },
+  { intent: 'review.week', patterns: [/مرور هفته/, /هفته چطور/, /هفته گذشته چطور/, /جمع بندی هفته/, /review/] },
   { intent: 'why.suggestion', patterns: [/چرا/, /دلیل/, /why/] },
+  {
+    intent: 'project.status',
+    // A *named* project is a status question, not a risk listing.
+    patterns: [/وضعیت پروژه/, /پروژه [^ ]+ چطور/, /پیشرفت پروژه/],
+  },
   { intent: 'projects.risk', patterns: [/پروژه/, /project/] },
   { intent: 'overdue.tasks', patterns: [/عقب افتاده/, /دیرکرد/, /گذشته/, /overdue/] },
   { intent: 'plan.today', patterns: [/برنامه/, /plan/, /بچین/, /چیدمان/] },
@@ -106,6 +151,9 @@ export function detectIntent(raw: string): CommandIntent {
 }
 
 const HELP_LINES = [
+  '«بریف امروز» — مدیر چه می‌گوید',
+  '«این هفته چطور بودم؟» — مرور هفته',
+  '«وضعیت پروژه کتاب» — با نام پروژه',
   '«وظایف امروز من چیست؟»',
   '«کدام کارها عقب افتاده؟»',
   '«کدام پروژه عقب افتاده؟»',
@@ -210,6 +258,87 @@ export function runCommand(raw: string, context: CommandContext): CommandAnswer 
             : 'هیچ‌کدام بارها جابه‌جا نشده‌اند؛ فقط از تاریخ گذشته‌اند.',
         ],
         action: { label: 'دیدن وظایف', tab: 'tasks' },
+      };
+    }
+
+    case 'brief.today': {
+      const brief = buildDailyBrief(managerInput(context));
+      return {
+        intent,
+        title: brief.headline,
+        lines: [
+          ...brief.lines,
+          ...(brief.recommendation
+            ? [
+                `پیشنهاد من: ${brief.recommendation.text}`,
+                `دلیل: ${brief.recommendation.reason} (اطمینان: ${confidenceLabel(brief.recommendation.confidence)})`,
+              ]
+            : []),
+        ],
+        action: brief.recommendation
+          ? { label: 'رفتن به کارها', tab: brief.recommendation.tab }
+          : { label: 'دیدن وظایف', tab: 'tasks' },
+      };
+    }
+
+    case 'review.week': {
+      const review = buildWeeklyReview(managerInput(context));
+      return {
+        intent,
+        title: review.headline,
+        lines: [
+          ...review.lines,
+          ...(review.risks.length > 0 ? [`ریسک: ${review.risks[0]}`] : []),
+          ...review.nextActions.map((action) => `قدم بعد: ${action}`),
+        ],
+        action: { label: 'تحلیل کامل', tab: 'analytics' },
+      };
+    }
+
+    case 'project.status': {
+      const named = matchByName(raw, context.projects, (project) => project.title);
+      if (named) {
+        const progress = computeProjectProgress(
+          context.stages.filter((stage) => stage.projectId === named.id),
+          tasks.filter((task) => task.projectId === named.id)
+        );
+        const risk = projectRisks({
+          projects: [named],
+          stages: context.stages,
+          tasks,
+          todayKey,
+        })[0];
+        return {
+          intent,
+          title: `«${named.title}» — ${fa(progress.percent)}٪`,
+          lines: [
+            describeBasis(progress),
+            `${fa(progress.stagesDone)} از ${fa(progress.stagesTotal)} مرحله و ${fa(
+              progress.tasksDone
+            )} از ${fa(progress.tasksTotal)} کار بسته شده است.`,
+            ...(risk ? [riskSentence(risk)] : ['ریسکی برای این پروژه نمی‌بینم.']),
+          ],
+          action: { label: 'دیدن پروژه‌ها', tab: 'projects' },
+        };
+      }
+      const risks = projectRisks({ projects: context.projects, stages: context.stages, tasks, todayKey });
+      if (risks.length === 0) {
+        return {
+          intent,
+          title: 'هیچ پروژه‌ای در خطر نیست',
+          lines: [
+            context.projects.length === 0
+              ? 'هنوز پروژه‌ای نساخته‌ای؛ از «بیشتر» → «پروژه‌ها» شروع کن.'
+              : 'همهٔ پروژه‌ها یا روی برنامه‌اند یا داده‌ای برای قضاوت ندارند.',
+          ],
+          action: { label: 'دیدن پروژه‌ها', tab: 'projects' },
+        };
+      }
+      return {
+        intent,
+        title: `${fa(risks.length)} پروژه در خطر`,
+        lines: risks.slice(0, 4).map((risk) => `• ${risk.title}: ${riskSentence(risk)}`),
+        action: { label: 'دیدن پروژه‌ها', tab: 'projects' },
       };
     }
 
@@ -341,6 +470,22 @@ export function runCommand(raw: string, context: CommandContext): CommandAnswer 
 
     case 'why.suggestion': {
       if (!context.lastSuggestionReason) {
+        // Nothing on screen to explain: answer from the manager itself rather
+        // than refusing, because "why?" always has a real answer here.
+        const brief = buildDailyBrief(managerInput(context));
+        if (brief.recommendation) {
+          return {
+            intent,
+            title: `دلیل این پیشنهاد: ${brief.recommendation.text}`,
+            lines: [
+              brief.recommendation.reason,
+              `اطمینان: ${confidenceLabel(brief.recommendation.confidence)}`,
+            ],
+            action: { label: 'رفتن به کارها', tab: brief.recommendation.tab },
+          };
+        }
+      }
+      if (!context.lastSuggestionReason) {
         return {
           intent,
           title: 'پیشنهاد تازه‌ای در کار نیست',
@@ -368,6 +513,8 @@ export function runCommand(raw: string, context: CommandContext): CommandAnswer 
 
 /** Suggestions shown as chips above the input. */
 export const QUICK_COMMANDS = [
+  'بریف امروز',
+  'این هفته چطور بودم؟',
   'وظایف امروز من چیست؟',
   'کدام کارها عقب افتاده؟',
   'کدام پروژه عقب افتاده؟',
@@ -375,3 +522,25 @@ export const QUICK_COMMANDS = [
   'وضعیت عادت‌ها',
   'برای امروز برنامه بساز',
 ] as const;
+
+/** Persian label for a confidence level, so the UI never shows an English word. */
+export function confidenceLabel(confidence: 'high' | 'medium' | 'low'): string {
+  if (confidence === 'high') return 'بالا';
+  if (confidence === 'medium') return 'متوسط';
+  return 'کم — داده کم است';
+}
+
+/** Adapts the command context to what the coach and planner need. */
+function managerInput(context: CommandContext): ManagerInput {
+  return {
+    tasks: context.tasks,
+    habits: context.habits,
+    habitLogs: context.habitLogs,
+    sessions: context.sessions ?? [],
+    goals: context.goals,
+    projects: context.projects,
+    stages: context.stages,
+    todayKey: context.todayKey,
+    goalMinutes: context.goalMinutes,
+  };
+}

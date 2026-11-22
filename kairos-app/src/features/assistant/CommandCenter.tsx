@@ -15,7 +15,8 @@ import {
 } from '@/lib/queries';
 import { buildDailySeries } from '@/lib/homeMetrics';
 import { getTodayKey } from '@/lib/date';
-import { QUICK_COMMANDS, runCommand, type CommandAnswer } from '@/lib/commands';
+import { confidenceLabel, QUICK_COMMANDS, runCommand, type CommandAnswer } from '@/lib/commands';
+import { buildDailyBrief } from '@/lib/coach';
 import { pickInsights } from '@/lib/insights';
 import { triggerHaptic } from '@/lib/native';
 
@@ -64,6 +65,21 @@ export function CommandCenter() {
     return insights[0] ? `${insights[0].title}. ${insights[0].body}` : null;
   }, [sessions, tasks, habits, habitLogs, journal, goals, todayKey]);
 
+  const brief = useMemo(
+    () =>
+      buildDailyBrief({
+        tasks,
+        habits,
+        habitLogs,
+        sessions,
+        goals,
+        projects,
+        stages,
+        todayKey,
+      }),
+    [tasks, habits, habitLogs, sessions, goals, projects, stages, todayKey]
+  );
+
   const ask = (text: string) => {
     const trimmed = text.trim();
     if (!trimmed) return;
@@ -76,6 +92,7 @@ export function CommandCenter() {
       stages,
       series,
       todayKey,
+      sessions,
       lastSuggestionReason: topInsightReason,
     });
     setHistory((current) => [answer, ...current].slice(0, 6));
@@ -130,6 +147,44 @@ export function CommandCenter() {
         }
       >
         <div className="space-y-3 px-5 py-4">
+          {/* The manager speaks first: one decision, its reason, its confidence. */}
+          <div
+            data-testid="manager-brief"
+            className="rounded-[var(--r-rail)] border border-[var(--accent-fg)]/25 bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] p-3"
+          >
+            <p className="text-[11.5px] font-semibold leading-5 text-[var(--text)]">
+              {brief.headline}
+            </p>
+            <ul className="mt-1 space-y-1">
+              {brief.lines.slice(0, 3).map((line) => (
+                <li key={line} className="text-[10px] leading-4 text-[var(--text-2)]">
+                  {line}
+                </li>
+              ))}
+            </ul>
+            {brief.recommendation && (
+              <div className="mt-2 border-t border-[var(--accent-fg)]/20 pt-2">
+                <p className="text-[11px] font-medium text-[var(--accent-fg)]">
+                  {brief.recommendation.text}
+                </p>
+                <p className="mt-0.5 text-[9.5px] leading-4 text-[var(--text-3)]">
+                  {brief.recommendation.reason} · اطمینان{' '}
+                  {confidenceLabel(brief.recommendation.confidence)}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveTab(brief.recommendation!.tab);
+                    setOpen(false);
+                  }}
+                  className="mt-1 text-[10px] font-medium text-[var(--accent-fg)]"
+                >
+                  انجامش بده ←
+                </button>
+              </div>
+            )}
+          </div>
+
           <div className="flex flex-wrap gap-1.5">
             {QUICK_COMMANDS.map((command) => (
               <button

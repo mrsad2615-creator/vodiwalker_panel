@@ -174,6 +174,42 @@ describe('home intelligence', () => {
   });
 });
 
+describe('the manager', () => {
+  it('speaks first, with a decision and its evidence', async () => {
+    await db.tasks.put({
+      id: 'tsk-mgr-1',
+      title: 'قرارداد',
+      description: '',
+      dueDate: '2020-01-01',
+      dueTime: null,
+      priority: 'high',
+      quadrant: 'q1',
+      category: 'work',
+      tags: [],
+      status: 'todo',
+      subtasks: [],
+      recurrence: 'none',
+      reminderEnabled: false,
+      reminderOffsetMin: 0,
+      archived: false,
+      postponeCount: 5,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      completedDate: null,
+      completedAt: null,
+    });
+
+    await boot();
+    fireEvent.click(screen.getByRole('button', { name: 'مرکز فرمان' }));
+
+    const brief = await screen.findByTestId('manager-brief');
+    expect(brief.textContent).toContain('قرارداد');
+    // Confidence is always stated, in Persian.
+    expect(brief.textContent).toMatch(/اطمینان/);
+    expect(brief.textContent).not.toMatch(/high|medium|low/);
+  });
+});
+
 describe('command centre', () => {
   it('answers a real question from real rows', async () => {
     await db.tasks.put({

@@ -178,3 +178,74 @@ describe('honesty', () => {
     }
   });
 });
+
+describe('the manager layer', () => {
+  it('answers "بریف امروز" with a decision, a reason and a confidence', () => {
+    const answer = runCommand('بریف امروز', {
+      ...baseContext,
+      tasks: [
+        task({ title: 'مالیات', dueDate: '2025-06-14', postponeCount: 3 }),
+        task({ title: 'گزارش', dueDate: TODAY }),
+      ],
+    });
+    expect(answer.intent).toBe('brief.today');
+    expect(answer.lines.some((line) => line.includes('مالیات'))).toBe(true);
+    expect(answer.lines.some((line) => line.includes('دلیل:'))).toBe(true);
+    expect(answer.lines.some((line) => line.includes('اطمینان:'))).toBe(true);
+    // Numbers are Persian, like the rest of the product.
+    expect(answer.title).not.toMatch(/[0-9]/);
+  });
+
+  it('reviews the week without inventing one when nothing was recorded', () => {
+    const answer = runCommand('این هفته چطور بودم؟', baseContext);
+    expect(answer.intent).toBe('review.week');
+    expect(answer.title).toContain('ثبت نشده');
+    expect(answer.lines.some((line) => line.includes('قدم بعد'))).toBe(true);
+  });
+
+  it('finds a project by its name instead of only listing risks', () => {
+    const project: Project = {
+      id: 'p1',
+      title: 'کتاب چاپ اول',
+      description: '',
+      category: 'work',
+      goalId: null,
+      status: 'active',
+      startDate: '2025-06-01',
+      dueDate: null,
+      createdAt: '2025-06-01T00:00:00.000Z',
+      updatedAt: '2025-06-01T00:00:00.000Z',
+    } as Project;
+    const answer = runCommand('وضعیت پروژه کتاب چاپ اول', {
+      ...baseContext,
+      projects: [project],
+      stages: [
+        {
+          id: 's1',
+          projectId: 'p1',
+          title: 'فصل اول',
+          kind: 'stage',
+          order: 0,
+          weight: 1,
+          done: true,
+          dueDate: null,
+          completedAt: '2025-06-10T00:00:00.000Z',
+          createdAt: '2025-06-01T00:00:00.000Z',
+          updatedAt: '2025-06-10T00:00:00.000Z',
+        },
+      ],
+    });
+    expect(answer.intent).toBe('project.status');
+    expect(answer.title).toContain('کتاب چاپ اول');
+    expect(answer.title).toContain('۱۰۰');
+  });
+
+  it('explains its own recommendation when asked "چرا" with nothing on screen', () => {
+    const answer = runCommand('چرا؟', {
+      ...baseContext,
+      tasks: [task({ title: 'مالیات', dueDate: '2025-06-14', postponeCount: 2 })],
+    });
+    expect(answer.intent).toBe('why.suggestion');
+    expect(answer.lines[0]).toContain('جابه‌جا');
+  });
+});

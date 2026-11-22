@@ -78,7 +78,11 @@ sleep 6
 adb shell content query --uri content://media/external/images/media --projection _id 2>/dev/null | wc -l | tee "$OUT_DIR/diag/mediastore-count.txt"
 
 echo "== spreading date_taken across three days so grouping is exercised =="
-NOW_MS=$(($(date +%s) * 1000))
+# `date +%s` through `adb shell` runs in the *device's* toybox, which cannot do
+# 64-bit shell arithmetic: the multiplication wrapped and every fixture landed on
+# 1970-01-01, which then rendered as the wrong year in date headers. Compute the
+# millisecond clock in the host shell and pass the number through.
+NOW_MS=$(( $(date +%s) * 1000 ))
 adb shell content query --uri content://media/external/images/media --projection _id 2>/dev/null \
   | sed -n 's/.*_id=\([0-9]*\).*/\1/p' > "$OUT_DIR/diag/media-ids.txt"
 IDX=0
@@ -315,6 +319,13 @@ adb shell am start -W -n "$PKG/$ACTIVITY" > /dev/null 2>&1
 sleep 3
 # Tap the tile by its description rather than by a coordinate: every cell announces
 # "Photo, <name>", so the first one is addressable no matter where the grid puts it.
+# Straight to the Camera album: sort order and the date-spreading above both decide
+# which thumbnail is first on the Photos tab, and a video landed there. The audience
+# asset is the same either way, but an album full of stills makes the step
+# deterministic.
+if tap_tag_or_text "camera-album" 'content-desc="Camera, [0-9]"'; then
+  sleep 2
+fi
 if tap_tag_or_text "first-photo" 'content-desc="Photo, '; then
   sleep 2
   shot 23-viewer-before-favourite.png

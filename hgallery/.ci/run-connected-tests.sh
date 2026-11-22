@@ -297,12 +297,23 @@ if tap_tag_or_text "videos-album" 'content-desc="Videos|text="Videos'; then
     adb shell input tap $((W / 2)) $((H / 2))
     sleep 2
     shot 14-video-player-no-chrome.png
-    # Let it reach the end, then bring the chrome back: the transport must offer
-    # replay rather than a play button that does nothing.
-    sleep 6
-    adb shell input tap $((W / 2)) $((H / 2))
+    # Let it reach the end, then bring the chrome back to prove the transport
+    # offers replay. The reveal tap is deliberately at 30% height, not the centre:
+    # a centre tap lands on the replay disc and restarts the clip, which is what
+    # the previous run photographed (0:01 of 0:06) instead of the ended state.
+    sleep 7
+    adb shell input tap $((W / 2)) $((H * 30 / 100))
     sleep 2
     shot 15-video-player-ended.png
+    # Landscape, which is how video is actually watched and the one case that
+    # exercises the orientation control and the reflow of the chrome.
+    adb shell settings put system accelerometer_rotation 0
+    adb shell settings put system user_rotation 1
+    sleep 3
+    shot 16-video-landscape.png
+    adb shell settings put system user_rotation 0
+    adb shell settings put system accelerometer_rotation 1
+    sleep 2
     adb shell input keyevent KEYCODE_BACK
     sleep 2
   else

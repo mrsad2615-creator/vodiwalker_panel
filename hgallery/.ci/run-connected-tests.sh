@@ -65,8 +65,26 @@ for f in .ci/fixtures/*.jpg; do
 done
 # MediaStore only notices new files once someone asks it to index them.
 adb shell content call --uri content://media/external --method scan_volume --arg external_primary >/dev/null 2>&1
-sleep 5
+sleep 6
 adb shell content query --uri content://media/external/images/media --projection _id 2>/dev/null | wc -l | tee "$OUT_DIR/diag/mediastore-count.txt"
+
+echo "== spreading date_taken across three days so grouping is exercised =="
+NOW_MS=$(($(date +%s) * 1000))
+adb shell content query --uri content://media/external/images/media --projection _id 2>/dev/null \
+  | sed -n 's/.*_id=\([0-9]*\).*/\1/p' > "$OUT_DIR/diag/media-ids.txt"
+IDX=0
+TOTAL=$(wc -l < "$OUT_DIR/diag/media-ids.txt")
+GROUP=$(( (TOTAL + 2) / 3 ))
+[ "$GROUP" -lt 1 ] && GROUP=1
+while IFS= read -r MID; do
+  [ -z "$MID" ] && continue
+  DAY=$((IDX / GROUP))
+  NEWMS=$((NOW_MS - DAY * 86400000))
+  adb shell content update --uri "content://media/external/images/media/$MID" \
+    --bind date_taken:l:"$NEWMS" --bind date_added:s:$((NEWMS / 1000)) >/dev/null 2>&1
+  IDX=$((IDX + 1))
+done < "$OUT_DIR/diag/media-ids.txt"
+echo "retimed $IDX rows into $(( (IDX + GROUP - 1) / GROUP )) day groups" | tee "$OUT_DIR/diag/retime.txt"
 
 echo "== granting media permissions =="
 for p in READ_MEDIA_IMAGES READ_MEDIA_VIDEO READ_MEDIA_VISUAL_USER_SELECTED; do
@@ -105,7 +123,7 @@ W=$(echo "$SIZE" | cut -d' ' -f1)
 H=$(echo "$SIZE" | cut -d' ' -f2)
 [ -z "$W" ] && W=1080 && H=1920
 echo "screen ${W}x${H}"
-Y=$((H - 110))
+Y=$((H - 55))
 
 tap_and_shot() {
   adb shell input tap "$1" "$Y"

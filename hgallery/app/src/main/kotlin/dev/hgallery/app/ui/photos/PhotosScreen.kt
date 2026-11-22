@@ -83,7 +83,6 @@ fun PhotosScreen(
     SelectionAwarePhotos(container = container, onOpenItem = onOpenItem, modifier = modifier)
 }
 
-@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 private fun SelectionAwarePhotos(
     container: AppContainer,
@@ -360,6 +359,7 @@ private fun SelectionAwarePhotos(
     }
 }
 
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 private fun ThumbnailCell(
     item: MediaItem,

@@ -42,8 +42,6 @@
     <string name="media_summary">%1$s و %2$s</string>
 
     <string name="viewer_position">%1$d از %2$d</string>
-    <string name="delete_confirm_title">این مورد حذف شود؟</string>
-    <string name="delete_confirm_body">%1$s از این دستگاه حذف خواهد شد.</string>
     <string name="cancel">لغو</string>
     <string name="view_month">نمای ماهانه</string>
     <string name="view_day">نمای روزانه</string>
@@ -57,9 +55,6 @@
     </plurals>
     <string name="select_all">انتخاب همه</string>
     <string name="select_none">لغو انتخاب همه</string>
-    <string name="share_selected">اشتراک‌گذاری موارد انتخاب‌شده</string>
-    <string name="delete_selected">حذف موارد انتخاب‌شده</string>
-    <string name="selection_hint">برای انتخاب، انگشت خود را روی تصویر نگه دارید</string>
 
     <plurals name="delete_selected_title">
         <item quantity="one">%1$d مورد حذف شود؟</item>
@@ -73,7 +68,6 @@
         <item quantity="one">%1$d مورد از این دستگاه حذف می‌شود. این کار برگشت‌پذیر نیست.</item>
         <item quantity="other">%1$d مورد از این دستگاه حذف می‌شوند. این کار برگشت‌پذیر نیست.</item>
     </plurals>
-    <string name="delete_system_body">اندروید پیش از حذف هر چیزی از شما تأیید می‌گیرد.</string>
 
     <plurals name="moved_to_trash">
         <item quantity="one">%1$d مورد به سبد بازیافت منتقل شد</item>

@@ -37,8 +37,6 @@
     <string name="media_summary">%1$s and %2$s</string>
 
     <string name="viewer_position">%1$d / %2$d</string>
-    <string name="delete_confirm_title">Delete this item?</string>
-    <string name="delete_confirm_body">%1$s will be removed from this device.</string>
     <string name="cancel">Cancel</string>
     <string name="view_month">Switch to month view</string>
     <string name="view_day">Switch to day view</string>
@@ -52,9 +50,6 @@
     </plurals>
     <string name="select_all">Select all</string>
     <string name="select_none">Deselect all</string>
-    <string name="share_selected">Share selected items</string>
-    <string name="delete_selected">Delete selected items</string>
-    <string name="selection_hint">Long-press a photo to select it</string>
 
     <plurals name="delete_selected_title">
         <item quantity="one">Delete %1$d item?</item>
@@ -68,7 +63,6 @@
         <item quantity="one">It will be removed from this device. This cannot be undone.</item>
         <item quantity="other">They will be removed from this device. This cannot be undone.</item>
     </plurals>
-    <string name="delete_system_body">Android will ask you to confirm before anything is removed.</string>
 
     <plurals name="moved_to_trash">
         <item quantity="one">Moved %1$d item to the trash</item>

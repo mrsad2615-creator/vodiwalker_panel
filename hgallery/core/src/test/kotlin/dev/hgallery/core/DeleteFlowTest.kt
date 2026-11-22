@@ -9,21 +9,34 @@ class DeleteFlowTest {
 
     @Test
     fun api30AndAboveAlwaysUsesTheRecoverableTrashRequest() {
-        // Even when the rows are writable directly: recoverability is the point.
-        assertEquals(DeletePath.SYSTEM_TRASH, deletePathFor(30, canWriteDirectly = true))
-        assertEquals(DeletePath.SYSTEM_TRASH, deletePathFor(33, canWriteDirectly = true))
-        assertEquals(DeletePath.SYSTEM_TRASH, deletePathFor(35, canWriteDirectly = true))
+        // Even when the rows would be writable directly: recoverability is the
+        // point, and the trash is the only path that offers it.
+        assertEquals(DeletePath.SYSTEM_TRASH, deletePathFor(30))
+        assertEquals(DeletePath.SYSTEM_TRASH, deletePathFor(33))
+        assertEquals(DeletePath.SYSTEM_TRASH, deletePathFor(35))
     }
 
     @Test
-    fun apiBelow30HasNoTrashSoItAsksTheSystemToConfirm() {
-        assertEquals(DeletePath.SYSTEM_DELETE_REQUEST, deletePathFor(29, canWriteDirectly = false))
-        assertEquals(DeletePath.SYSTEM_DELETE_REQUEST, deletePathFor(26, canWriteDirectly = false))
+    fun apiBelow30HasNoTrashAtAllSoItDeletesDirectly() {
+        // There is no system request API below 30 either, so the app's own
+        // confirmation is the last word and the dialog must say the deletion is
+        // permanent. Naming a "recoverable" path here would be a false promise.
+        assertEquals(DeletePath.DIRECT_DELETE, deletePathFor(29))
+        assertEquals(DeletePath.DIRECT_DELETE, deletePathFor(26))
     }
 
     @Test
-    fun apiBelow30WithWritableRowsDeletesDirectly() {
-        assertEquals(DeletePath.DIRECT_DELETE, deletePathFor(29, canWriteDirectly = true))
+    fun theDecisionNeverNamesAPathTheDeviceCannotUse() {
+        // Exhaustive over the supported range: every answer is either the trash,
+        // which exists from 30, or a direct delete, which needs no API at all.
+        (26..35).forEach { sdk ->
+            val path = deletePathFor(sdk)
+            if (sdk >= 30) {
+                assertEquals(DeletePath.SYSTEM_TRASH, path, "sdk=$sdk")
+            } else {
+                assertEquals(DeletePath.DIRECT_DELETE, path, "sdk=$sdk")
+            }
+        }
     }
 
     @Test

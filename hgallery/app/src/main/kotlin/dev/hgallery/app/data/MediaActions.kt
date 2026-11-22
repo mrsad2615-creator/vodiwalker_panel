@@ -46,7 +46,7 @@ class MediaActions(context: Context) {
     fun newRequestCode(): Int = nextRequestCode.incrementAndGet()
 
     /** Which mechanism this device offers for a delete. */
-    fun pathFor(): DeletePath = deletePathFor(Build.VERSION.SDK_INT, canWriteDirectly = false)
+    fun pathFor(): DeletePath = deletePathFor(Build.VERSION.SDK_INT)
 
     /**
      * The `IntentSender` that shows Android's own trash or delete dialog.
@@ -55,22 +55,13 @@ class MediaActions(context: Context) {
      * the caller falls back to deleting directly after its own confirmation.
      */
     fun buildDeleteRequest(uris: List<Uri>, path: DeletePath): IntentSender? {
-        val pending: PendingIntent? = when {
-            uris.isEmpty() -> null
-            path == DeletePath.SYSTEM_TRASH && Build.VERSION.SDK_INT >= API_TRASH ->
-                MediaStore.createTrashRequest(resolver, uris, true)
-            path == DeletePath.SYSTEM_DELETE_REQUEST && Build.VERSION.SDK_INT >= API_DELETE_REQUEST ->
-                MediaStore.createDeleteRequest(resolver, uris)
-            else -> null
-        }
-        return pending?.intentSender
+        if (uris.isEmpty() || path != DeletePath.SYSTEM_TRASH) return null
+        if (Build.VERSION.SDK_INT < API_TRASH) return null
+        return MediaStore.createTrashRequest(resolver, uris, true).intentSender
     }
 
     private companion object {
-        /** `MediaStore.createDeleteRequest` arrived in Android 10 (API 29). */
-        const val API_DELETE_REQUEST = 29
-
-        /** `MediaStore.createTrashRequest` arrived in Android 11 (API 30). */
+        /** Android 11: `MediaStore.createTrashRequest`. */
         const val API_TRASH = 30
     }
 

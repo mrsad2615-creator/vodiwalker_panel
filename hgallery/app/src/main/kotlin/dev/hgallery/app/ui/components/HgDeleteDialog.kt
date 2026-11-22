@@ -33,7 +33,9 @@ fun HgDeleteDialog(
     // caught by reading its own screenshot.
     val body = when (path) {
         DeletePath.SYSTEM_TRASH -> pluralStringResource(R.plurals.delete_trash_body, count, count)
-        DeletePath.SYSTEM_DELETE_REQUEST -> stringResource(R.string.delete_system_body)
+        // Below API 30 there is no trash on the device at all, so the dialog must
+        // not mention restoring. This is the sentence that keeps the promise
+        // truthful on an older phone.
         DeletePath.DIRECT_DELETE -> pluralStringResource(R.plurals.delete_permanent_body, count, count)
     }
 

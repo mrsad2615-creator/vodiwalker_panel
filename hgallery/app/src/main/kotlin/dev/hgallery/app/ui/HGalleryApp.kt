@@ -44,6 +44,10 @@ import dev.hgallery.core.Album
  * siblings with no back stack, and the two overlays have exactly one entry point
  * each. A graph here would be indirection without a benefit.
  */
+// VideoPlayerScreen uses Media3 types, which are marked UnstableApi. The opt-in
+// is declared here rather than suppressed globally so the exception is visible at
+// the one place the player is composed.
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 @Composable
 fun HGalleryApp(container: AppContainer) {
     val palette = hgPalette

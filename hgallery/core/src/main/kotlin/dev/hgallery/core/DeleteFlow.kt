@@ -17,14 +17,9 @@ enum class DeletePath {
     SYSTEM_TRASH,
 
     /**
-     * Android 8–10: there is no trash. `MediaStore.createDeleteRequest` asks the
-     * user to confirm the removal of items the app does not own.
-     */
-    SYSTEM_DELETE_REQUEST,
-
-    /**
-     * Last resort, only when the platform supplies no request at all: a direct
-     * `ContentResolver.delete` against rows this app can write.
+     * Android 8–9: no trash and no request API. The app deletes rows it can write
+     * and reports the rest as failures; there is no recoverable option here, and
+     * the confirmation dialog says so.
      */
     DIRECT_DELETE,
 }
@@ -69,17 +64,27 @@ sealed interface DeleteFlow {
  * because that is what makes the item recoverable. Below 30 there is no trash,
  * so the direct path is used when the rows are writable.
  */
-/** Android 10: `createDeleteRequest` and scoped storage. */
+/** Android 10: scoped storage, and `MediaStore.createTrashRequest` does not exist. */
 const val API_SCOPED_STORAGE = 29
 
-/** Android 11: the system trash arrived with `createTrashRequest`. */
+/**
+ * Android 11: the system trash and `MediaStore.createTrashRequest` arrived, and
+ * `createDeleteRequest` became usable for rows the app does not own.
+ */
 const val API_SYSTEM_TRASH = 30
 
-fun deletePathFor(sdkInt: Int, canWriteDirectly: Boolean): DeletePath = when {
-    sdkInt >= API_SYSTEM_TRASH -> DeletePath.SYSTEM_TRASH
-    !canWriteDirectly -> DeletePath.SYSTEM_DELETE_REQUEST
-    else -> DeletePath.DIRECT_DELETE
-}
+/**
+ * Chooses the mechanism, and never names one this device cannot use.
+ *
+ * The first version of this function returned a "system delete request" path for
+ * API 29, but `MediaStore.createDeleteRequest` is API 30 — lint's `NewApi` check
+ * found the mismatch. Both request APIs therefore exist only from 30 up, which
+ * makes the decision two-way, not three-way: on 30+ the items go to the trash and
+ * are recoverable; below that there is no recoverable option at all and the app
+ * must say so rather than imply it.
+ */
+fun deletePathFor(sdkInt: Int): DeletePath =
+    if (sdkInt >= API_SYSTEM_TRASH) DeletePath.SYSTEM_TRASH else DeletePath.DIRECT_DELETE
 
 /**
  * The outcome of a batch delete, in the terms the UI has to show.

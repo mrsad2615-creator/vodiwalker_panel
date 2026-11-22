@@ -20,6 +20,9 @@ ACTIVITY="dev.hgallery.app.MainActivity"
 
 rm -rf "$OUT_DIR"
 mkdir -p "$OUT_DIR/diag"
+# `adb pull` recreates the device folder name, so this is the only place the
+# PNGs can end up. Creating it explicitly means they land at a known path.
+mkdir -p "$OUT_DIR/$ALBUM_NAME"
 
 echo "== instrumented UI tests =="
 ./gradlew --console=plain --no-daemon :app:connectedDebugAndroidTest 2>&1 | tee ui-test.log
@@ -28,19 +31,19 @@ echo "connectedDebugAndroidTest exit status: $TEST_STATUS"
 
 echo "== installing the application build for screenshots =="
 APK=$(find apk -name '*.apk' 2>/dev/null | head -1)
-echo "apk path: ${APK:-<none>}" | tee ui-shots/diag/apk-path.txt
+echo "apk path: ${APK:-<none>}" | tee "$OUT_DIR/diag/apk-path.txt"
 if [ -z "$APK" ]; then
   echo "::error title=e2e::no APK was downloaded into apk/"
   exit 1
 fi
-adb uninstall "$PKG" > ui-shots/diag/adb-uninstall.txt 2>&1 || true
-adb install -r -g "$APK" > ui-shots/diag/adb-install.txt 2>&1
+adb uninstall "$PKG" > "$OUT_DIR/diag/adb-uninstall.txt" 2>&1 || true
+adb install -r -g "$APK" > "$OUT_DIR/diag/adb-install.txt" 2>&1
 INSTALL_STATUS=$?
-cat ui-shots/diag/adb-install.txt
+cat "$OUT_DIR/diag/adb-install.txt"
 echo "install status: $INSTALL_STATUS"
 if [ "$INSTALL_STATUS" -ne 0 ]; then
   echo "::error title=e2e::the APK could not be installed"
-  adb shell pm list packages | grep -i gallery > ui-shots/diag/packages.txt
+  adb shell pm list packages | grep -i gallery > "$OUT_DIR/diag/packages.txt"
   exit 1
 fi
 
@@ -53,27 +56,27 @@ done
 # MediaStore only notices new files once someone asks it to index them.
 adb shell content call --uri content://media/external --method scan_volume --arg external_primary >/dev/null 2>&1
 sleep 5
-adb shell content query --uri content://media/external/images/media --projection _id 2>/dev/null | wc -l | tee ui-shots/diag/mediastore-count.txt
+adb shell content query --uri content://media/external/images/media --projection _id 2>/dev/null | wc -l | tee "$OUT_DIR/diag/mediastore-count.txt"
 
 echo "== granting media permissions =="
 for p in READ_MEDIA_IMAGES READ_MEDIA_VIDEO READ_MEDIA_VISUAL_USER_SELECTED; do
   adb shell pm grant "$PKG" "android.permission.$p" 2>/dev/null
 done
-adb shell dumpsys package "$PKG" > ui-shots/diag/package-dump.txt 2>&1
+adb shell dumpsys package "$PKG" > "$OUT_DIR/diag/package-dump.txt" 2>&1
 
 echo "== launching the app =="
 adb shell am force-stop "$PKG"
-adb shell am start -W -n "$PKG/$ACTIVITY" > ui-shots/diag/am-start.txt 2>&1
-cat ui-shots/diag/am-start.txt
+adb shell am start -W -n "$PKG/$ACTIVITY" > "$OUT_DIR/diag/am-start.txt" 2>&1
+cat "$OUT_DIR/diag/am-start.txt"
 sleep 10
 
 FOCUS=$(adb shell dumpsys window 2>/dev/null | grep -E "mCurrentFocus|mFocusedApp" | head -4)
-echo "$FOCUS" > ui-shots/diag/focus.txt
+echo "$FOCUS" > "$OUT_DIR/diag/focus.txt"
 echo "$FOCUS"
 
 if ! echo "$FOCUS" | grep -q "$PKG"; then
   echo "::warning title=screenshots::the app never reached the foreground"
-  adb logcat -d -t 600 > ui-shots/diag/logcat.txt
+  adb logcat -d -t 600 > "$OUT_DIR/diag/logcat.txt"
   adb shell screencap -p "$DEVICE_DIR/99-failed.png"
   adb pull "$DEVICE_DIR" "$OUT_DIR" >/dev/null 2>&1
   exit $TEST_STATUS

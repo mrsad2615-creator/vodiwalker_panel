@@ -421,9 +421,11 @@ fun FocusScreen(
                         Modifier.fillMaxWidth(),
                         accent = ObsidianSpectrum.Aqua,
                     ) {
-                        SectionHeader(
-                            title = "پروتکل‌های علمی تمرکز",
-                            subtitle = "انتخاب سریع چرخه‌های استاندارد یا تنظیم دستی زمان و تعداد دور",
+                        SectionHeader(title = "پروتکل‌های علمی تمرکز")
+                        Text(
+                            "انتخاب سریع چرخه‌های استاندارد یا تنظیم دستی زمان و تعداد دور",
+                            style = type.caption,
+                            color = colors.textSecondary,
                         )
                         val presets = remember {
                             listOf(
@@ -533,8 +535,8 @@ private fun SoundscapeCardRtl(
         AmbientSoundscape.BROWN_WARM -> ObsidianSpectrum.Aqua
         AmbientSoundscape.RAIN_CANOPY -> ObsidianSpectrum.BrightBlue
         AmbientSoundscape.ALPHA_FOCUS -> ObsidianSpectrum.Teal
-        AmbientSoundscape.GAMMA_DEEP -> ObsidianSpectrum.Violet
-        AmbientSoundscape.OCEAN_TIDE -> ObsidianSpectrum.Lavender
+        AmbientSoundscape.GAMMA_DEEP -> ObsidianSpectrum.Lavender
+        AmbientSoundscape.OCEAN_TIDE -> ObsidianSpectrum.DeepViolet
         AmbientSoundscape.TIBETAN_BOWL -> ObsidianSpectrum.Pink
         AmbientSoundscape.OFF -> colors.textMuted
     }
@@ -619,9 +621,9 @@ private fun ProtocolPresetRowRtl(
     val accent = when (preset) {
         FocusProtocolPreset.POMODORO -> ObsidianSpectrum.Aqua
         FocusProtocolPreset.DEEP_WORK -> ObsidianSpectrum.BrightBlue
-        FocusProtocolPreset.ULTRADIAN -> ObsidianSpectrum.Violet
+        FocusProtocolPreset.ULTRADIAN -> ObsidianSpectrum.Lavender
         FocusProtocolPreset.SPRINT -> ObsidianSpectrum.Teal
-        FocusProtocolPreset.CUSTOM -> ObsidianSpectrum.Lavender
+        FocusProtocolPreset.CUSTOM -> ObsidianSpectrum.DeepViolet
     }
     val shape = RoundedCornerShape(MrsadTokens.Radius.md)
 

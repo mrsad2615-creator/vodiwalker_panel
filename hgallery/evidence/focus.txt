@@ -1,2 +1,2 @@
-  mCurrentFocus=Window{d644a0c u0 dev.hgallery.app.debug/dev.hgallery.app.MainActivity}
-  mFocusedApp=ActivityRecord{3e97889 u0 dev.hgallery.app.debug/dev.hgallery.app.MainActivity} t9}
+  mCurrentFocus=Window{ba02b44 u0 dev.hgallery.app.debug/dev.hgallery.app.MainActivity}
+  mFocusedApp=ActivityRecord{dba5e1 u0 dev.hgallery.app.debug/dev.hgallery.app.MainActivity} t9}

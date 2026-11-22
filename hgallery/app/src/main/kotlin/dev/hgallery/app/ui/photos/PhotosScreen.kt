@@ -2,6 +2,7 @@ package dev.hgallery.app.ui.photos
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,41 +19,50 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import dev.hgallery.app.R
 import dev.hgallery.app.data.AppContainer
 import dev.hgallery.app.data.ThumbnailStore
 import dev.hgallery.app.ui.components.HgScreenTitle
-import dev.hgallery.app.ui.components.HgToolbar
 import dev.hgallery.app.ui.components.HgTestTags
+import dev.hgallery.app.ui.components.HgToolbar
 import dev.hgallery.app.ui.components.MediaThumbnail
 import dev.hgallery.app.ui.theme.HgMetrics
 import dev.hgallery.app.ui.theme.hgPalette
 import dev.hgallery.core.MediaItem
 import java.util.Locale
-import androidx.compose.ui.res.stringResource
-import dev.hgallery.app.R
 
 /**
  * The Photos timeline.
  *
- * Structure taken from reference R1:
+ * Structure, from reference R1:
  *  - toolbar (search, overflow) at the top right, below the status bar;
- *  - large "Photos" title with a centred "N photos and M videos" line;
- *  - day sections, each introduced by a small date header;
- *  - a seamless 4-column grid;
- *  - the title scrolls with the content, it is not a sticky bar.
+ *  - a large "Photos" title with a centred count line underneath;
+ *  - date sections, each introduced by a small header;
+ *  - a seamless grid;
+ *  - the title scrolls with the content; it is not a pinned bar.
+ *
+ * Behaviour, from Huawei's own Gallery manual for the Photos tab: *"zoom in or
+ * out to switch between month and day view."* Pinching out enters month view
+ * (more items per row, month headers); pinching in returns to day view.
  */
 @Composable
 fun PhotosScreen(
@@ -66,15 +76,14 @@ fun PhotosScreen(
     val error by container.mediaStore.error.collectAsStateWithLifecycle()
 
     val locale = remember { Locale.getDefault() }
-    val sections = remember(items, locale) { container.sections(items, locale) }
-    val (photos, videos) = remember(items) {
-        val v = items.count { it.isVideo }
-        (items.size - v) to v
-    }
+    val daySections = remember(items, locale) { container.sections(items, locale) }
+    val monthSections = remember(items, locale) { container.months(items, locale) }
 
-    // Counts come from the resources rather than from string concatenation, so a
-    // language with different plural rules reads correctly. Everything is
-    // resolved here, at composition time, instead of inside a lambda.
+    val photos = remember(items) { items.count { !it.isVideo } }
+    val videos = remember(items) { items.count { it.isVideo } }
+
+    // Counts come from the resources rather than from concatenation, so a
+    // language with different plural rules reads correctly.
     val photoLabel = stringResource(R.string.photo_count, photos)
     val videoLabel = stringResource(R.string.video_count, videos)
     val summary = when {
@@ -84,12 +93,11 @@ fun PhotosScreen(
         else -> ""
     }
 
-    val cell = remember { 256 }
-    val thumbnails = remember { container.thumbnails }
+    var monthView by remember { mutableStateOf(false) }
+    val pinch = remember { mutableFloatStateOf(1f) }
 
-    // Flatten into one lazy grid so the whole timeline is a single recycler:
-    // a lazy column of lazy grids would defeat recycling and stutter on scroll.
-    val rows = remember(sections) { TimelineRowFactory.build(sections, HgMetrics.PhotosColumns) }
+    val columns = if (monthView) HgMetrics.MonthColumns else HgMetrics.PhotosColumns
+    val thumbnails = remember { container.thumbnails }
 
     Column(modifier = modifier.fillMaxSize().background(palette.page)) {
         Spacer(Modifier.statusBarsPadding())
@@ -118,19 +126,44 @@ fun PhotosScreen(
                 stringResource(R.string.empty_photos_body),
             )
             else -> LazyVerticalGrid(
-                columns = GridCells.Fixed(HgMetrics.PhotosColumns),
+                columns = GridCells.Fixed(columns),
                 horizontalArrangement = Arrangement.spacedBy(HgMetrics.GridGap),
                 verticalArrangement = Arrangement.spacedBy(HgMetrics.GridGap),
-                contentPadding = PaddingValues(start = HgMetrics.Gutter, end = HgMetrics.Gutter, bottom = 24.dp),
-                modifier = Modifier.fillMaxSize(),
-            ) {
-                rows.forEach { row ->
-                    when (row) {
-                        is TimelineRows.Header -> item(span = { GridItemSpan(maxLineSpan) }) {
-                            DateHeader(row.label)
+                contentPadding = PaddingValues(
+                    start = HgMetrics.Gutter,
+                    end = HgMetrics.Gutter,
+                    bottom = 24.dp,
+                ),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .testTag(HgTestTags.PHOTOS_GRID)
+                    // The zoom threshold is deliberately coarse: a pinch that is
+                    // still in progress must not flip the level back and forth.
+                    .pointerInput(Unit) {
+                        detectTransformGestures { _, _, zoom, _ ->
+                            pinch.value *= zoom
+                            if (pinch.value > 1.35f && !monthView) {
+                                monthView = true
+                                pinch.value = 1f
+                            } else if (pinch.value < 0.7f && monthView) {
+                                monthView = false
+                                pinch.value = 1f
+                            }
                         }
-                        is TimelineRows.Cells -> items(row.items, key = { it.id }) { item ->
-                            ThumbnailCell(item, thumbnails, cell) { onOpenItem(item.id) }
+                    },
+            ) {
+                if (monthView) {
+                    monthSections.forEach { section ->
+                        item(span = { GridItemSpan(maxLineSpan) }) { SectionHeader(section.header, true) }
+                        items(section.items, key = { it.id }) { item ->
+                            ThumbnailCell(item, thumbnails) { onOpenItem(item.id) }
+                        }
+                    }
+                } else {
+                    daySections.forEach { section ->
+                        item(span = { GridItemSpan(maxLineSpan) }) { SectionHeader(section.header, false) }
+                        items(section.items, key = { it.id }) { item ->
+                            ThumbnailCell(item, thumbnails) { onOpenItem(item.id) }
                         }
                     }
                 }
@@ -143,7 +176,6 @@ fun PhotosScreen(
 private fun ThumbnailCell(
     item: MediaItem,
     store: ThumbnailStore,
-    cellPx: Int,
     onClick: () -> Unit,
 ) {
     MediaThumbnail(
@@ -153,22 +185,22 @@ private fun ThumbnailCell(
         modifier = Modifier
             .testTag(HgTestTags.thumbnail(item.id))
             .aspectRatio(1f)
-            .clip(androidx.compose.foundation.shape.RoundedCornerShape(3.dp))
+            .clip(RoundedCornerShape(3.dp))
             .clickable(onClick = onClick),
     )
 }
 
 @Composable
-private fun DateHeader(label: String) {
+private fun SectionHeader(label: String, isMonth: Boolean) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = 14.dp, bottom = 8.dp),
+            .padding(top = if (isMonth) 16.dp else 14.dp, bottom = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             text = label,
-            style = MaterialTheme.typography.titleSmall,
+            style = if (isMonth) MaterialTheme.typography.titleMedium else MaterialTheme.typography.titleSmall,
             color = hgPalette.textPrimary,
         )
     }

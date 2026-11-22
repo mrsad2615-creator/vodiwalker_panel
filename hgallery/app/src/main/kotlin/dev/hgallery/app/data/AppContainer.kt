@@ -48,4 +48,13 @@ class AppContainer(context: Context) {
 
     fun sections(items: List<dev.hgallery.core.MediaItem>, locale: Locale) =
         DateGrouping.group(items, zone, java.time.LocalDate.now(zone), dateHeaderFormatter(locale))
+
+    /** `Mal 2026` style header for the month level of the timeline. */
+    fun monthFormatter(locale: Locale): (java.time.YearMonth) -> String {
+        val formatter = DateTimeFormatter.ofPattern("MMMM yyyy", locale)
+        return { month -> month.format(formatter) }
+    }
+
+    fun months(items: List<dev.hgallery.core.MediaItem>, locale: Locale) =
+        dev.hgallery.core.MonthGrouping.group(items, zone, monthFormatter(locale))
 }

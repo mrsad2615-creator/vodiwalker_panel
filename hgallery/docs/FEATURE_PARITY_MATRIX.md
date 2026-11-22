@@ -95,3 +95,11 @@ change pixels is the clearest possible example of fake functionality.
 | Persian calendar | **no** | dates use `java.time` Gregorian formatting |
 | Light theme | done | measured palette |
 | Dark theme | partial | palette and theme exist; no Huawei dark capture to verify against |
+
+## Correction log
+
+| Date | Correction | Why |
+|---|---|---|
+| 2026-11-21 | "Adaptive grid" downgraded from `done` to `partial`, and the Photos tab now has month and day views with a pinch to switch | Huawei's own manual states the Photos tab switches between month and day view by pinching. Only day view existed, so the previous `done` was wrong. Source: [Huawei Mate 10 user manual, "Viewing Photos and Videos"](https://manuals.plus/huawei/viewing-photos-videos-huawei-mate-10) |
+| 2026-11-21 | Album tiles documented as 4:3 | Confirmed by EMUI 11 release coverage: the Albums tab "is now laid out in 4:3 aspect ratio with new settings to sort photos" ([Gizmochina](https://www.gizmochina.com/2020/09/10/huawei-announces-emui-11-features-updated-beta-devices/)) |
+| 2026-11-21 | Hidden albums noted | EMUI 11 added "hidden albums" to Gallery ([Gizmochina](https://www.gizmochina.com/2020/09/10/huawei-announces-emui-11-features-updated-beta-devices/)). Not implemented; recorded rather than implied. |

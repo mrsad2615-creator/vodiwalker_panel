@@ -75,7 +75,7 @@ val Vazirmatn = FontFamily(
  * string renders Inter for its Latin run and Vazirmatn for its Persian run at the
  * same line height. That is why this is not a `Locale`-driven branch.
  */
-val HgFontFamily = FontFamily(InterLatin, Vazirmatn)
+val HgFontFamily = FontFamily(listOf(InterLatin, Vazirmatn))
 
 private val trim = LineHeightStyle(
     alignment = LineHeightStyle.Alignment.Center,

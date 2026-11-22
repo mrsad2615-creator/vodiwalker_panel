@@ -211,16 +211,25 @@ cat "$OUT_DIR/diag/view-change.txt" | head -2
 # The video player. Reached through Albums -> Videos -> first tile, which is the
 # path a user takes and does not depend on a MediaStore id.
 echo "== photographing the video player =="
+# Anchors measured from 11-albums-for-video.png, not guessed: the Videos tile is
+# the second of three in the smart row, and its centre sits at 0.61 of the width,
+# 0.605 of the height. Two earlier attempts guessed and photographed the same
+# Albums screen three times.
 adb shell input tap $((W / 8 * 3)) $((H - 55))
 sleep 3
-adb shell screencap -p "$DEVICE_DIR/11-albums-for-video.png"
-# The Videos tile is the second cell of the smart row.
-adb shell input tap $((W / 2)) $((H * 145 / 1000))
+shot 11-albums-for-video.png
+adb shell input tap $((W * 61 / 100)) $((H * 605 / 1000))
 sleep 4
 shot 12-videos-album.png
-adb shell input tap $((W / 8)) $((H * 300 / 1000))
-sleep 6
+# The first tile of the Videos album grid.
+adb shell input tap $((W * 17 / 100)) $((H * 315 / 1000))
+sleep 8
 shot 13-video-player.png
+# Tap the surface once so the chrome toggles off, proving the player really is
+# playing behind its own bars rather than showing a paused first frame.
+adb shell input tap $((W / 2)) $((H / 2))
+sleep 2
+shot 14-video-player-no-chrome.png
 adb shell input keyevent KEYCODE_BACK
 sleep 2
 

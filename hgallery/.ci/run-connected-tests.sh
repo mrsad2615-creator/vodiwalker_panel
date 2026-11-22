@@ -288,22 +288,24 @@ if tap_tag_or_text "videos-album" 'content-desc="Videos|text="Videos'; then
   # The album's first tile: the only nodes whose label starts with "Video,".
   # Tapping the first match avoids depending on test tags, which are not exposed.
   if tap_tag_or_text "first-video" 'content-desc="Video, '; then
-    # Mid-playback with the chrome up: the clip is six seconds, so two seconds in
-    # catches a real frame with a real timecode instead of the first image.
-    sleep 2
-    shot 13-video-player.png
-    # One tap hides the chrome; this is the shot that proves the surface really is
-    # playing behind its own bars.
-    adb shell input tap $((W / 2)) $((H / 2))
-    sleep 2
-    shot 14-video-player-no-chrome.png
-    # Let it reach the end, then bring the chrome back to prove the transport
-    # offers replay. The reveal tap is deliberately at 30% height, not the centre:
-    # a centre tap lands on the replay disc and restarts the clip, which is what
-    # the previous run photographed (0:01 of 0:06) instead of the ended state.
-    sleep 7
+    # The chrome hides itself three seconds into playback, and a tap on the
+    # surface both shows it and pins it. So: wait past the auto-hide, then tap once
+    # at 30% height (never the centre, where the transport disc sits once a clip
+    # ends — an earlier run tapped there and restarted the clip it meant to
+    # photograph).
+    sleep 4
     adb shell input tap $((W / 2)) $((H * 30 / 100))
-    sleep 2
+    sleep 1
+    shot 13-video-player.png
+    # Second tap unpins and hides it; this is the shot that proves the surface is
+    # really playing behind its own bars.
+    adb shell input tap $((W / 2)) $((H * 30 / 100))
+    sleep 1
+    shot 14-video-player-no-chrome.png
+    # Playback ends on its own and the screen reveals the chrome by itself, so the
+    # ended state is photographed without touching anything. Tapping here is what
+    # produced a 0:01-of-0:06 'ended' shot in the previous run.
+    sleep 6
     shot 15-video-player-ended.png
     # Landscape, which is how video is actually watched and the one case that
     # exercises the orientation control and the reflow of the chrome.

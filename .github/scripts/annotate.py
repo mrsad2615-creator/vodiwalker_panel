@@ -43,7 +43,14 @@ def main() -> int:
         return 0
 
     lines = log.read_text(encoding="utf-8", errors="replace").splitlines()
-    hits = [line for line in lines if any(k in line for k in KEYWORDS)]
+    hits = []
+    for index, line in enumerate(lines):
+        if any(k in line for k in KEYWORDS):
+            hits.append(line)
+        elif "What went wrong" in line:
+            # The lines after this header carry the actual cause, and they rarely
+            # match any keyword on their own.
+            hits.extend(lines[index + 1:index + 5])
     chosen = (hits or lines)[-MAX_ANNOTATIONS:]
 
     for line in chosen:

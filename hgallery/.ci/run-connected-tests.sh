@@ -149,12 +149,39 @@ shot 07-viewer-chrome-hidden.png
 
 # Back out of the viewer, then pinch out to reach month view. This is the
 # behaviour Huawei's manual describes, so it has to be photographed, not assumed.
+#
+# `input swipe` cannot express two fingers; a pinch needs a real multi-touch
+# event stream. `input motionevent` sends a single pointer, so for two fingers
+# `sendevent` is the only option — but device node numbers differ between images.
+# A pinch that silently does nothing would produce a "day view" screenshot that
+# looks like a pass, so the result is checked rather than assumed.
 adb shell input keyevent KEYCODE_BACK
 sleep 3
-adb shell input swipe $((W / 2 - 60)) $((H / 2)) $((W / 2 - 200)) $((H / 2)) 300
-adb shell input swipe $((W / 2 + 60)) $((H / 2)) $((W / 2 + 200)) $((H / 2)) 300
+
+PINCH_DEV=$(adb shell getevent -pl 2>/dev/null | sed -n 's/.*add device [0-9]*: \/dev\/input\/event\([0-9]*\).*/\1/p' | head -1)
+echo "touch device: event${PINCH_DEV:-<none>}" | tee "$OUT_DIR/diag/pinch.txt"
+if [ -n "$PINCH_DEV" ]; then
+  DEV=/dev/input/event$PINCH_DEV
+  Y1=$((H / 2 - 120)); Y2=$((H / 2 + 120))
+  adb shell "sendevent $DEV 3 57 1; sendevent $DEV 3 53 $((W/2-80)); sendevent $DEV 3 54 $Y1; sendevent $DEV 3 58 50; sendevent $DEV 3 57 2; sendevent $DEV 3 53 $((W/2+80)); sendevent $DEV 3 54 $Y2; sendevent $DEV 3 58 50; sendevent $DEV 1 330 1; sendevent $DEV 0 0 0"
+  for step in 1 2 3 4 5 6; do
+    adb shell "sendevent $DEV 3 53 $((W/2-80-step*25)); sendevent $DEV 3 54 $((Y1-step*25)); sendevent $DEV 3 57 2; sendevent $DEV 3 53 $((W/2+80+step*25)); sendevent $DEV 3 54 $((Y2+step*25)); sendevent $DEV 0 0 0"
+  done
+  adb shell "sendevent $DEV 3 57 1; sendevent $DEV 3 57 2; sendevent $DEV 1 330 0; sendevent $DEV 0 0 0"
+fi
 sleep 4
 shot 08-month-view.png
+
+# Compare against the day view: if the pinch worked, the grid shows more columns
+# and month headers, so the two images must differ.
+if command -v cmp >/dev/null 2>&1; then
+  if cmp -s "$DEVICE_DIR/01-photos.png" "$DEVICE_DIR/08-month-view.png"; then
+    echo "::warning title=month view::the pinch did not change the view"
+    echo "pinch did not change the view" >> "$OUT_DIR/diag/pinch.txt"
+  else
+    echo "month view differs from day view" >> "$OUT_DIR/diag/pinch.txt"
+  fi
+fi
 
 echo "== pulling screenshots =="
 adb pull "$DEVICE_DIR" "$OUT_DIR" >/dev/null 2>&1

@@ -142,6 +142,41 @@ Y=$((H - 55))
 # so `uiautomator dump` can locate the real bounds and we tap the centre of them.
 # Returns non-zero (and reports why) when the tag is not on screen, which is far
 # more useful than a screenshot of the wrong page.
+# Dump the live view hierarchy once, into the artifacts directory.
+dump_ui() {
+  adb shell uiautomator dump /sdcard/ui.xml >/dev/null 2>&1
+  adb shell cat /sdcard/ui.xml > "$OUT_DIR/diag-$1.xml" 2>/dev/null
+}
+
+# Centre of the first node whose resource-id or content-desc matches $1.
+node_centre() {
+  adb shell cat /sdcard/ui.xml 2>/dev/null | tr '>' '\n' \
+    | grep -E "$1" \
+    | sed -n 's/.*bounds="\[\([0-9]*\),\([0-9]*\)\]\[\([0-9]*\),\([0-9]*\)\]".*/\1 \2 \3 \4/p' \
+    | head -1
+}
+
+# Tap by tag, or by accessibility text when the tag is not exposed.
+#
+# Compose test tags are not published as resource ids here (testTagsAsResourceId
+# does not resolve in this Compose version), but contentDescription does reach the
+# accessibility tree, so the labels added to the grid cells are addressable.
+tap_tag_or_text() {
+  TAG="$1"; PATTERN="$2"
+  dump_ui "$TAG"
+  BOUNDS=$(node_centre "$PATTERN")
+  if [ -z "$BOUNDS" ]; then
+    echo "::warning title=e2e::no node matching $PATTERN on screen"
+    return 1
+  fi
+  set -- $BOUNDS
+  CX=$(( ($1 + $3) / 2 )); CY=$(( ($2 + $4) / 2 ))
+  echo "tap $PATTERN -> centre ($CX,$CY) bounds [$1,$2][$3,$4]"
+  adb shell input tap "$CX" "$CY"
+  sleep 3
+  return 0
+}
+
 tap_tag() {
   TAG="$1"
   adb shell uiautomator dump /sdcard/ui.xml >/dev/null 2>&1
@@ -246,26 +281,23 @@ adb shell input tap $((W / 8 * 3)) $((H - 55))
 sleep 3
 shot 11-albums-for-video.png
 
-if tap_tag "album-Videos"; then
+if tap_tag_or_text "videos-album" 'content-desc="Videos, [0-9]*"'; then
   sleep 2
   shot 12-videos-album.png
-  # The first tile in the album grid, again by tag.
-  FIRST_VID=$(adb shell cat /sdcard/ui.xml 2>/dev/null | tr '>' '\n' \
-    | grep -o 'resource-id="[^"]*:id/thumb-[0-9]*"' | head -1 \
-    | sed 's/.*id\/thumb-//;s/"//')
-  if [ -n "$FIRST_VID" ]; then
-    tap_tag "thumb-$FIRST_VID" || true
-    sleep 8
+  # The album's first tile: the only nodes whose label starts with "Video,".
+  # Tapping the first match avoids depending on test tags, which are not exposed.
+  if tap_tag_or_text "first-video" 'content-desc="Video, [^"]*"'; then
+    sleep 9
     shot 13-video-player.png
-    # One tap on the surface toggles the chrome off; the shot proves the surface
-    # is really playing behind its own bars.
+    # One tap on the surface toggles the chrome off; this shot proves the surface
+    # is genuinely playing behind its own bars and not a paused first frame.
     adb shell input tap $((W / 2)) $((H / 2))
     sleep 2
     shot 14-video-player-no-chrome.png
     adb shell input keyevent KEYCODE_BACK
     sleep 2
   else
-    echo "::warning title=e2e::the Videos album showed no tiles"
+    echo "::warning title=e2e::the Videos album showed no video tiles"
   fi
   adb shell input keyevent KEYCODE_BACK
   sleep 2

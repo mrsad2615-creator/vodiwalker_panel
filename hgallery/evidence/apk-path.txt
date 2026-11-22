@@ -1,2 +1,1 @@
 apk path: apk/app-debug.apk
-apk/app-debug.apk

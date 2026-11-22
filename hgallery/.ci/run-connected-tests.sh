@@ -159,41 +159,19 @@ adb shell input tap $((W * 58 / 100)) $((H * 75 / 1000))
 sleep 4
 shot 08-month-view.png
 
-# Compare against the day view: if the pinch worked, the grid shows more columns
-# and month headers, so the two images must differ.
-# Compare the two views with the status bar masked out: a clock that ticked is
-# otherwise enough to make "they differ" true and hide a view switch that did
-# nothing. Stale copies from an earlier run must not decide the verdict, so they
-# are removed first and a missing file is an error, not a silent pass.
+# Verify that the switch really changed the page. Both frames are pulled fresh:
+# a stale copy from an earlier run must never decide this verdict.
 rm -f "$OUT_DIR/diag/day.png" "$OUT_DIR/diag/month.png"
 adb pull "$DEVICE_DIR/01-photos.png" "$OUT_DIR/diag/day.png" >/dev/null 2>&1
 adb pull "$DEVICE_DIR/08-month-view.png" "$OUT_DIR/diag/month.png" >/dev/null 2>&1
-VERDICT=$(python3 - <<'PYEOF'
-from PIL import Image
-import numpy as np, sys
-try:
-    a = np.asarray(Image.open("ui-shots/diag/day.png").convert("RGB")).astype(int)
-    b = np.asarray(Image.open("ui-shots/diag/month.png").convert("RGB")).astype(int)
-except Exception as exc:
-    print("0.0 0")  # unreadable: treated as "no change", never as a pass
-    import sys; print("unreadable: %s" % exc, file=sys.stderr)
-h = min(a.shape[0], b.shape[0]); w = min(a.shape[1], b.shape[1])
-a, b = a[:h, :w], b[:h, :w]
-# mask the status bar (top 6%) and the gesture area (bottom 4%)
-top, bottom = int(h * 0.06), int(h * 0.96)
-a, b = a[top:bottom], b[top:bottom]
-diff = (np.abs(a - b).sum(axis=2) > 24).mean()
-print("%.4f %.0f" % (diff, diff * 100))
-PYEOF
-)
-CHANGED=$(echo "$VERDICT" | cut -d' ' -f1)
-echo "changed-pixel fraction below the status bar: $CHANGED" | tee -a "$OUT_DIR/diag/pinch.txt"
-python3 - "$CHANGED" <<'PYEOF'
-import sys
-fraction = float(sys.argv[1]) if sys.argv[1] else 0.0
-if fraction < 0.02:
-    print("::warning title=month view::the pinch did not change the grid (%.1f%% of pixels changed)" % (fraction * 100))
-PYEOF
+
+if python3 tools/compare_frames.py "$OUT_DIR/diag/day.png" "$OUT_DIR/diag/month.png" 0.02 > "$OUT_DIR/diag/view-change.txt" 2>&1; then
+  echo "view switch changed the page (see view-change.txt)" >> "$OUT_DIR/diag/pinch.txt"
+else
+  cat "$OUT_DIR/diag/view-change.txt"
+  echo "view switch did NOT change the page" >> "$OUT_DIR/diag/pinch.txt"
+fi
+cat "$OUT_DIR/diag/view-change.txt" | head -2
 
 echo "== pulling screenshots =="
 adb pull "$DEVICE_DIR" "$OUT_DIR" >/dev/null 2>&1

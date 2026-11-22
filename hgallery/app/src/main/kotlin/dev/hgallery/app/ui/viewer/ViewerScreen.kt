@@ -46,6 +46,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.hgallery.app.data.AppContainer
 import dev.hgallery.app.ui.icons.HgIcons
+import dev.hgallery.app.ui.components.HgDeleteDialog
 import dev.hgallery.app.ui.components.HgIconButton
 import dev.hgallery.app.ui.components.HgTestTags
 import dev.hgallery.core.MediaItem
@@ -152,30 +153,22 @@ fun ViewerScreen(
 
         val queued = pendingDelete
         if (queued != null) {
-            androidx.compose.material3.AlertDialog(
-                onDismissRequest = { pendingDelete = null },
-                containerColor = Color(0xFF1C1C1E),
-                titleContentColor = Color.White,
-                textContentColor = Color.White.copy(alpha = 0.8f),
-                title = { Text(stringResource(R.string.delete_confirm_title)) },
-                text = { Text(stringResource(R.string.delete_confirm_body, queued.displayName)) },
-                confirmButton = {
-                    androidx.compose.material3.TextButton(onClick = {
-                        pendingDelete = null
-                        coroutine.launch {
-                            val removed = container.mediaStore.delete(setOf(queued.id))
-                            // Leave the viewer only once the item is really gone.
-                            if (removed > 0) onClose()
-                        }
-                    }) {
-                        Text(stringResource(R.string.delete), color = Color(0xFFFF5A5A))
+            // The same dialog the grid uses, so the wording cannot drift between
+            // the two places a delete can start.
+            HgDeleteDialog(
+                count = 1,
+                path = container.mediaStore.deletePath(),
+                onConfirm = {
+                    pendingDelete = null
+                    coroutine.launch {
+                        // The viewer has no selection, so this is the single-item
+                        // path; it is still routed through the store so the grid
+                        // behind the viewer loses the row too.
+                        val outcome = container.mediaStore.applyDelete(setOf(queued.id))
+                        if (outcome.removed > 0) onClose()
                     }
                 },
-                dismissButton = {
-                    androidx.compose.material3.TextButton(onClick = { pendingDelete = null }) {
-                        Text(stringResource(R.string.cancel), color = Color.White)
-                    }
-                },
+                onDismiss = { pendingDelete = null },
             )
         }
 

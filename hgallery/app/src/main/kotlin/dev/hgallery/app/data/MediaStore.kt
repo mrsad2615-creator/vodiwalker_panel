@@ -47,8 +47,14 @@ class MediaStore(
             try {
                 _items.value = repository.loadAll()
                 loadedOnce = true
-            } catch (t: Throwable) {
-                _error.value = t.message ?: t::class.java.simpleName
+            } catch (e: android.database.sqlite.SQLiteException) {
+                // A corrupt or locked MediaStore database: recoverable by asking
+                // again later, so it is reported rather than fatal.
+                _error.value = e.message ?: "media store unavailable"
+            } catch (e: SecurityException) {
+                // The permission was revoked between the check and the query —
+                // a real state on Android 14's partial access, not a crash.
+                _error.value = e.message ?: "media permission was revoked"
             } finally {
                 _loading.value = false
             }

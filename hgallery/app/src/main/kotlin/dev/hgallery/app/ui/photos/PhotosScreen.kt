@@ -1,7 +1,5 @@
 package dev.hgallery.app.ui.photos
 
-import androidx.activity.result.IntentSenderRequest
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -25,9 +23,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -44,7 +40,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.hgallery.app.R
 import dev.hgallery.app.data.AppContainer
 import dev.hgallery.app.data.ThumbnailStore
-import dev.hgallery.app.ui.components.HgDeleteDialog
 import dev.hgallery.app.ui.components.HgScreenTitle
 import dev.hgallery.app.ui.components.HgSelectionActions
 import dev.hgallery.app.ui.components.HgSelectionHeader
@@ -58,7 +53,6 @@ import dev.hgallery.app.ui.theme.HgMetrics
 import dev.hgallery.app.ui.theme.hgPalette
 import dev.hgallery.core.MediaItem
 import dev.hgallery.core.Selection
-import kotlinx.coroutines.launch
 import java.util.Locale
 
 /**
@@ -117,73 +111,16 @@ private fun SelectionAwarePhotos(
 
     // Selection lives on the screen that owns the grid, so leaving the tab drops
     // it. The `prune` keeps it honest when a delete removes rows.
-    var selection by remember { mutableStateOf(Selection.None) }
-    var pendingDelete by remember { mutableStateOf(false) }
+    val model = remember(container) { PhotosSelectionModel(container) }
+    val context = androidx.compose.ui.platform.LocalContext.current
+
     val existingIds = remember(daySections, monthSections) {
         (daySections.flatMap { it.items } + monthSections.flatMap { it.items }).map { it.id }.toSet()
     }
-    LaunchedEffect(existingIds) { selection = selection.prune(existingIds) }
-
-    val scope = rememberCoroutineScope()
-    val context = androidx.compose.ui.platform.LocalContext.current
-    val deletePath = remember { container.mediaStore.deletePath() }
-
-    /**
-     * Applies a delete the user has already approved and reports the result.
-     *
-     * One function for both routes on purpose: the local toast previously had to
-     * be written twice, and two copies of a message derived from an outcome is
-     * exactly how a UI ends up claiming an item was trashed when it was deleted.
-     */
-    suspend fun finishDelete(ids: Set<Long>) {
-        val outcome = container.mediaStore.applyDelete(ids)
-        selection = selection.exit()
-        val message = when {
-            outcome.removed == 0 -> context.getString(R.string.delete_failed)
-            outcome.failed > 0 -> context.resources.getQuantityString(
-                R.plurals.delete_partial, outcome.total, outcome.failed, outcome.total,
-            )
-            outcome.trashed > 0 -> context.resources.getQuantityString(
-                R.plurals.moved_to_trash, outcome.trashed, outcome.trashed,
-            )
-            else -> context.resources.getQuantityString(
-                R.plurals.deleted_permanently, outcome.deleted, outcome.deleted,
-            )
-        }
-        android.widget.Toast.makeText(context, message, android.widget.Toast.LENGTH_SHORT).show()
-    }
-
-    // The system trash dialog returns through the activity result registry: the
-    // app may *ask* for a delete, only the platform may perform one.
-    val deleteLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.StartIntentSenderForResult(),
-    ) { result ->
-        val ids = selection.ids
-        if (result.resultCode == android.app.Activity.RESULT_OK && ids.isNotEmpty()) {
-            scope.launch { finishDelete(ids) }
-        }
-    }
-
-    /** Confirm, then delete through whichever route this Android version offers. */
-    fun performDelete() {
-        val ids = selection.ids
-        if (ids.isEmpty()) return
-        pendingDelete = false
-        val sender = container.mediaStore.buildDeleteRequest(ids)
-        if (sender != null) {
-            val launched = runCatching {
-                deleteLauncher.launch(IntentSenderRequest.Builder(sender).build())
-            }.isSuccess
-            if (launched) return
-            // A sender can be refused (e.g. the grant was revoked). The direct
-            // path keeps the action working rather than failing silently.
-        }
-        scope.launch { finishDelete(ids) }
-    }
+    PruneSelection(model, existingIds)
 
     fun share() {
-        val ids = selection.ids
-        val intent = if (ids.isEmpty()) null else container.mediaStore.buildShareIntent(ids)
+        val intent = model.shareIntent()
         if (intent == null) {
             android.widget.Toast.makeText(context, R.string.share_nothing, android.widget.Toast.LENGTH_SHORT).show()
         } else {
@@ -199,10 +136,10 @@ private fun SelectionAwarePhotos(
 
         // In selection mode the title is replaced by the count, exactly as R3
         // draws it, so the grid itself does not move.
-        if (selection.active) {
+        if (model.selection.active) {
             HgSelectionHeader(
-                selection = selection,
-                onExit = { selection = selection.exit() },
+                selection = model.selection,
+                onExit = { model.exit() },
             )
         } else {
         Column(Modifier.fillMaxWidth()) {
@@ -215,7 +152,7 @@ private fun SelectionAwarePhotos(
                     HgIconButton(
                         icon = HgIcons.SelectAll,
                         contentDescription = stringResource(R.string.select),
-                        onClick = { selection = selection.selectAll(existingIds) },
+                        onClick = { model.selectAll(existingIds) },
                         modifier = Modifier.testTag(HgTestTags.SELECT_BUTTON),
                     )
                     // A pinch alone is undiscoverable, and a gesture that cannot
@@ -307,15 +244,15 @@ private fun SelectionAwarePhotos(
                             ThumbnailCell(
                                 item = item,
                                 store = thumbnails,
-                                selection = selection,
+                                selection = model.selection,
                                 onClick = {
-                                    if (selection.active) {
-                                        selection = selection.toggle(item.id)
+                                    if (model.selection.active) {
+                                        model.toggle(item.id)
                                     } else {
                                         onOpenItem(item.id)
                                     }
                                 },
-                                onLongClick = { selection = selection.beginWith(item.id) },
+                                onLongClick = { model.beginWith(item.id) },
                             )
                         }
                     }
@@ -326,15 +263,15 @@ private fun SelectionAwarePhotos(
                             ThumbnailCell(
                                 item = item,
                                 store = thumbnails,
-                                selection = selection,
+                                selection = model.selection,
                                 onClick = {
-                                    if (selection.active) {
-                                        selection = selection.toggle(item.id)
+                                    if (model.selection.active) {
+                                        model.toggle(item.id)
                                     } else {
                                         onOpenItem(item.id)
                                     }
                                 },
-                                onLongClick = { selection = selection.beginWith(item.id) },
+                                onLongClick = { model.beginWith(item.id) },
                             )
                         }
                     }
@@ -344,32 +281,19 @@ private fun SelectionAwarePhotos(
         }
         }
 
-        if (selection.active) {
+        if (model.selection.active) {
             HgSelectionActions(
-                selection = selection,
+                selection = model.selection,
                 allIds = existingIds,
                 onShare = { share() },
-                onDelete = { pendingDelete = true },
-                onToggleSelectAll = {
-                    selection = if (selection.isAllSelected(existingIds)) {
-                        selection.exit()
-                    } else {
-                        selection.selectAll(existingIds)
-                    }
-                },
+                onDelete = { model.requestDelete() },
+                onToggleSelectAll = { model.toggleSelectAll(existingIds) },
                 modifier = Modifier.testTag(HgTestTags.SELECTION_BAR),
             )
         }
     }
 
-    if (pendingDelete) {
-        HgDeleteDialog(
-            count = selection.count,
-            path = deletePath,
-            onConfirm = { performDelete() },
-            onDismiss = { pendingDelete = false },
-        )
-    }
+    PhotosSelectionEffects(container = container, model = model, onDeleted = {})
 }
 
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)

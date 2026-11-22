@@ -72,17 +72,16 @@ fun PhotosScreen(
         (items.size - v) to v
     }
 
-    // Counts are pluralised by the resources, not by string concatenation, so a
-    // language with different plural rules reads correctly.
+    // Counts come from the resources rather than from string concatenation, so a
+    // language with different plural rules reads correctly. Everything is
+    // resolved here, at composition time, instead of inside a lambda.
     val photoLabel = stringResource(R.string.photo_count, photos)
     val videoLabel = stringResource(R.string.video_count, videos)
-    val summary = { p: Int, v: Int ->
-        when {
-            p > 0 && v > 0 -> stringResource(R.string.media_summary, photoLabel, videoLabel)
-            p > 0 -> photoLabel
-            v > 0 -> videoLabel
-            else -> ""
-        }
+    val summary = when {
+        photos > 0 && videos > 0 -> stringResource(R.string.media_summary, photoLabel, videoLabel)
+        photos > 0 -> photoLabel
+        videos > 0 -> videoLabel
+        else -> ""
     }
 
     val cell = remember { 256 }
@@ -102,7 +101,7 @@ fun PhotosScreen(
             )
             HgScreenTitle(
                 title = stringResource(R.string.tab_photos),
-                subtitle = if (items.isNotEmpty()) summary(photos, videos) else null,
+                subtitle = if (items.isNotEmpty()) summary else null,
                 subtitleCentred = true,
             )
             Spacer(Modifier.height(14.dp))

@@ -84,8 +84,12 @@ object AlbumBuilder {
     /**
      * Items of one album. Synthetic albums are answered from the full list so
      * the caller never has to know which kind it is looking at.
+     *
+     * The `albums` parameter this used to take was never read: since every album
+     * is derivable from the item list, passing the album list back in was a
+     * second source of truth waiting to disagree with the first.
      */
-    fun itemsOf(albums: List<Album>, allItems: List<MediaItem>, albumId: Long): List<MediaItem> =
+    fun itemsOf(allItems: List<MediaItem>, albumId: Long): List<MediaItem> =
         when (albumId) {
             ALL_PHOTOS -> allItems
             VIDEOS -> allItems.filter { it.isVideo }

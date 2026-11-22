@@ -69,8 +69,14 @@ sealed interface DeleteFlow {
  * because that is what makes the item recoverable. Below 30 there is no trash,
  * so the direct path is used when the rows are writable.
  */
+/** Android 10: `createDeleteRequest` and scoped storage. */
+const val API_SCOPED_STORAGE = 29
+
+/** Android 11: the system trash arrived with `createTrashRequest`. */
+const val API_SYSTEM_TRASH = 30
+
 fun deletePathFor(sdkInt: Int, canWriteDirectly: Boolean): DeletePath = when {
-    sdkInt >= 30 -> DeletePath.SYSTEM_TRASH
+    sdkInt >= API_SYSTEM_TRASH -> DeletePath.SYSTEM_TRASH
     !canWriteDirectly -> DeletePath.SYSTEM_DELETE_REQUEST
     else -> DeletePath.DIRECT_DELETE
 }

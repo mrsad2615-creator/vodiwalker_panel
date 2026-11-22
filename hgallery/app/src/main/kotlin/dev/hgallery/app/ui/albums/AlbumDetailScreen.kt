@@ -61,7 +61,7 @@ fun AlbumDetailScreen(
 ) {
     val palette = hgPalette
     val contents = remember(album.id, items) {
-        AlbumBuilder.itemsOf(emptyList(), items, album.id).sortedByDescending { it.dateTakenMs }
+        AlbumBuilder.itemsOf(items, album.id).sortedByDescending { it.dateTakenMs }
     }
 
     Column(modifier = modifier.fillMaxSize().background(palette.page)) {

@@ -128,7 +128,7 @@ private fun AlbumTile(
     val palette = hgPalette
     val mosaic = remember(album.id, allItems) {
         if (!album.isSynthetic) emptyList()
-        else AlbumBuilder.itemsOf(emptyList(), allItems, album.id)
+        else AlbumBuilder.itemsOf(allItems, album.id)
             .sortedByDescending { it.dateTakenMs }
             .take(4)
     }

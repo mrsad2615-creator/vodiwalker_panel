@@ -81,6 +81,16 @@ object PlayerPolicy {
     /** The shortest a seek can be and still be worth applying. */
     const val MIN_SEEK_DELTA_MS = 500L
 
+    private const val MS_PER_SECOND = 1000L
+    private const val SECONDS_PER_MINUTE = 60L
+    private const val SECONDS_PER_HOUR = 3600L
+
+    /**
+     * Speeds are rounded to this many steps per unit before being labelled, so
+     * binary float noise (0.1f + 0.2f) cannot leak into "0.3x".
+     */
+    private const val SPEED_ROUNDING = 100f
+
     fun shouldAutoHide(
         state: PlayerState,
         scrubbing: Boolean,
@@ -146,10 +156,10 @@ object PlayerPolicy {
     /** Formats a position for the timecode: `m:ss`, or `h:mm:ss` past an hour. */
     fun timecode(ms: Long): String {
         val safe = if (ms < 0L) 0L else ms
-        val totalSeconds = safe / 1000L
-        val seconds = totalSeconds % 60L
-        val minutes = (totalSeconds / 60L) % 60L
-        val hours = totalSeconds / 3600L
+        val totalSeconds = safe / MS_PER_SECOND
+        val seconds = totalSeconds % SECONDS_PER_MINUTE
+        val minutes = (totalSeconds / SECONDS_PER_MINUTE) % SECONDS_PER_MINUTE
+        val hours = totalSeconds / SECONDS_PER_HOUR
         return if (hours > 0L) {
             "%d:%02d:%02d".format(hours, minutes, seconds)
         } else {
@@ -159,7 +169,7 @@ object PlayerPolicy {
 
     /** The label for a speed: `1x`, `1.5x`, never `1.0x`. */
     fun speedLabel(speed: Float): String {
-        val rounded = kotlin.math.round(speed * 100f) / 100f
+        val rounded = kotlin.math.round(speed * SPEED_ROUNDING) / SPEED_ROUNDING
         return if (rounded == rounded.toInt().toFloat()) {
             "${rounded.toInt()}x"
         } else {

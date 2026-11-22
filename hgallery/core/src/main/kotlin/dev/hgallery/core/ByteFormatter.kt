@@ -10,14 +10,17 @@ package dev.hgallery.core
 object ByteFormatter {
     private val units = arrayOf("B", "KB", "MB", "GB", "TB")
 
+    /** Binary prefixes, which is what every file manager and Android itself show. */
+    private const val BYTES_PER_UNIT = 1024L
+
     fun format(bytes: Long): String {
         if (bytes < 0) return "0 B"
-        if (bytes < 1024) return "$bytes B"
+        if (bytes < BYTES_PER_UNIT) return "$bytes B"
 
         var value = bytes.toDouble()
         var unit = 0
-        while (value >= 1024 && unit < units.lastIndex) {
-            value /= 1024.0
+        while (value >= BYTES_PER_UNIT && unit < units.lastIndex) {
+            value /= BYTES_PER_UNIT.toDouble()
             unit++
         }
 

@@ -76,29 +76,40 @@ class SimilarityDetectorTest {
 
 class SearchFiltersTest {
 
-    private fun item(
-        id: Long,
-        name: String = "IMG_$id.jpg",
-        bucket: String = "Camera",
-        mime: String = "image/jpeg",
-        size: Long = 1000,
-        date: Long = 1_000_000,
-        favourite: Boolean = false,
-        duration: Long = 0,
-    ) = MediaItem(
-        id = id,
-        uri = "content://media/$id",
-        displayName = name,
-        mimeType = mime,
-        sizeBytes = size,
-        dateTakenMs = date,
-        width = 100,
-        height = 100,
-        durationMs = duration,
-        bucketId = bucket.hashCode().toLong(),
-        bucketName = bucket,
-        isFavorite = favourite,
-    )
+    /**
+     * A test fixture builder rather than a method with eight default parameters.
+     *
+     * Eight parameters crossed the project's limit, and the limit was the right
+     * call: `item(1, size = 5)` and `item(1, mime = "video/mp4")` compiled happily
+     * while testing something nobody had intended.
+     */
+    private class ItemBuilder(val id: Long) {
+        var name: String = "IMG_$id.jpg"
+        var bucket: String = "Camera"
+        var mime: String = "image/jpeg"
+        var size: Long = 1000
+        var date: Long = 1_000_000
+        var favourite: Boolean = false
+        var duration: Long = 0
+    }
+
+    private fun item(id: Long, build: ItemBuilder.() -> Unit = {}): MediaItem {
+        val b = ItemBuilder(id).apply(build)
+        return MediaItem(
+            id = b.id,
+            uri = "content://media/${b.id}",
+            displayName = b.name,
+            mimeType = b.mime,
+            sizeBytes = b.size,
+            dateTakenMs = b.date,
+            width = 100,
+            height = 100,
+            durationMs = b.duration,
+            bucketId = 7,
+            bucketName = b.bucket,
+            isFavorite = b.favourite,
+        )
+    }
 
     @Test
     fun `an empty query returns everything`() {
@@ -108,22 +119,29 @@ class SearchFiltersTest {
 
     @Test
     fun `text matches the file name case-insensitively`() {
-        val items = listOf(item(1, name = "Beach.JPG"), item(2, name = "dog.jpg"))
+        val items = listOf(item(1) { name = "Beach.JPG" }, item(2) { name = "dog.jpg" })
         assertEquals(listOf(1L), SearchFilters.apply(items, SearchQuery(text = "beach")).map { it.id })
     }
 
     @Test
     fun `text also matches the album name`() {
-        val items = listOf(item(1, bucket = "Screenshots"), item(2, bucket = "Camera"))
+        val items = listOf(item(1) { bucket = "Screenshots" }, item(2) { bucket = "Camera" })
         assertEquals(listOf(1L), SearchFilters.apply(items, SearchQuery(text = "screen")).map { it.id })
     }
 
     @Test
     fun `type, size and favourites filters compose`() {
         val items = listOf(
-            item(1, mime = "video/mp4", duration = 5000, size = 9_000),
-            item(2, mime = "image/jpeg", size = 9_000, favourite = true),
-            item(3, mime = "image/jpeg", size = 10),
+            item(1) {
+                mime = "video/mp4"
+                duration = 5_000L
+                size = 9_000L
+            },
+            item(2) {
+                size = 9_000L
+                favourite = true
+            },
+            item(3) { size = 10L },
         )
         val videos = SearchFilters.apply(items, SearchQuery(videosOnly = true))
         assertEquals(listOf(1L), videos.map { it.id })
@@ -134,7 +152,7 @@ class SearchFiltersTest {
 
     @Test
     fun `date window is inclusive on both ends`() {
-        val items = listOf(item(1, date = 100), item(2, date = 200), item(3, date = 300))
+        val items = listOf(item(1) { date = 100L }, item(2) { date = 200L }, item(3) { date = 300L })
         val hit = SearchFilters.apply(items, SearchQuery(fromMs = 100, toMs = 200))
         assertEquals(listOf(1L, 2L), hit.map { it.id })
     }

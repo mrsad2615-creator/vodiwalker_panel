@@ -80,8 +80,6 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
       - name: Make the wrapper executable
         run: chmod +x ./gradlew
-<<<<<<< HEAD
-=======
       # Static analysis first: it is the fastest signal, and a style or complexity
       # regression should not wait behind a nine-minute APK build to be reported.
       - name: Static analysis (detekt)
@@ -108,7 +106,6 @@ jobs:
             hgallery/app/build/reports/detekt/**
             hgallery/core/build/reports/detekt/**
           if-no-files-found: ignore
->>>>>>> 7fb24bb (feat(player): a real Media3 video player, plus the type and code standards it needed)
       - name: Assemble debug
         run: |
           set -o pipefail

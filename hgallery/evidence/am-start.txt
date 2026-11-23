@@ -2,6 +2,6 @@ Starting: Intent { cmp=dev.hgallery.app.debug/dev.hgallery.app.MainActivity }
 Status: ok
 LaunchState: COLD
 Activity: dev.hgallery.app.debug/dev.hgallery.app.MainActivity
-TotalTime: 1790
-WaitTime: 1797
+TotalTime: 1178
+WaitTime: 1186
 Complete

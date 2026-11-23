@@ -93,7 +93,7 @@ object HgMotion {
     /** The matching curve for something that is leaving. */
     val emphasizedAccelerate: Easing = CubicBezierEasing(0.3f, 0f, 0.8f, 0.15f)
 
-    private fun specOrSnap(damping: Float, stiffness: Float, reduceMotion: Boolean): SpringSpec<Float> =
+    private fun specOrSnap(reduceMotion: Boolean, damping: Float, stiffness: Float): SpringSpec<Float> =
         if (reduceMotion) infiniteStiff() else spring(dampingRatio = damping, stiffness = stiffness)
 
     private fun infiniteStiff(): SpringSpec<Float> = spring(dampingRatio = 1f, stiffness = 100_000f)

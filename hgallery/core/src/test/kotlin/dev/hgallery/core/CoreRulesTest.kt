@@ -536,9 +536,12 @@ class VideoQueueTest {
 
     @Test
     fun `next and previous follow the queue`() {
+        // Newest first, so the queue is 3, 2, 1. The neighbour of 2 is 3 behind it and
+        // 1 in front of it; the first version of this test had the two swapped.
         val queue = VideoQueue.build(listOf(video(1, 100), video(2, 200), video(3, 300)))
         assertEquals(2L, VideoQueue.next(queue, 3L)?.id)
-        assertEquals(1L, VideoQueue.previous(queue, 2L)?.id)
+        assertEquals(3L, VideoQueue.previous(queue, 2L)?.id)
+        assertEquals(1L, VideoQueue.next(queue, 2L)?.id)
     }
 
     @Test

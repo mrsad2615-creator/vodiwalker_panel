@@ -33,6 +33,14 @@ const config: CapacitorConfig = {
       backgroundColor: '#000000',
       showSpinner: false,
     },
+    // Requests from the WebView are browser requests: the provider's CORS policy
+    // decides whether they are allowed, and several refuse an `Authorization`
+    // preflight from an app origin. CapacitorHttp performs them in Java instead —
+    // no CORS, no preflight, no mixed-content block. This is what makes the API
+    // work on a real phone, not just in the desktop preview.
+    CapacitorHttp: {
+      enabled: true,
+    },
     LocalNotifications: {
       iconColor: '#6D4AFF',
       sound: 'default',

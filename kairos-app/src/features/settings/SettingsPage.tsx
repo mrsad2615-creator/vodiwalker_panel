@@ -42,7 +42,7 @@ import { useFocusSessions, useHabitLogs, useHabits, useTasks } from '@/lib/queri
 import { exportBackupFile, readBackupFile, saveTextFile } from '@/lib/backup';
 import { tasksToCsv, habitLogsToCsv, focusSessionsToCsv } from '@/lib/csv';
 import { APP_VERSION, BUILD_NUMBER, BUILD_SHA } from '@/lib/buildInfo';
-import { AI_MODEL_HINT, testAiConnection } from '@/lib/ai/client';
+import { AI_MODEL_HINT, diagnoseAi, testAiConnection, type AiDiagnosis } from '@/lib/ai/client';
 import { AI_PROVIDERS, providerFor } from '@/lib/ai/providers';
 
 export function SettingsPage() {
@@ -65,6 +65,8 @@ export function SettingsPage() {
   const [aiKey, setAiKey] = useState(settings.aiKey);
   const [aiAutoApply, setAiAutoApply] = useState(settings.aiAutoApply);
   const [aiTesting, setAiTesting] = useState(false);
+  const [aiDiagnosis, setAiDiagnosis] = useState<AiDiagnosis | null>(null);
+  const [copiedDiagnosis, setCopiedDiagnosis] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -120,21 +122,45 @@ export function SettingsPage() {
 
   const handleTestAi = async () => {
     setAiTesting(true);
-    const result = await testAiConnection({
-      settings: {
-        ...settings,
-        aiEnabled: true,
-        aiBaseUrl: aiBaseUrl.trim(),
-        aiModel: aiModel.trim(),
-        aiKey: aiKey.trim(),
-      },
-    });
+    setAiDiagnosis(null);
+    setCopiedDiagnosis(false);
+    const candidate = {
+      ...settings,
+      aiEnabled: true,
+      aiBaseUrl: aiBaseUrl.trim(),
+      aiModel: aiModel.trim(),
+      aiKey: aiKey.trim(),
+    };
+    const [result, diagnosis] = await Promise.all([
+      testAiConnection({ settings: candidate }),
+      diagnoseAi(candidate),
+    ]);
     setAiTesting(false);
+    setAiDiagnosis(diagnosis);
     pushToast({
       title: result.ok ? 'اتصال برقرار است' : 'اتصال برقرار نشد',
-      description: result.message,
+      description: diagnosis.hint,
       tone: result.ok ? 'success' : 'warning',
     });
+  };
+
+  const copyDiagnosis = async () => {
+    if (!aiDiagnosis) return;
+    const text = [
+      `platform=${aiDiagnosis.via}`,
+      `url=${aiDiagnosis.url}`,
+      `model=${aiDiagnosis.model}`,
+      `keyLooksValid=${aiDiagnosis.keyLooksValid}`,
+      `reached=${aiDiagnosis.reached}`,
+      `status=${aiDiagnosis.status}`,
+      `detail=${aiDiagnosis.detail}`,
+    ].join('\n');
+    try {
+      await navigator.clipboard?.writeText(text);
+      setCopiedDiagnosis(true);
+    } catch {
+      pushToast({ title: 'کپی نشد', description: text.slice(0, 120), tone: 'warning' });
+    }
   };
 
   const dbCounts = useLiveQuery(async () => {
@@ -454,7 +480,9 @@ export function SettingsPage() {
         </div>
 
         <p className="text-[10.5px] leading-5 text-[var(--text-3)]">
-          خاموش که باشد، هیچ‌چیز از گوشی بیرون نمی‌رود و همان مدیر آفلاین جواب می‌دهد. روشن که باشد،
+          اگر «تشخیص اتصال» می‌گوید درخواست به سرور نرسید، یعنی شبکه اجازهٔ رفتن به آن سرویس را
+          نمی‌دهد (فیلتر، DNS یا اینترنت). در آن حالت یا سرویس دیگری را امتحان کن، یا Ollama را روی
+          کامپیوتر خودت بالا بیاور. خاموش که باشد، هیچ‌چیز از گوشی بیرون نمی‌رود و همان مدیر آفلاین جواب می‌دهد. روشن که باشد،
           فقط جملهٔ تو و خلاصهٔ همان چیزی که لازم است (کارها، عادت‌ها، تمرکز) به آدرسی که خودت
           می‌نویسی فرستاده می‌شود. کلید API فقط روی همین دستگاه ذخیره می‌شود و{' '}
           <span className="text-[var(--text-2)]">در فایل پشتیبان نوشته نمی‌شود</span>.
@@ -587,9 +615,35 @@ export function SettingsPage() {
             disabled={aiTesting}
             className="btn-ghost-luxury rounded-xl py-2.5 text-xs font-medium text-[var(--text)] disabled:opacity-50"
           >
-            {aiTesting ? 'در حال آزمودن…' : 'آزمودن اتصال'}
+            {aiTesting ? 'در حال آزمودن…' : 'تشخیص اتصال'}
           </button>
         </div>
+
+        {aiDiagnosis && (
+          <div
+            data-testid="ai-diagnosis"
+            className={`space-y-1.5 rounded-xl border p-2.5 ${
+              aiDiagnosis.reached
+                ? 'border-[var(--border)] bg-[var(--surface-1)]'
+                : 'border-[var(--danger)]/40 bg-[color-mix(in_srgb,var(--danger)_8%,transparent)]'
+            }`}
+          >
+            <p className="text-[10.5px] font-medium leading-5 text-[var(--text)]">
+              {aiDiagnosis.hint}
+            </p>
+            <p className="num-geo text-[9px] leading-4 text-[var(--text-3)]" dir="ltr">
+              {aiDiagnosis.via} · status {aiDiagnosis.status} · {aiDiagnosis.reached ? 'reached' : 'blocked'}
+              {aiDiagnosis.detail ? ` · ${aiDiagnosis.detail.slice(0, 120)}` : ''}
+            </p>
+            <button
+              type="button"
+              onClick={() => void copyDiagnosis()}
+              className="text-[9.5px] font-medium text-[var(--accent-fg)]"
+            >
+              {copiedDiagnosis ? 'کپی شد' : 'کپی جزئیات برای فرستادن'}
+            </button>
+          </div>
+        )}
       </LuxuryCard>
 
       {/* LOCAL DATA & PRIVACY */}

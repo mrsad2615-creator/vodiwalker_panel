@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { db, exportBackup } from '@/lib/db';
 import { executeAiTool } from '@/lib/ai/tools';
-import { isAiReady, runAiTurn, type FetchLike } from '@/lib/ai/client';
+import { diagnoseAi, isAiReady, runAiTurn, type FetchLike } from '@/lib/ai/client';
+import { cleanSecret, completionsEndpoint, normalizeBaseUrl } from '@/lib/ai/transport';
 import { DEFAULT_SETTINGS } from '@/lib/db';
 import { getTodayKey } from '@/lib/date';
 
@@ -324,5 +325,88 @@ describe('the wider tool set', () => {
     for (let index = 0; index < 5; index += 1) await executeAiTool('undo_last', {});
     const empty = await executeAiTool('undo_last', {});
     expect(empty.ok).toBe(false);
+  });
+});
+
+
+describe('the transport contract', () => {
+  it('turns a bare host into a real URL, never a relative one', () => {
+    expect(normalizeBaseUrl('openrouter.ai/api/v1')).toBe('https://openrouter.ai/api/v1');
+    expect(normalizeBaseUrl('https://api.groq.com/openai/v1/')).toBe('https://api.groq.com/openai/v1');
+    expect(normalizeBaseUrl('')).toBe('');
+  });
+
+  it('builds the completions endpoint exactly once', () => {
+    expect(completionsEndpoint('https://api.openai.com/v1')).toBe(
+      'https://api.openai.com/v1/chat/completions'
+    );
+    expect(completionsEndpoint('https://api.openai.com/v1/chat/completions')).toBe(
+      'https://api.openai.com/v1/chat/completions'
+    );
+  });
+
+  it('strips the quoting and newlines people copy along with a key', () => {
+    expect(cleanSecret('  "sk-abc123"\n')).toBe('sk-abc123');
+    expect(cleanSecret("'sk abc'")).toBe('skabc');
+  });
+
+  it('drops tools and asks again when a provider refuses them', async () => {
+    const bodies: unknown[] = [];
+    const fetchImpl: FetchLike = async (_url, init) => {
+      const body = JSON.parse(init?.body ?? '{}');
+      bodies.push(body);
+      if (bodies.length === 1) {
+        return { ok: false, status: 400, json: async () => ({ error: { message: 'tools unsupported' } }) };
+      }
+      return { ok: true, status: 200, json: async () => ({ choices: [{ message: { content: 'سلام!' } }] }) };
+    };
+
+    const result = await runAiTurn({
+      settings: { ...DEFAULT_SETTINGS, aiEnabled: true, aiKey: 'sk-test', aiModel: 'm' },
+      history: [],
+      userText: 'سلام',
+      fetchImpl,
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.reply).toBe('سلام!');
+    expect((bodies[0] as { tools?: unknown }).tools).toBeDefined();
+    expect((bodies[1] as { tools?: unknown }).tools).toBeUndefined();
+  });
+});
+
+describe('diagnosis', () => {
+  const configured = { ...DEFAULT_SETTINGS, aiEnabled: true, aiKey: 'sk-test', aiModel: 'test/model' };
+
+  it('says the request never left the device when the transport fails', async () => {
+    const fetchImpl: FetchLike = async () => {
+      throw new TypeError('Failed to fetch');
+    };
+    const diagnosis = await diagnoseAi(configured, fetchImpl);
+    expect(diagnosis.reached).toBe(false);
+    expect(diagnosis.status).toBe(0);
+    expect(diagnosis.detail).toContain('Failed to fetch');
+    expect(diagnosis.hint).toMatch(/نرسید|مرورگر/);
+  });
+
+  it('names a rejected key as a rejected key', async () => {
+    const fetchImpl: FetchLike = async () => ({
+      ok: false,
+      status: 401,
+      json: async () => ({ error: { message: 'invalid_api_key' } }),
+    });
+    const diagnosis = await diagnoseAi(configured, fetchImpl);
+    expect(diagnosis.reached).toBe(true);
+    expect(diagnosis.hint).toContain('کلید');
+  });
+
+  it('warns about a model that cannot use tools when the provider returns 400', async () => {
+    const fetchImpl: FetchLike = async () => ({
+      ok: false,
+      status: 400,
+      json: async () => ({ error: { message: 'tools are not supported' } }),
+    });
+    const diagnosis = await diagnoseAi(configured, fetchImpl);
+    expect(diagnosis.hint).toMatch(/مدل|tools/);
   });
 });

@@ -1,5 +1,12 @@
 import type { UserSettings } from '@/types/domain';
 import { AI_TOOLS, executeAiTool, type ToolCall } from './tools';
+import {
+  cleanSecret,
+  completionsEndpoint,
+  isNativePlatform,
+  postJson,
+  type HttpResult,
+} from './transport';
 
 /**
  * The cloud half of the manager.
@@ -49,7 +56,12 @@ export type FetchLike = (
 ) => Promise<{ ok: boolean; status: number; json: () => Promise<unknown>; text?: () => Promise<string> }>;
 
 export function isAiReady(settings: UserSettings): boolean {
-  return Boolean(settings.aiEnabled && settings.aiKey.trim() && settings.aiBaseUrl.trim() && settings.aiModel.trim());
+  return Boolean(
+    settings.aiEnabled &&
+      cleanSecret(settings.aiKey) &&
+      settings.aiBaseUrl.trim() &&
+      settings.aiModel.trim()
+  );
 }
 
 export const AI_MODEL_HINT =
@@ -59,8 +71,29 @@ const TIMEOUT_MS = 45_000;
 const MAX_TOOL_ROUNDS = 3;
 
 function endpoint(baseUrl: string): string {
-  const trimmed = baseUrl.trim().replace(/\/+$/, '');
-  return trimmed.endsWith('/chat/completions') ? trimmed : `${trimmed}/chat/completions`;
+  return completionsEndpoint(baseUrl);
+}
+
+/** Headers for any OpenAI-compatible provider, plus the two OpenRouter likes. */
+function requestHeaders(settings: UserSettings, url: string): Record<string, string> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${cleanSecret(settings.aiKey)}`,
+  };
+  if (url.includes('openrouter.ai')) {
+    headers['HTTP-Referer'] = 'https://kairos.app';
+    headers['X-Title'] = 'KAIROS';
+  }
+  return headers;
+}
+
+/** A transport failure is a different animal from an HTTP error; say so. */
+function transportMessage(detail: string | undefined): string {
+  const native = isNativePlatform();
+  const suffix = detail ? ` (${detail.slice(0, 120)})` : '';
+  return native
+    ? `اتصال برقرار نشد؛ درخواست حتی به سرور نرسید${suffix}. بررسی کن: اینترنت گوشی، درست بودن آدرس سرویس، و اینکه سرویس از ایران پاسخ می‌دهد.`
+    : `اتصال برقرار نشد؛ مرورگر اجازهٔ این درخواست را نداد${suffix}. در نسخهٔ نصب‌شده روی گوشی این محدودیت وجود ندارد.`;
 }
 
 interface CompletionResponse {
@@ -79,6 +112,51 @@ function persianError(status: number, detail: string): string {
   return detail ? `خطای سرویس: ${detail}` : `خطای سرویس (کد ${status}).`;
 }
 
+/** A request through an injected fetch (tests, and the web preview). */
+async function webRequest(
+  fetchImpl: FetchLike,
+  url: string,
+  headers: Record<string, string>,
+  body: unknown
+): Promise<HttpResult> {
+  try {
+    const response = await fetchImpl(url, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(body),
+    });
+    let data: unknown = null;
+    try {
+      data = await response.json();
+    } catch {
+      data = null;
+    }
+    return { status: response.status, ok: response.ok, data, via: 'web' };
+  } catch (error) {
+    return {
+      status: 0,
+      ok: false,
+      data: null,
+      transportError: (error as Error)?.message ?? String(error),
+      via: 'web',
+    };
+  }
+}
+
+/** Native HTTP has its own timeouts; this guards the promise itself. */
+function withTimeout(promise: Promise<HttpResult>, ms = TIMEOUT_MS): Promise<HttpResult> {
+  return Promise.race([
+    promise,
+    new Promise<HttpResult>((resolve) =>
+      setTimeout(
+        () =>
+          resolve({ status: 0, ok: false, data: null, transportError: 'timeout', via: 'native' }),
+        ms
+      )
+    ),
+  ]);
+}
+
 /** One assistant turn: send, run the tools it asks for, send the results back. */
 export async function runAiTurn(params: {
   settings: UserSettings;
@@ -94,61 +172,70 @@ export async function runAiTurn(params: {
     return { ok: false, reply: '', steps: [], error: 'مدیر ابری فعال نیست.' };
   }
 
-  const fetchImpl: FetchLike = params.fetchImpl ?? (globalThis.fetch as unknown as FetchLike);
-  // The transcript is trimmed: a long chat must not turn into a long bill, and
-  // the model only needs the last few exchanges to stay coherent.
   const messages: ChatMessage[] = [...history.slice(-8), { role: 'user', content: userText }];
   const steps: AiTurnResult['steps'] = [];
   let navigateTo: string | undefined;
+  // Some providers (and many local models) reject `tools` outright. Instead of
+  // failing the whole conversation, the first refusal drops the tools and asks
+  // again — the model can still answer from the summary it was given.
+  let toolsDisabled = false;
+
+  const url = endpoint(settings.aiBaseUrl);
+  if (!url) {
+    return { ok: false, reply: '', steps, error: 'آدرس سرویس خالی است. در تنظیمات یک سرویس انتخاب کن.' };
+  }
+
+  const requestBody = () => ({
+    model: settings.aiModel.trim(),
+    messages,
+    temperature: 0.3,
+    ...(toolsDisabled ? {} : { tools: AI_TOOLS, tool_choice: 'auto' }),
+  });
 
   for (let round = 0; round < MAX_TOOL_ROUNDS; round += 1) {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
-    let payload: CompletionResponse;
+    const payloadResult = params.fetchImpl
+      ? await webRequest(params.fetchImpl, url, requestHeaders(settings, url), requestBody())
+      : await withTimeout(
+          postJson({
+            url,
+            headers: requestHeaders(settings, url),
+            body: requestBody(),
+          })
+        );
 
-    try {
-      const response = await fetchImpl(endpoint(settings.aiBaseUrl), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${settings.aiKey.trim()}`,
-        },
-        body: JSON.stringify({
-          model: settings.aiModel.trim(),
-          messages,
-          tools: AI_TOOLS,
-          tool_choice: 'auto',
-          temperature: 0.3,
-        }),
-        signal: controller.signal,
-      });
-
-      if (!response.ok) {
-        let detail = '';
-        try {
-          const body = (await response.json()) as CompletionResponse;
-          detail = body?.error?.message ?? '';
-        } catch {
-          detail = '';
-        }
-        return { ok: false, reply: '', steps, error: persianError(response.status, detail) };
-      }
-      payload = (await response.json()) as CompletionResponse;
-    } catch (error) {
-      const aborted = (error as Error)?.name === 'AbortError';
+    if (payloadResult.transportError !== undefined || payloadResult.status === 0) {
+      const timedOut = (payloadResult.transportError ?? '').toLowerCase().includes('time');
       return {
         ok: false,
         reply: '',
         steps,
-        error: aborted
+        error: timedOut
           ? 'پاسخ سرویس دیر آمد و لغو شد. دوباره بپرس.'
-          : 'اتصال برقرار نشد. اینترنت یا آدرس سرویس را بررسی کن.',
+          : transportMessage(payloadResult.transportError),
       };
-    } finally {
-      clearTimeout(timer);
     }
 
-    const message = payload.choices?.[0]?.message;
+    const payload = payloadResult.data as CompletionResponse | null;
+
+    if (!payloadResult.ok) {
+      if (!toolsDisabled && (payloadResult.status === 400 || payloadResult.status === 422)) {
+        toolsDisabled = true;
+        continue;
+      }
+      const detail = payload?.error?.message ?? '';
+      return {
+        ok: false,
+        reply: '',
+        steps,
+        error: persianError(payloadResult.status, detail),
+      };
+    }
+
+    if (!payload) {
+      return { ok: false, reply: '', steps, error: 'پاسخ سرویس خالی بود.' };
+    }
+
+    const message = payload?.choices?.[0]?.message;
     if (!message) {
       return { ok: false, reply: '', steps, error: 'پاسخ سرویس خالی بود.' };
     }
@@ -252,4 +339,102 @@ export async function testAiConnection(params: {
   });
   if (!result.ok) return { ok: false, message: result.error ?? 'اتصال برقرار نشد.' };
   return { ok: true, message: 'اتصال برقرار است.' };
+}
+
+
+/* ── Diagnosis ─────────────────────────────────────────────────────────────── */
+
+export interface AiDiagnosis {
+  ready: boolean;
+  via: 'native' | 'web';
+  url: string;
+  model: string;
+  keyLooksValid: boolean;
+  /** Did the request reach the provider at all? */
+  reached: boolean;
+  status: number;
+  /** Raw technical text, for the user to paste back when asking for help. */
+  detail: string;
+  /** What to do about it, in Persian. */
+  hint: string;
+}
+
+/**
+ * A real request whose only job is to explain what went wrong.
+ *
+ * The generic failure message was useless — «اتصال برقرار نشد» cannot tell a
+ * wrong URL from a blocked request from a rejected key. This sends one tiny
+ * completion and reports the layer that broke, so the answer is actionable
+ * without a debugger.
+ */
+export async function diagnoseAi(
+  settings: UserSettings,
+  fetchImpl?: FetchLike
+): Promise<AiDiagnosis> {
+  const url = completionsEndpoint(settings.aiBaseUrl);
+  const via = isNativePlatform() ? 'native' : 'web';
+  const base: AiDiagnosis = {
+    ready: isAiReady(settings),
+    via,
+    url: url || '(خالی)',
+    model: settings.aiModel.trim() || '(خالی)',
+    keyLooksValid: cleanSecret(settings.aiKey).length >= 20,
+    reached: false,
+    status: 0,
+    detail: '',
+    hint: '',
+  };
+
+  if (!base.ready) {
+    return { ...base, hint: 'اول کلید، آدرس سرویس و نام مدل را پر کن و «ذخیرهٔ مدیر ابری» را بزن.' };
+  }
+
+  const body = {
+    model: settings.aiModel.trim(),
+    messages: [{ role: 'user', content: 'سلام' }],
+    max_tokens: 8,
+  };
+
+  const result = fetchImpl
+    ? await webRequest(fetchImpl, url, requestHeaders(settings, url), body)
+    : await withTimeout(postJson({ url, headers: requestHeaders(settings, url), body }));
+
+  if (result.status === 0) {
+    return {
+      ...base,
+      detail: result.transportError ?? 'بدون جزئیات',
+      hint: transportMessage(result.transportError),
+    };
+  }
+
+  const payload = result.data as CompletionResponse | null;
+  const providerDetail = payload?.error?.message ?? '';
+
+  if (result.ok) {
+    return {
+      ...base,
+      reached: true,
+      status: result.status,
+      detail: 'پاسخ سالم دریافت شد.',
+      hint: 'اتصال سالم است. اگر در گفت‌وگو خطا دیدی، نام مدل را بررسی کن.',
+    };
+  }
+
+  const hints: Record<number, string> = {
+    400: 'درخواست پذیرفته نشد. معمولاً نام مدل اشتباه است یا این مدل ابزار (tools) را پشتیبانی نمی‌کند.',
+    401: 'کلید رد شد. کلید را از سایت سرویس دوباره کپی کن (بدون فاصله و کوتیشن).',
+    403: 'کلید اجازهٔ این مدل را ندارد یا حساب محدود است.',
+    404: 'آدرس سرویس یا نام مدل پیدا نشد. آدرس باید به /v1 ختم شود.',
+    422: 'بدنهٔ درخواست پذیرفته نشد؛ معمولاً نام مدل یا پارامتر tools.',
+    429: 'سهمیه/نرخ درخواست پر است. کمی بعد یا با کلید دیگری تلاش کن.',
+    503: 'سرویس موقتاً در دسترس نیست.',
+  };
+
+  return {
+    ...base,
+    reached: true,
+    status: result.status,
+    detail: providerDetail || `HTTP ${result.status}`,
+    hint: hints[result.status] ?? persianError(result.status, providerDetail),
+  };
 }

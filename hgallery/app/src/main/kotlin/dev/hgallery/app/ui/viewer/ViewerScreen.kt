@@ -53,6 +53,7 @@ import dev.hgallery.core.MediaItem
 import kotlinx.coroutines.launch
 import androidx.compose.ui.res.stringResource
 import dev.hgallery.app.R
+import android.app.Activity
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest

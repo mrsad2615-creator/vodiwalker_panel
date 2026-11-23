@@ -109,6 +109,7 @@
     <string name="search_no_results_both">No match for that name with these filters. Try clearing one.</string>
     <string name="search_filters_label">Filters</string>
     <string name="search_albums_label">Albums</string>
+    <string name="search_filters_scrollable">Filters, scroll for more</string>
     <string name="search_clear_filters">Clear filters</string>
     <string name="favourite_badge">Favourite</string>
     <string name="favourite_failed">Could not change the favourite. Your library did not allow the change.</string>

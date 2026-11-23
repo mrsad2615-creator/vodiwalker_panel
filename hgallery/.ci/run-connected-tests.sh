@@ -152,6 +152,44 @@ node_centre() {
     | head -1
 }
 
+# Scroll a horizontal row until a node appears, then leave it where it can be tapped.
+#
+# The chip row is a real horizontal scroll: "Large" sits off the right edge until it
+# is swiped. A single fixed swipe was a guess and it guessed wrong — the row moved
+# but Large was still clipped, so the run reported "not on screen after swiping"
+# while the label list plainly showed the row had scrolled. This dumps the hierarchy
+# between attempts and stops as soon as the node exists anywhere on screen.
+scroll_to() {
+  PATTERN="$1"; ROWY="$2"; ATTEMPT=1
+  while [ "$ATTEMPT" -le 3 ]; do
+    dump_ui "scroll-$ATTEMPT"
+    if node_centre "$PATTERN" | grep -q .; then
+      echo "::notice title=e2e::$PATTERN visible after $ATTEMPT swipe(s)"
+      return 0
+    fi
+    adb shell input swipe $((W * 80 / 100)) "$ROWY" $((W * 15 / 100)) "$ROWY" 300
+    sleep 2
+    ATTEMPT=$((ATTEMPT + 1))
+  done
+  dump_ui "scroll-final"
+  node_centre "$PATTERN" | grep -q . && return 0
+  return 1
+}
+
+# The vertical centre of the kind-chip row, read from the hierarchy rather than
+# guessed as a fraction of the screen height: adding the row labels moved every row
+# down, and the old fraction landed on the label above.
+kind_chip_row_y() {
+  dump_ui "kind-row"
+  Y1=$(node_centre 'content-desc="Photos"' | cut -d' ' -f2)
+  Y2=$(node_centre 'content-desc="Photos"' | cut -d' ' -f4)
+  if [ -n "$Y1" ] && [ -n "$Y2" ]; then
+    echo $(( (Y1 + Y2) / 2 ))
+  else
+    echo $((H * 20 / 100))
+  fi
+}
+
 # Tap by tag, or by accessibility text when the tag is not exposed.
 #
 # Compose test tags are not published as resource ids here (testTagsAsResourceId
@@ -385,17 +423,26 @@ if tap_tag_or_text "search-button" 'content-desc="Search"'; then
     sleep 2
     shot 33-search-videos.png
   fi
-  # The chip row is a horizontal scroll, so Large is off the right edge until the
-  # row is swiped. Swiping is what a user does; the row cannot be widened.
-  adb shell input swipe $((W * 85 / 100)) $((H * 16 / 100)) $((W * 20 / 100)) $((H * 16 / 100)) 250
-  sleep 2
-  if tap_tag_or_text "chip-large" 'content-desc="Large"'; then
+  # Size and recency live past the first four chips, so the row must be scrolled.
+  # The row's height, not a guessed fraction of the screen: the labels above moved
+  # everything down, and the previous fraction landed on the row above.
+  KIND_Y=$(kind_chip_row_y)
+  if scroll_to 'content-desc="Large"' "$KIND_Y" && \
+     tap_tag_or_text "chip-large" 'content-desc="Large"'; then
     sleep 2
     # "clip" AND Videos AND Large: the fixtures are 1.5-1.9 MB, so this must find
     # nothing. Photographing the empty state is the proof that the axes AND, not OR.
     shot 34-search-no-results.png
   else
-    echo "::warning title=e2e::the Large chip was not on screen after swiping"
+    echo "::warning title=e2e::the Large chip could not be reached"
+  fi
+  # Same axis, opposite value: Large must be able to become Small. Photographing
+  # the swap proves the chips replace rather than accumulate.
+  if scroll_to 'content-desc="Small"' "$KIND_Y"; then
+    if tap_tag_or_text "chip-small" 'content-desc="Small"'; then
+      sleep 2
+      shot 36-search-size-swapped.png
+    fi
   fi
   adb shell input keyevent KEYCODE_BACK
   sleep 2

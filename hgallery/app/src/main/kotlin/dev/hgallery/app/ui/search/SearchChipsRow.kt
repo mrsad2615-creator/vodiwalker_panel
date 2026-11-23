@@ -1,25 +1,26 @@
 package dev.hgallery.app.ui.search
 
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import dev.hgallery.app.ui.theme.hgPalette
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import dev.hgallery.app.R
 import dev.hgallery.app.ui.components.HgChip
 import dev.hgallery.app.ui.components.HgRemovableChip
 import dev.hgallery.app.ui.theme.HgMetrics
+import dev.hgallery.app.ui.theme.hgPalette
 import dev.hgallery.core.Album
 import dev.hgallery.core.DateBucket
 import dev.hgallery.core.SearchChips
@@ -84,6 +85,12 @@ private fun KindChips(chips: SearchChips, onChange: (SearchChips) -> Unit) {
     LazyRow(
         contentPadding = PaddingValues(horizontal = HgMetrics.Gutter),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier.semantics {
+            // A row of pills clipped at the right edge looks finished. Saying it
+            // scrolls is the difference between a user finding "Large" and
+            // concluding the app has no size filter at all.
+            contentDescription = stringResource(R.string.search_filters_scrollable)
+        },
     ) {
         item {
             HgChip(

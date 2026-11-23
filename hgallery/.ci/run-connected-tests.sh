@@ -337,7 +337,7 @@ if tap_tag_or_text "first-photo" 'content-desc="Photo, '; then
     fi
     # Whatever the screen shows, the reason is in the app's own log lines. The XML
     # dump says what was drawn; it cannot say why the write was refused.
-    adb logcat -d -t 400 | grep -E "HGalleryViewer" > "$OUT_DIR/diag/favourite-log.txt" 2>/dev/null
+    adb logcat -d -t 400 | grep -E "HGallery(Viewer|Actions)" > "$OUT_DIR/diag/favourite-log.txt" 2>/dev/null
     grep -c . "$OUT_DIR/diag/favourite-log.txt" > /dev/null 2>&1 || true
     while IFS= read -r line; do
       echo "::warning title=favourite::$line"

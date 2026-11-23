@@ -151,8 +151,36 @@ if ! echo "$FOCUS" | grep -q "$PKG"; then
 fi
 
 shot() {
+  # Check the foreground before the capture, not after. A screenshot of another app is
+  # worse than a missing screenshot: it gets reviewed as if it proved something. This
+  # is how the launcher's home screen ended up in five evidence slots for several runs.
+  FOCUS_NOW=$(adb shell dumpsys window 2>/dev/null | grep -E "mCurrentFocus" | head -1)
+  case "$FOCUS_NOW" in
+    *"$PKG"*) ;;
+    *)
+      echo "::error title=e2e::refusing to save $1: the app is not in front"
+      echo "::error title=e2e::focus is: ${FOCUS_NOW:-unknown}"
+      ;;
+  esac
   adb shell screencap -p "$DEVICE_DIR/$1"
   echo "captured $1"
+}
+
+# Long-press the first node whose label matches, using its own bounds.
+long_press_tag_or_text() {
+  TAG="$1"; PATTERN="$2"
+  dump_ui "$TAG"
+  BOUNDS=$(node_centre "$PATTERN")
+  if [ -z "$BOUNDS" ]; then
+    echo "::warning title=e2e::no node matching $PATTERN to long-press"
+    return 1
+  fi
+  set -- $BOUNDS
+  CX=$(( ($1 + $3) / 2 )); CY=$(( ($2 + $4) / 2 ))
+  echo "::notice title=e2e::long-pressed $PATTERN at ($CX,$CY)"
+  adb shell input swipe "$CX" "$CY" "$CX" "$CY" 900
+  sleep 2
+  return 0
 }
 
 shot 01-photos.png
@@ -279,10 +307,14 @@ tap_and_shot $((W / 8 * 5)) 03-highlights.png
 tap_and_shot $((W / 8 * 7)) 04-discover.png
 tap_and_shot $((W / 8)) 05-photos-again.png
 
-# Open the first thumbnail to photograph the full-screen viewer. The first cell
-# sits just under the date header; tap its centre.
-adb shell input tap $((W / 4)) $((H / 2 - 40))
-sleep 5
+# Open the first thumbnail by its accessibility label. The old coordinate assumed a
+# cell under the date header; when the grid's gutter changed the tap landed on empty
+# space, the viewer never opened, and the "chrome hidden" shot was the grid.
+if tap_tag_or_text "first-photo-viewer" 'content-desc="Photo, '; then
+  sleep 4
+else
+  echo "::error title=e2e::no photo tile was addressable to open the viewer"
+fi
 shot 06-viewer.png
 # A single tap toggles the chrome off; this shot proves the photo can be seen
 # without any bars in the way.
@@ -312,7 +344,7 @@ if tap_tag_or_text "view-switch-back" 'content-desc="Switch to day view"'; then
   sleep 3
 fi
 # Long press the first tile by its label rather than by coordinate.
-adb shell input swipe $((W / 4)) $((H / 2 - 40)) $((W / 4)) $((H / 2 - 40)) 900
+long_press_tag_or_text "first-photo-select" 'content-desc="Photo, '
 sleep 4
 shot 09-selection.png
 

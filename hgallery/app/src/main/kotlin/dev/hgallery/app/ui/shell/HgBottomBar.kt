@@ -2,7 +2,6 @@ package dev.hgallery.app.ui.shell
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -10,9 +9,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -73,6 +74,7 @@ fun HgBottomBar(
 ) {
     val colors = hgColors
     val spacing = hgSpacing
+    val reduceMotion = rememberReduceMotion()
 
     Column(
         modifier = modifier
@@ -87,21 +89,40 @@ fun HgBottomBar(
                 .height(0.7.dp)
                 .background(colors.divider),
         )
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(spacing.bottomBarHeight)
-                .padding(horizontal = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceEvenly,
-        ) {
-            HgTab.entries.forEach { tab ->
-                TabItem(
-                    tab = tab,
-                    selected = tab == selected,
-                    onClick = { onSelect(tab) },
-                    modifier = Modifier.weight(1f),
-                )
+        BoxWithConstraints(Modifier.fillMaxWidth().height(spacing.bottomBarHeight)) {
+            // One indicator, computed from the container's width rather than from a
+            // measured child: a child cannot report its width before it is laid out, and
+            // the three attempts at doing that all produced a pill that started at zero.
+            val cell = maxWidth / HgTab.entries.size
+            val targetOffset = cell * selected.ordinal
+            val indicatorOffset by animateDpAsState(
+                targetValue = targetOffset,
+                // A spring, so a tab change that interrupts another continues instead of
+                // restarting from rest. This is the single most "alive" movement in the
+                // app and it is one animated value.
+                animationSpec = HgMotion.fastSpatial(reduceMotion),
+                label = "indicatorOffset",
+            )
+
+            Box(
+                Modifier
+                    .offset(x = indicatorOffset + (cell - INDICATOR_WIDTH) / 2)
+                    .align(Alignment.CenterStart)
+                    .width(INDICATOR_WIDTH)
+                    .height(INDICATOR_HEIGHT)
+                    .clip(RoundedCornerShape(hgShapes.pill))
+                    .background(colors.accent.copy(alpha = INDICATOR_ALPHA)),
+            )
+
+            Row(Modifier.fillMaxSize()) {
+                HgTab.entries.forEach { tab ->
+                    TabItem(
+                        tab = tab,
+                        selected = tab == selected,
+                        onClick = { onSelect(tab) },
+                        modifier = Modifier.weight(1f),
+                    )
+                }
             }
         }
     }
@@ -124,14 +145,6 @@ private fun TabItem(
         targetValue = if (selected) colors.accent else colors.textSecondary,
         animationSpec = HgMotion.fastEffects(reduceMotion),
         label = "tabTint",
-    )
-
-    // The capsule fades rather than scales its own width: animating a width inside a
-    // weighted row would re-measure the three other items on every frame.
-    val capsuleAlpha by animateFloatAsState(
-        targetValue = if (selected) 1f else 0f,
-        animationSpec = HgMotion.fastEffects(reduceMotion),
-        label = "capsuleAlpha",
     )
 
     // The icon grows by 2 dp when it is the destination. Small enough to read as a
@@ -158,14 +171,6 @@ private fun TabItem(
         verticalArrangement = Arrangement.Center,
     ) {
         Box(contentAlignment = Alignment.Center) {
-            if (capsuleAlpha > 0.01f) {
-                Box(
-                    Modifier
-                        .size(width = CAPSULE_WIDTH, height = CAPSULE_HEIGHT)
-                        .clip(RoundedCornerShape(shapes.pill))
-                        .background(colors.accent.copy(alpha = capsuleAlpha * CAPSULE_MAX_ALPHA)),
-                )
-            }
             Icon(
                 imageVector = tab.icon,
                 // The label below already names the destination; a second reading of
@@ -190,9 +195,9 @@ private fun TabItem(
 }
 
 /** Wide enough to read as a capsule around the widest icon, not as a dot. */
-private val CAPSULE_WIDTH = 44.dp
+private val INDICATOR_WIDTH = 46.dp
 
-private val CAPSULE_HEIGHT = 26.dp
+private val INDICATOR_HEIGHT = 28.dp
 
-/** The capsule is a hint, not a button: full-strength accent would fight the icon. */
-private const val CAPSULE_MAX_ALPHA = 0.16f
+/** A hint, not a button: full-strength accent would fight the icon on top of it. */
+private const val INDICATOR_ALPHA = 0.16f

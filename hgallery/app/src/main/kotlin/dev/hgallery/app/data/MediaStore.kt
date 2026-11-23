@@ -1,7 +1,5 @@
 package dev.hgallery.app.data
 
-import android.content.Context
-import android.util.LruCache
 import dev.hgallery.core.AlbumBuilder
 import dev.hgallery.core.MediaItem
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -155,6 +153,26 @@ class MediaStore(
             thumbnails.invalidate(gone.map { id -> targets.first { it.id == id }.uri })
         }
         return outcome
+    }
+
+    /**
+     * Moves media into the app's own trash.
+     *
+     * Only used on platforms with no system trash. Returns how many items were stored:
+     * the caller must report that number, not the number it asked about, because a failed
+     * copy leaves the file where it was.
+     */
+    suspend fun moveToAppTrash(ids: Set<Long>, trash: TrashStore): Int {
+        val targets = _items.value.filter { it.id in ids }
+        val stored = trash.moveToTrash(targets)
+        if (stored.isNotEmpty()) {
+            val gone = stored.map { it.itemId }.toSet()
+            _items.value = _items.value.filterNot { it.id in gone }
+            thumbnails.invalidate(
+                targets.filter { it.id in gone }.map { it.uri },
+            )
+        }
+        return stored.size
     }
 
     /** Builds the system share sheet for the selected items. */

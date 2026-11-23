@@ -29,6 +29,9 @@ complexity:
     thresholdInFiles: 24
     thresholdInClasses: 20
     thresholdInInterfaces: 14
+    # An object of test tags is a dictionary: one constant per thing a test may press.
+    # Splitting it would only move the list somewhere else.
+    thresholdInObjects: 60
   ComplexCondition:
     threshold: 5
 

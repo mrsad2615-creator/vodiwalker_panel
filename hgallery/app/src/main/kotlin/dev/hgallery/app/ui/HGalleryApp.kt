@@ -26,6 +26,7 @@ import dev.hgallery.app.ui.discover.DiscoverScreen
 import dev.hgallery.app.ui.highlights.HighlightsScreen
 import dev.hgallery.app.ui.photos.PhotosScreen
 import dev.hgallery.app.ui.settings.SettingsScreen
+import dev.hgallery.app.ui.trash.TrashScreen
 import dev.hgallery.app.ui.search.SearchScreen
 import dev.hgallery.app.ui.shell.HgBottomBar
 import dev.hgallery.app.ui.shell.HgTab
@@ -61,6 +62,7 @@ fun HGalleryApp(container: AppContainer) {
     var playerId by remember { mutableStateOf<Long?>(null) }
     var searchOpen by remember { mutableStateOf(false) }
     var settingsOpen by remember { mutableStateOf(false) }
+    var trashOpen by remember { mutableStateOf(false) }
     // A custom album is opened by id, not by value: its membership changes while the
     // screen is up, and a captured copy would show the membership from the moment the
     // tile was tapped.
@@ -91,6 +93,7 @@ fun HGalleryApp(container: AppContainer) {
     BackHandler(
         enabled = playerId == null && viewerId == null && openAlbum == null && customAlbumId != null,
     ) { customAlbumId = null }
+    BackHandler(enabled = playerId == null && viewerId == null && trashOpen) { trashOpen = false }
 
     // One entry point for "open this item": a video goes to the player, an image
     // to the viewer. Deciding here means every grid in the app behaves the same
@@ -118,8 +121,17 @@ fun HGalleryApp(container: AppContainer) {
         return
     }
 
+    if (trashOpen) {
+        TrashScreen(container = container, onBack = { trashOpen = false })
+        return
+    }
+
     if (settingsOpen) {
-        SettingsScreen(container = container, onBack = { settingsOpen = false })
+        SettingsScreen(
+            container = container,
+            onBack = { settingsOpen = false },
+            onOpenTrash = { trashOpen = true },
+        )
         return
     }
 

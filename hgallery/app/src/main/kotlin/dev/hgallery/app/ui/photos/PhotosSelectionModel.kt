@@ -102,7 +102,17 @@ class PhotosSelectionModel(private val container: AppContainer) {
     suspend fun applyDelete(): DeleteOutcome {
         val ids = selection.ids
         confirmingDelete = false
-        val outcome = if (ids.isEmpty()) DeleteOutcome() else container.mediaStore.applyDelete(ids)
+        val outcome = when {
+            ids.isEmpty() -> DeleteOutcome()
+            // Below Android 11 the platform has no trash, so the app moves the files to
+            // its own. Above it, the platform's trash is the one the user can see in
+            // other apps, and it is the correct place for the file to go.
+            deletePath != DeletePath.SYSTEM_TRASH -> {
+                val stored = container.mediaStore.moveToAppTrash(ids, container.trash)
+                DeleteOutcome(trashed = stored, failed = ids.size - stored)
+            }
+            else -> container.mediaStore.applyDelete(ids)
+        }
         selection = Selection.None
         lastOutcome = outcome
         return outcome

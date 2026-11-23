@@ -74,10 +74,19 @@ object HgTestTags {
     const val FILMSTRIP_HANDLE = "video-filmstrip-handle"
     fun filmstripCell(id: Long) = "filmstrip-cell-$id"
 
+    // Trash.
+    const val TRASH_LIST = "trash-list"
+    const val TRASH_BACK = "trash-back"
+    const val TRASH_EMPTY = "trash-empty"
+    const val TRASH_EMPTY_CONFIRM = "trash-empty-confirm"
+    fun trashRestore(id: Long) = "trash-restore-$id"
+    fun trashDelete(id: Long) = "trash-delete-$id"
+
     // Settings.
     const val SETTINGS_LIST = "settings-list"
     const val SETTINGS_BACK = "settings-back"
     const val GRID_SLIDER = "settings-grid-slider"
+    const val SETTINGS_TRASH = "settings-trash"
     const val FILMSTRIP_SWITCH = "settings-filmstrip"
     const val AUTOPLAY_SWITCH = "settings-autoplay"
     fun themeOption(mode: String) = "settings-theme-$mode"

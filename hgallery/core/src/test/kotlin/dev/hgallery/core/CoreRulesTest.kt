@@ -610,3 +610,54 @@ class AlbumRulesTest {
         assertEquals(listOf(1L, 3L), AlbumRules.prune(album, setOf(1L, 3L)).itemIds)
     }
 }
+
+class TrashPolicyTest {
+
+    private fun entry(deletedAtMs: Long) = TrashEntry(
+        itemId = 1L,
+        fileName = "IMG_1.jpg",
+        storedPath = "/data/user/0/dev.hgallery.app/files/trash/1-IMG_1.jpg",
+        mimeType = "image/jpeg",
+        sizeBytes = 1_000L,
+        deletedAtMs = deletedAtMs,
+    )
+
+    private val now = 1_800_000_000_000L
+    private val day = 24L * 60L * 60L * 1000L
+
+    @Test
+    fun `an entry inside the period is active`() {
+        val entries = listOf(entry(now - 5 * day))
+        assertEquals(1, TrashPolicy.active(entries, now).size)
+        assertTrue(TrashPolicy.expired(entries, now).isEmpty())
+    }
+
+    @Test
+    fun `an entry past thirty days has expired`() {
+        val entries = listOf(entry(now - 31 * day))
+        assertEquals(1, TrashPolicy.expired(entries, now).size)
+        assertTrue(TrashPolicy.active(entries, now).isEmpty())
+    }
+
+    @Test
+    fun `exactly thirty days counts as expired`() {
+        val entries = listOf(entry(now - 30 * day))
+        assertEquals(1, TrashPolicy.expired(entries, now).size)
+    }
+
+    @Test
+    fun `days left counts part of a day as a day`() {
+        assertEquals(30, TrashPolicy.daysLeft(entry(now), now))
+        assertEquals(2, TrashPolicy.daysLeft(entry(now - 28 * day - 1), now))
+        assertEquals(0, TrashPolicy.daysLeft(entry(now - 40 * day), now))
+    }
+
+    @Test
+    fun `active entries come newest first`() {
+        val entries = listOf(entry(now - 9 * day), entry(now - 2 * day))
+        assertEquals(
+            listOf(now - 2 * day, now - 9 * day),
+            TrashPolicy.active(entries, now).map { it.deletedAtMs },
+        )
+    }
+}

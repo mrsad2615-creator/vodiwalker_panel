@@ -2,6 +2,7 @@ package dev.hgallery.app.ui.settings
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -59,6 +60,7 @@ import java.util.Locale
 fun SettingsScreen(
     container: AppContainer,
     onBack: () -> Unit,
+    onOpenTrash: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val palette = hgPalette
@@ -141,6 +143,32 @@ fun SettingsScreen(
                     onChange = { scope.launch { container.settings.setAutoplayNext(it) } },
                     modifier = Modifier.testTag(HgTestTags.AUTOPLAY_SWITCH),
                 )
+            }
+
+            item { SectionLabel(stringResource(R.string.settings_storage)) }
+            item {
+                // Trash lives here because it is about storage, not about appearance:
+                // it is where a user looks after deleting something by mistake.
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = HgMetrics.MinTouchTarget)
+                        .clickable(onClick = onOpenTrash)
+                        .testTag(HgTestTags.SETTINGS_TRASH),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = stringResource(R.string.trash),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = palette.textPrimary,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Text(
+                        text = stringResource(R.string.settings_trash_detail),
+                        style = CountLabel,
+                        color = palette.textSecondary,
+                    )
+                }
             }
 
             item { SectionLabel(stringResource(R.string.settings_privacy)) }

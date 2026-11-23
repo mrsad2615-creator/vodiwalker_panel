@@ -147,19 +147,25 @@ class CustomAlbumStore(context: Context) {
      * then has one album fewer rather than an unopenable tab.
      */
     private fun decode(raw: String?): CustomAlbum? {
-        if (raw.isNullOrBlank()) return null
-        val parts = raw.split(SEP)
+        val parts = raw?.split(SEP).orEmpty()
         if (parts.size <= FIELD_ITEM_IDS) return null
-        val id = parts[FIELD_ID].toLongOrNull() ?: return null
-        val name = parts[FIELD_NAME].takeIf { AlbumRules.isValidName(it) } ?: return null
-        val ids = parts[FIELD_ITEM_IDS].split(",").mapNotNull { it.toLongOrNull() }
-        return CustomAlbum(
-            id = id,
-            name = name,
-            itemIds = ids,
-            updatedAtMs = parts[FIELD_UPDATED].toLongOrNull() ?: 0L,
-            isPrivate = parts[FIELD_PRIVATE] == PRIVATE_TRUE,
-        )
+
+        val id = parts[FIELD_ID].toLongOrNull()
+        val name = parts[FIELD_NAME]
+        // One check for both fields: a line that fails either is not readable, and the
+        // caller treats the two the same way.
+        val usable = id != null && AlbumRules.isValidName(name)
+        return if (!usable || id == null) {
+            null
+        } else {
+            CustomAlbum(
+                id = id,
+                name = name,
+                itemIds = parts[FIELD_ITEM_IDS].split(",").mapNotNull { it.toLongOrNull() },
+                updatedAtMs = parts[FIELD_UPDATED].toLongOrNull() ?: 0L,
+                isPrivate = parts[FIELD_PRIVATE] == PRIVATE_TRUE,
+            )
+        }
     }
 
     private companion object {

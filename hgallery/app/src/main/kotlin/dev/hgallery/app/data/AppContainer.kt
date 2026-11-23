@@ -35,6 +35,9 @@ class AppContainer(context: Context) {
     /** Albums the user made, kept apart from the device's own folders. */
     val customAlbums = CustomAlbumStore(appContext)
 
+    /** The app's own trash, for platforms that have no system one. */
+    val trash = TrashStore(appContext)
+
     /**
      * The installed version, read from the package manager.
      *

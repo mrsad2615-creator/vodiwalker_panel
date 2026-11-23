@@ -164,6 +164,8 @@
     <string name="settings_theme_system">پیروی از سیستم</string>
     <string name="settings_theme_light">روشن</string>
     <string name="settings_theme_dark">تیره</string>
+    <string name="settings_storage">حافظه</string>
+    <string name="settings_trash_detail">موارد حذف‌شده</string>
     <string name="settings_grid">شبکهٔ عکس‌ها</string>
     <string name="settings_grid_density">ستون‌ها</string>
     <string name="settings_grid_columns">%1$d ستون</string>
@@ -210,4 +212,20 @@
     <string name="add_to_album">افزودن به آلبوم</string>
     <string name="add_to_album_empty">هنوز آلبومی ندارید. برای شروع یکی بسازید.</string>
     <string name="album_add_hint">در خط زمانی عکس‌ها را انتخاب کنید و به این آلبوم بیفزایید.</string>
+
+    <!-- Trash -->
+    <string name="trash">سطل زباله</string>
+    <string name="trash_loading">خواندن سطل زباله</string>
+    <string name="trash_empty_title">سطل زباله خالی است</string>
+    <string name="trash_empty_body">موارد حذف‌شده تا ۳۰ روز اینجا می‌مانند. نسخه‌ها در حافظهٔ خود برنامه هستند، پس حذف برنامه آن‌ها را پاک می‌کند.</string>
+    <string name="trash_empty_action">خالی کردن سطل</string>
+    <string name="trash_empty_confirm_title">همهٔ سطل زباله حذف شود؟</string>
+    <string name="trash_empty_confirm_body">این کار برگشت‌پذیر نیست.</string>
+    <string name="trash_row_detail">%1$s · %2$d روز مانده</string>
+    <string name="trash_delete_confirm_title">%1$s برای همیشه حذف شود؟</string>
+    <string name="trash_delete_confirm_body">این کار برگشت‌پذیر نیست.</string>
+    <plurals name="trash_summary">
+        <item quantity="one">%1$d مورد. موارد پس از %2$d روز پاک می‌شوند.</item>
+        <item quantity="other">%1$d مورد. موارد پس از %2$d روز پاک می‌شوند.</item>
+    </plurals>
 </resources>

@@ -92,15 +92,21 @@ fun ViewerScreen(
     // 11+, and a refused write is reported as "0 rows" rather than as an error. The
     // toggle therefore asks for the grant and retries once; without this the heart
     // simply never filled and nothing anywhere said why.
-    var pendingFavouriteId by remember { mutableStateOf<Long?>(null) }
+    // The value the user asked for, not merely which item: the system dialog has
+    // already applied it, so retrying the toggle would undo it.
+    var pendingFavourite by remember { mutableStateOf<Pair<Long, Boolean>?>(null) }
     val favouriteConsent = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartIntentSenderForResult(),
     ) { result ->
-        val id = pendingFavouriteId
-        pendingFavouriteId = null
-        Log.w(TAG, "favourite consent result=${result.resultCode} id=$id")
-        if (result.resultCode == Activity.RESULT_OK && id != null) {
-            coroutine.launch { container.mediaStore.toggleFavorite(id) }
+        val pending = pendingFavourite
+        pendingFavourite = null
+        Log.w(TAG, "favourite consent result=${result.resultCode} pending=$pending")
+        if (result.resultCode == Activity.RESULT_OK && pending != null) {
+            coroutine.launch {
+                val (id, target) = pending
+                // Idempotent on purpose: see applyFavourite.
+                container.mediaStore.applyFavourite(id, target)
+            }
         }
     }
 
@@ -109,14 +115,15 @@ fun ViewerScreen(
             val direct = container.mediaStore.toggleFavorite(id)
             Log.w(TAG, "favourite id=$id direct=$direct")
             if (direct) return@launch
+            val target = container.mediaStore.targetFavourite(id)
             val sender = container.mediaStore.favouriteWriteRequest(id)
-            Log.w(TAG, "favourite id=$id sender=${sender != null}")
+            Log.w(TAG, "favourite id=$id target=$target sender=${sender != null}")
             if (sender == null) {
                 // Nothing was written and the platform offers no dialog to ask for.
                 // Saying so is the difference between a bug and a mystery.
                 Toast.makeText(context, R.string.favourite_failed, Toast.LENGTH_SHORT).show()
             } else {
-                pendingFavouriteId = id
+                pendingFavourite = id to target
                 favouriteConsent.launch(IntentSenderRequest.Builder(sender).build())
             }
         }

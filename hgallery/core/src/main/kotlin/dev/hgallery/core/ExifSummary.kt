@@ -49,6 +49,12 @@ object ExifFormat {
     /** Below this the focal length is a macro or a rounding artefact, not a lens. */
     private const val MIN_FOCAL_MM = 1.0
 
+    /** At and above this, apertures are printed without a decimal: f/11, not f/11.0. */
+    private const val WHOLE_APERTURE_FROM = 10.0
+
+    /** The base the one-decimal helper scales by. */
+    private const val DECIMAL_BASE = 10.0
+
     /**
      * Aperture, from the f-number.
      *
@@ -57,7 +63,7 @@ object ExifFormat {
      */
     fun aperture(fNumber: Double): String = when {
         fNumber <= 0.0 -> ""
-        fNumber >= 10.0 -> "f/${fNumber.toInt()}"
+        fNumber >= WHOLE_APERTURE_FROM -> "f/${fNumber.toInt()}"
         else -> "f/" + oneDecimal(fNumber)
     }
 
@@ -106,7 +112,7 @@ object ExifFormat {
         if (value == kotlin.math.floor(value)) value.toInt().toString() else oneDecimal(value)
 
     private fun oneDecimal(value: Double): String {
-        val scaled = kotlin.math.round(value * 10.0).toLong()
-        return "${scaled / 10}.${scaled % 10}"
+        val scaled = kotlin.math.round(value * DECIMAL_BASE).toLong()
+        return "${scaled / DECIMAL_BASE.toLong()}.${scaled % DECIMAL_BASE.toLong()}"
     }
 }

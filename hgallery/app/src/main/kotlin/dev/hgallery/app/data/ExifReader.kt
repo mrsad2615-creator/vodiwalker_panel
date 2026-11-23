@@ -72,9 +72,16 @@ class ExifReader(private val context: Context) {
      */
     private fun orientationDegrees(exif: ExifInterface): Int =
         when (exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)) {
-            ExifInterface.ORIENTATION_ROTATE_90 -> 90
-            ExifInterface.ORIENTATION_ROTATE_180 -> 180
-            ExifInterface.ORIENTATION_ROTATE_270 -> 270
+            ExifInterface.ORIENTATION_ROTATE_90 -> QUARTER_TURN
+            ExifInterface.ORIENTATION_ROTATE_180 -> HALF_TURN
+            ExifInterface.ORIENTATION_ROTATE_270 -> THREE_QUARTERS_TURN
             else -> 0
         }
+
+    private companion object {
+        /** The three rotations EXIF can name, in degrees clockwise. */
+        const val QUARTER_TURN = 90
+        const val HALF_TURN = 180
+        const val THREE_QUARTERS_TURN = 270
+    }
 }

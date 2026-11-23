@@ -114,26 +114,42 @@ private suspend fun androidx.compose.ui.input.pointer.PointerInputScope.detectDe
     onDensityChange: (Int) -> Unit,
 ) {
     androidx.compose.foundation.gestures.awaitEachGesture {
-        var startDistance = 0f
-        var lastDistance = 0f
-        while (true) {
-            val event = awaitPointerEvent()
-            val pressed = event.changes.filter { it.pressed }
-            if (pressed.size < 2) {
-                if (startDistance == 0f) continue
-                break
-            }
-            val distance = (pressed[0].position - pressed[1].position).getDistance()
-            if (startDistance == 0f) startDistance = distance
-            lastDistance = distance
+        val startDistance = awaitPinchStartDistance() ?: return@awaitEachGesture
+        val endDistance = awaitPinchEndDistance()
+        if (endDistance <= 0f) return@awaitEachGesture
+        val target = GridDensity.afterPinch(
+            startColumns = columns,
+            scale = endDistance / startDistance,
+        )
+        if (target != columns) onDensityChange(target)
+    }
+}
+
+/**
+ * Waits until two fingers are down and returns the distance between them.
+ *
+ * Null means the gesture ended before a second finger arrived, which is an ordinary tap;
+ * the caller then leaves the density alone.
+ */
+private suspend fun androidx.compose.ui.input.pointer.AwaitPointerEventScope
+.awaitPinchStartDistance(): Float? {
+    while (true) {
+        val pressed = awaitPointerEvent().changes.filter { it.pressed }
+        if (pressed.size >= 2) {
+            return (pressed[0].position - pressed[1].position).getDistance()
         }
-        if (startDistance > 0f && lastDistance > 0f) {
-            val target = GridDensity.afterPinch(
-                startColumns = columns,
-                scale = lastDistance / startDistance,
-            )
-            if (target != columns) onDensityChange(target)
-        }
+        if (pressed.isEmpty()) return null
+    }
+}
+
+/** Follows the pinch until a finger lifts, and returns the last distance it saw. */
+private suspend fun androidx.compose.ui.input.pointer.AwaitPointerEventScope
+.awaitPinchEndDistance(): Float {
+    var distance = 0f
+    while (true) {
+        val pressed = awaitPointerEvent().changes.filter { it.pressed }
+        if (pressed.size < 2) return distance
+        distance = (pressed[0].position - pressed[1].position).getDistance()
     }
 }
 

@@ -1,7 +1,6 @@
 package dev.hgallery.app.ui.onboarding
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
@@ -74,12 +73,6 @@ fun PermissionScreen(
         delay(MARK_DELAY_MS)
         markVisible = true
     }
-    val markScale by animateFloatAsState(
-        targetValue = if (markVisible) 1f else MARK_START_SCALE,
-        animationSpec = HgMotion.defaultSpatial(reduceMotion),
-        label = "markScale",
-    )
-
     Column(
         modifier = Modifier
             .fillMaxSize()

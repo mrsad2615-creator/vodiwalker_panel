@@ -53,6 +53,14 @@ object DiscoverBuilder {
     const val MAX_ITEMS_PER_SECTION = 24
 
     /**
+     * The size a file must reach to appear under "Largest".
+     *
+     * One megabyte: below it every thumbnail on the device would be listed, and the
+     * section would stop answering the question it exists for.
+     */
+    const val LARGE_FILE_BYTES = 1_000_000L
+
+    /**
      * Builds Discover from the library.
      *
      * [today] is passed in rather than read from the clock so the result is testable and
@@ -102,7 +110,7 @@ object DiscoverBuilder {
         // Largest files, which is the one list that answers "what is taking my storage".
         // Only files over a megabyte: listing every tiny thumbnail as "large" is noise.
         val largest = items
-            .filter { it.sizeBytes >= 1_000_000L }
+            .filter { it.sizeBytes >= LARGE_FILE_BYTES }
             .sortedByDescending { it.sizeBytes }
             .take(MAX_ITEMS_PER_SECTION)
 

@@ -32,6 +32,9 @@ class AppContainer(context: Context) {
     /** Theme, grid density and the remaining preferences. */
     val settings = SettingsRepository(appContext)
 
+    /** Albums the user made, kept apart from the device's own folders. */
+    val customAlbums = CustomAlbumStore(appContext)
+
     /**
      * The installed version, read from the package manager.
      *

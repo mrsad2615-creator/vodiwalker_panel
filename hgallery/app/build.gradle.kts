@@ -107,6 +107,12 @@ dependencies {
 
     implementation("androidx.datastore:datastore-preferences:1.1.2")
 
+    // BiometricPrompt, for the Private albums gate. The library falls back to the device
+    // credential (PIN, pattern, password) when no fingerprint or face is enrolled, which
+    // is the behaviour the screen promises and cannot implement with a keyguard check
+    // alone. Apache 2.0.
+    implementation("androidx.biometric:biometric:1.1.0")
+
     // Media3 for video playback. ExoPlayer replaces MediaPlayer because the
     // platform player cannot report buffered position or speed reliably, and its
     // seeking on this class of hardware is visibly coarse. The UI module is

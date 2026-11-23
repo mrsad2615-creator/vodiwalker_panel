@@ -558,3 +558,55 @@ class VideoQueueTest {
         assertEquals(-1, VideoQueue.indexOf(queue, 99L))
     }
 }
+
+class AlbumRulesTest {
+
+    private fun album(id: Long, name: String, ids: List<Long> = emptyList()) =
+        CustomAlbum(id = id, name = name, itemIds = ids)
+
+    @Test
+    fun `a name is trimmed and inner runs of spaces collapse`() {
+        assertEquals("Lake trip", AlbumRules.clean("  Lake    trip  "))
+    }
+
+    @Test
+    fun `a name of spaces is not valid`() {
+        assertFalse(AlbumRules.isValidName("   "))
+        assertTrue(AlbumRules.isValidName("Trips"))
+    }
+
+    @Test
+    fun `a long name is cut to the limit`() {
+        val long = "a".repeat(80)
+        assertEquals(AlbumRules.MAX_NAME_LENGTH, AlbumRules.clean(long).length)
+    }
+
+    @Test
+    fun `a duplicate name is refused and the album keeps its own`() {
+        val albums = listOf(album(1, "Trips"), album(2, "Work"))
+        assertTrue(AlbumRules.isTaken("trips", albums))
+        assertTrue(AlbumRules.isTaken("  TRIPS ", albums))
+        assertFalse(AlbumRules.isTaken("trips", albums, exceptId = 1))
+        assertFalse(AlbumRules.isTaken("Family", albums))
+    }
+
+    @Test
+    fun `ids are not reused after a delete`() {
+        val albums = listOf(album(1, "One"), album(7, "Seven"))
+        assertEquals(8L, AlbumRules.nextId(albums))
+        assertEquals(1L, AlbumRules.nextId(emptyList()))
+    }
+
+    @Test
+    fun `adding the same item twice keeps one entry`() {
+        val once = AlbumRules.addItem(album(1, "Trips"), 5L)
+        val twice = AlbumRules.addItem(once, 5L)
+        assertEquals(listOf(5L), twice.itemIds)
+    }
+
+    @Test
+    fun `pruning drops ids that are no longer in the library`() {
+        val album = album(1, "Trips", listOf(1L, 2L, 3L))
+        assertEquals(listOf(1L, 3L), AlbumRules.prune(album, setOf(1L, 3L)).itemIds)
+    }
+}

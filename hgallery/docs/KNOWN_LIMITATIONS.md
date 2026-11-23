@@ -46,6 +46,13 @@ oversight that went unnoticed.
   reveal tap and rotation. Double-tap seek, drag-to-seek, the speed menu and the
   fill toggle are implemented and unit-tested at the policy layer but were **not**
   driven by the harness.
+* **The favourite heart is photographed in the viewer, not yet on a tile.** The
+  overlay itself is drawn by `ThumbnailCell` and the state it depends on is the same
+  one the viewer's filled heart proves, but the shot of a grid tile carrying the heart
+  has not been taken: the harness closes the viewer with the control whose label it
+  had guessed wrong, and that step now needs a run. The read path is also unverified
+  after a relaunch — `IS_FAVORITE` is queried on API 30+ and the write path was the
+  part that was broken, so a restart is what proves the value persisted.
 * **Search is now a real screen, but only four of its axes were driven.** The
   magnifier was wired to an empty lambda and is now a screen with a field, kind
   chips, size, recency and album chips, filtering through the tested

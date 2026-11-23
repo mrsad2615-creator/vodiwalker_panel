@@ -346,7 +346,8 @@ if tap_tag_or_text "first-photo" 'content-desc="Photo, '; then
       echo "::warning title=favourite::$line"
     done < "$OUT_DIR/diag/favourite-log.txt"
     shot 24-viewer-favourited.png
-    if tap_tag_or_text "viewer-back" 'content-desc="Back"'; then
+    # The viewer's dismiss control is "Close"; "Back" was a guess that cost a run.
+    if tap_tag_or_text "viewer-close" 'content-desc="Close"'; then
       sleep 2
       # The heart is drawn on the tile; this is the shot that proves it.
       shot 25-photos-favourite-heart.png

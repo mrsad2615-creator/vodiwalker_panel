@@ -23,6 +23,10 @@ OUT_DIR="ui-shots"
 # marker in this one directory, which is what it is for: files remain readable by
 # `adb pull`, indexed by nothing.
 DEVICE_DIR="/sdcard/Pictures/$ALBUM_NAME"
+# Fixtures are media the app must find, so they live outside the marked directory:
+# .nomedia hides every descendant, not just its own level, and when the fixtures
+# were pushed inside $DEVICE_DIR the library came up empty.
+FIXTURE_DIR="/sdcard/Pictures/hgallery-fixtures"
 PKG="${HGPKG:-dev.hgallery.app.debug}"
 ACTIVITY="dev.hgallery.app.MainActivity"
 
@@ -64,6 +68,7 @@ echo "== pushing fixture media so the timeline has real content =="
 # items, which is the artefact this change exists to remove.
 adb shell rm -rf "/sdcard/Pictures/hgallery-shots" >/dev/null 2>&1
 adb shell rm -rf "$DEVICE_DIR" >/dev/null 2>&1
+adb shell rm -rf "$FIXTURE_DIR" >/dev/null 2>&1
 # Created here, after the purge above and before the first screencap: an earlier
 # revision created it before this same rm -rf and the marker was deleted a few lines
 # later, which is why a run with the fix in place still photographed itself.
@@ -74,8 +79,8 @@ if adb shell ls -a "$DEVICE_DIR" 2>/dev/null | grep -q nomedia; then
 else
   echo "::error title=e2e::.nomedia could not be created; every screenshot will be indexed"
 fi
-adb shell mkdir -p "$DEVICE_DIR/Camera" >/dev/null 2>&1
-adb shell mkdir -p "$DEVICE_DIR/Screenshots" >/dev/null 2>&1
+adb shell mkdir -p "$FIXTURE_DIR/Camera" >/dev/null 2>&1
+adb shell mkdir -p "$FIXTURE_DIR/Screenshots" >/dev/null 2>&1
 # Real photographs, not flat test cards. The earlier fixtures were solid colour
 # blocks with a white circle, which made every screenshot of the app look like a
 # prototype regardless of how the layout underneath was built.
@@ -83,16 +88,16 @@ n=0
 for f in .ci/fixtures/real/*.jpg; do
   n=$((n + 1))
   if [ $((n % 4)) -eq 0 ]; then
-    adb push "$f" "$DEVICE_DIR/Screenshots/" >/dev/null 2>&1
+    adb push "$f" "$FIXTURE_DIR/Screenshots/" >/dev/null 2>&1
   else
-    adb push "$f" "$DEVICE_DIR/Camera/" >/dev/null 2>&1
+    adb push "$f" "$FIXTURE_DIR/Camera/" >/dev/null 2>&1
   fi
 done
 # Two real H.264/AAC clips so the Albums tab has a Videos bucket and the player
 # has something to actually decode.
 for f in .ci/fixtures/real/*.mp4; do
   [ -f "$f" ] || continue
-  adb push "$f" "$DEVICE_DIR/Camera/" >/dev/null 2>&1
+  adb push "$f" "$FIXTURE_DIR/Camera/" >/dev/null 2>&1
 done
 # MediaStore only notices new files once someone asks it to index them.
 adb shell content call --uri content://media/external --method scan_volume --arg external_primary >/dev/null 2>&1

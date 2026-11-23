@@ -334,7 +334,20 @@ jobs:
           export ORG_GRADLE_PROJECT_HG_KEYSTORE_PASSWORD="$PASS"
           export ORG_GRADLE_PROJECT_HG_KEY_ALIAS="hgallery"
           export ORG_GRADLE_PROJECT_HG_KEY_PASSWORD="$PASS"
-          ./gradlew --console=plain --no-daemon :app:assembleRelease
+          # Piped through tee so the failure reporter below can read it. The job
+          # failed here once and the annotations carried nothing but "exit code 1".
+          set -o pipefail
+          ./gradlew --console=plain --no-daemon --stacktrace :app:assembleRelease 2>&1 | tee release.log
+
+      - name: Report release build failure
+        if: failure() || cancelled()
+        shell: bash
+        run: |
+          set -uo pipefail
+          if [ -f release.log ]; then
+            echo "::error title=release::release.log is $(wc -l < release.log) lines"
+          fi
+          python3 ../.github/scripts/annotate.py release.log "release build" || true
 
       - name: Verify the APK is signed and well formed
         shell: bash

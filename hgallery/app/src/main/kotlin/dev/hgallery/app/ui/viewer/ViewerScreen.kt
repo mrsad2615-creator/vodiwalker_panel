@@ -135,6 +135,7 @@ fun ViewerScreen(
     val pagerState = rememberPagerState(initialPage = initialIndex) { items.size }
     var chromeVisible by remember { mutableStateOf(true) }
     var pendingDelete by remember { mutableStateOf<MediaItem?>(null) }
+    var showDetails by remember { mutableStateOf(false) }
 
     val current = items.getOrNull(pagerState.currentPage)
 
@@ -218,6 +219,10 @@ fun ViewerScreen(
             }
         }
 
+        if (showDetails && current != null) {
+            DetailsSheet(item = current, onDismiss = { showDetails = false })
+        }
+
         val queued = pendingDelete
         if (queued != null) {
             // The same dialog the grid uses, so the wording cannot drift between
@@ -285,6 +290,14 @@ fun ViewerScreen(
                             onClick = { favourite(current.id) },
                             tint = if (current.isFavorite) Color(0xFFFF6B5A) else Color.White,
                         )
+                        // Real now: every value it shows is already in the row the
+                        // grid loaded, so it needs no permission and no new query.
+                        HgIconButton(
+                            icon = HgIcons.Info,
+                            contentDescription = stringResource(R.string.details),
+                            onClick = { showDetails = true },
+                            tint = Color.White,
+                        )
                         // Not implemented: disabled rather than misleading.
                         HgIconButton(
                             icon = HgIcons.Edit,
@@ -300,13 +313,6 @@ fun ViewerScreen(
                             // first, and so must this.
                             onClick = { pendingDelete = current },
                             tint = Color.White,
-                        )
-                        HgIconButton(
-                            icon = HgIcons.Info,
-                            contentDescription = stringResource(R.string.details),
-                            onClick = {},
-                            enabled = false,
-                            tint = Color.White.copy(alpha = 0.35f),
                         )
                     }
                 }

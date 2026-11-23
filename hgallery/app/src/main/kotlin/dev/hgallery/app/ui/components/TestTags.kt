@@ -40,4 +40,7 @@ object HgTestTags {
     // Search.
     const val SEARCH_FIELD = "search-field"
     const val SEARCH_RESULTS = "search-results"
+
+    /** The details sheet in the viewer. */
+    const val DETAILS_SHEET = "details-sheet"
 }

@@ -165,6 +165,40 @@ class SearchFiltersTest {
     }
 
     @Test
+    fun `details name the file in terms a person uses`() {
+        val photo = item(1) { mime = "image/jpeg"; size = 2L * 1024L * 1024L }
+        val rows = detailRows(photo) { w, h -> "$w x $h" }.associate { it.label to it.value }
+
+        assertEquals("IMG_1.jpg", rows["Name"])
+        assertEquals("2.00 MB", rows["Size"])
+        assertEquals("100 x 100", rows["Dimensions"])
+        assertEquals("JPEG image", rows["Type"])
+        // A JPEG is not a video, so it must not claim a duration.
+        assertFalse(rows.containsKey("Duration"))
+    }
+
+    @Test
+    fun `details say nothing rather than nothing-useful`() {
+        // A row that reads "0.0 MP" or "Folder " is worse than an absent row: the
+        // sheet is a list of facts, and a placeholder is not a fact.
+        val unknown = item(2) { mime = "image/heic" }
+        val rows = detailRows(unknown) { w, h -> "$w x $h" }
+
+        assertTrue(rows.none { it.value.isBlank() })
+        assertEquals("HEIC image", typeLabel("image/heic"))
+        assertFalse(megapixels(unknown).startsWith("0.0"))
+    }
+
+    @Test
+    fun `a video reports its duration and a still does not`() {
+        val clip = item(3) { mime = "video/mp4"; duration = 6_000L }
+        val rows = detailRows(clip) { w, h -> "$w x $h" }.associate { it.label to it.value }
+        // detail() is the sheet's form ("6 s"), not the tile badge's ("0:06").
+        assertEquals("6 s", rows["Duration"])
+        assertEquals("MP4 video", rows["Type"])
+    }
+
+    @Test
     fun `summary pluralises`() {
         assertEquals("1 result", SearchFilters.summary(1))
         assertEquals("0 results", SearchFilters.summary(0))

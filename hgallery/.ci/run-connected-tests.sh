@@ -411,6 +411,18 @@ if tap_tag_or_text "first-photo" 'content-desc="Photo, '; then
       echo "::warning title=favourite::$line"
     done < "$OUT_DIR/diag/favourite-log.txt"
     shot 24-viewer-favourited.png
+    # Details reads the row the grid already loaded, so it needs no new permission
+    # and the sheet must appear at once. Photographed because a dialog that renders
+    # nothing is indistinguishable from a dialog that works, in code.
+    if tap_tag_or_text "viewer-details" 'content-desc="Details"'; then
+      sleep 2
+      shot 26-viewer-details.png
+      # The sheet covers the bottom controls; a tap above it dismisses.
+      adb shell input keyevent KEYCODE_BACK
+      sleep 2
+    else
+      echo "::warning title=e2e::the Details control was not on screen"
+    fi
     # The viewer's dismiss control is "Close"; "Back" was a guess that cost a run.
     if tap_tag_or_text "viewer-close" 'content-desc="Close"'; then
       sleep 2

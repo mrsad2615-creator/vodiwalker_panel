@@ -79,6 +79,25 @@ class MediaStore(
         )
     }
 
+    /** The value a tap on this item's favourite control is asking for. */
+    fun targetFavourite(id: Long): Boolean =
+        !(_items.value.firstOrNull { it.id == id }?.isFavorite ?: false)
+
+    /**
+     * Records a favourite the platform has already written.
+     *
+     * When the consent dialog comes back granted, MediaProvider has applied the
+     * change itself; asking it to write again is at best redundant and at worst
+     * refused, which is what made the heart stay hollow with a successful grant in
+     * the log. Only the in-memory item needs catching up, and it must not be a
+     * toggle: the value is already decided.
+     */
+    fun recordFavourite(id: Long, favourite: Boolean) {
+        _items.value = _items.value.map {
+            if (it.id == id) it.copy(isFavorite = favourite) else it
+        }
+    }
+
     /**
      * Favourite toggle, applied optimistically and rolled back if the platform refuses.
      *
@@ -88,30 +107,6 @@ class MediaStore(
      * was indistinguishable from a tap that did nothing, because `update` reports it
      * as "0 rows" rather than as an error.
      */
-    /**
-     * Sets the favourite flag to the value the user asked for, idempotently.
-     *
-     * Needed after the system's consent dialog, because that dialog has already
-     * applied the change: calling [toggleFavorite] again flips the flag straight back
-     * and the heart stays hollow. This sets the requested value instead, and updates
-     * the in-memory list so the screen redraws without waiting for a reload.
-     */
-    /** The value a tap on this item's favourite control is asking for. */
-    fun targetFavourite(id: Long): Boolean =
-        !(_items.value.firstOrNull { it.id == id }?.isFavorite ?: false)
-
-    suspend fun applyFavourite(id: Long, favourite: Boolean): Boolean {
-        val current = _items.value.firstOrNull { it.id == id } ?: return false
-        val uri = actions.mediaUriFor(current.id, current.mimeType)
-        val ok = repository.setFavorite(uri, favourite)
-        if (ok) {
-            _items.value = _items.value.map {
-                if (it.id == id) it.copy(isFavorite = favourite) else it
-            }
-        }
-        return ok
-    }
-
     suspend fun toggleFavorite(id: Long): Boolean {
         val current = _items.value.firstOrNull { it.id == id } ?: return false
         val target = !current.isFavorite

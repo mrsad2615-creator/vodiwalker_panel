@@ -102,11 +102,11 @@ fun ViewerScreen(
         pendingFavourite = null
         Log.w(TAG, "favourite consent result=${result.resultCode} pending=$pending")
         if (result.resultCode == Activity.RESULT_OK && pending != null) {
-            coroutine.launch {
-                val (id, target) = pending
-                // Idempotent on purpose: see applyFavourite.
-                container.mediaStore.applyFavourite(id, target)
-            }
+            val (id, target) = pending
+            // The dialog *is* the write: a granted favourite request has already been
+            // applied by MediaProvider, so the app only has to record it. Writing
+            // again was the last remaining reason the heart stayed hollow.
+            container.mediaStore.recordFavourite(id, target)
         }
     }
 

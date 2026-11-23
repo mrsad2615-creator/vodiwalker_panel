@@ -44,7 +44,12 @@ class ExifReader(private val context: Context) {
                         exif.getAttribute(ExifInterface.TAG_MAKE).orEmpty(),
                         exif.getAttribute(ExifInterface.TAG_MODEL).orEmpty(),
                     ),
-                    lens = exif.getAttribute(ExifInterface.TAG_LENS_MODEL).orEmpty(),
+                    // Files write a lens model, not a lens maker. Where only the maker
+                    // exists, showing it is better than showing nothing, but the model is
+                    // what a photographer recognises.
+                    lens = exif.getAttribute(ExifInterface.TAG_LENS_MODEL)
+                        ?.takeIf { it.isNotBlank() }
+                        ?: exif.getAttribute(ExifInterface.TAG_LENS_MAKE).orEmpty(),
                     aperture = ExifFormat.aperture(
                         exif.getAttributeDouble(ExifInterface.TAG_F_NUMBER, 0.0),
                     ),
@@ -52,7 +57,7 @@ class ExifReader(private val context: Context) {
                         exif.getAttributeDouble(ExifInterface.TAG_EXPOSURE_TIME, 0.0),
                     ),
                     iso = ExifFormat.iso(
-                        exif.getAttributeInt(ExifInterface.TAG_PHOTOGRAPHIC_SENSITIVITY, 0),
+                        exif.getAttributeInt(ExifInterface.TAG_ISO_SPEED, 0),
                     ),
                     focalLength = ExifFormat.focalLength(
                         exif.getAttributeDouble(ExifInterface.TAG_FOCAL_LENGTH, 0.0),

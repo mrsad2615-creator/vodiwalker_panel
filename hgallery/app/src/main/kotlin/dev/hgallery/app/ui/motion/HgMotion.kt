@@ -1,7 +1,7 @@
 package dev.hgallery.app.ui.motion
 
 import android.provider.Settings
-import androidx.compose.animation.core.AnimationSpec
+import androidx.compose.animation.core.FiniteAnimationSpec
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.Easing
 import androidx.compose.animation.core.SpringSpec
@@ -67,22 +67,22 @@ private const val STIFFEST_SPRING = 100_000f
 object HgMotion {
 
     /** Press feedback and other quick, small movements. */
-    fun <T> fastSpatial(reduceMotion: Boolean = false): AnimationSpec<T> =
+    fun <T> fastSpatial(reduceMotion: Boolean = false): FiniteAnimationSpec<T> =
         specOrSnap(reduceMotion, FAST_SPATIAL_DAMPING, FAST_SPATIAL_STIFFNESS)
 
     /** Moving a medium surface, such as the selected-tab indicator. */
-    fun <T> defaultSpatial(reduceMotion: Boolean = false): AnimationSpec<T> =
+    fun <T> defaultSpatial(reduceMotion: Boolean = false): FiniteAnimationSpec<T> =
         specOrSnap(reduceMotion, DEFAULT_SPATIAL_DAMPING, DEFAULT_SPATIAL_STIFFNESS)
 
     /** A whole screen arriving. */
-    fun <T> slowSpatial(reduceMotion: Boolean = false): AnimationSpec<T> =
+    fun <T> slowSpatial(reduceMotion: Boolean = false): FiniteAnimationSpec<T> =
         specOrSnap(reduceMotion, SLOW_SPATIAL_DAMPING, SLOW_SPATIAL_STIFFNESS)
 
     /** Colour and opacity: no overshoot, by construction. */
-    fun <T> fastEffects(reduceMotion: Boolean = false): AnimationSpec<T> =
+    fun <T> fastEffects(reduceMotion: Boolean = false): FiniteAnimationSpec<T> =
         specOrSnap(reduceMotion, FAST_EFFECT_DAMPING, FAST_EFFECT_STIFFNESS)
 
-    fun <T> defaultEffects(reduceMotion: Boolean = false): AnimationSpec<T> =
+    fun <T> defaultEffects(reduceMotion: Boolean = false): FiniteAnimationSpec<T> =
         specOrSnap(reduceMotion, DEFAULT_EFFECT_DAMPING, DEFAULT_EFFECT_STIFFNESS)
 
     /**

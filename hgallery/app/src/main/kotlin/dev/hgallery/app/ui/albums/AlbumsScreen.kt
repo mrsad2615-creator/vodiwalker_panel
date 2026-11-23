@@ -42,6 +42,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.hgallery.app.R
 import dev.hgallery.app.data.AppContainer
+import dev.hgallery.app.ui.components.HgIconButton
 import dev.hgallery.app.ui.components.HgScreenTitle
 import dev.hgallery.app.ui.components.HgSectionHeader
 import dev.hgallery.app.ui.components.HgTestTags
@@ -375,7 +376,7 @@ private fun PrivateRow(count: Int, onUnlock: () -> Unit) {
             .fillMaxWidth()
             .heightIn(min = HgMetrics.MinTouchTarget)
             .clip(RoundedCornerShape(HgMetrics.AlbumCorner))
-            .background(palette.surfaceHigh)
+            .background(palette.chipBackground)
             .clickable(onClick = onUnlock)
             .padding(horizontal = 12.dp, vertical = 10.dp)
             .semantics(mergeDescendants = true) {

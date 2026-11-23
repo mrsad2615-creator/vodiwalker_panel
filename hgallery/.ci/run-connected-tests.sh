@@ -31,10 +31,6 @@ mkdir -p "$OUT_DIR/diag"
 # `adb pull` recreates the device folder name, so this is the only place the
 # PNGs can end up. Creating it explicitly means they land at a known path.
 mkdir -p "$OUT_DIR/$ALBUM_NAME"
-# Created before the first screencap, so no capture is ever indexed. MediaProvider
-# skips a directory containing .nomedia, including on an explicit scan.
-adb shell mkdir -p "$DEVICE_DIR" >/dev/null 2>&1
-adb shell touch "$DEVICE_DIR/.nomedia" >/dev/null 2>&1
 
 echo "== instrumented UI tests =="
 ./gradlew --console=plain --no-daemon :app:connectedDebugAndroidTest 2>&1 | tee ui-test.log
@@ -68,6 +64,16 @@ echo "== pushing fixture media so the timeline has real content =="
 # items, which is the artefact this change exists to remove.
 adb shell rm -rf "/sdcard/Pictures/hgallery-shots" >/dev/null 2>&1
 adb shell rm -rf "$DEVICE_DIR" >/dev/null 2>&1
+# Created here, after the purge above and before the first screencap: an earlier
+# revision created it before this same rm -rf and the marker was deleted a few lines
+# later, which is why a run with the fix in place still photographed itself.
+adb shell mkdir -p "$DEVICE_DIR" >/dev/null 2>&1
+adb shell touch "$DEVICE_DIR/.nomedia" >/dev/null 2>&1
+if adb shell ls -a "$DEVICE_DIR" 2>/dev/null | grep -q nomedia; then
+  echo "::notice title=e2e::.nomedia is in place, so captures stay out of the library"
+else
+  echo "::error title=e2e::.nomedia could not be created; every screenshot will be indexed"
+fi
 adb shell mkdir -p "$DEVICE_DIR/Camera" >/dev/null 2>&1
 adb shell mkdir -p "$DEVICE_DIR/Screenshots" >/dev/null 2>&1
 # Real photographs, not flat test cards. The earlier fixtures were solid colour

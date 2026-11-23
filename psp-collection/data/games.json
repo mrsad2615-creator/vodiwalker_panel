@@ -1,0 +1,867 @@
+{
+  "meta": {
+    "title": "کالکشن PPSSPP — نوستالژی و گرافیک بالا",
+    "limit_gb": 10,
+    "safety_margin_gb": 0.5,
+    "updated": "2026-11-23",
+    "note_fa": "حجم‌ها بر پایه دامپ‌های Redump (ISO) و میانگین CSO محاسبه شده‌اند و تقریبی هستند (±۱۰٪). اسکریپت build_zips.py حجم واقعی فایل‌های شما را دوباره اندازه می‌گیرد و بر همان اساس ZIP را پر می‌کند."
+  },
+  "folders": {
+    "nostalgia": {
+      "id": "nostalgia",
+      "name_fa": "۱) بازی‌های قدیمی و نوستالژی",
+      "subtitle_fa": "نسل اول PSP — ۲۰۰۴ تا ۲۰۰۸",
+      "desc_fa": "همان بازی‌هایی که با PSP بزرگ شدیم: از Lumines و WipEout تا LocoRoco، Patapon و Daxter. حجم‌ها سبک‌ترند، پس تعداد بیشتری داخل سقف ۱۰ گیگ جا می‌شود.",
+      "zip_name": "PSP_01_Nostalgia",
+      "color": "#4f8cff"
+    },
+    "graphics": {
+      "id": "graphics",
+      "name_fa": "۲) بازی‌های محبوب و گرافیک بالا",
+      "subtitle_fa": "بهترین گرافیک‌های PSP — ۲۰۰۸ تا ۲۰۱۱",
+      "desc_fa": "سنگین‌وزن‌های آخر عمر PSP؛ بازی‌هایی که واقعاً سقف سخت‌افزار را جابه‌جا کردند. برای PPSSPP بهترین انتخاب برای تست آپ‌اسکیل ۲x و ۳x.",
+      "zip_name": "PSP_02_Graphics",
+      "color": "#ff5b8a"
+    }
+  },
+  "games": [
+    {
+      "id": "lumines",
+      "folder": "nostalgia",
+      "title": "Lumines: Puzzle Fusion",
+      "title_fa": "لومینس",
+      "year": 2005,
+      "genre": "Puzzle",
+      "genre_fa": "پازل / موزیک",
+      "dev": "Q Entertainment",
+      "publisher": "Ubisoft",
+      "score": 89,
+      "iso_mb": 720,
+      "cso_mb": 500,
+      "block_fa": "بازیِ لانچ PSP و بهترین ویترین برای صفحه‌ی OLED-مانندِ آن. بلوک‌ها با ریتم موسیقی می‌افتند؛ یک پازل که تا امروز هم اعتیادآور است.",
+      "tip_fa": "سبک و بی‌دردسر. روی هر دستگاهی با ۱x هم ۶۰ فریم می‌دهد.",
+      "sources": [
+        {
+          "name": "Vimm's Lair (PSP Vault)",
+          "url": "https://vimm.net/vault/PSP"
+        },
+        {
+          "name": "CDRomance",
+          "url": "https://cdromance.org/?s=Lumines"
+        }
+      ]
+    },
+    {
+      "id": "wipeout-pure",
+      "folder": "nostalgia",
+      "title": "WipEout Pure",
+      "title_fa": "وایپ‌اوت پیور",
+      "year": 2005,
+      "genre": "Racing",
+      "genre_fa": "مسابقه‌ای / آینده‌نگر",
+      "dev": "Studio Liverpool",
+      "publisher": "SCEE",
+      "score": 88,
+      "iso_mb": 640,
+      "cso_mb": 430,
+      "block_fa": "سریع‌ترین حس سرعتِ نسل، با موسیقی الکترونیک که خودش نصف لذت است. طراحی منوها هنوز مدرن به نظر می‌رسد.",
+      "tip_fa": "برای حس واقعی سرعت، FPS را ۶۰ قفل کنید و Motion Blur را روشن بگذارید.",
+      "sources": [
+        {
+          "name": "Vimm's Lair (PSP Vault)",
+          "url": "https://vimm.net/vault/PSP"
+        },
+        {
+          "name": "CDRomance",
+          "url": "https://cdromance.org/?s=Wipeout+Pure"
+        }
+      ]
+    },
+    {
+      "id": "ridge-racer",
+      "folder": "nostalgia",
+      "title": "Ridge Racer",
+      "title_fa": "ریج ریسر",
+      "year": 2005,
+      "genre": "Racing",
+      "genre_fa": "مسابقه‌ای / دریفت",
+      "dev": "Namco",
+      "publisher": "Namco",
+      "score": 79,
+      "iso_mb": 520,
+      "cso_mb": 350,
+      "block_fa": "دریفتِ آرکید در خالص‌ترین شکلش. برای بازی‌های کوتاه ده‌دقیقه‌ای بهترین گزینه است.",
+      "tip_fa": "همیشه ۶۰ فریم. اگر لرزش تصویر دیدید Buffer rendering را روشن کنید.",
+      "sources": [
+        {
+          "name": "Vimm's Lair (PSP Vault)",
+          "url": "https://vimm.net/vault/PSP"
+        },
+        {
+          "name": "CDRomance",
+          "url": "https://cdromance.org/?s=Ridge+Racer"
+        }
+      ]
+    },
+    {
+      "id": "locoroco",
+      "folder": "nostalgia",
+      "title": "LocoRoco",
+      "title_fa": "لوکوروکو",
+      "year": 2006,
+      "genre": "Platform / Puzzle",
+      "genre_fa": "پلتفرمر / پازل",
+      "dev": "SCE Japan Studio",
+      "publisher": "Sony",
+      "score": 83,
+      "iso_mb": 420,
+      "cso_mb": 280,
+      "block_fa": "با دکمه‌های L و R دنیا را کج می‌کنی و توپ‌های آوازخوان را می‌غلتانی. شادترین بازی تاریخ PSP.",
+      "tip_fa": "سبک؛ ۲x رزولوشن بدون افت فریم.",
+      "sources": [
+        {
+          "name": "Vimm's Lair (PSP Vault)",
+          "url": "https://vimm.net/vault/PSP"
+        },
+        {
+          "name": "CDRomance",
+          "url": "https://cdromance.org/?s=LocoRoco"
+        }
+      ]
+    },
+    {
+      "id": "patapon",
+      "folder": "nostalgia",
+      "title": "Patapon",
+      "title_fa": "پاتاپون",
+      "year": 2007,
+      "genre": "Rhythm / Strategy",
+      "genre_fa": "ریتم / استراتژی",
+      "dev": "Pyramid",
+      "publisher": "Sony",
+      "score": 84,
+      "iso_mb": 380,
+      "cso_mb": 250,
+      "block_fa": "چهار طبل، یک قبیله‌ی چشم‌دار، و جنگی که با ریتم فرماندهی می‌شود. ایده‌ای که هیچ‌کس قبلش نبرده بود.",
+      "tip_fa": "تأخیر صدا در اندروید ریتم را خراب می‌کند؛ Audio latency را Low کنید و هدفون بزنید.",
+      "sources": [
+        {
+          "name": "Vimm's Lair (PSP Vault)",
+          "url": "https://vimm.net/vault/PSP"
+        },
+        {
+          "name": "CDRomance",
+          "url": "https://cdromance.org/?s=Patapon"
+        }
+      ]
+    },
+    {
+      "id": "mega-man-powered-up",
+      "folder": "nostalgia",
+      "title": "Mega Man Powered Up",
+      "title_fa": "مگامن پاورآپ",
+      "year": 2006,
+      "genre": "Platform",
+      "genre_fa": "پلتفرمر / اکشن",
+      "dev": "Capcom",
+      "publisher": "Capcom",
+      "score": 82,
+      "iso_mb": 620,
+      "cso_mb": 420,
+      "block_fa": "بازسازی کامل مگامن ۱ با گرافیک چبی و ادیتور مرحله. یکی از کامل‌ترین بسته‌های Capcom روی PSP.",
+      "tip_fa": "بدون مشکل شناخته‌شده؛ ۲x رزولوشن عالی جواب می‌دهد.",
+      "sources": [
+        {
+          "name": "Vimm's Lair (PSP Vault)",
+          "url": "https://vimm.net/vault/PSP"
+        },
+        {
+          "name": "CDRomance",
+          "url": "https://cdromance.org/?s=Mega+Man+Powered+Up"
+        }
+      ]
+    },
+    {
+      "id": "ultimate-ghosts-n-goblins",
+      "folder": "nostalgia",
+      "title": "Ultimate Ghosts 'n Goblins",
+      "title_fa": "آلتی‌میت گوستس اند گابلینز",
+      "year": 2006,
+      "genre": "Action Platformer",
+      "genre_fa": "اکشن / پلتفرمر",
+      "dev": "Tose",
+      "publisher": "Capcom",
+      "score": 76,
+      "iso_mb": 560,
+      "cso_mb": 380,
+      "block_fa": "سخت، بی‌رحم و کاملاً کلاسیک. اگر دنبال چالش واقعی نسل قدیم هستید، همین است.",
+      "tip_fa": "فریم‌ریت را قفل نکنید؛ بازی به ۳۰ فریم طراحی شده و بالاتر از آن سریع می‌شود.",
+      "sources": [
+        {
+          "name": "Vimm's Lair (PSP Vault)",
+          "url": "https://vimm.net/vault/PSP"
+        },
+        {
+          "name": "CDRomance",
+          "url": "https://cdromance.org/?s=Ultimate+Ghosts+n+Goblins"
+        }
+      ]
+    },
+    {
+      "id": "burnout-legends",
+      "folder": "nostalgia",
+      "title": "Burnout Legends",
+      "title_fa": "برن‌اوت لجندز",
+      "year": 2005,
+      "genre": "Racing",
+      "genre_fa": "مسابقه‌ای / تخریب",
+      "dev": "Criterion",
+      "publisher": "EA",
+      "score": 86,
+      "iso_mb": 520,
+      "cso_mb": 340,
+      "block_fa": "بهترین بخش‌های Burnout ۳ و Revenge، جمع‌شده در یک UMD. سیستم Crash Junction هنوز هم بی‌نظیر است.",
+      "tip_fa": "افت فریم در کرش‌های سنگین طبیعی است؛ Multithreaded را روشن کنید.",
+      "sources": [
+        {
+          "name": "Vimm's Lair (PSP Vault)",
+          "url": "https://vimm.net/vault/PSP"
+        },
+        {
+          "name": "CDRomance",
+          "url": "https://cdromance.org/?s=Burnout+Legends"
+        }
+      ]
+    },
+    {
+      "id": "virtua-tennis-world-tour",
+      "folder": "nostalgia",
+      "title": "Virtua Tennis: World Tour",
+      "title_fa": "ویرچوا تنیس",
+      "year": 2005,
+      "genre": "Sports",
+      "genre_fa": "ورزشی",
+      "dev": "Sumo Digital",
+      "publisher": "Sega",
+      "score": 82,
+      "iso_mb": 420,
+      "cso_mb": 280,
+      "block_fa": "بهترین تنیسِ دستیِ تاریخ. گیم‌پلی ساده، عمیق و بی‌نهایت اعتیادآور با هم‌بازی محلی.",
+      "tip_fa": "آدهاک در PPSSPP شبکه‌ای تنظیم می‌خواهد؛ برای بازی دونفره از یک دستگاه استفاده کنید.",
+      "sources": [
+        {
+          "name": "Vimm's Lair (PSP Vault)",
+          "url": "https://vimm.net/vault/PSP"
+        },
+        {
+          "name": "CDRomance",
+          "url": "https://cdromance.org/?s=Virtua+Tennis+World+Tour"
+        }
+      ]
+    },
+    {
+      "id": "sid-meiers-pirates",
+      "folder": "nostalgia",
+      "title": "Sid Meier's Pirates!",
+      "title_fa": "پایرتس",
+      "year": 2005,
+      "genre": "Action / Strategy",
+      "genre_fa": "ماجراجویی / استراتژی",
+      "dev": "Firaxis",
+      "publisher": "2K Games",
+      "score": 82,
+      "iso_mb": 280,
+      "cso_mb": 190,
+      "block_fa": "دزدی دریایی، رقص با فرماندار، و گنج‌یابی. یکی از عجیب‌ترین و سرگرم‌کننده‌ترین پورت‌های PSP.",
+      "tip_fa": "خیلی سبک؛ حتی روی گوشی‌های قدیمی هم روان است.",
+      "sources": [
+        {
+          "name": "Vimm's Lair (PSP Vault)",
+          "url": "https://vimm.net/vault/PSP"
+        },
+        {
+          "name": "CDRomance",
+          "url": "https://cdromance.org/?s=Sid+Meier+Pirates"
+        }
+      ]
+    },
+    {
+      "id": "crush",
+      "folder": "nostalgia",
+      "title": "Crush",
+      "title_fa": "کراش",
+      "year": 2007,
+      "genre": "Puzzle Platformer",
+      "genre_fa": "پازل / پلتفرمر",
+      "dev": "Zoë Mode",
+      "publisher": "Sega",
+      "score": 82,
+      "iso_mb": 260,
+      "cso_mb": 175,
+      "block_fa": "دنیای سه‌بعدی را به دوبعدی «فشرده» می‌کنی تا مسیر باز شود. ایده‌ی درخشان و فراموش‌شده‌ی PSP.",
+      "tip_fa": "سبک و کم‌مصرف؛ برای گوشی ضعیف گزینه‌ی ایده‌آل.",
+      "sources": [
+        {
+          "name": "Vimm's Lair (PSP Vault)",
+          "url": "https://vimm.net/vault/PSP"
+        },
+        {
+          "name": "CDRomance",
+          "url": "https://cdromance.org/?s=Crush+PSP"
+        }
+      ]
+    },
+    {
+      "id": "jeanne-darc",
+      "folder": "nostalgia",
+      "title": "Jeanne d'Arc",
+      "title_fa": "ژان دارک",
+      "year": 2007,
+      "genre": "Tactical RPG",
+      "genre_fa": "نقش‌آفرینی تاکتیکی",
+      "dev": "Level-5",
+      "publisher": "Sony",
+      "score": 87,
+      "iso_mb": 660,
+      "cso_mb": 440,
+      "block_fa": "بهترین تاکتیکال‌آر‌پی‌جیِ PSP؛ روایت ژان دارک با لایه‌ای از جادو و هیولا. سیستم Transformation هنوز هم باحال است.",
+      "tip_fa": "زمان بارگذاری نبردها زیاد است؛ Speed up MS access را روشن بگذارید.",
+      "sources": [
+        {
+          "name": "Vimm's Lair (PSP Vault)",
+          "url": "https://vimm.net/vault/PSP"
+        },
+        {
+          "name": "CDRomance",
+          "url": "https://cdromance.org/?s=Jeanne+d%27Arc"
+        }
+      ]
+    },
+    {
+      "id": "gta-liberty-city-stories",
+      "folder": "nostalgia",
+      "title": "GTA: Liberty City Stories",
+      "title_fa": "جی‌تی‌ای: لیبرتی سیتی استوریز",
+      "year": 2005,
+      "genre": "Action Adventure",
+      "genre_fa": "اکشن / جهان‌باز",
+      "dev": "Rockstar Leeds",
+      "publisher": "Rockstar",
+      "score": 88,
+      "iso_mb": 820,
+      "cso_mb": 540,
+      "block_fa": "یک GTA کامل روی دست. شهر سه‌بعدیِ لیبرتی سیتی و مأموریت‌هایی که هنوز هم سرگرم‌کننده‌اند.",
+      "tip_fa": "در PPSSPP روی اندروید حتماً ۲x رزولوشن و Frame skip صفر؛ لگ در ترافیک طبیعی است.",
+      "sources": [
+        {
+          "name": "Vimm's Lair (PSP Vault)",
+          "url": "https://vimm.net/vault/PSP"
+        },
+        {
+          "name": "CDRomance",
+          "url": "https://cdromance.org/?s=Liberty+City+Stories"
+        }
+      ]
+    },
+    {
+      "id": "castlevania-dracula-x-chronicles",
+      "folder": "nostalgia",
+      "title": "Castlevania: The Dracula X Chronicles",
+      "title_fa": "کسلوانیا: دراکولا ایکس",
+      "year": 2007,
+      "genre": "Action Platformer",
+      "genre_fa": "اکشن / پلتفرمر",
+      "dev": "Konami",
+      "publisher": "Konami",
+      "score": 83,
+      "iso_mb": 780,
+      "cso_mb": 510,
+      "block_fa": "بازسازی Rondo of Blood به‌همراه نسخه‌ی کامل Symphony of the Night به‌عنوان محتوای قفل‌شدنی. ارزش خرید دو بازی در یک UMD.",
+      "tip_fa": "برای باز کردن SotN باید نسخه‌ی اصلی را پیدا کنید — راهنما داخل بازی هست.",
+      "sources": [
+        {
+          "name": "Vimm's Lair (PSP Vault)",
+          "url": "https://vimm.net/vault/PSP"
+        },
+        {
+          "name": "CDRomance",
+          "url": "https://cdromance.org/?s=Dracula+X+Chronicles"
+        }
+      ]
+    },
+    {
+      "id": "ape-escape-on-the-loose",
+      "folder": "nostalgia",
+      "title": "Ape Escape: On the Loose",
+      "title_fa": "ایپ اسکیپ: آن د لوز",
+      "year": 2005,
+      "genre": "Platformer",
+      "genre_fa": "پلتفرمر",
+      "dev": "SCE Cambridge",
+      "publisher": "Sony",
+      "score": 78,
+      "iso_mb": 480,
+      "cso_mb": 330,
+      "block_fa": "ریمیک بازی افسانه‌ای PS1 با دو آنالوگ که بالاخره معنا پیدا می‌کند. تعقیب میمون‌ها با تور؛ ناز و خلاقانه.",
+      "tip_fa": "سبک. دو آنالوگ در PPSSPP را به دکمه‌های راست/چپ صفحه یا دسته وصل کنید.",
+      "sources": [
+        {
+          "name": "Vimm's Lair (PSP Vault)",
+          "url": "https://vimm.net/vault/PSP"
+        },
+        {
+          "name": "CDRomance",
+          "url": "https://cdromance.org/?s=Ape+Escape+On+the+Loose"
+        }
+      ]
+    },
+    {
+      "id": "daxter",
+      "folder": "nostalgia",
+      "title": "Daxter",
+      "title_fa": "داکستر",
+      "year": 2006,
+      "genre": "Platformer",
+      "genre_fa": "پلتفرمر",
+      "dev": "Ready at Dawn",
+      "publisher": "Sony",
+      "score": 85,
+      "iso_mb": 1000,
+      "cso_mb": 660,
+      "block_fa": "بهترین پلتفرمرِ PSP و یکی از زیباترین بازی‌های نسل اول. داکستر با اسپری حشره‌کش به جنگ می‌رود!",
+      "tip_fa": "۶۰ فریم و بدون مشکل. آپ‌اسکیل ۲x تفاوت زیادی می‌دهد.",
+      "sources": [
+        {
+          "name": "Vimm's Lair (PSP Vault)",
+          "url": "https://vimm.net/vault/PSP"
+        },
+        {
+          "name": "CDRomance",
+          "url": "https://cdromance.org/?s=Daxter"
+        }
+      ]
+    },
+    {
+      "id": "god-of-war-chains-of-olympus",
+      "folder": "graphics",
+      "title": "God of War: Chains of Olympus",
+      "title_fa": "گاد آو وار: زنجیرهای المپ",
+      "year": 2008,
+      "genre": "Action Adventure",
+      "genre_fa": "اکشن / ماجراجویی",
+      "dev": "Ready at Dawn",
+      "publisher": "Sony",
+      "score": 91,
+      "iso_mb": 1400,
+      "cso_mb": 980,
+      "block_fa": "با ۹۱ متاکریتیک، بالاترین امتیاز تاریخ PSP. یک God of War کامل و سینمایی روی صفحه‌ی کوچک، بدون هیچ بهانه‌ای.",
+      "tip_fa": "سنگین. Vulkan + ۲x رزولوشن روی موبایل میان‌رده، ۱x روی گوشی ضعیف.",
+      "sources": [
+        {
+          "name": "Vimm's Lair (PSP Vault)",
+          "url": "https://vimm.net/vault/PSP"
+        },
+        {
+          "name": "CDRomance",
+          "url": "https://cdromance.org/?s=Chains+of+Olympus"
+        }
+      ]
+    },
+    {
+      "id": "god-of-war-ghost-of-sparta",
+      "folder": "graphics",
+      "title": "God of War: Ghost of Sparta",
+      "title_fa": "گاد آو وار: شبح اسپارتا",
+      "year": 2010,
+      "genre": "Action Adventure",
+      "genre_fa": "اکشن / ماجراجویی",
+      "dev": "Ready at Dawn",
+      "publisher": "Sony",
+      "score": 86,
+      "iso_mb": 1620,
+      "cso_mb": 1120,
+      "block_fa": "زیباترین بازی PSP و سنگین‌ترین‌شان. انیمیشن صورت و نورپردازی‌اش هنوز هم باورنکردنی است. حجم ~۱.۶ گیگ، پس فقط یکی از این دو God of War را انتخاب کنید.",
+      "tip_fa": "حداقل ۲ گیگ رم آزاد؛ Vulkan، Texture filtering روی Auto، بافر رندر روشن.",
+      "sources": [
+        {
+          "name": "Vimm's Lair (PSP Vault)",
+          "url": "https://vimm.net/vault/PSP"
+        },
+        {
+          "name": "CDRomance",
+          "url": "https://cdromance.org/?s=Ghost+of+Sparta"
+        }
+      ]
+    },
+    {
+      "id": "crisis-core",
+      "folder": "graphics",
+      "title": "Crisis Core: Final Fantasy VII",
+      "title_fa": "کریسیس کور: فاینال فانتزی ۷",
+      "year": 2007,
+      "genre": "Action RPG",
+      "genre_fa": "نقش‌آفرینی اکشن",
+      "dev": "Square Enix",
+      "publisher": "Square Enix",
+      "score": 83,
+      "iso_mb": 1600,
+      "cso_mb": 1100,
+      "block_fa": "پیش‌درآمد FFVII با زک فیر. سینماتیک‌های CG که موبایل را شرمنده می‌کنند و سیستم DMW که هر ضربه را قمار می‌کند.",
+      "tip_fa": "ویدیوهای CG سنگین‌اند؛ اگر قطع شد Multithreaded و «Speed up MS access» را روشن کنید.",
+      "sources": [
+        {
+          "name": "Vimm's Lair (PSP Vault)",
+          "url": "https://vimm.net/vault/PSP"
+        },
+        {
+          "name": "CDRomance",
+          "url": "https://cdromance.org/?s=Crisis+Core"
+        }
+      ]
+    },
+    {
+      "id": "kingdom-hearts-bbs",
+      "folder": "graphics",
+      "title": "Kingdom Hearts: Birth by Sleep",
+      "title_fa": "کینگدام هارتس: تولد با خواب",
+      "year": 2010,
+      "genre": "Action RPG",
+      "genre_fa": "نقش‌آفرینی اکشن",
+      "dev": "Square Enix",
+      "publisher": "Square Enix",
+      "score": 82,
+      "iso_mb": 1500,
+      "cso_mb": 1040,
+      "block_fa": "سه داستان، سه قهرمان، یک پایان. بهترین نسخه‌ی دستیِ کینگدام هارتس با گرافیکی که تا آخر عمر PSP بی‌رقیب ماند.",
+      "tip_fa": "در بعضی نسخه‌ها FMV اول بازی گیر می‌کند؛ با «Simulate UMD delays» خاموش امتحان کنید.",
+      "sources": [
+        {
+          "name": "Vimm's Lair (PSP Vault)",
+          "url": "https://vimm.net/vault/PSP"
+        },
+        {
+          "name": "CDRomance",
+          "url": "https://cdromance.org/?s=Birth+by+Sleep"
+        }
+      ]
+    },
+    {
+      "id": "mgs-peace-walker",
+      "folder": "graphics",
+      "title": "Metal Gear Solid: Peace Walker",
+      "title_fa": "متال گیر سالید: پیس واکر",
+      "year": 2010,
+      "genre": "Action / Stealth",
+      "genre_fa": "اکشن / مخفی‌کاری",
+      "dev": "Kojima Productions",
+      "publisher": "Konami",
+      "score": 89,
+      "iso_mb": 1390,
+      "cso_mb": 970,
+      "block_fa": "کوجیما یک MGS واقعی روی PSP ساخت، با سیستم Mother Base و مأموریت‌های تعاونی. شاید کامل‌ترین بازی PSP از نظر محتوا.",
+      "tip_fa": "برای ۶۰ فریم به پچ نیاز دارد؛ در غیر این صورت ۳۰ فریم پایدار با Multithreaded.",
+      "sources": [
+        {
+          "name": "Vimm's Lair (PSP Vault)",
+          "url": "https://vimm.net/vault/PSP"
+        },
+        {
+          "name": "CDRomance",
+          "url": "https://cdromance.org/?s=Peace+Walker"
+        }
+      ]
+    },
+    {
+      "id": "tekken-6",
+      "folder": "graphics",
+      "title": "Tekken 6",
+      "title_fa": "تکن ۶",
+      "year": 2009,
+      "genre": "Fighting",
+      "genre_fa": "مبارزه‌ای",
+      "dev": "Namco Bandai",
+      "publisher": "Bandai Namco",
+      "score": 82,
+      "iso_mb": 800,
+      "cso_mb": 560,
+      "block_fa": "بهترین مدل‌های کاراکتر روی PSP. اگر می‌خواهید به کسی نشان دهید PSP چه می‌توانست، همین بازی را نشان دهید — سبک است و خیره‌کننده.",
+      "tip_fa": "۶۰ فریم کامل. یکی از کم‌دردسرترین بازی‌های سنگین برای امولاتور.",
+      "sources": [
+        {
+          "name": "Vimm's Lair (PSP Vault)",
+          "url": "https://vimm.net/vault/PSP"
+        },
+        {
+          "name": "CDRomance",
+          "url": "https://cdromance.org/?s=Tekken+6"
+        }
+      ]
+    },
+    {
+      "id": "mhfu",
+      "folder": "graphics",
+      "title": "Monster Hunter Freedom Unite",
+      "title_fa": "مانستر هانتر فریدم یونایت",
+      "year": 2009,
+      "genre": "Action RPG",
+      "genre_fa": "نقش‌آفرینی اکشن",
+      "dev": "Capcom",
+      "publisher": "Capcom",
+      "score": 81,
+      "iso_mb": 770,
+      "cso_mb": 500,
+      "block_fa": "پادشاه کتابخانه‌ی PSP. بیش از ۴۰۰ مأموریت و صدها ساعت شکار؛ با حجم کم، بهترین نسبت محتوا به گیگابایت.",
+      "tip_fa": "بارگذاری منطقه‌ها کند است؛ Speed up MS access را روشن بگذارید.",
+      "sources": [
+        {
+          "name": "Vimm's Lair (PSP Vault)",
+          "url": "https://vimm.net/vault/PSP"
+        },
+        {
+          "name": "CDRomance",
+          "url": "https://cdromance.org/?s=Freedom+Unite"
+        }
+      ]
+    },
+    {
+      "id": "gran-turismo",
+      "folder": "graphics",
+      "title": "Gran Turismo",
+      "title_fa": "گرن توریسمو",
+      "year": 2009,
+      "genre": "Racing",
+      "genre_fa": "مسابقه‌ای / شبیه‌سازی",
+      "dev": "Polyphony Digital",
+      "publisher": "Sony",
+      "score": 74,
+      "iso_mb": 1000,
+      "cso_mb": 700,
+      "block_fa": "۸۰۰ ماشین و ۳۰ پیست در ۶۰ فریم روی دست. حس رانندگی‌اش هنوز استاندارد طلایی مسابقه‌های دستی است.",
+      "tip_fa": "۶۰ فریم قفل؛ اگر Texture flicker دیدید بافر رندر روشن.",
+      "sources": [
+        {
+          "name": "Vimm's Lair (PSP Vault)",
+          "url": "https://vimm.net/vault/PSP"
+        },
+        {
+          "name": "CDRomance",
+          "url": "https://cdromance.org/?s=Gran+Turismo"
+        }
+      ]
+    },
+    {
+      "id": "gta-vice-city-stories",
+      "folder": "graphics",
+      "title": "GTA: Vice City Stories",
+      "title_fa": "جی‌تی‌ای: وایس سیتی استوریز",
+      "year": 2006,
+      "genre": "Action Adventure",
+      "genre_fa": "اکشن / جهان‌باز",
+      "dev": "Rockstar Leeds",
+      "publisher": "Rockstar",
+      "score": 86,
+      "iso_mb": 820,
+      "cso_mb": 540,
+      "block_fa": "وایس سیتی با نئون‌های ۱۹۸۴ و موسیقی که هنوز بهترین ساندترک تاریخ GTA است. جهان‌باز زیبا با حجم معقول.",
+      "tip_fa": "برای تکسچرهای تمیز، Texture filtering روی Auto و ۲x رزولوشن.",
+      "sources": [
+        {
+          "name": "Vimm's Lair (PSP Vault)",
+          "url": "https://vimm.net/vault/PSP"
+        },
+        {
+          "name": "CDRomance",
+          "url": "https://cdromance.org/?s=Vice+City+Stories"
+        }
+      ]
+    },
+    {
+      "id": "resistance-retribution",
+      "folder": "graphics",
+      "title": "Resistance: Retribution",
+      "title_fa": "رزیستنس: رتریبیوشن",
+      "year": 2009,
+      "genre": "Third Person Shooter",
+      "genre_fa": "تیراندازی سوم‌شخص",
+      "dev": "Bend Studio",
+      "publisher": "Sony",
+      "score": 81,
+      "iso_mb": 1000,
+      "cso_mb": 700,
+      "block_fa": "شوتر سوم‌شخصِ کامل با سیستم هدف‌گیری هوشمند و گرافیک بالاتر از حد PSP. یکی از بهترین‌های مخفی‌مانده.",
+      "tip_fa": "کنترل لمسی اذیت می‌کند؛ با دسته بازی کنید.",
+      "sources": [
+        {
+          "name": "Vimm's Lair (PSP Vault)",
+          "url": "https://vimm.net/vault/PSP"
+        },
+        {
+          "name": "CDRomance",
+          "url": "https://cdromance.org/?s=Resistance+Retribution"
+        }
+      ]
+    },
+    {
+      "id": "motorstorm-arctic-edge",
+      "folder": "graphics",
+      "title": "MotorStorm: Arctic Edge",
+      "title_fa": "موتوراستورم: آرکتیک اج",
+      "year": 2009,
+      "genre": "Racing",
+      "genre_fa": "مسابقه‌ای / آفرود",
+      "dev": "Bigbig Studios",
+      "publisher": "Sony",
+      "score": 80,
+      "iso_mb": 700,
+      "cso_mb": 480,
+      "block_fa": "برف، یخ و موتورهای دیوانه. یکی از بهترین گرافیک‌های PSP در سبک مسابقه با فیزیک واقعاً حس‌شدنی.",
+      "tip_fa": "۶۰ فریم؛ در منوی بازی کمی افت دارد که طبیعی است.",
+      "sources": [
+        {
+          "name": "Vimm's Lair (PSP Vault)",
+          "url": "https://vimm.net/vault/PSP"
+        },
+        {
+          "name": "CDRomance",
+          "url": "https://cdromance.org/?s=MotorStorm+Arctic+Edge"
+        }
+      ]
+    },
+    {
+      "id": "naruto-ultimate-ninja-impact",
+      "folder": "graphics",
+      "title": "Naruto Shippuden: Ultimate Ninja Impact",
+      "title_fa": "ناروتو شیپودن: آلتیمیت نینجا ایمپکت",
+      "year": 2011,
+      "genre": "Action / Fighting",
+      "genre_fa": "اکشن / مبارزه‌ای",
+      "dev": "CyberConnect2",
+      "publisher": "Bandai Namco",
+      "score": 60,
+      "iso_mb": 800,
+      "cso_mb": 560,
+      "block_fa": "نبردهای ده‌ها نفره با افکت‌های چاکرا که PSP را به لبه می‌برد. برای طرفداران انیمه، بهترین انتخاب.",
+      "tip_fa": "هنگام انفجار افکت‌ها افت فریم دارد؛ ۱x رزولوشن توصیه می‌شود.",
+      "sources": [
+        {
+          "name": "Vimm's Lair (PSP Vault)",
+          "url": "https://vimm.net/vault/PSP"
+        },
+        {
+          "name": "CDRomance",
+          "url": "https://cdromance.org/?s=Ultimate+Ninja+Impact"
+        }
+      ]
+    }
+  ],
+  "alternates": {
+    "nostalgia": [
+      {
+        "title": "Ape Escape: On the Loose",
+        "title_fa": "ایپ اسکیپ",
+        "year": 2005,
+        "iso_mb": 480,
+        "cso_mb": 330,
+        "why_fa": "ریمیک بازی PS1 با آنالوگ؛ ناز و بامزه."
+      },
+      {
+        "title": "Syphon Filter: Dark Mirror",
+        "title_fa": "سایفون فیلتر: دارک میرور",
+        "year": 2006,
+        "iso_mb": 760,
+        "cso_mb": 510,
+        "why_fa": "بهترین شوتر سوم‌شخصِ نسل اول PSP."
+      },
+      {
+        "title": "Exit",
+        "title_fa": "اگزیت",
+        "year": 2005,
+        "iso_mb": 180,
+        "cso_mb": 120,
+        "why_fa": "پازل-اکشن مینیمال با استایل گرافیکی خاص؛ خیلی سبک."
+      },
+      {
+        "title": "Hot Shots Golf: Open Tee",
+        "title_fa": "هات شاتس گلف",
+        "year": 2005,
+        "iso_mb": 260,
+        "cso_mb": 175,
+        "why_fa": "گلف آرکید؛ آرامش‌بخش‌ترین بازی PSP."
+      },
+      {
+        "title": "Power Stone Collection",
+        "title_fa": "پاور استون کالکشن",
+        "year": 2006,
+        "iso_mb": 420,
+        "cso_mb": 280,
+        "why_fa": "بازی مبارزه‌ای چهارنفره‌ی دیوانه از دریم‌کست."
+      },
+      {
+        "title": "Twisted Metal: Head-On",
+        "title_fa": "تویستد متال: هد-آن",
+        "year": 2005,
+        "iso_mb": 560,
+        "cso_mb": 380,
+        "why_fa": "ماشین‌های مسلح و خرابیِ تمام‌عیار."
+      },
+      {
+        "title": "Ridge Racer 2",
+        "title_fa": "ریج ریسر ۲",
+        "year": 2006,
+        "iso_mb": 600,
+        "cso_mb": 400,
+        "why_fa": "نسخه‌ی کامل‌تر ریج ریسر با پیست‌های بیشتر."
+      }
+    ],
+    "graphics": [
+      {
+        "title": "Dragon Ball Z: Tenkaichi Tag Team",
+        "title_fa": "دراگون بال زد: تنکایچی تگ تیم",
+        "year": 2010,
+        "iso_mb": 900,
+        "cso_mb": 620,
+        "why_fa": "نبردهای سه‌بعدی دونفره؛ محبوب‌ترین انیمه‌بازی PSP."
+      },
+      {
+        "title": "Dante's Inferno",
+        "title_fa": "دانتهز اینفرنو",
+        "year": 2010,
+        "iso_mb": 1500,
+        "cso_mb": 1050,
+        "why_fa": "کپیِ خوبِ God of War با تم جهنم؛ گرافیک بالا."
+      },
+      {
+        "title": "Silent Hill: Origins",
+        "title_fa": "سایلنت هیل: اوریجینز",
+        "year": 2007,
+        "iso_mb": 850,
+        "cso_mb": 580,
+        "why_fa": "ترسناک‌ترین بازی PSP با مه و نورپردازی درخشان."
+      },
+      {
+        "title": "Metal Gear Solid: Portable Ops",
+        "title_fa": "متال گیر: پورتابل آپس",
+        "year": 2006,
+        "iso_mb": 1100,
+        "cso_mb": 760,
+        "why_fa": "نسخه‌ی قبل از Peace Walker با داستان کانن."
+      },
+      {
+        "title": "Valkyria Chronicles 2",
+        "title_fa": "والکیریا کرونیکلز ۲",
+        "year": 2010,
+        "iso_mb": 1300,
+        "cso_mb": 900,
+        "why_fa": "استراتژی نوبتی با گرافیک نقاشی‌آب‌رنگ؛ خاص و زیبا."
+      },
+      {
+        "title": "Ys Seven",
+        "title_fa": "ایس سون",
+        "year": 2009,
+        "iso_mb": 700,
+        "cso_mb": 480,
+        "why_fa": "اکشن‌آر‌پی‌جی سریع با سه نفر هم‌زمان."
+      }
+    ]
+  }
+}

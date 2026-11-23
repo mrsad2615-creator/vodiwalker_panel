@@ -1,3 +1,3 @@
-11-23 02:19:28.282  7819  7819 W HGalleryViewer: favourite id=1000000047 direct=false
-11-23 02:19:28.290  7819  7819 W HGalleryActions: favourite request refused: IllegalArgumentException All requested items must be Media items
-11-23 02:19:28.290  7819  7819 W HGalleryViewer: favourite id=1000000047 sender=false
+11-23 02:36:31.336  7603  7603 W HGalleryViewer: favourite id=1000000047 direct=false
+11-23 02:36:31.344  7603  7603 W HGalleryViewer: favourite id=1000000047 sender=true
+11-23 02:36:31.577  7603  7603 W HGalleryViewer: favourite consent result=-1 id=1000000047

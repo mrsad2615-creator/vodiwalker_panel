@@ -1,0 +1,2 @@
+11-23 01:29:58.024  7564  7564 W HGalleryViewer: favourite id=1000000047 direct=false
+11-23 01:29:58.025  7564  7564 W HGalleryViewer: favourite id=1000000047 sender=false

@@ -58,6 +58,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import dev.hgallery.app.ui.motion.hgScale
 import dev.hgallery.app.ui.motion.rememberPressScale
 import dev.hgallery.app.ui.theme.hgColors
+import dev.hgallery.app.ui.theme.hgPalette
 import dev.hgallery.app.ui.theme.hgShapes
 import dev.hgallery.app.ui.theme.HgMetrics
 import dev.hgallery.core.MediaItem

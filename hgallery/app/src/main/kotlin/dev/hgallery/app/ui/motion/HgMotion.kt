@@ -61,25 +61,28 @@ private const val DEFAULT_EFFECT_STIFFNESS = 1600f
 /** Fraction of full animation scale below which motion is treated as off. */
 private const val REDUCED_MOTION_THRESHOLD = 0.05f
 
+/** Settles faster than the display can show a frame. */
+private const val STIFFEST_SPRING = 100_000f
+
 object HgMotion {
 
     /** Press feedback and other quick, small movements. */
-    fun fastSpatial(reduceMotion: Boolean = false): AnimationSpec<Float> =
+    fun <T> fastSpatial(reduceMotion: Boolean = false): AnimationSpec<T> =
         specOrSnap(reduceMotion, FAST_SPATIAL_DAMPING, FAST_SPATIAL_STIFFNESS)
 
     /** Moving a medium surface, such as the selected-tab indicator. */
-    fun defaultSpatial(reduceMotion: Boolean = false): AnimationSpec<Float> =
+    fun <T> defaultSpatial(reduceMotion: Boolean = false): AnimationSpec<T> =
         specOrSnap(reduceMotion, DEFAULT_SPATIAL_DAMPING, DEFAULT_SPATIAL_STIFFNESS)
 
     /** A whole screen arriving. */
-    fun slowSpatial(reduceMotion: Boolean = false): AnimationSpec<Float> =
+    fun <T> slowSpatial(reduceMotion: Boolean = false): AnimationSpec<T> =
         specOrSnap(reduceMotion, SLOW_SPATIAL_DAMPING, SLOW_SPATIAL_STIFFNESS)
 
     /** Colour and opacity: no overshoot, by construction. */
-    fun fastEffects(reduceMotion: Boolean = false): AnimationSpec<Float> =
+    fun <T> fastEffects(reduceMotion: Boolean = false): AnimationSpec<T> =
         specOrSnap(reduceMotion, FAST_EFFECT_DAMPING, FAST_EFFECT_STIFFNESS)
 
-    fun defaultEffects(reduceMotion: Boolean = false): AnimationSpec<Float> =
+    fun <T> defaultEffects(reduceMotion: Boolean = false): AnimationSpec<T> =
         specOrSnap(reduceMotion, DEFAULT_EFFECT_DAMPING, DEFAULT_EFFECT_STIFFNESS)
 
     /**
@@ -93,10 +96,14 @@ object HgMotion {
     /** The matching curve for something that is leaving. */
     val emphasizedAccelerate: Easing = CubicBezierEasing(0.3f, 0f, 0.8f, 0.15f)
 
-    private fun specOrSnap(reduceMotion: Boolean, damping: Float, stiffness: Float): SpringSpec<Float> =
-        if (reduceMotion) infiniteStiff() else spring(dampingRatio = damping, stiffness = stiffness)
-
-    private fun infiniteStiff(): SpringSpec<Float> = spring(dampingRatio = 1f, stiffness = 100_000f)
+    private fun <T> specOrSnap(reduceMotion: Boolean, damping: Float, stiffness: Float): SpringSpec<T> =
+        if (reduceMotion) {
+            // A spring this stiff settles in well under a frame, which is how the
+            // platform spells "no animation" for a value that must still exist.
+            spring(dampingRatio = 1f, stiffness = STIFFEST_SPRING)
+        } else {
+            spring(dampingRatio = damping, stiffness = stiffness)
+        }
 }
 
 /**

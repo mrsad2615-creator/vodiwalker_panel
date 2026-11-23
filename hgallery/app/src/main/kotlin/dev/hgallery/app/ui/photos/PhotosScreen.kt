@@ -393,7 +393,16 @@ private fun SectionHeader(label: String, isMonth: Boolean) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = if (isMonth) 16.dp else 14.dp, bottom = 8.dp),
+            // The grid is edge to edge now, so a section header that does not inset
+            // itself sits flush against the screen edge while the page title keeps its
+            // 20 dp gutter. "Today" touched the left edge in the screenshot that
+            // followed that change.
+            .padding(
+                start = HgMetrics.Gutter,
+                end = HgMetrics.Gutter,
+                top = if (isMonth) 16.dp else 14.dp,
+                bottom = 8.dp,
+            ),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(

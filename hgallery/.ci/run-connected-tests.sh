@@ -179,6 +179,29 @@ node_centre() {
     | head -1
 }
 
+# Fail loudly if the app is no longer in front.
+#
+# This exists because it was not here. One wrong tap in the delete section pressed
+# BACK with no dialog open, which exited the app; the next tap landed on the launcher's
+# Calendar icon. From that point every screenshot showed Google Calendar, and the run
+# reported success with a folder of pictures of the wrong app -- twice, which is why
+# the video and favourite sections had no evidence for several builds.
+#
+# The check costs one dumpsys and turns silent garbage into a named failure.
+assert_app_foreground() {
+  WHERE="$1"
+  FOCUS_NOW=$(adb shell dumpsys window 2>/dev/null | grep -E "mCurrentFocus" | head -1)
+  case "$FOCUS_NOW" in
+    *"$PKG"*) return 0 ;;
+  esac
+  echo "::error title=e2e::the app left the foreground before $WHERE"
+  echo "::error title=e2e::focus is: ${FOCUS_NOW:-unknown}"
+  adb shell am force-stop "$PKG"
+  adb shell am start -W -n "$PKG/$ACTIVITY" >/dev/null 2>&1
+  sleep 5
+  return 1
+}
+
 # Scroll a horizontal row until a node appears, then leave it where it can be tapped.
 #
 # The chip row is a real horizontal scroll: "Large" sits off the right edge until it
@@ -273,17 +296,22 @@ shot 07-viewer-chrome-hidden.png
 # form that can be driven and therefore checked.
 adb shell input keyevent KEYCODE_BACK
 sleep 3
-# The view switch is the first of three toolbar icons, measured from the
-# screenshot itself: its centre sits at 0.58 of the width, 0.075 of the height.
-adb shell input tap $((W * 58 / 100)) $((H * 75 / 1000))
-sleep 4
+# By label. The old fraction, 0.58 of the width, is the select-all box in the current
+# toolbar; it opened selection mode and the month view was never photographed.
+if tap_tag_or_text "view-switch" 'content-desc="Switch to month view"'; then
+  sleep 3
+else
+  echo "::error title=e2e::the month-view control was not addressable"
+fi
 shot 08-month-view.png
 
 # Multi-selection, photographed the way a user enters it: a long press on the
 # first tile. `input swipe` with equal start and end is a long press on this
 # Android version; the duration is what makes it a press rather than a tap.
-adb shell input tap $((W * 58 / 100)) $((H * 75 / 1000))
-sleep 3
+if tap_tag_or_text "view-switch-back" 'content-desc="Switch to day view"'; then
+  sleep 3
+fi
+# Long press the first tile by its label rather than by coordinate.
 adb shell input swipe $((W / 4)) $((H / 2 - 40)) $((W / 4)) $((H / 2 - 40)) 900
 sleep 4
 shot 09-selection.png
@@ -294,16 +322,19 @@ shot 09-selection.png
 # Open the confirmation dialog and photograph it, then dismiss with Back: the
 # shot proves the dialog exists and that its wording matches the device's real
 # delete path.
-# The action row is three equal cells: Share, Select all, Delete. These two
-# anchors are not guesses: the danger-coloured Delete glyph was located in
-# evidence/09-selection.png with a pixel scan and measures x=0.796, y=0.866.
-# Two earlier attempts guessed and photographed "select all" and then the
-# Discover tab instead of the dialog.
-adb shell input tap $((W * 796 / 1000)) $((H * 866 / 1000))
+# By label, not by fraction. The fractions below were measured from an older layout
+# and stopped being true when the action bar's height changed; they then selected
+# "select all" and finally pressed BACK with no dialog open, which exited the app.
+if ! tap_tag_or_text "delete-action" 'content-desc="Delete"'; then
+  echo "::error title=e2e::the Delete action was not addressable in selection mode"
+fi
 sleep 3
 shot 10-delete-confirmation.png
 adb shell input keyevent KEYCODE_BACK
 sleep 3
+# The delete section ends with a dialog that may or may not have opened. If it did not,
+# that BACK closed the app instead of the dialog.
+assert_app_foreground "the view-switch comparison" || true
 
 # Verify that the switch really changed the page. Both frames are pulled fresh:
 # a stale copy from an earlier run must never decide this verdict.
@@ -322,6 +353,7 @@ cat "$OUT_DIR/diag/view-change.txt" | head -2
 # The video player. Reached through Albums -> Videos -> first tile, which is the
 # path a user takes and does not depend on a MediaStore id.
 echo "== photographing the video player =="
+assert_app_foreground "the video section"
 # Every tap from here on is by tag, never by coordinate.
 adb shell input tap $((W / 8 * 3)) $((H - 55))
 sleep 3
@@ -376,6 +408,7 @@ fi
 # is decor, so the only honest evidence that it works is to see one on a tile, and the
 # only user path to it is the viewer's favourite control.
 echo "== photographing favourite overlay =="
+assert_app_foreground "the favourites section" || true
 # The app must be in front, and on a known screen. force-stop rather than am start:
 # `am start` on a running task resumes whatever screen it was left on, and the video
 # section leaves an album open. Every tap after that then addressed an album listing
@@ -442,6 +475,7 @@ adb shell am start -W -n "$PKG/$ACTIVITY" > /dev/null 2>&1
 sleep 4
 
 echo "== photographing search =="
+assert_app_foreground "the search section" || true
 # The app was just force-stopped and relaunched, so it is on the Photos tab with no
 # viewer and no album open. Both tabs open search, but the Photos corner holds
 # nothing else, so the tap is unambiguous. Do not tap anywhere before this: the

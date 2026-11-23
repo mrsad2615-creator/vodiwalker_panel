@@ -31,7 +31,6 @@ import {
   requestNotificationPermission,
   syncTaskRemindersNative,
 } from '@/lib/notifications';
-import { seedStarterWorkspaceIfEmpty } from '@/lib/seed';
 import {
   pauseClock,
   resolvePlan,
@@ -174,13 +173,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
-  // Bootstrap DB, starter workspace (only on very first run), and Capacitor native shell
+  // Bootstrap the local database and native shell without inventing user history.
   useEffect(() => {
     let active = true;
     (async () => {
       try {
         await initNativeShell();
-        await seedStarterWorkspaceIfEmpty();
         const s = await ensureSettings();
         const config = chronoConfigFromSettings(s);
 

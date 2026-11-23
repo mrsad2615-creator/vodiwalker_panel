@@ -218,7 +218,7 @@ describe('brain switch', () => {
     expect(screen.queryByTestId('brain-switch')).toBeNull();
   });
 
-  it('offers both brains once a key is saved', async () => {
+  it('remains local even when legacy cloud settings exist', async () => {
     await db.settings.put({
       ...(await db.settings.get('default'))!,
       aiEnabled: true,
@@ -228,13 +228,10 @@ describe('brain switch', () => {
     });
     await boot();
     fireEvent.click(screen.getByRole('button', { name: 'مرکز فرمان' }));
-
-    const brainSwitch = await screen.findByTestId('brain-switch');
-    expect(brainSwitch.textContent).toContain('آفلاین');
-    expect(brainSwitch.textContent).toContain('ابر');
-    // Switching to the cloud shows the chat surface, not the command list.
-    fireEvent.click(within(brainSwitch).getByRole('button', { name: 'ابر' }));
-    expect(await screen.findByTestId('cloud-chat')).toBeInTheDocument();
+    await screen.findByTestId('manager-brief');
+    expect(screen.queryByTestId('brain-switch')).toBeNull();
+    expect(screen.queryByTestId('cloud-chat')).toBeNull();
+    expect((await db.settings.get('default'))?.aiKey).toBe('sk-test');
   });
 });
 

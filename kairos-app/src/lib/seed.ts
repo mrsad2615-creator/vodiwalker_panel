@@ -11,23 +11,6 @@ function seededUnit(seed: number): number {
   return x - Math.floor(x);
 }
 
-export async function seedStarterWorkspaceIfEmpty(): Promise<boolean> {
-  const [taskCount, habitCount, sessionCount, settings] = await Promise.all([
-    db.tasks.count(),
-    db.habits.count(),
-    db.focusSessions.count(),
-    db.settings.get('default'),
-  ]);
-
-  // If user already initialized/cleared settings or has data, never overwrite
-  if (settings || taskCount > 0 || habitCount > 0 || sessionCount > 0) {
-    return false;
-  }
-
-  await populateStarterWorkspace();
-  return true;
-}
-
 export async function populateStarterWorkspace(todayKey: string = getTodayKey()): Promise<void> {
   const nowIso = new Date().toISOString();
   const startHistoryDate = addDays(todayKey, -95);
@@ -548,19 +531,19 @@ export async function populateStarterWorkspace(todayKey: string = getTodayKey())
     },
   ];
 
-  const existingSettings = await db.settings.get('default');
-
   await db.transaction(
     'rw',
-    [db.tasks, db.habits, db.habitLogs, db.focusSessions, db.goals, db.settings],
+    [db.tasks, db.habits, db.habitLogs, db.focusSessions, db.goals, db.settings,
+      db.journal, db.projects, db.projectStages, db.activeRun],
     async () => {
-      await Promise.all([
-        db.tasks.clear(),
-        db.habits.clear(),
-        db.habitLogs.clear(),
-        db.focusSessions.clear(),
-        db.goals.clear(),
+      // Check inside the same transaction as the inserts: never clear or replace
+      // a real row, even if another operation started while this button was open.
+      const counts = await Promise.all([
+        db.tasks.count(), db.habits.count(), db.habitLogs.count(), db.focusSessions.count(),
+        db.goals.count(), db.journal.count(), db.projects.count(), db.projectStages.count(), db.activeRun.count(),
       ]);
+      if (counts.some((count) => count > 0)) throw new Error('workspace-not-empty');
+      const existingSettings = await db.settings.get('default');
       await db.tasks.bulkPut(tasks);
       await db.habits.bulkPut(habits);
       await db.habitLogs.bulkPut(habitLogs);

@@ -3,7 +3,6 @@ import { motion } from 'framer-motion';
 import { ArrowUpLeft, Check, ChevronLeft, Plus, Timer } from '@/components/ui/icons';
 import type { Goal, Habit, Task } from '@/types/domain';
 import {
-  clearAllUserData,
   clearHabitLog,
   setTaskStatus,
   updateGoal,
@@ -452,35 +451,12 @@ export function DashboardPage() {
         </button>
       )}
 
-      {settings.hasSampleData && !settings.sampleBannerDismissed && (
+      {settings.hasSampleData && (
         <div className="flex items-center justify-between gap-3 border-s-2 border-[var(--accent-fg)]/40 px-3 py-2">
           <p className="text-[10.5px] leading-4 text-[var(--text-3)]">
-            داده‌های نمونه بارگذاری شده‌اند؛ همهٔ نمودارها واقعی‌اند.
+            داده‌های نمونه و تاریخچهٔ ساختگی در تحلیل‌ها وجود دارند؛ این‌ها سابقهٔ واقعی شما نیستند.
           </p>
-          <div className="flex shrink-0 items-center gap-1">
-            <button
-              type="button"
-              onClick={async () => {
-                await clearAllUserData();
-                pushToast({
-                  title: 'فضای کاری پاک‌سازی شد',
-                  description: 'می‌توانید داده‌های واقعی خودتان را ثبت کنید.',
-                  tone: 'success',
-                });
-              }}
-              className="rounded-lg border border-[var(--border-strong)] px-2 py-1 text-[10px] font-medium text-[var(--text)]"
-            >
-              شروع خالی
-            </button>
-            <button
-              type="button"
-              onClick={() => updateSettings({ sampleBannerDismissed: true })}
-              aria-label="بستن پیشنهاد"
-              className="px-1.5 py-1 text-[10px] text-[var(--text-3)]"
-            >
-              بستن
-            </button>
-          </div>
+
         </div>
       )}
 

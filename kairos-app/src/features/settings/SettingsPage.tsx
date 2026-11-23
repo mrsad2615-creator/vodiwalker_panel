@@ -7,7 +7,6 @@ import {
   RefreshCw,
   ShieldCheck,
   Smartphone,
-  Sparkles,
   TableIcon,
   Trash2,
   Upload,
@@ -42,8 +41,7 @@ import { useFocusSessions, useHabitLogs, useHabits, useTasks } from '@/lib/queri
 import { exportBackupFile, readBackupFile, saveTextFile } from '@/lib/backup';
 import { tasksToCsv, habitLogsToCsv, focusSessionsToCsv } from '@/lib/csv';
 import { APP_VERSION, BUILD_NUMBER, BUILD_SHA } from '@/lib/buildInfo';
-import { AI_MODEL_HINT, diagnoseAi, testAiConnection, type AiDiagnosis } from '@/lib/ai/client';
-import { AI_PROVIDERS, providerFor } from '@/lib/ai/providers';
+import type { KairosBackupPayload } from '@/types/domain';
 
 export function SettingsPage() {
   const { settings, pushToast } = useApp();
@@ -57,16 +55,8 @@ export function SettingsPage() {
   const [dailyTaskGoal, setDailyTaskGoal] = useState(settings.dailyTaskGoal);
   const [permState, setPermState] = useState<NotificationPermissionState>('prompt');
   const [confirmWipe, setConfirmWipe] = useState(false);
-  // The cloud manager. Every field starts from what is stored, and nothing is
-  // written until «ذخیره» is pressed — the key is a secret, not a live control.
-  const [aiEnabled, setAiEnabled] = useState(settings.aiEnabled);
-  const [aiBaseUrl, setAiBaseUrl] = useState(settings.aiBaseUrl);
-  const [aiModel, setAiModel] = useState(settings.aiModel);
-  const [aiKey, setAiKey] = useState(settings.aiKey);
-  const [aiAutoApply, setAiAutoApply] = useState(settings.aiAutoApply);
-  const [aiTesting, setAiTesting] = useState(false);
-  const [aiDiagnosis, setAiDiagnosis] = useState<AiDiagnosis | null>(null);
-  const [copiedDiagnosis, setCopiedDiagnosis] = useState(false);
+  const [pendingBackup, setPendingBackup] = useState<KairosBackupPayload | null>(null);
+  const [importing, setImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -84,84 +74,6 @@ export function SettingsPage() {
   useEffect(() => {
     void getNotificationPermission().then(setPermState);
   }, []);
-
-  useEffect(() => {
-    setAiEnabled(settings.aiEnabled);
-    setAiBaseUrl(settings.aiBaseUrl);
-    setAiModel(settings.aiModel);
-    setAiKey(settings.aiKey);
-    setAiAutoApply(settings.aiAutoApply);
-  }, [settings.aiEnabled, settings.aiBaseUrl, settings.aiModel, settings.aiKey, settings.aiAutoApply]);
-
-  const handleSaveAi = async () => {
-    const enabled = aiEnabled && aiKey.trim().length > 0 && aiModel.trim().length > 0;
-    await updateSettings({
-      aiEnabled: enabled,
-      aiBaseUrl: aiBaseUrl.trim() || 'https://openrouter.ai/api/v1',
-      aiModel: aiModel.trim(),
-      aiKey: aiKey.trim(),
-      aiAutoApply: enabled ? aiAutoApply : false,
-      aiConsentAt: enabled ? new Date().toISOString() : null,
-    });
-    if (aiEnabled && !enabled) {
-      pushToast({
-        title: 'مدیر ابری روشن نشد',
-        description: 'کلید API و نام مدل لازم است؛ تا آن موقع مدیر آفلاین جواب می‌دهد.',
-        tone: 'warning',
-      });
-      return;
-    }
-    pushToast({
-      title: enabled ? 'مدیر ابری فعال شد' : 'مدیر ابری خاموش شد',
-      description: enabled
-        ? 'فقط سؤال و خلاصهٔ داده‌هایت به همین آدرس فرستاده می‌شود.'
-        : 'همه‌چیز مثل قبل آفلاین کار می‌کند.',
-      tone: 'success',
-    });
-  };
-
-  const handleTestAi = async () => {
-    setAiTesting(true);
-    setAiDiagnosis(null);
-    setCopiedDiagnosis(false);
-    const candidate = {
-      ...settings,
-      aiEnabled: true,
-      aiBaseUrl: aiBaseUrl.trim(),
-      aiModel: aiModel.trim(),
-      aiKey: aiKey.trim(),
-    };
-    const [result, diagnosis] = await Promise.all([
-      testAiConnection({ settings: candidate }),
-      diagnoseAi(candidate),
-    ]);
-    setAiTesting(false);
-    setAiDiagnosis(diagnosis);
-    pushToast({
-      title: result.ok ? 'اتصال برقرار است' : 'اتصال برقرار نشد',
-      description: diagnosis.hint,
-      tone: result.ok ? 'success' : 'warning',
-    });
-  };
-
-  const copyDiagnosis = async () => {
-    if (!aiDiagnosis) return;
-    const text = [
-      `platform=${aiDiagnosis.via}`,
-      `url=${aiDiagnosis.url}`,
-      `model=${aiDiagnosis.model}`,
-      `keyLooksValid=${aiDiagnosis.keyLooksValid}`,
-      `reached=${aiDiagnosis.reached}`,
-      `status=${aiDiagnosis.status}`,
-      `detail=${aiDiagnosis.detail}`,
-    ].join('\n');
-    try {
-      await navigator.clipboard?.writeText(text);
-      setCopiedDiagnosis(true);
-    } catch {
-      pushToast({ title: 'کپی نشد', description: text.slice(0, 120), tone: 'warning' });
-    }
-  };
 
   const dbCounts = useLiveQuery(async () => {
     const [tasks, habits, logs, sessions, goals] = await Promise.all([
@@ -270,20 +182,33 @@ export function SettingsPage() {
   };
 
   const handleImportFile = async (file: File) => {
+    setPendingBackup(null);
     try {
-      const parsed = await readBackupFile(file);
-      await importBackup(parsed);
+      setPendingBackup(await readBackupFile(file));
+    } catch {
       pushToast({
-        title: 'بازیابی پشتیبان با موفقیت انجام شد',
-        description: 'تمام وظایف، عادت‌ها و گزارش‌های شما بازگردانی شدند.',
+        title: 'فایل قابل بازیابی نیست',
+        description: 'ساختار یا نسخهٔ پشتیبان معتبر نیست؛ هیچ داده‌ای تغییر نکرد.',
+        tone: 'warning',
+      });
+    }
+  };
+
+  const confirmImport = async () => {
+    if (!pendingBackup || importing) return;
+    setImporting(true);
+    try {
+      const result = await importBackup(pendingBackup);
+      setPendingBackup(null);
+      pushToast({
+        title: 'بازیابی ادغامی انجام شد',
+        description: `${result.added} رکورد اضافه شد؛ ${result.skipped} رکورد موجود دست‌نخورده ماند. تنظیمات تغییر نکرد.`,
         tone: 'success',
       });
     } catch {
-      pushToast({
-        title: 'خطا در خواندن فایل پشتیبان',
-        description: 'لطفاً یک فایل JSON معتبر ساخته‌شده توسط کایروس انتخاب کنید.',
-        tone: 'warning',
-      });
+      pushToast({ title: 'بازیابی انجام نشد', description: 'تراکنش برگشت داده شد؛ داده‌های قبلی حفظ شدند.', tone: 'warning' });
+    } finally {
+      setImporting(false);
     }
   };
 
@@ -458,192 +383,12 @@ export function SettingsPage() {
         </div>
       </LuxuryCard>
 
-      {/* THE CLOUD MANAGER — optional, off by default */}
-      <LuxuryCard className="space-y-3.5 p-4" data-testid="ai-settings">
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex items-center gap-2 text-xs font-bold text-[var(--text)]">
-            <Sparkles className="h-4 w-4 text-[var(--accent-fg)]" />
-            <span>مدیر ابری (اختیاری)</span>
-          </div>
-          <button
-            type="button"
-            aria-pressed={aiEnabled}
-            onClick={() => setAiEnabled((value) => !value)}
-            className={`rounded-full px-3 py-1 text-[10.5px] font-semibold transition-colors ${
-              aiEnabled
-                ? 'bg-[var(--accent)] text-[var(--accent-on)]'
-                : 'border border-[var(--border)] text-[var(--text-2)]'
-            }`}
-          >
-            {aiEnabled ? 'روشن' : 'خاموش'}
-          </button>
-        </div>
-
-        <p className="text-[10.5px] leading-5 text-[var(--text-3)]">
-          اگر «تشخیص اتصال» می‌گوید درخواست به سرور نرسید، یعنی شبکه اجازهٔ رفتن به آن سرویس را
-          نمی‌دهد (فیلتر، DNS یا اینترنت). در آن حالت یا سرویس دیگری را امتحان کن، یا Ollama را روی
-          کامپیوتر خودت بالا بیاور. خاموش که باشد، هیچ‌چیز از گوشی بیرون نمی‌رود و همان مدیر آفلاین جواب می‌دهد. روشن که باشد،
-          فقط جملهٔ تو و خلاصهٔ همان چیزی که لازم است (کارها، عادت‌ها، تمرکز) به آدرسی که خودت
-          می‌نویسی فرستاده می‌شود. کلید API فقط روی همین دستگاه ذخیره می‌شود و{' '}
-          <span className="text-[var(--text-2)]">در فایل پشتیبان نوشته نمی‌شود</span>.
+      <LuxuryCard className="space-y-2 p-4">
+        <p className="text-xs font-bold text-[var(--text)]">دستیار محلی</p>
+        <p className="text-[11px] leading-6 text-[var(--text-2)]">
+          دستیار از فرمان‌های مشخص و داده‌های روی دستگاه استفاده می‌کند؛ مدل زبانی و سرویس بیرونی ندارد.
+          گفت‌وگوی آزاد و پاسخ به هر پرسش پشتیبانی نمی‌شود. تنظیمات اتصال قدیمی بدون تغییر در دستگاه باقی می‌مانند، اما دیگر استفاده نمی‌شوند.
         </p>
-
-        {/* Pick a provider: fills the address and a known-good model, then the
-            only thing left is the key. */}
-        <div className="space-y-1.5">
-          <span className="block text-[10.5px] text-[var(--text-2)]">سرویس</span>
-          <div className="flex flex-wrap gap-1.5">
-            {AI_PROVIDERS.map((provider) => (
-              <button
-                key={provider.id}
-                type="button"
-                onClick={() => {
-                  setAiBaseUrl(provider.baseUrl);
-                  if (provider.model) setAiModel(provider.model);
-                }}
-                aria-pressed={providerFor(aiBaseUrl)?.id === provider.id}
-                className={`rounded-full px-2.5 py-1 text-[10px] transition-colors ${
-                  providerFor(aiBaseUrl)?.id === provider.id
-                    ? 'bg-[var(--accent)] text-[var(--accent-on)]'
-                    : 'border border-[var(--border)] text-[var(--text-2)]'
-                }`}
-              >
-                {provider.name}
-              </button>
-            ))}
-          </div>
-          {providerFor(aiBaseUrl) && (
-            <p className="text-[9.5px] leading-4 text-[var(--text-3)]">
-              {providerFor(aiBaseUrl)!.note}{' '}
-              {providerFor(aiBaseUrl)!.keyUrl && (
-                <a
-                  href={providerFor(aiBaseUrl)!.keyUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="font-medium text-[var(--accent-fg)] underline decoration-dotted"
-                >
-                  دریافت کلید ←
-                </a>
-              )}
-            </p>
-          )}
-        </div>
-
-        <div>
-          <label htmlFor="ai-base" className="mb-1.5 block text-[11px] text-[var(--text-2)]">
-            آدرس سرویس (سازگار با OpenAI)
-          </label>
-          <input
-            id="ai-base"
-            dir="ltr"
-            value={aiBaseUrl}
-            onChange={(event) => setAiBaseUrl(event.target.value)}
-            placeholder="https://openrouter.ai/api/v1"
-            className="luxury-input text-xs"
-          />
-        </div>
-
-        <div>
-          <label htmlFor="ai-model" className="mb-1.5 block text-[11px] text-[var(--text-2)]">
-            نام مدل
-          </label>
-          <input
-            id="ai-model"
-            dir="ltr"
-            value={aiModel}
-            onChange={(event) => setAiModel(event.target.value)}
-            placeholder="openai/gpt-4o-mini"
-            className="luxury-input text-xs"
-          />
-          <p className="num-geo mt-1 text-[9.5px] text-[var(--text-3)]" dir="ltr">
-            {AI_MODEL_HINT}
-          </p>
-        </div>
-
-        <div>
-          <label htmlFor="ai-key" className="mb-1.5 block text-[11px] text-[var(--text-2)]">
-            کلید API
-          </label>
-          <input
-            id="ai-key"
-            type="password"
-            dir="ltr"
-            autoComplete="off"
-            value={aiKey}
-            onChange={(event) => setAiKey(event.target.value)}
-            placeholder="sk-..."
-            className="luxury-input text-xs"
-          />
-        </div>
-
-        <button
-          type="button"
-          aria-pressed={aiAutoApply}
-          onClick={() => setAiAutoApply((value) => !value)}
-          className="flex w-full items-center justify-between gap-2 rounded-xl border border-[var(--border)] px-3 py-2 text-start text-[11px] text-[var(--text-2)]"
-        >
-          <span>
-            تغییرات سطح ۲ را بدون پرسیدن انجام بده
-            <span className="mt-0.5 block text-[9.5px] text-[var(--text-3)]">
-              ساخت و ویرایش کار، تیک مرحله، ثبت عادت. حذف هیچ‌وقت در دسترس مدیر نیست.
-            </span>
-          </span>
-          <span
-            className={`grid h-5 w-9 shrink-0 place-items-center rounded-full ${
-              aiAutoApply ? 'bg-[var(--accent)]' : 'bg-[var(--surface-3)]'
-            }`}
-          >
-            <span
-              className={`h-3.5 w-3.5 rounded-full bg-[var(--bg)] transition-transform ${
-                aiAutoApply ? '-translate-x-2' : 'translate-x-2'
-              }`}
-            />
-          </span>
-        </button>
-
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            type="button"
-            onClick={() => void handleSaveAi()}
-            className="btn-royal rounded-xl py-2.5 text-xs font-semibold"
-          >
-            ذخیرهٔ مدیر ابری
-          </button>
-          <button
-            type="button"
-            onClick={() => void handleTestAi()}
-            disabled={aiTesting}
-            className="btn-ghost-luxury rounded-xl py-2.5 text-xs font-medium text-[var(--text)] disabled:opacity-50"
-          >
-            {aiTesting ? 'در حال آزمودن…' : 'تشخیص اتصال'}
-          </button>
-        </div>
-
-        {aiDiagnosis && (
-          <div
-            data-testid="ai-diagnosis"
-            className={`space-y-1.5 rounded-xl border p-2.5 ${
-              aiDiagnosis.reached
-                ? 'border-[var(--border)] bg-[var(--surface-1)]'
-                : 'border-[var(--danger)]/40 bg-[color-mix(in_srgb,var(--danger)_8%,transparent)]'
-            }`}
-          >
-            <p className="text-[10.5px] font-medium leading-5 text-[var(--text)]">
-              {aiDiagnosis.hint}
-            </p>
-            <p className="num-geo text-[9px] leading-4 text-[var(--text-3)]" dir="ltr">
-              {aiDiagnosis.via} · status {aiDiagnosis.status} · {aiDiagnosis.reached ? 'reached' : 'blocked'}
-              {aiDiagnosis.detail ? ` · ${aiDiagnosis.detail.slice(0, 120)}` : ''}
-            </p>
-            <button
-              type="button"
-              onClick={() => void copyDiagnosis()}
-              className="text-[9.5px] font-medium text-[var(--accent-fg)]"
-            >
-              {copiedDiagnosis ? 'کپی شد' : 'کپی جزئیات برای فرستادن'}
-            </button>
-          </div>
-        )}
       </LuxuryCard>
 
       {/* LOCAL DATA & PRIVACY */}
@@ -714,21 +459,34 @@ export function SettingsPage() {
           />
         </div>
 
+        {pendingBackup && (
+          <div role="region" aria-label="پیش‌نمایش بازیابی" className="space-y-2 rounded-xl border border-[var(--accent-fg)]/30 bg-[var(--surface-1)] p-3 text-[11px] leading-6 text-[var(--text)]">
+            <p className="font-bold">پیش‌نمایش بازیابی ادغامی</p>
+            <p>وظیفه: {pendingBackup.tasks.length} · عادت: {pendingBackup.habits.length} · ثبت عادت: {pendingBackup.habitLogs.length} · تمرکز: {pendingBackup.focusSessions.length} · هدف: {pendingBackup.goals.length}</p>
+            <p>پروژه: {pendingBackup.projects?.length ?? 0} · مرحله: {pendingBackup.projectStages?.length ?? 0} · ژورنال: {pendingBackup.journal?.length ?? 0}</p>
+            <p className="text-[var(--text-2)]">فقط رکوردهای جدید اضافه می‌شوند؛ شناسه‌های موجود و تنظیمات فعلی تغییر نمی‌کنند. فایل‌های قدیمی ممکن است همهٔ بخش‌ها را نداشته باشند. این فایل تأیید اصالت رمزنگاری‌شده ندارد.</p>
+            <div className="flex gap-2">
+              <button type="button" disabled={importing} onClick={() => void confirmImport()} className="btn-royal rounded-xl px-3 py-2 disabled:opacity-50">{importing ? 'در حال بازیابی…' : 'تأیید و افزودن'}</button>
+              <button type="button" disabled={importing} onClick={() => setPendingBackup(null)} className="btn-ghost-luxury rounded-xl px-3 py-2">انصراف</button>
+            </div>
+          </div>
+        )}
+
         <div className="space-y-2 border-t border-[var(--accent-fg)]/10 pt-3">
           <button
             type="button"
             onClick={async () => {
-              await populateStarterWorkspace();
-              pushToast({
-                title: 'داده‌های نمونه بارگذاری شدند',
-                description: 'تمامی گزارش‌های ماهانه و نقشه حرارتی با سابقه 95 روزه آماده بررسی‌اند.',
-                tone: 'success',
-              });
+              try {
+                await populateStarterWorkspace();
+                pushToast({ title: 'داده‌های نمونه بارگذاری شدند', description: 'این تاریخچه ساختگی است و فعالیت واقعی شما نیست.', tone: 'success' });
+              } catch {
+                pushToast({ title: 'داده‌های نمونه اضافه نشدند', description: 'برای محافظت از داده‌ها، نمونه فقط در فضای کاملاً خالی قابل بارگذاری است.', tone: 'warning' });
+              }
             }}
             className="btn-ghost-luxury flex w-full items-center justify-center gap-1.5 rounded-xl py-2 text-[11px] font-medium text-[var(--text-2)]"
           >
             <RefreshCw className="h-3.5 w-3.5" />
-            <span>بارگذاری مجدد داده‌های نمونه</span>
+            <span>بارگذاری داده‌های نمونه در فضای خالی</span>
           </button>
 
           {!confirmWipe ? (

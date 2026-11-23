@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Brain, Sparkles } from '@/components/ui/icons';
 import { ModalSheet } from '@/components/ui/ModalSheet';
@@ -19,8 +19,6 @@ import { confidenceLabel, QUICK_COMMANDS, runCommand, type CommandAnswer } from 
 import { buildDailyBrief } from '@/lib/coach';
 import { pickInsights } from '@/lib/insights';
 import { triggerHaptic } from '@/lib/native';
-import { isAiReady, runAiTurn, type ChatMessage } from '@/lib/ai/client';
-import type { ToolCall } from '@/lib/ai/tools';
 
 /**
  * The command centre: a Persian question box with no model behind it.
@@ -36,17 +34,6 @@ export function CommandCenter() {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [history, setHistory] = useState<CommandAnswer[]>([]);
-  /**
-   * Two brains, one box. «آفلاین» is the rule engine: instant, provable, and it
-   * says "I don't know" out loud. «ابر» is the optional cloud manager that can
-   * call the app's own tools. The switch only exists when a key is configured.
-   */
-  const [mode, setMode] = useState<'local' | 'cloud'>('local');
-  const [chat, setChat] = useState<{ role: 'user' | 'assistant'; text: string }[]>([]);
-  const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
-  const [thinking, setThinking] = useState(false);
-  const [pendingCall, setPendingCall] = useState<ToolCall | null>(null);
-  const pendingResolver = useRef<((allowed: boolean) => void) | null>(null);
 
   const tasks = useTasks();
   const habits = useHabits();
@@ -56,7 +43,7 @@ export function CommandCenter() {
   const stages = useProjectStages();
   const sessions = useFocusSessions();
   const journal = useJournal();
-  const { setActiveTab, pushToast, settings } = useApp();
+  const { setActiveTab, pushToast } = useApp();
 
   const todayKey = getTodayKey();
   const series = useMemo(
@@ -116,79 +103,8 @@ export function CommandCenter() {
     }
   };
 
-  const answerPending = (allowed: boolean) => {
-    const resolve = pendingResolver.current;
-    pendingResolver.current = null;
-    setPendingCall(null);
-    resolve?.(allowed);
-  };
-
-  const askCloud = async (text: string) => {
-    setThinking(true);
-    setChat((current) => [...current, { role: 'user', text }]);
-    const result = await runAiTurn({
-      settings,
-      history: chatHistory,
-      userText: text,
-      confirmWrite: settings.aiAutoApply
-        ? undefined
-        : (call) =>
-            new Promise<boolean>((resolve) => {
-              pendingResolver.current = resolve;
-              setPendingCall(call);
-            }),
-    });
-    setThinking(false);
-
-    if (!result.ok) {
-      const message = result.error ?? 'ارتباط با مدیر ابری برقرار نشد.';
-      // Never leave the person with an error alone: the offline engine answers
-      // the same question where it can, and says so on the card.
-      const localAnswer = runCommand(text, {
-        tasks,
-        habits,
-        habitLogs,
-        goals,
-        projects,
-        stages,
-        series,
-        todayKey,
-        sessions,
-        lastSuggestionReason: topInsightReason,
-      });
-      const fallback = localAnswer.unknown
-        ? 'این را هم نمی‌دانم.'
-        : `${localAnswer.title}\n${localAnswer.lines.join('\n')}`;
-      setChat((current) => [
-        ...current,
-        { role: 'assistant', text: `${message}\n\nجواب آفلاین:\n${fallback}` },
-      ]);
-      pushToast({ title: 'مدیر ابری پاسخ نداد', description: message, tone: 'warning' });
-      return;
-    }
-
-    setChatHistory((current) => [
-      ...current,
-      { role: 'user', content: text },
-      { role: 'assistant', content: result.reply },
-    ]);
-    const stepsLine = result.steps.length
-      ? `\n${result.steps.map((step) => `${step.ok ? '✓' : '×'} ${step.summary}`).join('\n')}`
-      : '';
-    setChat((current) => [...current, { role: 'assistant', text: `${result.reply}${stepsLine}` }]);
-    if (result.navigateTo) setActiveTab(result.navigateTo as never);
-    void triggerHaptic('light');
-  };
-
   const submit = (text: string) => {
-    const trimmed = text.trim();
-    if (!trimmed || thinking) return;
-    if (mode === 'cloud') {
-      void askCloud(trimmed);
-    } else {
-      ask(trimmed);
-    }
-    setQuery('');
+    ask(text);
   };
 
   return (
@@ -227,10 +143,9 @@ export function CommandCenter() {
             <button
               type="button"
               onClick={() => submit(query)}
-              disabled={thinking}
               className="rounded-full bg-[var(--accent)] px-4 py-2 text-[11.5px] font-bold text-[var(--accent-on)] disabled:opacity-60"
             >
-              {thinking ? '…' : 'بپرس'}
+              بپرس
             </button>
           </div>
         }
@@ -274,35 +189,6 @@ export function CommandCenter() {
             )}
           </div>
 
-          {isAiReady(settings) ? (
-            <div className="flex items-center gap-1.5" data-testid="brain-switch">
-              {(['local', 'cloud'] as const).map((option) => (
-                <button
-                  key={option}
-                  type="button"
-                  aria-pressed={mode === option}
-                  onClick={() => setMode(option)}
-                  className={`rounded-full px-3 py-1 text-[10.5px] font-medium transition-colors ${
-                    mode === option
-                      ? 'bg-[var(--accent)] text-[var(--accent-on)]'
-                      : 'border border-[var(--border)] text-[var(--text-2)]'
-                  }`}
-                >
-                  {option === 'local' ? 'آفلاین' : 'ابر'}
-                </button>
-              ))}
-              <span className="text-[9.5px] text-[var(--text-3)]">
-                {mode === 'local'
-                  ? 'موتور قانون: سریع، از دادهٔ خودت، بدون اینترنت'
-                  : 'مدیر ابری: گفت‌وگوی آزاد و فرمان روی برنامه'}
-              </span>
-            </div>
-          ) : settings.aiEnabled ? (
-            <p className="rounded-[var(--r-field)] border border-[var(--border)] px-2.5 py-1.5 text-[10px] text-[var(--text-3)]">
-              مدیر ابری روشن است ولی کامل نیست؛ کلید و نام مدل را در تنظیمات پر کن.
-            </p>
-          ) : null}
-
           <div className="flex flex-wrap gap-1.5">
             {QUICK_COMMANDS.map((command) => (
               <button
@@ -316,57 +202,7 @@ export function CommandCenter() {
             ))}
           </div>
 
-          {mode === 'cloud' ? (
-            <div className="space-y-2" data-testid="cloud-chat">
-              {chat.length === 0 && (
-                <p className="rounded-[var(--r-rail)] border border-[var(--border)] bg-[var(--surface-1)] p-3 text-[10.5px] leading-5 text-[var(--text-3)]">
-                  با مدیر حرف بزن؛ می‌تواند کار بسازد، پروژه و مرحله اضافه کند، عادت ثبت کند و تنظیمات را
-                  عوض کند — همه از همان مسیر معمولی برنامه، با ثبت در دفتر و برگشت‌پذیر.
-                </p>
-              )}
-              {chat.map((entry, index) => (
-                <div
-                  key={`${entry.role}-${index}`}
-                  className={`w-fit max-w-[92%] whitespace-pre-line rounded-[var(--r-rail)] px-3 py-2 text-[11px] leading-5 ${
-                    entry.role === 'user'
-                      ? 'ms-auto bg-[var(--accent)] text-[var(--accent-on)]'
-                      : 'border border-[var(--border)] bg-[var(--surface-1)] text-[var(--text)]'
-                  }`}
-                >
-                  {entry.text}
-                </div>
-              ))}
-              {thinking && (
-                <p className="text-[10px] text-[var(--text-3)]">مدیر دارد فکر می‌کند…</p>
-              )}
-              {pendingCall && (
-                <div className="rounded-[var(--r-rail)] border border-[var(--accent-fg)]/40 bg-[color-mix(in_srgb,var(--accent)_12%,transparent)] p-2.5">
-                  <p className="text-[11px] font-semibold text-[var(--text)]">
-                    مدیر می‌خواهد این تغییر را بدهد:
-                  </p>
-                  <p className="num-geo mt-1 text-[10px] leading-4 text-[var(--text-2)]">
-                    {pendingCall.name} · {JSON.stringify(pendingCall.args).slice(0, 160)}
-                  </p>
-                  <div className="mt-2 flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => answerPending(true)}
-                      className="rounded-full bg-[var(--accent)] px-3 py-1 text-[10.5px] font-bold text-[var(--accent-on)]"
-                    >
-                      اجرا کن
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => answerPending(false)}
-                      className="rounded-full border border-[var(--border)] px-3 py-1 text-[10.5px] text-[var(--text-2)]"
-                    >
-                      رد
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          ) : history.length === 0 ? (
+          {history.length === 0 ? (
             <div className="rounded-[var(--r-rail)] border border-[var(--border)] bg-[var(--surface-1)] p-3">
               <p className="text-[11.5px] font-semibold text-[var(--text)]">
                 <Brain className="me-1 inline h-3.5 w-3.5 text-[var(--accent-fg)]" />

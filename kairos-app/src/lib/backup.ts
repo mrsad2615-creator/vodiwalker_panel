@@ -2,6 +2,7 @@ import { Capacitor } from '@capacitor/core';
 import { Directory, Filesystem } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
 import type { KairosBackupPayload } from '@/types/domain';
+import { validateBackup } from './backupValidation';
 
 /**
  * Backup export that actually works on Android.
@@ -60,8 +61,8 @@ export async function saveTextFile(
         });
         return { ok: true, via: 'share', location: written.uri };
       } catch {
-        // The user closed the share sheet — the file still exists in cache.
-        return { ok: true, via: 'share', location: written.uri };
+        // A cache file is not proof the user chose a durable destination.
+        return { ok: false, via: 'error', error: 'share-not-completed', location: written.uri };
       }
     } catch (error) {
       return { ok: false, via: 'error', error: error instanceof Error ? error.message : 'unknown' };
@@ -108,9 +109,7 @@ export async function readFileText(file: File): Promise<string> {
 /** Accepts a backup file from an <input type="file"> or the share sheet. */
 export async function readBackupFile(file: File): Promise<KairosBackupPayload> {
   const raw = await readFileText(file);
-  const parsed = JSON.parse(raw) as KairosBackupPayload;
-  if (!parsed || typeof parsed !== 'object' || !('version' in parsed)) {
-    throw new Error('invalid-backup');
-  }
+  const parsed: unknown = JSON.parse(raw);
+  validateBackup(parsed);
   return parsed;
 }

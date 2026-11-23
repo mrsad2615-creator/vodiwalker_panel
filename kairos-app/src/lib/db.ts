@@ -18,6 +18,7 @@ import type {
   UserSettings,
 } from '@/types/domain';
 import { computeNextRecurrenceDate, getTodayKey } from './date';
+import { validateBackup } from './backupValidation';
 import { createId } from './format';
 import type { Authority, EventEntity, EventKind, EventSource, KairosEvent } from './events';
 import type { PermissionGrant } from './permissions';
@@ -48,7 +49,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
   hasSampleData: false,
   sampleBannerDismissed: false,
   aiEnabled: false,
-  aiBaseUrl: 'https://openrouter.ai/api/v1',
+  aiBaseUrl: '',
   aiModel: '',
   aiKey: '',
   aiAutoApply: false,
@@ -844,59 +845,43 @@ export async function exportBackup(): Promise<KairosBackupPayload> {
   };
 }
 
-export async function importBackup(payload: KairosBackupPayload): Promise<void> {
-  if (!payload || payload.app !== 'KAIROS' || !Array.isArray(payload.tasks)) {
-    throw new Error('فرمت فایل پشتیبان کایروس معتبر نیست.');
+export interface BackupImportResult {
+  added: number;
+  skipped: number;
+}
+
+/** Restore missing records only. Existing rows and settings are never overwritten. */
+export async function importBackup(payload: KairosBackupPayload): Promise<BackupImportResult> {
+  validateBackup(payload);
+  let added = 0;
+  let skipped = 0;
+  async function addMissing<T extends { id: string }>(table: Table<T, string>, rows?: T[]) {
+    if (!rows?.length) return;
+    const existing = await table.bulkGet(rows.map((row) => row.id));
+    const missing = rows.filter((_, index) => existing[index] === undefined);
+    if (missing.length) await table.bulkAdd(missing);
+    added += missing.length;
+    skipped += rows.length - missing.length;
   }
   await db.transaction(
     'rw',
-    [
-      db.tasks,
-      db.habits,
-      db.habitLogs,
-      db.focusSessions,
-      db.goals,
-      db.settings,
-      db.journal,
-      db.projects,
-      db.projectStages,
-    ],
+    [db.tasks, db.habits, db.habitLogs, db.focusSessions, db.goals, db.journal, db.projects, db.projectStages],
     async () => {
-      await Promise.all([
-        db.tasks.clear(),
-        db.habits.clear(),
-        db.habitLogs.clear(),
-        db.focusSessions.clear(),
-        db.goals.clear(),
-        db.journal.clear(),
-        // Projects are restored wholesale: a stage without its project (or the
-        // reverse) would be a broken chain, not a partial restore.
-        db.projects.clear(),
-        db.projectStages.clear(),
-      ]);
-      if (payload.tasks.length) await db.tasks.bulkPut(payload.tasks);
-      if (payload.projects?.length) await db.projects.bulkPut(payload.projects);
-      if (payload.projectStages?.length) await db.projectStages.bulkPut(payload.projectStages);
-      if (payload.habits?.length) await db.habits.bulkPut(payload.habits);
-      if (payload.habitLogs?.length) await db.habitLogs.bulkPut(payload.habitLogs);
-      if (payload.focusSessions?.length) await db.focusSessions.bulkPut(payload.focusSessions);
-      if (payload.goals?.length) await db.goals.bulkPut(payload.goals);
-      if (payload.journal?.length) await db.journal.bulkPut(payload.journal);
-      if (payload.settings) {
-        await db.settings.put({ ...DEFAULT_SETTINGS, ...payload.settings, id: 'default' });
-      }
+      await addMissing(db.tasks, payload.tasks);
+      await addMissing(db.habits, payload.habits);
+      await addMissing(db.habitLogs, payload.habitLogs);
+      await addMissing(db.focusSessions, payload.focusSessions);
+      await addMissing(db.goals, payload.goals);
+      await addMissing(db.journal, payload.journal);
+      await addMissing(db.projects, payload.projects);
+      await addMissing(db.projectStages, payload.projectStages);
     }
   );
-  // Level 3: a restore overwrites everything, so it is always on the record.
   await logEvent('data.imported', 'system', 'backup', {
     level: 3,
-    data: {
-      tasks: payload.tasks.length,
-      habits: payload.habits?.length ?? 0,
-      journal: payload.journal?.length ?? 0,
-      projects: payload.projects?.length ?? 0,
-    },
+    data: { added, skipped },
   });
+  return { added, skipped };
 }
 
 export async function clearAllUserData(): Promise<void> {

@@ -107,12 +107,9 @@ describe('Bundle C — global search and shareable report', () => {
     await waitFor(() => expect(screen.getByText('تحلیل و گزارش عملکرد')).toBeInTheDocument());
     const card = await screen.findByRole('region', { name: 'گزارش قابل اشتراک' });
     expect(within(card).getByText('گزارش این هفته')).toBeInTheDocument();
-    // The preview is the text that will be shared, verbatim. It is built from a
-    // live query, so the numbers may arrive one tick after the card itself —
-    // waiting for the first *data* line is what makes this stable on a slow
-    // runner instead of reading an empty report.
+    // A fresh workspace is empty: the report must not invent starter history.
     await within(card).findByText(/کایروس · گزارش ۷ روزه/);
-    await within(card).findByText(/تمرکز: /);
+    await within(card).findByText(/در این بازه هیچ فعالیتی ثبت نشده است/);
 
     fireEvent.click(within(card).getByRole('button', { name: /اشتراک‌گذاری/ }));
     await waitFor(() => expect(writeText).toHaveBeenCalled());

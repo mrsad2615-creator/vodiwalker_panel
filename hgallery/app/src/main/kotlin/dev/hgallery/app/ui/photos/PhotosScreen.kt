@@ -46,6 +46,7 @@ import dev.hgallery.app.data.AppContainer
 import dev.hgallery.app.data.ThumbnailStore
 import dev.hgallery.app.ui.components.HgIconButton
 import dev.hgallery.app.ui.components.HgScreenTitle
+import dev.hgallery.app.ui.albums.AddToAlbumSheet
 import dev.hgallery.app.ui.components.HgSelectionActions
 import dev.hgallery.app.ui.components.HgSelectionHeader
 import dev.hgallery.app.ui.components.HgTestTags
@@ -211,6 +212,44 @@ private fun SelectionAwarePhotos(
     val thumbnails = remember { container.thumbnails }
     val scope = rememberCoroutineScope()
 
+    // Add to album. The album list is read here rather than passed in, so the sheet
+    // works the same on every screen that offers selection.
+    val customAlbums by container.customAlbums.albums.collectAsStateWithLifecycle(
+        initialValue = emptyList(),
+    )
+    var addToAlbumOpen by remember { mutableStateOf(false) }
+
+    if (addToAlbumOpen) {
+        val chosen = model.selectableIds()
+        AddToAlbumSheet(
+            albums = customAlbums,
+            onDismiss = { addToAlbumOpen = false },
+            onPick = { album ->
+                addToAlbumOpen = false
+                scope.launch {
+                    var updated = album
+                    chosen.forEach { updated = dev.hgallery.core.AlbumRules.addItem(updated, it) }
+                    container.customAlbums.save(updated)
+                    model.exit()
+                }
+            },
+            onCreate = { name, done ->
+                scope.launch {
+                    val created = container.customAlbums.create(name, customAlbums)
+                    if (created != null) {
+                        var updated = created
+                        chosen.forEach { updated = dev.hgallery.core.AlbumRules.addItem(updated, it) }
+                        container.customAlbums.save(updated)
+                        model.exit()
+                        done(true)
+                    } else {
+                        done(false)
+                    }
+                }
+            },
+        )
+    }
+
     Column(modifier = modifier.fillMaxSize().background(hgColors.background)) {
         Spacer(Modifier.statusBarsPadding())
 
@@ -350,6 +389,7 @@ private fun SelectionAwarePhotos(
                 onShare = { share() },
                 onDelete = { model.requestDelete() },
                 onToggleSelectAll = { model.toggleSelectAll(existingIds) },
+                onAddToAlbum = { addToAlbumOpen = true },
                 modifier = Modifier.testTag(HgTestTags.SELECTION_BAR),
             )
         }

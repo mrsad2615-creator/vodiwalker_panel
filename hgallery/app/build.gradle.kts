@@ -112,6 +112,11 @@ dependencies {
     // is the behaviour the screen promises and cannot implement with a keyguard check
     // alone. Apache 2.0.
     implementation("androidx.biometric:biometric:1.1.0")
+    // The biometric prompt is a fragment, so the host activity must be a
+    // FragmentActivity. Declared here rather than relied on as a transitive dependency,
+    // because a compile-time import that arrives by accident is a build that breaks
+    // on an unrelated version bump.
+    implementation("androidx.fragment:fragment:1.8.5")
 
     // Media3 for video playback. ExoPlayer replaces MediaPlayer because the
     // platform player cannot report buffered position or speed reliably, and its

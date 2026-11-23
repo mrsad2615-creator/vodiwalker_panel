@@ -49,6 +49,15 @@ class PhotosSelectionModel(private val container: AppContainer) {
 
     val selectedIds: Set<Long> get() = selection.ids
 
+    /**
+     * The selection as a list, in a stable order.
+     *
+     * A set has no order, and adding a batch to an album should produce the same album
+     * every time, so the ids are sorted before they are used. Copied out of the set
+     * because the sheet reads it after the dialog closes.
+     */
+    fun selectableIds(): List<Long> = selection.ids.sorted()
+
     fun beginWith(id: Long) {
         selection = selection.beginWith(id)
     }

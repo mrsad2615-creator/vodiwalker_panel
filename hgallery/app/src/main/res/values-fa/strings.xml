@@ -185,4 +185,29 @@
         <item quantity="one">%1$d ویدیو</item>
         <item quantity="other">%1$d ویدیو</item>
     </plurals>
+
+    <!-- Custom albums -->
+    <string name="save">ذخیره</string>
+    <string name="album_new_title">آلبوم تازه</string>
+    <string name="album_rename_title">تغییر نام آلبوم</string>
+    <string name="album_name_label">نام</string>
+    <string name="album_name_empty">یک نام بنویسید.</string>
+    <string name="album_name_taken">این نام پیش‌تر استفاده شده است.</string>
+    <string name="album_delete_title">%1$s حذف شود؟</string>
+    <string name="album_delete_body">آلبوم حذف می‌شود. عکس‌ها و ویدیوهای شما روی این دستگاه می‌مانند.</string>
+    <string name="album_menu">گزینه‌های آلبوم</string>
+    <string name="album_menu_rename_label">تغییر نام</string>
+    <string name="album_menu_lock">قفل با قفل دستگاه</string>
+    <string name="album_menu_unlock">برداشتن قفل</string>
+    <string name="album_menu_lock_detail">قفل این آلبوم را پنهان می‌کند و برای باز کردنش پین، الگو یا اثر انگشت می‌خواهد. فایل‌ها را رمزگذاری نمی‌کند.</string>
+    <string name="album_menu_lock_unavailable">این دستگاه قفل صفحه ندارد. اول پین، الگو یا اثر انگشت بگذارید، بعد قفل را روشن کنید.</string>
+    <string name="section_my_albums">آلبوم‌های من</string>
+    <string name="private_row_title">آلبوم‌های خصوصی (%1$d)</string>
+    <string name="private_row_body">برای نمایش، قفل را باز کنید. فایل‌ها رمزگذاری نمی‌شوند.</string>
+    <string name="private_title">آلبوم‌های خصوصی</string>
+    <string name="private_subtitle">برای نمایش این آلبوم‌ها، هویت خود را تأیید کنید.</string>
+    <string name="custom_album_empty">هنوز چیزی در این آلبوم نیست</string>
+    <string name="add_to_album">افزودن به آلبوم</string>
+    <string name="add_to_album_empty">هنوز آلبومی ندارید. برای شروع یکی بسازید.</string>
+    <string name="album_add_hint">در خط زمانی عکس‌ها را انتخاب کنید و به این آلبوم بیفزایید.</string>
 </resources>

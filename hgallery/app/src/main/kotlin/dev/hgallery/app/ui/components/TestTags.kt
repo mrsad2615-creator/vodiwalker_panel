@@ -26,6 +26,7 @@ object HgTestTags {
     const val SELECTION_SELECT_ALL = "selection-select-all"
     const val SELECTION_BAR = "selection-bar"
     const val SELECT_BUTTON = "photos-select-button"
+    const val SELECTION_ADD_TO_ALBUM = "selection-add-to-album"
     fun tick(id: Long) = "tick-$id"
 
     // Video player.
@@ -54,6 +55,19 @@ object HgTestTags {
     fun highlight(key: String) = "highlight-$key"
     fun discoverItem(id: Long) = "discover-item-$id"
     fun discoverYear(key: String) = "discover-$key"
+
+    // Custom albums.
+    const val ADD_ALBUM = "add-album"
+    const val ALBUM_NAME_FIELD = "album-name-field"
+    const val ALBUM_NAME_CONFIRM = "album-name-confirm"
+    const val ALBUM_DELETE_CONFIRM = "album-delete-confirm"
+    const val ALBUM_MENU_RENAME = "album-menu-rename"
+    const val ALBUM_MENU_DELETE = "album-menu-delete"
+    const val ALBUM_MENU_PRIVATE = "album-menu-private"
+    const val ALBUM_MENU = "album-menu"
+    fun customAlbum(id: Long) = "custom-album-$id"
+    fun addToAlbumRow(id: Long) = "add-to-album-$id"
+    const val SELECTION_NEW_ALBUM = "selection-new-album"
 
     // The video filmstrip.
     const val FILMSTRIP = "video-filmstrip"

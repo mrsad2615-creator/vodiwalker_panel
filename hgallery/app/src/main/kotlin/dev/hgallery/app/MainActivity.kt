@@ -4,7 +4,6 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
@@ -22,7 +21,14 @@ import dev.hgallery.app.ui.onboarding.PermissionScreen
 import dev.hgallery.app.ui.theme.HgTheme
 import dev.hgallery.app.ui.theme.resolveDark
 
-class MainActivity : ComponentActivity() {
+/**
+ * The single activity.
+ *
+ * It extends [FragmentActivity] rather than only [ComponentActivity] because the private
+ * album gate uses `BiometricPrompt`, which is a fragment. Everything else here — edge to
+ * edge, Compose content, activity result contracts — works the same way.
+ */
+class MainActivity : androidx.fragment.app.FragmentActivity() {
 
     /**
      * The system's page for this app, where media access can be granted after a denial.

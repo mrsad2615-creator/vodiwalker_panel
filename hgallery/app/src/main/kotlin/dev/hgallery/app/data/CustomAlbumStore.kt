@@ -131,21 +131,35 @@ class CustomAlbumStore(context: Context) {
         append(SEP)
         append(album.updatedAtMs)
         append(SEP)
-        append(if (album.isPrivate) "1" else "0")
+        append(if (album.isPrivate) PRIVATE_TRUE else "0")
         append(SEP)
         append(album.itemIds.joinToString(","))
     }
 
+    /**
+     * Reads one line back.
+     *
+     * The indices are named rather than written as numbers: this format is written in one
+     * place and read in another, and a field added in the middle would otherwise shift
+     * every later value without a compile error.
+     *
+     * A line that is too short, or whose id or name is unusable, is dropped. The caller
+     * then has one album fewer rather than an unopenable tab.
+     */
     private fun decode(raw: String?): CustomAlbum? {
         if (raw.isNullOrBlank()) return null
         val parts = raw.split(SEP)
-        if (parts.size < 5) return null
-        val id = parts[0].toLongOrNull() ?: return null
-        val name = parts[1].takeIf { AlbumRules.isValidName(it) } ?: return null
-        val updated = parts[2].toLongOrNull() ?: 0L
-        val isPrivate = parts[3] == "1"
-        val ids = parts[4].split(",").mapNotNull { it.toLongOrNull() }
-        return CustomAlbum(id, name, ids, updated, isPrivate)
+        if (parts.size <= FIELD_ITEM_IDS) return null
+        val id = parts[FIELD_ID].toLongOrNull() ?: return null
+        val name = parts[FIELD_NAME].takeIf { AlbumRules.isValidName(it) } ?: return null
+        val ids = parts[FIELD_ITEM_IDS].split(",").mapNotNull { it.toLongOrNull() }
+        return CustomAlbum(
+            id = id,
+            name = name,
+            itemIds = ids,
+            updatedAtMs = parts[FIELD_UPDATED].toLongOrNull() ?: 0L,
+            isPrivate = parts[FIELD_PRIVATE] == PRIVATE_TRUE,
+        )
     }
 
     private companion object {
@@ -153,5 +167,13 @@ class CustomAlbumStore(context: Context) {
 
         /** A unit separator: it cannot be typed, so a name cannot contain it by accident. */
         const val SEP = "\u001F"
+        const val PRIVATE_TRUE = "1"
+
+        /** Field positions in one stored line. */
+        const val FIELD_ID = 0
+        const val FIELD_NAME = 1
+        const val FIELD_UPDATED = 2
+        const val FIELD_PRIVATE = 3
+        const val FIELD_ITEM_IDS = 4
     }
 }

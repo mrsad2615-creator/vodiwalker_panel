@@ -131,6 +131,31 @@
     <string name="permission_allow">Allow access</string>
     <string name="permission_open_settings">Open settings</string>
 
+    <!-- Custom albums -->
+    <string name="save">Save</string>
+    <string name="album_new_title">New album</string>
+    <string name="album_rename_title">Rename album</string>
+    <string name="album_name_label">Name</string>
+    <string name="album_name_empty">Enter a name.</string>
+    <string name="album_name_taken">That name is already used.</string>
+    <string name="album_delete_title">Delete %1$s?</string>
+    <string name="album_delete_body">The album is deleted. Your photos and videos stay on this device.</string>
+    <string name="album_menu">Album options</string>
+    <string name="album_menu_rename_label">Rename</string>
+    <string name="album_menu_lock">Lock with the device lock</string>
+    <string name="album_menu_unlock">Remove the lock</string>
+    <string name="album_menu_lock_detail">The lock hides this album and asks for your PIN, pattern or fingerprint to open it. It does not encrypt the files.</string>
+    <string name="album_menu_lock_unavailable">This device has no screen lock. Set a PIN, pattern or fingerprint first, then turn the lock on.</string>
+    <string name="section_my_albums">MY ALBUMS</string>
+    <string name="private_row_title">Private albums (%1$d)</string>
+    <string name="private_row_body">Unlock to show them. The files are not encrypted.</string>
+    <string name="private_title">Private albums</string>
+    <string name="private_subtitle">Confirm it is you to show these albums.</string>
+    <string name="custom_album_empty">Nothing in this album yet</string>
+    <string name="add_to_album">Add to album</string>
+    <string name="add_to_album_empty">You have no albums yet. Create one to start.</string>
+    <string name="album_add_hint">Select photos in the timeline, then add them to this album.</string>
+
     <!-- Highlights -->
     <string name="highlights_subtitle">Days worth going back to</string>
     <string name="highlights_empty_title">No highlights yet</string>

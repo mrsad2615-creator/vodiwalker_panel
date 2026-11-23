@@ -500,6 +500,28 @@ object HgIcons {
         close()
     }
 
+    /**
+     * A closed padlock, for a private album.
+     *
+     * Drawn on the same 24-unit grid as the rest: a 10 by 8 body with a 6 by 4 shackle.
+     * It is a lock and not a shield or an eye, because the promise it makes is "you need
+     * the device lock to open this", which a padlock says and the other two do not.
+     */
+    val Lock: ImageVector = icon("HG.Lock") {
+        moveTo(7f, 10.5f)
+        verticalLineToRelative(-1.5f)
+        curveTo(7f, 7.2f, 9.2f, 5f, 12f, 5f)
+        curveTo(14.8f, 5f, 17f, 7.2f, 17f, 9f)
+        verticalLineToRelative(1.5f)
+        moveTo(5.5f, 10.5f)
+        horizontalLineToRelative(13f)
+        verticalLineToRelative(9f)
+        horizontalLineToRelative(-13f)
+        close()
+        moveTo(12f, 14f)
+        verticalLineToRelative(3f)
+    }
+
     /** Diamond glyph used in place of a missing thumbnail for a folder. */
     val ImageBroken: ImageVector = icon("HG.ImageBroken") {
         moveTo(4f, 6f)

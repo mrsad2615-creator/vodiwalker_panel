@@ -21,6 +21,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.hgallery.app.data.AppContainer
 import dev.hgallery.app.ui.albums.AlbumDetailScreen
 import dev.hgallery.app.ui.albums.AlbumsScreen
+import dev.hgallery.app.ui.albums.CustomAlbumScreen
 import dev.hgallery.app.ui.discover.DiscoverScreen
 import dev.hgallery.app.ui.highlights.HighlightsScreen
 import dev.hgallery.app.ui.photos.PhotosScreen
@@ -60,6 +61,10 @@ fun HGalleryApp(container: AppContainer) {
     var playerId by remember { mutableStateOf<Long?>(null) }
     var searchOpen by remember { mutableStateOf(false) }
     var settingsOpen by remember { mutableStateOf(false) }
+    // A custom album is opened by id, not by value: its membership changes while the
+    // screen is up, and a captured copy would show the membership from the moment the
+    // tile was tapped.
+    var customAlbumId by remember { mutableStateOf<Long?>(null) }
 
     val items by container.mediaStore.items.collectAsStateWithLifecycle()
     val settings by container.settings.settings.collectAsStateWithLifecycle()
@@ -83,6 +88,9 @@ fun HGalleryApp(container: AppContainer) {
     BackHandler(enabled = playerId == null && viewerId == null && openAlbum == null && settingsOpen) {
         settingsOpen = false
     }
+    BackHandler(
+        enabled = playerId == null && viewerId == null && openAlbum == null && customAlbumId != null,
+    ) { customAlbumId = null }
 
     // One entry point for "open this item": a video goes to the player, an image
     // to the viewer. Deciding here means every grid in the app behaves the same
@@ -121,7 +129,16 @@ fun HGalleryApp(container: AppContainer) {
         Column(Modifier.fillMaxSize()) {
             Box(Modifier.weight(1f)) {
                 val album = openAlbum
-                if (album != null) {
+                val customId = customAlbumId
+                if (customId != null) {
+                    CustomAlbumScreen(
+                        container = container,
+                        albumId = customId,
+                        items = items,
+                        onBack = { customAlbumId = null },
+                        onOpenItem = openItem,
+                    )
+                } else if (album != null) {
                     AlbumDetailScreen(
                         container = container,
                         album = album,
@@ -145,6 +162,7 @@ fun HGalleryApp(container: AppContainer) {
                             HgTab.Albums -> AlbumsScreen(
                                 container = container,
                                 onOpenAlbum = { openAlbum = it },
+                                onOpenCustomAlbum = { customAlbumId = it },
                                 onSearch = { searchOpen = true },
                                 onOpenSettings = openSettings,
                             )
@@ -162,7 +180,14 @@ fun HGalleryApp(container: AppContainer) {
                     }
                 }
             }
-            HgBottomBar(selected = tab, onSelect = { tab = it; openAlbum = null })
+            HgBottomBar(
+                selected = tab,
+                onSelect = {
+                    tab = it
+                    openAlbum = null
+                    customAlbumId = null
+                },
+            )
         }
 
         val playingId = playerId

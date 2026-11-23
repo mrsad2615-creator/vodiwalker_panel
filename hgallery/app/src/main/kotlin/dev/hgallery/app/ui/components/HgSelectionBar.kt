@@ -101,6 +101,8 @@ fun HgSelectionActions(
     onDelete: () -> Unit,
     onToggleSelectAll: () -> Unit,
     modifier: Modifier = Modifier,
+    /** Adds the selection to a custom album. Null when the caller cannot. */
+    onAddToAlbum: (() -> Unit)? = null,
 ) {
     val palette = hgPalette
     val allSelected = selection.isAllSelected(allIds)
@@ -136,6 +138,16 @@ fun HgSelectionActions(
                 tint = palette.textPrimary,
                 tag = HgTestTags.SELECTION_SELECT_ALL,
             )
+            if (onAddToAlbum != null) {
+                SelectionAction(
+                    icon = HgIcons.Add,
+                    label = stringResource(R.string.add_to_album),
+                    enabled = !selection.isEmpty,
+                    onClick = onAddToAlbum,
+                    tint = palette.textPrimary,
+                    tag = HgTestTags.SELECTION_ADD_TO_ALBUM,
+                )
+            }
             SelectionAction(
                 icon = HgIcons.Delete,
                 label = stringResource(R.string.delete),

@@ -183,6 +183,16 @@
         <item quantity="other">%1$d videos</item>
     </plurals>
 
+    <!-- Camera facts -->
+    <string name="exif_title">Camera</string>
+    <string name="exif_camera">Camera</string>
+    <string name="exif_lens">Lens</string>
+    <string name="exif_aperture">Aperture</string>
+    <string name="exif_shutter">Shutter</string>
+    <string name="exif_iso">ISO</string>
+    <string name="exif_focal">Focal length</string>
+    <string name="exif_rotation">Rotation</string>
+
     <!-- Trash -->
     <string name="trash">Trash</string>
     <string name="trash_loading">Reading the trash</string>

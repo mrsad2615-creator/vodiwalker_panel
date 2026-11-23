@@ -1,0 +1,112 @@
+package dev.hgallery.core
+
+/**
+ * The camera facts a photograph carries, as far as the gallery shows them.
+ *
+ * ## Why so few fields
+ *
+ * A real EXIF block holds a hundred tags, most of which mean nothing to the person who
+ * took the photograph. The gallery shows the six that answer "where and how was this
+ * taken": camera, lens, aperture, shutter, ISO and focal length. Everything else is left
+ * in the file.
+ *
+ * ## Why it is a separate value
+ *
+ * Reading EXIF needs the file stream, which is slow and can fail. Keeping the result in a
+ * plain value means the sheet can show what it has while the read is running, and the
+ * formatting rules are testable without a device.
+ */
+data class ExifSummary(
+    /** Make and model, joined and cleaned. Empty when the camera wrote neither. */
+    val camera: String = "",
+    val lens: String = "",
+    /** Aperture as an f-number, e.g. "f/1.8". Empty when unknown. */
+    val aperture: String = "",
+    /** Exposure time, e.g. "1/125 s" or "2 s". Empty when unknown. */
+    val shutter: String = "",
+    /** Sensitivity, e.g. "ISO 100". Empty when unknown. */
+    val iso: String = "",
+    /** Focal length, e.g. "26 mm". Empty when unknown. */
+    val focalLength: String = "",
+    /** Degrees clockwise the viewer must apply. 0, 90, 180 or 270. */
+    val orientationDegrees: Int = 0,
+) {
+    /** True when nothing was read, so the sheet can say so instead of drawing an empty list. */
+    val isEmpty: Boolean
+        get() = camera.isEmpty() && lens.isEmpty() && aperture.isEmpty() &&
+            shutter.isEmpty() && iso.isEmpty() && focalLength.isEmpty() && orientationDegrees == 0
+}
+
+/**
+ * The rules for turning EXIF values into the strings the sheet shows.
+ *
+ * Each function takes the raw numbers a decoder produces and returns the text a camera
+ * would print, or an empty string when the number is not usable. An empty string is the
+ * signal to omit the row: a dash in place of a value is noise, and a wrong value is worse.
+ */
+object ExifFormat {
+
+    /** Below this the focal length is a macro or a rounding artefact, not a lens. */
+    private const val MIN_FOCAL_MM = 1.0
+
+    /**
+     * Aperture, from the f-number.
+     *
+     * One decimal below f/10 and none above, which is how lenses are marked. A value of 0
+     * means the camera did not write one.
+     */
+    fun aperture(fNumber: Double): String = when {
+        fNumber <= 0.0 -> ""
+        fNumber >= 10.0 -> "f/${fNumber.toInt()}"
+        else -> "f/" + oneDecimal(fNumber)
+    }
+
+    /**
+     * Shutter speed, from the exposure time in seconds.
+     *
+     * Long exposures are written as seconds and short ones as a fraction, because
+     * "0.008 s" tells a photographer less than "1/125 s" does.
+     */
+    fun shutter(seconds: Double): String = when {
+        seconds <= 0.0 -> ""
+        seconds >= 1.0 -> "${trim(seconds)} s"
+        else -> "1/${kotlin.math.round(1.0 / seconds).toInt()} s"
+    }
+
+    /** Sensitivity, from the ISO value. */
+    fun iso(value: Int): String = if (value <= 0) "" else "ISO $value"
+
+    /** Focal length, from millimetres. */
+    fun focalLength(millimetres: Double): String = when {
+        millimetres < MIN_FOCAL_MM -> ""
+        else -> "${trim(millimetres)} mm"
+    }
+
+    /**
+     * Make and model, joined without repeating the maker.
+     *
+     * Cameras very often write the maker into the model as well ("Canon" and
+     * "Canon EOS R6"), and printing both gives "Canon Canon EOS R6".
+     */
+    fun camera(make: String, model: String): String {
+        val m = make.trim()
+        val d = model.trim()
+        return when {
+            m.isEmpty() -> d
+            d.isEmpty() -> m
+            d.startsWith(m, ignoreCase = true) -> d
+            else -> "$m $d"
+        }
+    }
+
+    /**
+     * Whole numbers print without a decimal point: a 26 mm lens is not "26.0 mm".
+     */
+    private fun trim(value: Double): String =
+        if (value == kotlin.math.floor(value)) value.toInt().toString() else oneDecimal(value)
+
+    private fun oneDecimal(value: Double): String {
+        val scaled = kotlin.math.round(value * 10.0).toLong()
+        return "${scaled / 10}.${scaled % 10}"
+    }
+}

@@ -220,7 +220,11 @@ fun ViewerScreen(
         }
 
         if (showDetails && current != null) {
-            DetailsSheet(item = current, onDismiss = { showDetails = false })
+            DetailsSheet(
+                item = current,
+                exifReader = container.exif,
+                onDismiss = { showDetails = false },
+            )
         }
 
         val queued = pendingDelete

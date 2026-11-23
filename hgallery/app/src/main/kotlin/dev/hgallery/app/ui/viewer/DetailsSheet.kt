@@ -15,6 +15,8 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.testTag
 import androidx.compose.runtime.Composable
@@ -28,6 +30,8 @@ import dev.hgallery.app.ui.components.HgTestTags
 import dev.hgallery.app.ui.theme.HgMetrics
 import dev.hgallery.app.ui.theme.hgPalette
 import dev.hgallery.core.DetailRow
+import dev.hgallery.app.data.ExifReader
+import dev.hgallery.core.ExifSummary
 import dev.hgallery.core.MediaItem
 import dev.hgallery.core.detailRows
 
@@ -43,10 +47,17 @@ import dev.hgallery.core.detailRows
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DetailsSheet(item: MediaItem, onDismiss: () -> Unit) {
+fun DetailsSheet(item: MediaItem, exifReader: ExifReader, onDismiss: () -> Unit) {
     val palette = hgPalette
     val rows = remember(item) { detailRows(item) { w, h -> "$w × $h" } }
     val sheetState = rememberModalBottomSheetState()
+
+    // EXIF is read while the sheet is already open. The file facts above need no read;
+    // the camera block appears when it arrives, and an item with no block never shows an
+    // empty section.
+    val exif by produceState(initialValue = ExifSummary(), key1 = item.uri) {
+        value = exifReader.read(item.uri)
+    }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -63,6 +74,17 @@ fun DetailsSheet(item: MediaItem, onDismiss: () -> Unit) {
             Spacer(Modifier.height(8.dp))
             LazyColumn(Modifier.heightIn(max = MAX_SHEET_HEIGHT_DP.dp)) {
                 items(rows, key = { it.label }) { row -> DetailLine(row) }
+            }
+
+            if (!exif.isEmpty) {
+                Spacer(Modifier.height(12.dp))
+                Text(
+                    text = stringResource(R.string.exif_title),
+                    style = MaterialTheme.typography.titleSmall,
+                    color = palette.textPrimary,
+                )
+                Spacer(Modifier.height(4.dp))
+                exifRows(exif).forEach { row -> DetailLine(row) }
             }
             Spacer(Modifier.height(24.dp))
         }
@@ -99,3 +121,25 @@ private fun DetailLine(row: DetailRow) {
 
 /** Tall enough for the seven rows a video can produce, short enough for a phone. */
 private const val MAX_SHEET_HEIGHT_DP = 420
+
+/**
+ * The camera block as rows, skipping anything the file did not record.
+ *
+ * Built here rather than in `core` because the labels are user-facing text and belong with
+ * the other translated strings; the values themselves were formatted and tested in
+ * `core/ExifSummary`.
+ */
+@Composable
+private fun exifRows(exif: ExifSummary): List<DetailRow> = buildList {
+    if (exif.camera.isNotEmpty()) add(DetailRow(stringResource(R.string.exif_camera), exif.camera))
+    if (exif.lens.isNotEmpty()) add(DetailRow(stringResource(R.string.exif_lens), exif.lens))
+    if (exif.aperture.isNotEmpty()) add(DetailRow(stringResource(R.string.exif_aperture), exif.aperture))
+    if (exif.shutter.isNotEmpty()) add(DetailRow(stringResource(R.string.exif_shutter), exif.shutter))
+    if (exif.iso.isNotEmpty()) add(DetailRow(stringResource(R.string.exif_iso), exif.iso))
+    if (exif.focalLength.isNotEmpty()) {
+        add(DetailRow(stringResource(R.string.exif_focal), exif.focalLength))
+    }
+    if (exif.orientationDegrees != 0) {
+        add(DetailRow(stringResource(R.string.exif_rotation), "${exif.orientationDegrees}°"))
+    }
+}

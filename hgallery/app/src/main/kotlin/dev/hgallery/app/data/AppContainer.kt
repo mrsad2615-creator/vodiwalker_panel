@@ -38,6 +38,9 @@ class AppContainer(context: Context) {
     /** The app's own trash, for platforms that have no system one. */
     val trash = TrashStore(appContext)
 
+    /** Camera facts, read on demand when the details sheet opens. */
+    val exif = ExifReader(appContext)
+
     /**
      * The installed version, read from the package manager.
      *

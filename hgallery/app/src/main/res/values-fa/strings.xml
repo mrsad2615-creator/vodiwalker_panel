@@ -228,4 +228,14 @@
         <item quantity="one">%1$d مورد. موارد پس از %2$d روز پاک می‌شوند.</item>
         <item quantity="other">%1$d مورد. موارد پس از %2$d روز پاک می‌شوند.</item>
     </plurals>
+
+    <!-- Camera facts -->
+    <string name="exif_title">دوربین</string>
+    <string name="exif_camera">دوربین</string>
+    <string name="exif_lens">لنز</string>
+    <string name="exif_aperture">دیافراگم</string>
+    <string name="exif_shutter">شاتر</string>
+    <string name="exif_iso">حساسیت</string>
+    <string name="exif_focal">فاصلهٔ کانونی</string>
+    <string name="exif_rotation">چرخش</string>
 </resources>

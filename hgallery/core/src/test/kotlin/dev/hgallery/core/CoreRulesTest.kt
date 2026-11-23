@@ -661,3 +661,43 @@ class TrashPolicyTest {
         )
     }
 }
+
+class ExifFormatTest {
+
+    @Test
+    fun `aperture has one decimal below ten and none above`() {
+        assertEquals("f/1.8", ExifFormat.aperture(1.8))
+        assertEquals("f/11", ExifFormat.aperture(11.0))
+        assertEquals("", ExifFormat.aperture(0.0))
+    }
+
+    @Test
+    fun `a short exposure reads as a fraction and a long one as seconds`() {
+        assertEquals("1/125 s", ExifFormat.shutter(1.0 / 125))
+        assertEquals("2 s", ExifFormat.shutter(2.0))
+        assertEquals("", ExifFormat.shutter(0.0))
+    }
+
+    @Test
+    fun `sensitivity and focal length omit missing values`() {
+        assertEquals("ISO 100", ExifFormat.iso(100))
+        assertEquals("", ExifFormat.iso(0))
+        assertEquals("26 mm", ExifFormat.focalLength(26.0))
+        assertEquals("1.5 mm", ExifFormat.focalLength(1.5))
+        assertEquals("", ExifFormat.focalLength(0.0))
+    }
+
+    @Test
+    fun `the maker is not repeated when the model already starts with it`() {
+        assertEquals("Canon EOS R6", ExifFormat.camera("Canon", "Canon EOS R6"))
+        assertEquals("Canon EOS R6", ExifFormat.camera("", "Canon EOS R6"))
+        assertEquals("Canon", ExifFormat.camera("Canon", ""))
+        assertEquals("Sony A7", ExifFormat.camera("Sony", "A7"))
+    }
+
+    @Test
+    fun `an empty summary reports itself empty`() {
+        assertTrue(ExifSummary().isEmpty)
+        assertFalse(ExifSummary(camera = "Canon").isEmpty)
+    }
+}

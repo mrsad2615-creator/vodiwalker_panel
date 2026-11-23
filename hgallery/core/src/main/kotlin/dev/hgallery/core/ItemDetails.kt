@@ -27,7 +27,7 @@ fun detailRows(item: MediaItem, resolutionFormatter: (Int, Int) -> String): List
 
     if (item.width > 0 && item.height > 0) {
         rows += DetailRow("Dimensions", resolutionFormatter(item.width, item.height))
-        rows += DetailRow("Megapixels", megapixels(item))
+        megapixels(item).takeIf { it.isNotEmpty() }?.let { rows += DetailRow("Megapixels", it) }
     }
 
     if (item.isVideo && item.durationMs > 0) {
@@ -55,7 +55,10 @@ fun detailRows(item: MediaItem, resolutionFormatter: (Int, Int) -> String): List
 fun megapixels(item: MediaItem): String {
     if (item.width <= 0 || item.height <= 0) return ""
     val millions = item.width.toLong() * item.height.toLong() / MEGAPIXEL_DIVISOR
-    return "${tenths(millions)} MP"
+    val text = tenths(millions)
+    // A small icon rounds to "0.0", which is not a measurement. The test that
+    // catches this is the reason the rule is here rather than in the caller.
+    return if (text == ZERO_TENTHS) "" else "$text MP"
 }
 
 /** Integer division with one decimal place, without pulling in a formatter. */
@@ -86,6 +89,9 @@ fun typeLabel(mimeType: String): String {
 }
 
 private const val MEGAPIXEL_DIVISOR = 1_000_000.0
+
+/** What a count that rounds away to nothing looks like. */
+private const val ZERO_TENTHS = "0.0"
 
 /** Multiplier for one decimal place. */
 private const val DECIMAL_BASE = 10.0

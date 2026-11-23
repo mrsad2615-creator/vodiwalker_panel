@@ -14,14 +14,15 @@ set -u
 
 ALBUM_NAME="hgallery-shots"
 OUT_DIR="ui-shots"
-# Screenshots must not land anywhere MediaStore indexes. They used to be written to
-# /sdcard/Pictures, so every capture became a gallery item: the app photographed
-# itself, the grid showed screenshots of its own toolbar, the Photos count read "24
-# photos and 2 videos" when the fixtures are 8 and 2, and the search shot said "29
-# results" for an empty query. /data/local/tmp is outside every scanned volume, so
-# the library now contains only the fixtures and every count in a screenshot is
-# about the app rather than about the harness.
-DEVICE_DIR="/data/local/tmp/$ALBUM_NAME"
+# Screenshots are written to Pictures, which MediaStore indexes, so every capture
+# became a gallery item: the app photographed itself, the grid filled with shots of
+# its own toolbar, and the Photos count read "24 photos and 2 videos" when the
+# fixtures are 8 and 2. They stay in Pictures because the *fixtures* must stay in a
+# scanned volume — moving them to /data/local/tmp made the app show "No photos yet",
+# since that path is outside every volume MediaStore scans. The fix is a .nomedia
+# marker in this one directory, which is what it is for: files remain readable by
+# `adb pull`, indexed by nothing.
+DEVICE_DIR="/sdcard/Pictures/$ALBUM_NAME"
 PKG="${HGPKG:-dev.hgallery.app.debug}"
 ACTIVITY="dev.hgallery.app.MainActivity"
 
@@ -30,6 +31,10 @@ mkdir -p "$OUT_DIR/diag"
 # `adb pull` recreates the device folder name, so this is the only place the
 # PNGs can end up. Creating it explicitly means they land at a known path.
 mkdir -p "$OUT_DIR/$ALBUM_NAME"
+# Created before the first screencap, so no capture is ever indexed. MediaProvider
+# skips a directory containing .nomedia, including on an explicit scan.
+adb shell mkdir -p "$DEVICE_DIR" >/dev/null 2>&1
+adb shell touch "$DEVICE_DIR/.nomedia" >/dev/null 2>&1
 
 echo "== instrumented UI tests =="
 ./gradlew --console=plain --no-daemon :app:connectedDebugAndroidTest 2>&1 | tee ui-test.log

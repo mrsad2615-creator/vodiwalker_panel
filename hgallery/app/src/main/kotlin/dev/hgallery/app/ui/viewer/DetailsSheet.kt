@@ -15,9 +15,11 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.produceState
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.testTag
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -55,8 +57,9 @@ fun DetailsSheet(item: MediaItem, exifReader: ExifReader, onDismiss: () -> Unit)
     // EXIF is read while the sheet is already open. The file facts above need no read;
     // the camera block appears when it arrives, and an item with no block never shows an
     // empty section.
-    val exif by produceState(initialValue = ExifSummary(), key1 = item.uri) {
-        value = exifReader.read(item.uri)
+    var exif by remember(item.uri) { mutableStateOf(ExifSummary()) }
+    LaunchedEffect(item.uri) {
+        exif = exifReader.read(item.uri)
     }
 
     ModalBottomSheet(

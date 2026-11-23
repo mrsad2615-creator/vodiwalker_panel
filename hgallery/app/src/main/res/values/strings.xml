@@ -24,7 +24,6 @@
     <string name="empty_photos_title">No photos yet</string>
     <string name="empty_photos_body">Photos and videos on this device will appear here</string>
     <string name="error_media_title">Could not read this device\'s media</string>
-    <string name="not_implemented">%1$s is not implemented yet</string>
 
     <plurals name="photo_count">
         <item quantity="one">%1$d photo</item>
@@ -77,7 +76,6 @@
         <item quantity="other">%1$d of %2$d items could not be removed</item>
     </plurals>
     <string name="delete_failed">Nothing was removed</string>
-    <string name="delete_needs_permission">A permission is required before this can be deleted</string>
     <string name="share_nothing">There is nothing to share</string>
 
     <!-- Video player -->
@@ -88,7 +86,6 @@
     <string name="video_fill_screen">Fill screen</string>
     <string name="video_cannot_play">This video cannot be played</string>
     <string name="video_cannot_play_body">The file may use a codec this device does not support.</string>
-    <string name="video_speed">Playback speed</string>
     <string name="media_desc_photo">Photo, %1$s</string>
     <string name="media_desc_favourite_photo">Favourite photo, %1$s</string>
     <string name="media_desc_video">Video, %1$s, %2$s</string>
@@ -202,7 +199,10 @@
     <string name="trash_empty_action">Empty the trash</string>
     <string name="trash_empty_confirm_title">Delete everything in the trash?</string>
     <string name="trash_empty_confirm_body">This cannot be undone.</string>
-    <string name="trash_row_detail">%1$s · %2$d days left</string>
+    <plurals name="trash_days_left">
+        <item quantity="one">%1$d day left</item>
+        <item quantity="other">%1$d days left</item>
+    </plurals>
     <string name="trash_delete_confirm_title">Delete %1$s for good?</string>
     <string name="trash_delete_confirm_body">This cannot be undone.</string>
     <plurals name="trash_summary">
@@ -220,7 +220,10 @@
     <string name="settings_trash_detail">Deleted items</string>
     <string name="settings_grid">Photos grid</string>
     <string name="settings_grid_density">Columns</string>
-    <string name="settings_grid_columns">%1$d columns</string>
+    <plurals name="settings_grid_columns">
+        <item quantity="one">%1$d column</item>
+        <item quantity="other">%1$d columns</item>
+    </plurals>
     <string name="settings_grid_detail">You can also pinch the grid to change this.</string>
     <string name="settings_video">Video</string>
     <string name="settings_filmstrip">Show the filmstrip</string>

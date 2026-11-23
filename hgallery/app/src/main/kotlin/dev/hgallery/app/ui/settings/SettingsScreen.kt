@@ -27,6 +27,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -265,7 +266,7 @@ private fun ChoiceRow(
 @Composable
 private fun GridDensityRow(columns: Int, onChange: (Int) -> Unit) {
     val palette = hgPalette
-    val label = stringResource(R.string.settings_grid_columns, columns)
+    val label = pluralStringResource(R.plurals.settings_grid_columns, columns, columns)
     Column(Modifier.fillMaxWidth()) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Text(

@@ -29,7 +29,6 @@
     <string name="empty_photos_title">هنوز تصویری نیست</string>
     <string name="empty_photos_body">تصاویر و ویدیوهای این دستگاه اینجا نمایش داده می‌شوند</string>
     <string name="error_media_title">خواندن رسانه‌های این دستگاه ممکن نشد</string>
-    <string name="not_implemented">%1$s هنوز پیاده‌سازی نشده است</string>
 
     <plurals name="photo_count">
         <item quantity="one">%1$d تصویر</item>
@@ -82,7 +81,6 @@
         <item quantity="other">%1$d از %2$d مورد حذف نشد</item>
     </plurals>
     <string name="delete_failed">هیچ موردی حذف نشد</string>
-    <string name="delete_needs_permission">برای حذف، دسترسی لازم است</string>
     <string name="share_nothing">چیزی برای اشتراک‌گذاری نیست</string>
 
     <!-- پخش‌کنندهٔ ویدیو -->
@@ -93,7 +91,6 @@
     <string name="video_fill_screen">پر کردن صفحه</string>
     <string name="video_cannot_play">این ویدیو پخش نمی‌شود</string>
     <string name="video_cannot_play_body">ممکن است کدک این فایل روی این دستگاه پشتیبانی نشود.</string>
-    <string name="video_speed">سرعت پخش</string>
     <string name="media_desc_photo">عکس، %1$s</string>
     <string name="media_desc_favourite_photo">عکس موردعلاقه، %1$s</string>
     <string name="media_desc_video">ویدیو، %1$s، %2$s</string>
@@ -168,7 +165,10 @@
     <string name="settings_trash_detail">موارد حذف‌شده</string>
     <string name="settings_grid">شبکهٔ عکس‌ها</string>
     <string name="settings_grid_density">ستون‌ها</string>
-    <string name="settings_grid_columns">%1$d ستون</string>
+    <plurals name="settings_grid_columns">
+        <item quantity="one">%1$d ستون</item>
+        <item quantity="other">%1$d ستون</item>
+    </plurals>
     <string name="settings_grid_detail">می‌توانید با دو انگشت روی شبکه هم این را تغییر دهید.</string>
     <string name="settings_video">ویدیو</string>
     <string name="settings_filmstrip">نمایش نوار ویدیو</string>
@@ -222,7 +222,10 @@
     <string name="trash_empty_action">خالی کردن سطل</string>
     <string name="trash_empty_confirm_title">همهٔ سطل زباله حذف شود؟</string>
     <string name="trash_empty_confirm_body">این کار برگشت‌پذیر نیست.</string>
-    <string name="trash_row_detail">%1$s · %2$d روز مانده</string>
+    <plurals name="trash_days_left">
+        <item quantity="one">%1$d روز مانده</item>
+        <item quantity="other">%1$d روز مانده</item>
+    </plurals>
     <string name="trash_delete_confirm_title">%1$s برای همیشه حذف شود؟</string>
     <string name="trash_delete_confirm_body">این کار برگشت‌پذیر نیست.</string>
     <plurals name="trash_summary">

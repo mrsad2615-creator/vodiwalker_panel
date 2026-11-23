@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Nothing is backed up.
+
+  The gallery keeps no copy of the media, and the only things it does keep — the theme,
+  the grid density and the user's own albums — are preferences a new install can start
+  without. A cloud backup would copy an album's membership list without the photographs
+  it points at, which restores as a set of empty albums.
+
+  Android 12 and later read this file; `allowBackup="false"` keeps the older platforms
+  from copying anything either.
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="root" path="." />
+        <exclude domain="file" path="." />
+        <exclude domain="database" path="." />
+        <exclude domain="sharedpref" path="." />
+        <exclude domain="external" path="." />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="root" path="." />
+        <exclude domain="file" path="." />
+        <exclude domain="database" path="." />
+        <exclude domain="sharedpref" path="." />
+        <exclude domain="external" path="." />
+    </device-transfer>
+</data-extraction-rules>

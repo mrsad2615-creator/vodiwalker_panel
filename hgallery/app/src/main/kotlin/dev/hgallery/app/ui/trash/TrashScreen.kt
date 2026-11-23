@@ -247,11 +247,8 @@ private fun TrashRow(
                     overflow = TextOverflow.Ellipsis,
                 )
                 Text(
-                    text = stringResource(
-                        R.string.trash_row_detail,
-                        ByteFormatter.format(entry.sizeBytes),
-                        daysLeft,
-                    ),
+                    text = ByteFormatter.format(entry.sizeBytes) + " · " +
+                        pluralStringResource(R.plurals.trash_days_left, daysLeft, daysLeft),
                     style = CountLabel,
                     color = palette.textSecondary,
                 )

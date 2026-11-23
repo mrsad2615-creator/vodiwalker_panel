@@ -19,6 +19,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.hgallery.app.data.AppContainer
+import dev.hgallery.app.data.HgSettings
 import dev.hgallery.app.ui.albums.AlbumDetailScreen
 import dev.hgallery.app.ui.albums.AlbumsScreen
 import dev.hgallery.app.ui.albums.CustomAlbumScreen
@@ -69,7 +70,9 @@ fun HGalleryApp(container: AppContainer) {
     var customAlbumId by remember { mutableStateOf<Long?>(null) }
 
     val items by container.mediaStore.items.collectAsStateWithLifecycle()
-    val settings by container.settings.settings.collectAsStateWithLifecycle()
+    val settings by container.settings.settings.collectAsStateWithLifecycle(
+        initialValue = HgSettings(),
+    )
     // One queue for the whole app: the strip and the autoplay advance read the same list,
     // so the two cannot disagree about which video is next.
     val videoQueue = remember(items) { VideoQueue.build(items) }

@@ -43,6 +43,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.hgallery.app.R
 import dev.hgallery.app.data.AppContainer
+import dev.hgallery.app.data.HgSettings
 import dev.hgallery.app.data.ThumbnailStore
 import dev.hgallery.app.ui.components.HgIconButton
 import dev.hgallery.app.ui.components.HgScreenTitle
@@ -207,7 +208,9 @@ private fun SelectionAwarePhotos(
 
     // Month view is a fixed six columns; day view follows the stored density, which the
     // pinch gesture and the Settings slider both write.
-    val settings by container.settings.settings.collectAsStateWithLifecycle()
+    val settings by container.settings.settings.collectAsStateWithLifecycle(
+        initialValue = HgSettings(),
+    )
     val columns = if (monthView) HgMetrics.MonthColumns else GridDensity.clamp(settings.gridColumns)
     val thumbnails = remember { container.thumbnails }
     val scope = rememberCoroutineScope()

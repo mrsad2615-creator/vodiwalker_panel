@@ -64,7 +64,9 @@ fun SettingsScreen(
     modifier: Modifier = Modifier,
 ) {
     val palette = hgPalette
-    val settings by container.settings.settings.collectAsStateWithLifecycle()
+    val settings by container.settings.settings.collectAsStateWithLifecycle(
+        initialValue = HgSettings(),
+    )
     val scope = rememberCoroutineScope()
 
     Column(modifier = modifier.fillMaxSize().background(palette.page)) {

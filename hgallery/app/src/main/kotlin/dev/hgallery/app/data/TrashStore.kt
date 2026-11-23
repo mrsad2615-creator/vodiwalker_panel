@@ -92,11 +92,13 @@ class TrashStore(private val context: Context) {
         val file = java.io.File(entry.storedPath)
         if (!file.exists()) return@withContext false
 
-        val target = MediaStore.MediaColumns
         val values = ContentValues().apply {
-            put(target.DISPLAY_NAME, entry.fileName)
-            put(target.MIME_TYPE, entry.mimeType)
-            put(target.RELATIVE_PATH, entry.originalRelativePath.ifBlank { DEFAULT_FOLDER })
+            put(MediaStore.MediaColumns.DISPLAY_NAME, entry.fileName)
+            put(MediaStore.MediaColumns.MIME_TYPE, entry.mimeType)
+            put(
+                MediaStore.MediaColumns.RELATIVE_PATH,
+                entry.originalRelativePath.ifBlank { DEFAULT_FOLDER },
+            )
             put(MediaStore.MediaColumns.IS_PENDING, 1)
         }
 

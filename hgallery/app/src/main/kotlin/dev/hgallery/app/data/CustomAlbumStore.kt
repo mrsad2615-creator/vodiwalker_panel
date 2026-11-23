@@ -127,7 +127,7 @@ class CustomAlbumStore(context: Context) {
         // A name may contain the separator only if it is escaped; names are cleaned to
         // collapse spaces, so the separator is replaced instead of escaped to keep the
         // round trip obvious.
-        append(album.name.replace(SEP, ' '))
+        append(album.name.replace(SEP, " "))
         append(SEP)
         append(album.updatedAtMs)
         append(SEP)

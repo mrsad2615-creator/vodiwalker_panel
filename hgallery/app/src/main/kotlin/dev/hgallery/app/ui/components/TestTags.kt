@@ -69,6 +69,10 @@ object HgTestTags {
     fun addToAlbumRow(id: Long) = "add-to-album-$id"
     const val SELECTION_NEW_ALBUM = "selection-new-album"
 
+    // The photo filmstrip in the viewer.
+    const val PHOTO_FILMSTRIP = "photo-filmstrip"
+    fun filmstripThumb(id: Long) = "filmstrip-thumb-$id"
+
     // The video filmstrip.
     const val FILMSTRIP = "video-filmstrip"
     const val FILMSTRIP_HANDLE = "video-filmstrip-handle"

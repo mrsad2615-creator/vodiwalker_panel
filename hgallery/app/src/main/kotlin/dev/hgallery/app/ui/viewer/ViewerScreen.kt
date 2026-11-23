@@ -22,7 +22,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -34,13 +33,11 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -260,6 +257,14 @@ fun ViewerScreen(
                     .background(Color.Black.copy(alpha = 0.45f))
                     .navigationBarsPadding(),
             ) {
+                // The strip is above the action row, inside the same animated block:
+                // it is chrome, and hiding the chrome must hide all of it.
+                PhotoFilmstrip(
+                    items = items,
+                    selectedIndex = pagerState.currentPage,
+                    store = container.thumbnails,
+                    onSelect = { index -> coroutine.launch { pagerState.animateScrollToPage(index) } },
+                )
                 if (current != null) {
                     Row(
                         modifier = Modifier

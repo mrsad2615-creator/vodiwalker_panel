@@ -115,6 +115,31 @@ class MediaRepository(private val context: Context) {
         removed
     }
 
+    /**
+     * Writes a new orientation into a photograph's EXIF.
+     *
+     * The pixels are not re-encoded: only the orientation tag changes, which every viewer
+     * already honours. Re-encoding would cost a full decode and encode of a 12-megapixel
+     * file and could change its quality, so it is not done.
+     *
+     * Returns false when the file cannot be opened for writing, which is the ordinary
+     * outcome when the platform has not granted the write.
+     */
+    suspend fun setOrientation(uri: Uri, orientation: Int): Boolean = withContext(Dispatchers.IO) {
+        runCatching {
+            val stream = resolver.openFileDescriptor(uri, "rw") ?: return@runCatching false
+            stream.use {
+                val exif = android.media.ExifInterface(it.fileDescriptor)
+                exif.setAttribute(
+                    android.media.ExifInterface.TAG_ORIENTATION,
+                    orientation.toString(),
+                )
+                exif.saveAttributes()
+                true
+            }
+        }.getOrDefault(false)
+    }
+
     suspend fun setFavorite(uri: Uri, favorite: Boolean): Boolean = withContext(Dispatchers.IO) {
         if (Build.VERSION.SDK_INT < API_R) return@withContext false
         val values = android.content.ContentValues().apply {

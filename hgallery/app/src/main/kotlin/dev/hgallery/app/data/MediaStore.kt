@@ -17,6 +17,7 @@ import kotlinx.coroutines.sync.withLock
  * an instant toggle and a visible stall.
  */
 class MediaStore(
+    private val context: android.content.Context,
     private val repository: MediaRepository,
     private val thumbnails: ThumbnailStore,
     private val actions: MediaActions,
@@ -174,6 +175,37 @@ class MediaStore(
         }
         return stored.size
     }
+
+    /**
+     * Adds [degrees] clockwise to a photograph's orientation.
+     *
+     * Returns false when the platform refuses the write. The item in memory is not
+     * patched either way: the decoded bitmap is cached under the URI, and a rotation that
+     * only changed a counter would leave the grid showing the old orientation and the
+     * user doubting that anything happened. The screen reloads instead.
+     */
+    suspend fun rotate(id: Long, degrees: Int): Boolean {
+        val item = _items.value.firstOrNull { it.id == id } ?: return false
+        val current = runCatching {
+            exifOrientation(android.net.Uri.parse(item.uri))
+        }.getOrDefault(0)
+        val target = dev.hgallery.core.ExifOrientation.rotate(current, degrees)
+        val ok = repository.setOrientation(android.net.Uri.parse(item.uri), target)
+        if (ok) thumbnails.invalidate(listOf(item.uri))
+        return ok
+    }
+
+    /** The EXIF orientation currently stored for [uri], or 1 (normal) when unreadable. */
+    private fun exifOrientation(uri: android.net.Uri): Int =
+        runCatching {
+            context.contentResolver.openInputStream(uri)?.use { stream ->
+                android.media.ExifInterface(stream)
+                    .getAttributeInt(
+                        android.media.ExifInterface.TAG_ORIENTATION,
+                        android.media.ExifInterface.ORIENTATION_NORMAL,
+                    )
+            } ?: android.media.ExifInterface.ORIENTATION_NORMAL
+        }.getOrDefault(android.media.ExifInterface.ORIENTATION_NORMAL)
 
     /** Builds the system share sheet for the selected items. */
     fun buildShareIntent(ids: Set<Long>): android.content.Intent? {

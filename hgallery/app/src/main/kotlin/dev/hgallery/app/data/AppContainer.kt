@@ -27,7 +27,7 @@ class AppContainer(context: Context) {
     /** Platform dialogs and the share sheet; needs an application context only. */
     val actions = MediaActions(appContext)
 
-    val mediaStore = MediaStore(repository, thumbnails, actions)
+    val mediaStore = MediaStore(appContext, repository, thumbnails, actions)
 
     /** Theme, grid density and the remaining preferences. */
     val settings = SettingsRepository(appContext)

@@ -78,6 +78,10 @@ object HgTestTags {
     const val FILMSTRIP_HANDLE = "video-filmstrip-handle"
     fun filmstripCell(id: Long) = "filmstrip-cell-$id"
 
+    // Rotate.
+    const val ROTATE_90 = "rotate-90"
+    const val ROTATE_CANCEL = "rotate-cancel"
+
     // Trash.
     const val TRASH_LIST = "trash-list"
     const val TRASH_BACK = "trash-back"

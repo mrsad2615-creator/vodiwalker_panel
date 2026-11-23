@@ -180,6 +180,13 @@
         <item quantity="other">%1$d videos</item>
     </plurals>
 
+    <!-- Rotate -->
+    <string name="rotate">Rotate</string>
+    <string name="rotate_90">Turn 90 degrees clockwise</string>
+    <string name="rotate_done">Rotated</string>
+    <string name="rotate_failed">This photo could not be changed. The library did not allow it.</string>
+    <string name="rotate_no_permission">This app may not change this photo. Allow access to all photos in Settings to rotate it.</string>
+
     <!-- Camera facts -->
     <string name="exif_title">Camera</string>
     <string name="exif_camera">Camera</string>

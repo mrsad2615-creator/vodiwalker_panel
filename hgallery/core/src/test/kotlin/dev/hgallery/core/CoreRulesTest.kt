@@ -701,3 +701,34 @@ class ExifFormatTest {
         assertFalse(ExifSummary(camera = "Canon").isEmpty)
     }
 }
+
+class ExifOrientationTest {
+
+    @Test
+    fun `stored values map to the rotation the viewer applies`() {
+        assertEquals(0, ExifOrientation.degrees(1))
+        assertEquals(90, ExifOrientation.degrees(6))
+        assertEquals(180, ExifOrientation.degrees(3))
+        assertEquals(270, ExifOrientation.degrees(8))
+    }
+
+    @Test
+    fun `a quarter turn moves to the next stored value`() {
+        assertEquals(6, ExifOrientation.rotate(1, 90))
+        assertEquals(3, ExifOrientation.rotate(6, 90))
+        assertEquals(8, ExifOrientation.rotate(3, 90))
+        assertEquals(1, ExifOrientation.rotate(8, 90))
+    }
+
+    @Test
+    fun `four quarter turns come back to the start`() {
+        assertEquals(1, ExifOrientation.rotate(1, 360))
+        assertEquals(6, ExifOrientation.rotate(6, 360))
+    }
+
+    @Test
+    fun `a mirrored value is treated as its rotation`() {
+        // 5 is a mirrored 90: the viewer cannot flip, so the rotation is kept.
+        assertEquals(6, ExifOrientation.rotate(5, 0))
+    }
+}

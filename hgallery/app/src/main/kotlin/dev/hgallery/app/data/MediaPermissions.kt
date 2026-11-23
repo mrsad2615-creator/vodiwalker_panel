@@ -23,6 +23,9 @@ object MediaPermissions {
     /** Android 13: the granular READ_MEDIA_* permissions replaced one grant. */
     private const val API_TIRAMISU = 33
 
+    /** Android 11: writes through `MediaStore` stopped needing a storage permission. */
+    private const val API_R = 30
+
     /** Result of asking the platform whether the gallery may read media. */
     enum class State {
         GRANTED,
@@ -60,6 +63,25 @@ object MediaPermissions {
     }
 
     fun canReadAnything(context: Context): Boolean = state(context) != State.DENIED
+
+    /**
+     * Whether the app may write to the library.
+     *
+     * Two different answers, for a reason. From Android 11 a `MediaStore` update needs no
+     * permission for media the app did not create only when the write is done through the
+     * platform's own consent dialog; a direct update without that dialog needs the
+     * library to allow it. The gallery therefore asks this before offering a rotate and
+     * reports a failure rather than promising an edit that the platform refuses.
+     *
+     * Below Android 11 a write needs `WRITE_EXTERNAL_STORAGE`, which the manifest declares
+     * up to API 29.
+     */
+    fun canWrite(context: Context): Boolean =
+        if (Build.VERSION.SDK_INT >= API_R) {
+            canReadAnything(context)
+        } else {
+            has(context, Manifest.permission.WRITE_EXTERNAL_STORAGE)
+        }
 
     private fun has(context: Context, permission: String): Boolean =
         ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED

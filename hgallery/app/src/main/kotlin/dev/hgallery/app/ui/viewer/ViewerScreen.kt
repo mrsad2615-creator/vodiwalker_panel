@@ -42,6 +42,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.hgallery.app.data.AppContainer
+import dev.hgallery.app.data.MediaPermissions
 import dev.hgallery.app.ui.icons.HgIcons
 import dev.hgallery.app.ui.components.HgDeleteDialog
 import dev.hgallery.app.ui.components.HgIconButton
@@ -133,6 +134,7 @@ fun ViewerScreen(
     var chromeVisible by remember { mutableStateOf(true) }
     var pendingDelete by remember { mutableStateOf<MediaItem?>(null) }
     var showDetails by remember { mutableStateOf(false) }
+    var rotateOpen by remember { mutableStateOf(false) }
 
     val current = items.getOrNull(pagerState.currentPage)
 
@@ -216,7 +218,24 @@ fun ViewerScreen(
             }
         }
 
-        if (showDetails && current != null) {
+        if (rotateOpen && current != null) {
+        RotateSheet(
+            item = current,
+            hasPermission = MediaPermissions.canWrite(viewerContext),
+            onDismiss = { rotateOpen = false },
+            onRotate = { degrees ->
+                rotateOpen = false
+                coroutine.launch {
+                    val done = container.mediaStore.rotate(current.id, degrees)
+                    val text = if (done) R.string.rotate_done else R.string.rotate_failed
+                    android.widget.Toast.makeText(viewerContext, text, android.widget.Toast.LENGTH_SHORT)
+                        .show()
+                }
+            },
+        )
+    }
+
+    if (showDetails && current != null) {
             DetailsSheet(
                 item = current,
                 exifReader = container.exif,
@@ -307,13 +326,15 @@ fun ViewerScreen(
                             onClick = { showDetails = true },
                             tint = Color.White,
                         )
-                        // Not implemented: disabled rather than misleading.
+                        // Rotating is not editing. The brief rules out filters and
+                        // cropping, and a rotate is a change to the file's orientation
+                        // that the user can undo, so it is the one item action that
+                        // belongs here.
                         HgIconButton(
-                            icon = HgIcons.Edit,
-                            contentDescription = stringResource(R.string.edit),
-                            onClick = {},
-                            enabled = false,
-                            tint = Color.White.copy(alpha = 0.35f),
+                            icon = HgIcons.Rotate,
+                            contentDescription = stringResource(R.string.rotate),
+                            onClick = { rotateOpen = true },
+                            tint = Color.White,
                         )
                         HgIconButton(
                             icon = HgIcons.Delete,

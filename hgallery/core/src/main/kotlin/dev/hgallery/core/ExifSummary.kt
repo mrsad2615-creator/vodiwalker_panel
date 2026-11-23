@@ -38,6 +38,45 @@ data class ExifSummary(
 }
 
 /**
+ * The EXIF orientation value for a rotation, and the rotation for a value.
+ *
+ * EXIF stores orientation as one of eight numbers, and only the four rotations are used
+ * here. Keeping the mapping in one place means the reader and the rotate action cannot
+ * disagree about what orientation 6 means.
+ */
+object ExifOrientation {
+    const val NORMAL = 1
+    const val ROTATE_90 = 6
+    const val ROTATE_180 = 3
+    const val ROTATE_270 = 8
+
+    /** The rotation, in degrees clockwise, that a stored value asks the viewer to apply. */
+    fun degrees(value: Int): Int = when (value) {
+        ROTATE_90 -> 90
+        ROTATE_180 -> 180
+        ROTATE_270 -> 270
+        else -> 0
+    }
+
+    /**
+     * Adds [degrees] to a stored value and returns the new EXPOSURE orientation.
+     *
+     * The result is always a pure rotation: a mirrored value (2, 4, 5, 7) is treated as
+     * its rotation, because the viewer does not implement a flip and a value it cannot
+     * render would be worse than a rotation it can.
+     */
+    fun rotate(current: Int, degrees: Int): Int =
+        when ((degrees(current) + degrees) % FULL_TURN) {
+            90 -> ROTATE_90
+            180 -> ROTATE_180
+            270 -> ROTATE_270
+            else -> NORMAL
+        }
+
+    private const val FULL_TURN = 360
+}
+
+/**
  * The rules for turning EXIF values into the strings the sheet shows.
  *
  * Each function takes the raw numbers a decoder produces and returns the text a camera

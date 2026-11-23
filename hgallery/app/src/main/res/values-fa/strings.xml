@@ -242,4 +242,11 @@
     <string name="exif_iso">حساسیت</string>
     <string name="exif_focal">فاصلهٔ کانونی</string>
     <string name="exif_rotation">چرخش</string>
+
+    <!-- Rotate -->
+    <string name="rotate">چرخاندن</string>
+    <string name="rotate_90">۹۰ درجه در جهت ساعت</string>
+    <string name="rotate_done">چرخانده شد</string>
+    <string name="rotate_failed">این عکس تغییر نکرد. کتابخانه اجازه نداد.</string>
+    <string name="rotate_no_permission">این برنامه اجازهٔ تغییر این عکس را ندارد. برای چرخاندن، در تنظیمات دسترسی به همهٔ عکس‌ها را بدهید.</string>
 </resources>

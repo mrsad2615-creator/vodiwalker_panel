@@ -765,10 +765,11 @@ class CalendarLabelsTest {
 
     @Test
     fun `a gregorian language keeps its own locale`() {
-        assertEquals(
-            java.util.Locale.GERMAN,
-            CalendarLabels.localeFor("de-DE"),
-        )
+        // The language and the region, both: `Locale.GERMAN` is `de` with no country, so
+        // comparing against it would fail on a locale that is right.
+        val german = CalendarLabels.localeFor("de-DE")
+        assertEquals("de", german.language)
+        assertEquals("DE", german.country)
     }
 }
 

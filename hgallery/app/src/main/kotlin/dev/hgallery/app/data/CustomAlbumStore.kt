@@ -66,7 +66,11 @@ class CustomAlbumStore(context: Context) {
      * creates an album — the add sheet and any future import — obeys the same rule.
      * Returns null when the name is empty or already used.
      */
-    suspend fun create(name: String, existing: List<CustomAlbum>): CustomAlbum? {
+    suspend fun create(
+        name: String,
+        existing: List<CustomAlbum>,
+        items: Collection<Long> = emptyList(),
+    ): CustomAlbum? {
         val cleaned = AlbumRules.clean(name)
         if (!AlbumRules.isValidName(cleaned)) return null
         if (AlbumRules.isTaken(cleaned, existing)) return null
@@ -74,10 +78,19 @@ class CustomAlbumStore(context: Context) {
             CustomAlbum(
                 id = AlbumRules.nextId(existing),
                 name = cleaned,
-                itemIds = emptyList(),
+                itemIds = items.toList(),
             ),
         )
     }
+
+    /**
+     * Adds several items to an album at once.
+     *
+     * The fold lives here so a caller cannot add three of five items by forgetting one
+     * step of the loop, and so no screen has to hold a mutable album while it works.
+     */
+    suspend fun addItems(album: CustomAlbum, items: Collection<Long>): CustomAlbum =
+        save(items.fold(album) { current, id -> AlbumRules.addItem(current, id) })
 
     /** Renames an album. Returns null when the new name is not usable. */
     suspend fun rename(

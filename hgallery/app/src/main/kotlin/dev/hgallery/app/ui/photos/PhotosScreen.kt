@@ -231,20 +231,14 @@ private fun SelectionAwarePhotos(
             onPick = { picked ->
                 addToAlbumOpen = false
                 scope.launch {
-                    var updated = picked
-                    chosen.forEach { updated = dev.hgallery.core.AlbumRules.addItem(updated, it) }
-                    container.customAlbums.save(updated)
+                    container.customAlbums.addItems(picked, chosen)
                     model.exit()
                 }
             },
             onCreate = { name, done ->
                 scope.launch {
-                    val created = container.customAlbums.create(name, customAlbums)
+                    val created = container.customAlbums.create(name, customAlbums, chosen)
                     if (created != null) {
-                        val base = created
-                        var updated = base
-                        chosen.forEach { updated = dev.hgallery.core.AlbumRules.addItem(updated, it) }
-                        container.customAlbums.save(updated)
                         model.exit()
                         done(true)
                     } else {

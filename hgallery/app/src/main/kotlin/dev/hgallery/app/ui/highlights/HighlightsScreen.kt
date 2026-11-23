@@ -42,12 +42,10 @@ import dev.hgallery.app.ui.theme.CountLabel
 import dev.hgallery.app.ui.theme.HgMetrics
 import dev.hgallery.app.ui.theme.hgPalette
 import dev.hgallery.app.ui.theme.hgShapes
-import dev.hgallery.core.CalendarLabels
 import dev.hgallery.core.HighlightsBuilder
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
-import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 /**
@@ -142,16 +140,11 @@ private fun HighlightCard(
 ) {
     val palette = hgPalette
     val cover = highlight.cover
+    // One formatter for the whole app, so a date cannot read one way in the timeline and
+    // another way here.
     val dateLabel = remember(highlight.key, locale) {
         val date = Instant.ofEpochMilli(highlight.dayMs).atZone(zone).toLocalDate()
-        val calendar = CalendarLabels.calendarFor(locale.toLanguageTag())
-        val sameYear = CalendarLabels.sameYear(date, LocalDate.now(zone), calendar)
-        date.format(
-            DateTimeFormatter.ofPattern(
-                CalendarLabels.dayPattern(includeYear = !sameYear),
-                CalendarLabels.localeFor(calendar, locale),
-            ),
-        )
+        container.dateHeaderFormatter(locale)(date, "")
     }
     val countLabel = pluralStringResource(R.plurals.highlight_count, highlight.itemCount, highlight.itemCount)
 

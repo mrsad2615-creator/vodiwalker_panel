@@ -3,6 +3,9 @@ package dev.hgallery.app.data
 import android.content.Context
 import dev.hgallery.core.CalendarLabels
 import dev.hgallery.core.DateGrouping
+import dev.hgallery.core.HgCalendar
+import dev.hgallery.core.PERSIAN_MONTH_NAMES
+import dev.hgallery.core.PersianCalendar
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -60,29 +63,46 @@ class AppContainer(context: Context) {
      * with Today/Yesterday for the newest two.
      */
     fun dateHeaderFormatter(locale: Locale): (java.time.LocalDate, String) -> String {
-        // The calendar follows the language. A Persian reader gets a Persian date, and a
-        // header omits its year only inside that calendar's current year.
         val calendar = CalendarLabels.calendarFor(locale.toLanguageTag())
-        val formatLocale = CalendarLabels.localeFor(calendar, locale)
-        val yearFormatter = DateTimeFormatter.ofPattern(
-            CalendarLabels.dayPattern(includeYear = true),
-            formatLocale,
-        )
-        val monthFormatter = DateTimeFormatter.ofPattern(
-            CalendarLabels.dayPattern(includeYear = false),
-            formatLocale,
-        )
         return { date, fallback ->
-            when (fallback) {
-                "Today", "Yesterday" -> fallback
-                else -> {
-                    val sameYear = CalendarLabels.sameYear(
-                        date,
-                        java.time.LocalDate.now(zone),
-                        calendar,
-                    )
-                    date.format(if (sameYear) monthFormatter else yearFormatter)
+            when {
+                // Today and Yesterday are already translated by the caller.
+                fallback == "Today" || fallback == "Yesterday" -> fallback
+                calendar == HgCalendar.PERSIAN -> {
+                    val persian = PersianCalendar.fromGregorian(date)
+                    val sameYear = persian.year ==
+                        PersianCalendar.fromGregorian(java.time.LocalDate.now(zone)).year
+                    val monthName = PERSIAN_MONTH_NAMES[persian.month - 1]
+                    if (sameYear) {
+                        "${persian.day} $monthName"
+                    } else {
+                        "${persian.day} $monthName ${persian.year}"
+                    }
                 }
+                else -> {
+                    val formatLocale = CalendarLabels.localeFor(HgCalendar.GREGORIAN, locale)
+                    val sameYear = date.year == java.time.LocalDate.now(zone).year
+                    val pattern = CalendarLabels.dayPattern(includeYear = !sameYear)
+                    date.format(DateTimeFormatter.ofPattern(pattern, formatLocale))
+                }
+            }
+        }
+    }
+
+    /** `Mehr 1404` style header for the month level, in either calendar. */
+    fun monthFormatter(locale: Locale): (java.time.YearMonth) -> String {
+        val calendar = CalendarLabels.calendarFor(locale.toLanguageTag())
+        return { month ->
+            if (calendar == HgCalendar.PERSIAN) {
+                val persian = PersianCalendar.fromGregorian(month.atDay(15))
+                "${PERSIAN_MONTH_NAMES[persian.month - 1]} ${persian.year}"
+            } else {
+                month.format(
+                    DateTimeFormatter.ofPattern(
+                        CalendarLabels.MONTH_PATTERN,
+                        CalendarLabels.localeFor(HgCalendar.GREGORIAN, locale),
+                    ),
+                )
             }
         }
     }

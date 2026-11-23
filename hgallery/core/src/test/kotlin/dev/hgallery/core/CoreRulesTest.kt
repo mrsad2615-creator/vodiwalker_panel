@@ -750,10 +750,17 @@ class CalendarLabelsTest {
     }
 
     @Test
-    fun `the persian locale asks the platform for the persian calendar`() {
+    fun `a persian date is converted by the app, not by a locale extension`() {
+        // `java.time` accepts `-u-ca-persian` and then ignores it, so the conversion is
+        // done by the app. This asserts the locale carries no calendar promise it cannot
+        // keep, and that the conversion gives the right numbers.
         val locale = CalendarLabels.localeFor(HgCalendar.PERSIAN, java.util.Locale.ENGLISH)
-        // The extension is what makes the platform render Persian months and years.
-        assertTrue(locale.toLanguageTag().contains("ca-persian"))
+        assertEquals("fa", locale.language)
+        assertFalse(locale.toLanguageTag().contains("ca-persian"))
+        val persian = PersianCalendar.fromGregorian(java.time.LocalDate.of(2025, 3, 21))
+        assertEquals(1404, persian.year)
+        assertEquals(1, persian.month)
+        assertEquals(1, persian.day)
     }
 
     @Test
@@ -787,5 +794,66 @@ class CalendarYearTest {
     fun `a date is always in its own year`() {
         assertTrue(CalendarLabels.sameYear(lastDayOf1403, lastDayOf1403, HgCalendar.PERSIAN))
         assertTrue(CalendarLabels.sameYear(firstDayOf1404, firstDayOf1404, HgCalendar.GREGORIAN))
+    }
+}
+
+/**
+ * The Persian calendar, checked against dates whose Persian year is known.
+ *
+ * Each case is a year boundary or a well-known day, so a failure names the rule that
+ * broke rather than only a number: a wrong March start shifts every date in the year.
+ */
+class PersianCalendarTest {
+
+    private fun p(date: java.time.LocalDate): PersianDate = PersianCalendar.fromGregorian(date)
+
+    @Test
+    fun `the new year falls on the day the year starts`() {
+        assertEquals(PersianDate(1403, 1, 1), p(java.time.LocalDate.of(2024, 3, 20)))
+        assertEquals(PersianDate(1404, 1, 1), p(java.time.LocalDate.of(2025, 3, 21)))
+        assertEquals(PersianDate(1405, 1, 1), p(java.time.LocalDate.of(2026, 3, 21)))
+        assertEquals(PersianDate(1400, 1, 1), p(java.time.LocalDate.of(2021, 3, 21)))
+    }
+
+    @Test
+    fun `the last day of a year is the day before the next new year`() {
+        assertEquals(PersianDate(1403, 12, 30), p(java.time.LocalDate.of(2025, 3, 20)))
+    }
+
+    @Test
+    fun `a date in january belongs to the year that began the march before`() {
+        // The bug this catches: searching March of the same Gregorian year put the year
+        // start after the date, and the conversion returned the wrong year.
+        assertEquals(PersianDate(1378, 10, 11), p(java.time.LocalDate.of(2000, 1, 1)))
+        assertEquals(PersianDate(1405, 9, 1), p(java.time.LocalDate.of(2026, 11, 22)))
+    }
+
+    @Test
+    fun `a historic date keeps its well-known persian day`() {
+        assertEquals(PersianDate(1357, 11, 22), p(java.time.LocalDate.of(1979, 2, 11)))
+    }
+
+    @Test
+    fun `the month lengths follow the rule`() {
+        // 1 Farvardin plus 186 days is 1 Mehr; the first six months are 31 days each.
+        val mehr = p(java.time.LocalDate.of(2024, 3, 20).plusDays(186))
+        assertEquals(7, mehr.month)
+        assertEquals(1, mehr.day)
+    }
+
+    @Test
+    fun `a persian year is leap when the count of leaps changes`() {
+        // 1403 is a leap year: it has 366 days, and 30 Esfand exists in it.
+        assertTrue(PersianCalendar.isLeapYear(1403))
+        assertFalse(PersianCalendar.isLeapYear(1404))
+    }
+
+    @Test
+    fun `every month name has a key`() {
+        val names = PERSIAN_MONTH_KEYS
+        assertEquals(12, names.size)
+        assertEquals("farvardin", names.first())
+        assertEquals("esfand", names.last())
+        assertEquals("esfand", PersianDate(1403, 12, 1).monthKey)
     }
 }

@@ -61,24 +61,33 @@ object CalendarLabels {
      * and then its dates follow the language.
      */
     /**
-     * Whether two ISO dates are in the same year of [calendar].
+     * Whether two dates are in the same year of [calendar].
      *
      * Not `LocalDate.year == LocalDate.year`: a Persian year starts around 21 March, so
-     * two dates in one Gregorian year can sit in two Persian years. The comparison is made
-     * on the formatted year, which is the year the header would print.
-     *
-     * The platform's own calendar system does the arithmetic, so a leap year and the
-     * month lengths are its problem, not this file's.
+     * two dates in one Gregorian year can sit in two Persian years.
      */
-    fun sameYear(a: java.time.LocalDate, b: java.time.LocalDate, calendar: HgCalendar): Boolean {
-        val locale = localeFor(calendar, java.util.Locale.ROOT)
-        val formatted = java.time.format.DateTimeFormatter.ofPattern("yyyy", locale)
-        return a.format(formatted) == b.format(formatted)
-    }
+    fun sameYear(a: java.time.LocalDate, b: java.time.LocalDate, calendar: HgCalendar): Boolean =
+        yearOf(a, calendar) == yearOf(b, calendar)
 
+    /** The year [date] falls in, in [calendar]. */
+    fun yearOf(date: java.time.LocalDate, calendar: HgCalendar): Int =
+        when (calendar) {
+            HgCalendar.GREGORIAN -> date.year
+            HgCalendar.PERSIAN -> PersianCalendar.fromGregorian(date).year
+        }
+
+    /**
+     * The locale to format with.
+     *
+     * Deliberately the language's own locale, with no calendar extension. `java.time` on
+     * Android ignores a `-u-ca-` extension and silently formats in the calendar of the
+     * default locale, so the extension was a promise this platform does not keep. The
+     * conversion is done in [PersianCalendar] instead, and only the month and day names
+     * come from here.
+     */
     fun localeFor(calendar: HgCalendar, base: java.util.Locale): java.util.Locale =
         when (calendar) {
             HgCalendar.GREGORIAN -> base
-            HgCalendar.PERSIAN -> java.util.Locale.forLanguageTag("fa-IR-u-ca-persian")
+            HgCalendar.PERSIAN -> java.util.Locale("fa", "IR")
         }
 }

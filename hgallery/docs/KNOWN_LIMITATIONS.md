@@ -53,14 +53,14 @@ oversight that went unnoticed.
   had guessed wrong, and that step now needs a run. The read path is also unverified
   after a relaunch — `IS_FAVORITE` is queried on API 30+ and the write path was the
   part that was broken, so a restart is what proves the value persisted.
-* **Search is now a real screen, but only four of its axes were driven.** The
-  magnifier was wired to an empty lambda and is now a screen with a field, kind
-  chips, size, recency and album chips, filtering through the tested
-  `core/SearchFilters`. Photographed: empty, mid-typing ("clip" → 2 results) and
-  with the Videos chip lit. Not driven by the harness: the Large/size axis, the
-  recency chips, the album chips, and the empty state, because the chip row scrolls
-  and the harness only recently learned to swipe it. The filtering rules themselves
-  are unit-tested; what is unverified is the screen's behaviour on those axes.
+* **Search: two of its four axes are unverified.** Photographed and driven: the
+  text field, the kind chips ("clip" → 2 results, then Photos → 0), the size chips
+  (Large → 0 matches, then swapped to Small, which proves one choice per axis), the
+  empty state, the Clear action and Back out. Not driven: the recency chips, the
+  album chips, and the interactive path of tapping a result to open it. The
+  filtering rules for all of them are unit-tested; what is unverified is the screen
+  on those two axes. The chip row scrolls horizontally, which the harness handles by
+  swiping and re-reading the hierarchy up to three times.
 * **Persian plurals.** Lint's `ImpliedQuantity` check found that Persian's
   singular form also covers zero, so the delete bodies now carry the count in
   both variants. The wording was reviewed by inspection, not by a native speaker.

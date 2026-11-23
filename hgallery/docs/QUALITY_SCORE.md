@@ -17,6 +17,7 @@ quality 15 %, performance 15 %, interactions 10 %, compatibility 5 %.
 | Albums | 8.0 | 6.0 | 9.0 | 7.5 | 7.0 | 8.0 | **7.6** |
 | Album detail | 7.0 | 8.0 | 9.0 | 7.0 | 7.0 | 8.0 | **7.6** |
 | Viewer | 6.5 | 6.5 | 8.0 | 7.0 | 7.5 | 7.0 | **7.0** |
+| Search | 7.5 | 8.0 | 8.5 | 5.0 | 7.0 | 7.0 | **7.3** |
 | Bottom bar | 9.0 | 9.0 | 9.0 | 9.0 | 8.0 | 8.0 | **8.8** |
 
 ### Why Photos day view is 7.8 and not 9
@@ -44,7 +45,7 @@ which is implemented and photographed.
 | Photo editor | **0** | absent; its control is disabled rather than faked |
 | Video playback | **6** | a real Media3 player exists and is screenshotted in four states (mid-playback, chrome hidden, ended, landscape). Gestures beyond tap and rotation were not driven by the harness, and no clip longer than six seconds or other codec was tried. |
 | Discover / Highlights | **0** | absent; the tabs say so |
-| Search screen | **6** | a real screen: field, kind/size/recency/album chips, results grid reusing the photos cell, distinct empty states, unit-tested filtering. Three of the four axes were photographed; size, recency and album chips were not driven, and no result-of-a-chip-differs shot exists yet. |
+| Search screen | **7** | a real screen: field, kind/size/recency/album chips behind labelled section headers, results grid reusing the photos cell, distinct empty states, unit-tested filtering, all reachable through accessibility labels. Photographed: empty, mid-typing, kind axis narrowing 2 results to 0, size axis narrowing to 0 and being swapped from Large to Small. Not driven: the recency chips and the album chips. |
 | Duplicate finder | **2** | algorithm exists and is tested; no worker, no UI |
 | Recently deleted | **0** | absent, and deletion is therefore permanent |
 | Multi-selection / share | **8** | selection, batch share and recoverable delete are implemented, tested and photographed on API 33. |
@@ -99,19 +100,22 @@ Weighted: **6.95/10** (0.30×7.5 + 0.25×6.5 + 0.15×8.5 + 0.15×5.0 + 0.10×7.0
 not support; the figure is corrected rather than left flattering. The two low
 scores are honest, not modest: nothing has run on the phone the project is for.
 
-## Revision — 2026-11-22 (search screen exists)
+## Revision — 2026-11-22 (search screen photographed and driven)
 
 | Category | Weight | Score | Evidence |
 |---|---|---|---|
-| Huawei visual fidelity | 30% | 7.5/10 | The search screen is photographed for the first time and reads as the reference: a bordered field with the magnifier inside, chips beneath it, a plain result count, then the same 4-column grid as Photos. Unchanged from the previous revision because nothing was re-measured against a native capture. |
-| Functional completeness | 25% | 7.5/10 | Search went from 2 to 6. The field filters as you type ("clip" → 2 videos), chips AND together in tested code, and the empty state differs for "filters too wide" versus "no such file". Still absent: editor, Discover content, EXIF, custom albums. |
-| Code quality | 15% | 8.5/10 | `SearchChips.toQuery(nowMs)` takes the clock as a parameter instead of reading it, so the date buckets are testable; four new tests cover bucket contiguity, span arithmetic, chip emptiness and AND-ing. detekt rejected the first two attempts — unnamed byte and time literals — and both were fixed rather than suppressed. |
-| Performance | 15% | 5/10 | Unchanged and unmeasured. Search filters in-memory over the already-loaded item list, which is fine for 8 fixtures and unknown for 20 000 photos; nobody has measured it. |
-| Interactions and animations | 10% | 7/10 | The field takes focus on arrival, the Back key leaves search, and a chip visibly lights in the accent colour when chosen. No transition on the search/results switch and no measured frame timing. |
-| Compatibility | 5% | 7/10 | Unchanged. Only an API 33 emulator was run; the chip row scrolls horizontally, which was exercised only as a swipe in the harness. |
+| Huawei visual fidelity | 30% | 7.5/10 | The screen reads as the reference: a bordered field with the magnifier inside, labelled chip rows beneath it, then the same 4-column grid as Photos. The whole path from an empty field to a narrowed result set was photographed. Nothing was re-measured against a native capture, so this does not rise. |
+| Functional completeness | 25% | 8.0/10 | Search works on the kind axis (\"clip\" → 2 results, Photos → 0) and the size axis (Large → 0 matches, then swapped to Small), both photographed, and the harness reaches them by swiping the row and re-reading the hierarchy. Album and recency chips remain undriven. Still absent overall: editor, Discover content, EXIF, custom albums. |
+| Code quality | 15% | 8.5/10 | `SearchChips.toQuery(nowMs)` takes the clock as a parameter instead of reading it, so the date buckets are testable; four tests cover bucket contiguity, span arithmetic, chip emptiness and AND-ing. detekt rejected two rounds of unnamed byte and time literals, and both were fixed rather than suppressed. |
+| Performance | 15% | 5/10 | Unchanged and unmeasured. Search filters in memory over the already-loaded list, which is fine for 8 fixtures and unknown for 20 000 photos. |
+| Interactions and animations | 10% | 7/10 | The field takes focus on arrival, Back leaves search, a chosen chip lights in the accent colour and replaces its opposite rather than adding to it. No transition between search and the shell, and no measured frame timing. |
+| Compatibility | 5% | 7/10 | Unchanged. Only an API 33 emulator was run; the horizontal chip scroll was exercised as a real swipe with a retry loop. |
 
-Weighted: **7.20/10** (0.30×7.5 + 0.25×7.5 + 0.15×8.5 + 0.15×5.0 + 0.10×7.0 +
-0.05×7.0). Functional completeness rises because one of the brief's named absent
-screens was replaced by a working one, not because more was claimed. Performance
-staying at 5 is what keeps the total from moving further: the single largest weight
-after fidelity is the one nobody has measured.
+Weighted: **7.33/10** (0.30×7.5 + 0.25×8.0 + 0.15×8.5 + 0.15×5.0 + 0.10×7.0 +
+0.05×7.0).
+
+Three rounds of screenshots moved this, not three rounds of code review: the chip
+rows were unlabelled, \"Clear filters\" floated unattached when a query matched
+nothing, and the size chips were unreachable because the row scrolls and the harness
+never swiped it. Each was visible only in a PNG. Performance staying at 5 is what
+keeps the total from moving further.

@@ -16,7 +16,7 @@ quality 15 %, performance 15 %, interactions 10 %, compatibility 5 %.
 | Photos — month view | 6.5 | 7.0 | 9.0 | 7.0 | 7.0 | 8.0 | **7.2** |
 | Albums | 8.0 | 6.0 | 9.0 | 7.5 | 7.0 | 8.0 | **7.6** |
 | Album detail | 7.0 | 8.0 | 9.0 | 7.0 | 7.0 | 8.0 | **7.6** |
-| Viewer | 6.5 | 6.5 | 8.0 | 7.0 | 7.5 | 7.0 | **7.0** |
+| Viewer | 6.5 | 7.0 | 8.0 | 7.0 | 7.5 | 7.0 | **7.1** |
 | Search | 7.5 | 8.0 | 8.5 | 5.0 | 7.0 | 7.0 | **7.3** |
 | Bottom bar | 9.0 | 9.0 | 9.0 | 9.0 | 8.0 | 8.0 | **8.8** |
 
@@ -43,6 +43,7 @@ which is implemented and photographed.
 | Feature | Score | Reason |
 |---|---|---|
 | Photo editor | **0** | absent; its control is disabled rather than faked |
+| File details | **7** | a real sheet from the row already loaded: name, size, dimensions, megapixels, duration for video, folder, album and type. Unit-tested, including the rule that omits a row rather than print a placeholder. Shows no EXIF — camera, aperture, ISO — which needs the file stream and a parser. |
 | Video playback | **6** | a real Media3 player exists and is screenshotted in four states (mid-playback, chrome hidden, ended, landscape). Gestures beyond tap and rotation were not driven by the harness, and no clip longer than six seconds or other codec was tried. |
 | Discover / Highlights | **0** | absent; the tabs say so |
 | Search screen | **7** | a real screen: field, kind/size/recency/album chips behind labelled section headers, results grid reusing the photos cell, distinct empty states, unit-tested filtering, all reachable through accessibility labels. Photographed: empty, mid-typing, kind axis narrowing 2 results to 0, size axis narrowing to 0 and being swapped from Large to Small. Not driven: the recency chips and the album chips. |
@@ -60,7 +61,7 @@ exists to show, so no overall figure is given.
 | Score | Needs |
 |---|---|
 | Fidelity above 8 | a clean native-resolution capture from a real Huawei device, then pixel comparison of margins and cell boundaries |
-| Function above 8 | EXIF details, a photo editor, and search across size/recency/album axes that the harness has actually driven |
+| Function above 8 | EXIF (camera and exposure data, not just file facts), a photo editor, and search across the recency and album axes that the harness has not driven |
 | Performance above 7 | Macrobenchmark and `FrameMetrics` on the POCO X3 Pro |
 | Compatibility above 8 | a run on API 29 and API 34, not only 33 |
 
@@ -105,7 +106,7 @@ scores are honest, not modest: nothing has run on the phone the project is for.
 | Category | Weight | Score | Evidence |
 |---|---|---|---|
 | Huawei visual fidelity | 30% | 7.5/10 | The screen reads as the reference: a bordered field with the magnifier inside, labelled chip rows beneath it, then the same 4-column grid as Photos. The whole path from an empty field to a narrowed result set was photographed. Nothing was re-measured against a native capture, so this does not rise. |
-| Functional completeness | 25% | 8.0/10 | Search works on the kind axis (\"clip\" → 2 results, Photos → 0) and the size axis (Large → 0 matches, then swapped to Small), both photographed, and the harness reaches them by swiping the row and re-reading the hierarchy. Album and recency chips remain undriven. Still absent overall: editor, Discover content, EXIF, custom albums. |
+| Functional completeness | 25% | 8.0/10 | Search works on the kind axis (\"clip\" → 2 results, Photos → 0) and the size axis (Large → 0 matches, then swapped to Small), both photographed, and the harness reaches them by swiping the row and re-reading the hierarchy. Album and recency chips remain undriven. Still absent overall: editor, Discover content, custom albums, and true EXIF. A file-details sheet was added this revision. |
 | Code quality | 15% | 8.5/10 | `SearchChips.toQuery(nowMs)` takes the clock as a parameter instead of reading it, so the date buckets are testable; four tests cover bucket contiguity, span arithmetic, chip emptiness and AND-ing. detekt rejected two rounds of unnamed byte and time literals, and both were fixed rather than suppressed. |
 | Performance | 15% | 5/10 | Unchanged and unmeasured. Search filters in memory over the already-loaded list, which is fine for 8 fixtures and unknown for 20 000 photos. |
 | Interactions and animations | 10% | 7/10 | The field takes focus on arrival, Back leaves search, a chosen chip lights in the accent colour and replaces its opposite rather than adding to it. No transition between search and the shell, and no measured frame timing. |

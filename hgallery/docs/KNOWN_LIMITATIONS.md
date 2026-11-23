@@ -69,6 +69,11 @@ oversight that went unnoticed.
   The Albums screen's ADD ALBUM link is greyed for the same reason, though the
   reference shows it in the accent colour; the visual difference is deliberate and
   is the only place this build knowingly departs from a reference control's styling.
+* **The details sheet shows file facts, not photograph facts.** Size, dimensions,
+  megapixels, duration, folder, album and MIME type come from the MediaStore row the
+  grid already loaded. Camera make, lens, aperture, ISO and the original capture time
+  are EXIF, which means opening the file and parsing it; none of that is shown, so the
+  sheet must not be read as an EXIF panel.
 * **Persian plurals.** Lint's `ImpliedQuantity` check found that Persian's
   singular form also covers zero, so the delete bodies now carry the count in
   both variants. The wording was reviewed by inspection, not by a native speaker.

@@ -149,6 +149,7 @@ fun HgSectionHeader(
     modifier: Modifier = Modifier,
     action: String? = null,
     onAction: (() -> Unit)? = null,
+    enabled: Boolean = true,
 ) {
     val palette = hgPalette
     // The row is as tall as the 48 dp touch target it has to contain. Forcing a
@@ -169,18 +170,23 @@ fun HgSectionHeader(
             modifier = Modifier.weight(1f),
         )
         if (action != null && onAction != null) {
+            // A section action that cannot act is drawn greyed and says so, rather
+            // than in the accent colour as though it worked.
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(8.dp))
-                    .clickable(onClick = onAction)
+                    .clickable(enabled = enabled, onClick = onAction)
                     .padding(horizontal = 6.dp, vertical = 12.dp)
-                    .semantics { role = Role.Button },
+                    .semantics {
+                        role = Role.Button
+                        if (!enabled) contentDescription = "$action, unavailable"
+                    },
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
                     text = action,
                     style = androidx.compose.material3.MaterialTheme.typography.labelMedium,
-                    color = palette.accent,
+                    color = if (enabled) palette.accent else palette.textTertiary,
                     maxLines = 1,
                 )
             }

@@ -107,8 +107,12 @@ fun AlbumsScreen(
                 item(span = { GridItemSpan(maxLineSpan) }) {
                     HgSectionHeader(
                         label = stringResource(R.string.section_more_albums),
+                        // Custom albums are not built. The reference has this link,
+                        // so it stays drawn, but greyed and announced as unavailable
+                        // rather than accent-blue and inert.
                         action = stringResource(R.string.action_add_album),
                         onAction = {},
+                        enabled = false,
                     )
                 }
                 items(folders, key = { it.id }) { album ->

@@ -50,9 +50,6 @@ import dev.hgallery.app.ui.components.HgDeleteDialog
 import dev.hgallery.app.ui.components.HgIconButton
 import dev.hgallery.app.ui.components.HgTestTags
 import dev.hgallery.core.MediaItem
-
-/** One log tag for this screen, so the harness can isolate its lines from logcat. */
-private const val TAG = "HGalleryViewer"
 import kotlinx.coroutines.launch
 import androidx.compose.ui.res.stringResource
 import dev.hgallery.app.R
@@ -63,6 +60,9 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.ui.platform.LocalContext
+
+/** One log tag for this screen, so the harness can isolate its lines from logcat. */
+private const val TAG = "HGalleryViewer"
 
 /**
  * Full-screen viewer.

@@ -82,6 +82,9 @@ private fun RowLabel(text: String) {
  */
 @Composable
 private fun KindChips(chips: SearchChips, onChange: (SearchChips) -> Unit) {
+    // Resolved here: the semantics block below is not a composable scope, so it
+    // cannot call stringResource itself.
+    val scrollHint = stringResource(R.string.search_filters_scrollable)
     LazyRow(
         contentPadding = PaddingValues(horizontal = HgMetrics.Gutter),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -89,7 +92,7 @@ private fun KindChips(chips: SearchChips, onChange: (SearchChips) -> Unit) {
             // A row of pills clipped at the right edge looks finished. Saying it
             // scrolls is the difference between a user finding "Large" and
             // concluding the app has no size filter at all.
-            contentDescription = stringResource(R.string.search_filters_scrollable)
+            contentDescription = scrollHint
         },
     ) {
         item {

@@ -58,6 +58,10 @@ class MediaActions(context: Context) {
     fun buildDeleteRequest(uris: List<Uri>, path: DeletePath): IntentSender? {
         if (uris.isEmpty() || path != DeletePath.SYSTEM_TRASH) return null
         if (Build.VERSION.SDK_INT < API_TRASH) return null
+        // The version check is three lines above and applies to this statement; lint
+        // cannot follow a plain `if` across the intervening return. Below 30 the
+        // caller falls back to its own confirmation dialog.
+        @Suppress("NewApi") // guarded by the API_TRASH check directly above
         return MediaStore.createTrashRequest(resolver, uris, true).intentSender
     }
 
@@ -78,17 +82,27 @@ class MediaActions(context: Context) {
      */
     fun buildFavouriteRequest(uris: List<Uri>, favourite: Boolean): IntentSender? {
         if (uris.isEmpty()) return null
-        val androidVersion = Build.VERSION.SDK_INT
-        if (androidVersion < API_TRASH) return null
-        return runCatching {
-            if (androidVersion >= API_FAVOURITE_REQUEST) {
+        // Each call sits under its own version check rather than behind a shared
+        // local, because lint reasons about `Build.VERSION.SDK_INT` in the condition
+        // and not about a variable holding it; the variable form is a NewApi error.
+        return when {
+            Build.VERSION.SDK_INT >= API_FAVOURITE_REQUEST -> runCatching {
                 MediaStore.createFavoriteRequest(resolver, uris, favourite).intentSender
-            } else {
+            }.reportIfRefused()
+            Build.VERSION.SDK_INT >= API_TRASH -> runCatching {
                 MediaStore.createWriteRequest(resolver, uris).intentSender
-            }
-        }.onFailure { Log.w(TAG, "favourite request refused: ${it.javaClass.simpleName} ${it.message}") }
-            .getOrNull()
+            }.reportIfRefused()
+            else -> null
+        }
     }
+
+    /**
+     * A refusal here is worth a log line: the caller can only say "no dialog was
+     * available", and the reason is in the exception this discards.
+     */
+    private fun Result<IntentSender>.reportIfRefused(): IntentSender? =
+        onFailure { Log.w(TAG, "favourite request refused: ${it.javaClass.simpleName} ${it.message}") }
+            .getOrNull()
 
     private companion object {
         const val TAG = "HGalleryActions"

@@ -271,3 +271,58 @@ describe('the cloud turn', () => {
     expect(fetchImpl).not.toHaveBeenCalled();
   });
 });
+
+describe('the wider tool set', () => {
+  it('creates a batch of tasks in one call', async () => {
+    const result = await executeAiTool('create_tasks', { titles: ['الف', 'ب', 'ج'] });
+    expect(result.ok).toBe(true);
+    expect(await db.tasks.count()).toBe(3);
+  });
+
+  it('moves overdue work to today and leaves it undoable', async () => {
+    await executeAiTool('create_task', { title: 'کهنه', dueDate: '2020-01-01' });
+    const result = await executeAiTool('reschedule_overdue', {});
+    expect(result.ok).toBe(true);
+    const task = (await db.tasks.toArray())[0];
+    expect(task.dueDate).toBe(getTodayKey());
+    const undo = await db.undoHistory.toArray();
+    expect(undo.some((entry) => entry.kind === 'task.update')).toBe(true);
+  });
+
+  it('postpones one task by a number of days', async () => {
+    await executeAiTool('create_task', { title: 'قرارداد', dueDate: getTodayKey() });
+    const result = await executeAiTool('postpone_task', { titleQuery: 'قرارداد', days: 3 });
+    expect(result.ok).toBe(true);
+    const expected = new Date(`${getTodayKey()}T00:00:00Z`);
+    expected.setUTCDate(expected.getUTCDate() + 3);
+    expect((await db.tasks.toArray())[0].dueDate).toBe(expected.toISOString().slice(0, 10));
+  });
+
+  it('searches across every collection and says when nothing matches', async () => {
+    await executeAiTool('create_project', { title: 'بازطراحی سایت' });
+    const hit = await executeAiTool('search', { query: 'بازطراحی' });
+    expect((hit.data as unknown[]).length).toBe(1);
+    const miss = await executeAiTool('search', { query: 'هیچ‌چیز' });
+    expect(miss.summary).toContain('پیدا نشد');
+  });
+
+  it('plans the day with measured capacity rather than a fixed guess', async () => {
+    await executeAiTool('create_task', { title: 'کار امروز', dueDate: getTodayKey() });
+    const result = await executeAiTool('plan_day', {});
+    expect(result.ok).toBe(true);
+    expect((result.data as { capacityUnknown: boolean }).capacityUnknown).toBe(true);
+  });
+
+  it('undoes the last restorable change and refuses when there is nothing to undo', async () => {
+    await executeAiTool('create_task', { title: 'قابل برگشت', dueDate: getTodayKey() });
+    await executeAiTool('update_task', { titleQuery: 'قابل برگشت', priority: 'high' });
+    const undone = await executeAiTool('undo_last', {});
+    expect(undone.ok).toBe(true);
+    expect((await db.tasks.toArray())[0].priority).toBe('medium');
+
+    // Drain whatever is left, then the honest refusal.
+    for (let index = 0; index < 5; index += 1) await executeAiTool('undo_last', {});
+    const empty = await executeAiTool('undo_last', {});
+    expect(empty.ok).toBe(false);
+  });
+});

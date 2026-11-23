@@ -249,3 +249,40 @@ describe('the manager layer', () => {
     expect(answer.lines[0]).toContain('جابه‌جا');
   });
 });
+
+describe('offline small talk', () => {
+  it('answers a greeting instead of claiming not to understand it', () => {
+    const answer = runCommand('سلام', baseContext);
+    expect(answer.intent).toBe('smalltalk.greeting');
+    expect(answer.title).toContain('سلام');
+    expect(answer.unknown).toBeUndefined();
+  });
+
+  it('says which day it is, in Persian digits, from the real calendar', () => {
+    const answer = runCommand('امروز چند شنبه است؟', baseContext);
+    expect(answer.intent).toBe('smalltalk.date');
+    expect(answer.lines[0]).toMatch(/شنبه|یکشنبه|دوشنبه|سه‌شنبه|چهارشنبه|پنجشنبه|جمعه/);
+    expect(answer.lines[0]).not.toMatch(/[0-9]/);
+  });
+
+  it('reads the clock in Persian digits', () => {
+    const answer = runCommand('ساعت چند است؟', baseContext);
+    expect(answer.intent).toBe('smalltalk.time');
+    expect(answer.lines[0]).not.toMatch(/[0-9]/);
+  });
+
+  it('does not let a greeting steal a real question', () => {
+    const answer = runCommand('سلام، وظایف امروز چیه؟', {
+      ...baseContext,
+      tasks: [task({ title: 'مالیات', dueDate: TODAY })],
+    });
+    expect(answer.intent).toBe('today.tasks');
+    expect(answer.lines.join(' ')).toContain('مالیات');
+  });
+
+  it('still says "I do not know" for something genuinely outside its world', () => {
+    const answer = runCommand('قیمت بیت‌کوین چنده؟', baseContext);
+    expect(answer.intent).toBe('help');
+    expect(answer.unknown).toBe(true);
+  });
+});

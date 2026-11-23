@@ -1,6 +1,7 @@
 import { useId, useMemo, useState } from 'react';
 import { Numeric } from '@/components/ui/Numeric';
 import { useMotionLevel } from '@/lib/useAppearance';
+import { buildSmoothPath, niceAxis } from './geometry';
 
 export interface AreaChartPoint {
   key: string;
@@ -13,34 +14,6 @@ interface LuxuryAreaChartProps {
   maxValue?: number;
   height?: number;
   unitSuffix?: string;
-}
-
-/** Monotone-ish cubic curve: no overshoot, no fake dips between real points. */
-function buildSmoothPath(coords: { x: number; y: number }[]): string {
-  if (coords.length === 0) return '';
-  if (coords.length === 1) return `M ${coords[0].x} ${coords[0].y}`;
-  let path = `M ${coords[0].x} ${coords[0].y}`;
-  for (let i = 0; i < coords.length - 1; i++) {
-    const p0 = coords[i - 1] ?? coords[i];
-    const p1 = coords[i];
-    const p2 = coords[i + 1];
-    const p3 = coords[i + 2] ?? p2;
-    const t = 0.18;
-    const c1x = p1.x + (p2.x - p0.x) * t;
-    const c1y = p1.y + (p2.y - p0.y) * t;
-    const c2x = p2.x - (p3.x - p1.x) * t;
-    const c2y = p2.y - (p3.y - p1.y) * t;
-    path += ` C ${c1x} ${c1y}, ${c2x} ${c2y}, ${p2.x} ${p2.y}`;
-  }
-  return path;
-}
-
-function niceMax(value: number): number {
-  if (value <= 0) return 1;
-  const magnitude = 10 ** Math.floor(Math.log10(value));
-  const normalized = value / magnitude;
-  const step = normalized <= 2 ? 2 : normalized <= 5 ? 5 : 10;
-  return step * magnitude;
 }
 
 /**
@@ -65,7 +38,7 @@ export function LuxuryAreaChart({
   const plotH = height - padTop - padBottom;
 
   const axisMax = useMemo(
-    () => Math.max(1, maxValue ?? niceMax(Math.max(...points.map((p) => p.value), 1))),
+    () => Math.max(1, maxValue ?? niceAxis(Math.max(...points.map((p) => p.value), 1)).top),
     [maxValue, points]
   );
 

@@ -96,9 +96,14 @@ describe('Home showcases', () => {
         onOpen={vi.fn()}
       />
     );
-    const line = container.querySelector('polyline');
+    // A smooth path (not a raw polyline) that visits one point per day: the
+    // curve has 13 segments for 14 days, and the last point is marked.
+    const line = container.querySelector('path[stroke="var(--accent-fg)"]');
     expect(line).not.toBeNull();
-    expect(line!.getAttribute('points')!.trim().split(/\s+/)).toHaveLength(14);
+    const commands = line!.getAttribute('d') ?? '';
+    expect((commands.match(/ C /g) ?? []).length).toBe(13);
+    expect(container.querySelectorAll('circle').length).toBe(2);
+    expect(screen.getByRole('img', { name: /روند فعالیت/ })).toBeInTheDocument();
   });
 
   it('renders an empty habit board as an invitation, not a blank box', () => {

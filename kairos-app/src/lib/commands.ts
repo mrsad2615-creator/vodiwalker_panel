@@ -8,7 +8,7 @@ import type {
   Task,
 } from '@/types/domain';
 import type { DailyPoint } from './homeMetrics';
-import { formatJalaaliShort } from './date';
+import { formatClockHHMM, formatJalaaliFull, formatJalaaliShort, getTodayKey } from './date';
 import { computeProjectProgress, describeBasis, projectRisks, riskSentence } from './projects';
 import { buildDailyBrief, buildWeeklyReview, type ManagerInput } from './coach';
 
@@ -39,6 +39,11 @@ export type CommandIntent =
   | 'review.week'
   | 'why.suggestion'
   | 'help'
+  | 'smalltalk.greeting'
+  | 'smalltalk.date'
+  | 'smalltalk.time'
+  | 'smalltalk.thanks'
+  | 'smalltalk.identity'
   | 'unknown';
 
 export interface CommandAnswer {
@@ -185,13 +190,70 @@ export function unknownAnswer(): CommandAnswer {
   };
 }
 
+/**
+ * Small talk, handled honestly.
+ *
+ * A rule engine that answers «سلام» with «این فرمان را نمیشناسم» feels broken even
+ * though it is technically correct, so greetings, the date and the clock get real
+ * answers. They are only tried *after* every real intent fails, so «سلام، وظایف
+ * امروز چیه؟» is still a task question.
+ */
+export function detectSmalltalk(raw: string): CommandIntent | null {
+  const text = normalizeCommand(raw);
+  if (!text) return null;
+
+  const has = (patterns: RegExp[]) => patterns.some((pattern) => pattern.test(text));
+
+  if (has([/ساعت چند/, /چند ساعت/, /الساعه/, /^ساعت/, /what time/])) return 'smalltalk.time';
+  if (
+    has([
+      /چند شنبه/,
+      /چه روزی/,
+      /امروز چه روز/,
+      /تاریخ امروز/,
+      /امروز چندم/,
+      /چندمه/,
+      /تاریخ چنده/,
+      /what day/,
+      /today.*date/,
+    ])
+  ) {
+    return 'smalltalk.date';
+  }
+  if (has([/ممنون/, /مرسی/, /دستت درد نکنه/, /thanks/, /thank you/, /سپاس/])) {
+    return 'smalltalk.thanks';
+  }
+  if (
+    has([
+      /تو کی هستی/,
+      /کی هستی/,
+      /اسمت چیه/,
+      /چه کاری (می‌)?توانی/,
+      /چیکار میتونی/,
+      /چه کارهایی میتونی/,
+      /who are you/,
+    ])
+  ) {
+    return 'smalltalk.identity';
+  }
+  // Greetings must be short and must not contain a real request.
+  if (
+    text.length <= 24 &&
+    has([/^سلام/, /^درود/, /^سلام علیکم/, /^صبح بخیر/, /^شب بخیر/, /^عصر بخیر/, /^hi\b/, /^hello/])
+  ) {
+    return 'smalltalk.greeting';
+  }
+  return null;
+}
+
 function sum(values: number[]): number {
   return values.reduce((total, value) => total + value, 0);
 }
 
 /** Runs one command. Pure: everything it needs arrives in the context. */
 export function runCommand(raw: string, context: CommandContext): CommandAnswer {
-  const intent = detectIntent(raw);
+  const detected = detectIntent(raw);
+  const intent = detected === 'unknown' ? detectSmalltalk(raw) ?? detected : detected;
   const { tasks, todayKey } = context;
 
   switch (intent) {
@@ -499,6 +561,61 @@ export function runCommand(raw: string, context: CommandContext): CommandAnswer 
         intent,
         title: 'دلیل پیشنهاد',
         lines: [context.lastSuggestionReason],
+      };
+    }
+
+    case 'smalltalk.greeting': {
+      const today = formatJalaaliFull(context.todayKey);
+      return {
+        intent,
+        title: 'سلام! در خدمتم.',
+        lines: [
+          `امروز ${today.weekday} ${fa(today.day)} ${today.month} ${fa(today.year)} است.`,
+          'می‌توانی بپرسی «بریف امروز» یا «کاری برایم بساز». اگر مدیر ابری را روشن کرده باشی، گفت‌وگوی آزاد هم داریم.',
+        ],
+        action: { label: 'دیدن وظایف', tab: 'tasks' },
+      };
+    }
+
+    case 'smalltalk.date': {
+      const today = formatJalaaliFull(context.todayKey ?? getTodayKey());
+      return {
+        intent,
+        title: `امروز ${today.weekday} است`,
+        lines: [
+          `${today.weekday} ${fa(today.day)} ${today.month} ${fa(today.year)}`,
+          `به تاریخ میلادی: ${fa(new Date().toISOString().slice(0, 10))}`,
+        ],
+      };
+    }
+
+    case 'smalltalk.time': {
+      const clock = formatClockHHMM();
+      return {
+        intent,
+        title: `الان ساعت ${fa(clock)} است`,
+        lines: ['اگر کار عمیقی داری، همین حالا یک جلسهٔ تمرکز شروع کن؛ برنامه‌ات را هم می‌توانم بچینم.'],
+        action: { label: 'شروع تمرکز', tab: 'focus' },
+      };
+    }
+
+    case 'smalltalk.thanks': {
+      return {
+        intent,
+        title: 'قابلی نداشت.',
+        lines: ['اگر کاری مانده، بگو تا همین‌جا انجامش بدهم.'],
+      };
+    }
+
+    case 'smalltalk.identity': {
+      return {
+        intent,
+        title: 'من مدیر کایروس هستم',
+        lines: [
+          'آفلاین: بریف روز، مرور هفته، پیدا کردن کار و پروژه با نام، برنامه‌ریزی و پاسخ از دادهٔ خودت — بدون اینترنت.',
+          'با مدیر ابری (اختیاری): گفت‌وگوی آزاد و انجام کار روی برنامه از راه ابزارهای مشخص، با ثبت در دفتر و برگشت‌پذیر.',
+          'حذف کردن هیچ‌وقت در دست من نیست.',
+        ],
       };
     }
 

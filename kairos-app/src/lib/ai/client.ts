@@ -228,6 +228,11 @@ function isWriteTool(name: string): boolean {
     'toggle_stage',
     'log_habit',
     'update_settings',
+    'create_tasks',
+    'reschedule_overdue',
+    'postpone_task',
+    // An undo is a write, but an obviously safe one: it only restores a row.
+    'undo_last',
   ].includes(name);
 }
 

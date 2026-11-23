@@ -142,7 +142,27 @@ export function CommandCenter() {
 
     if (!result.ok) {
       const message = result.error ?? 'ارتباط با مدیر ابری برقرار نشد.';
-      setChat((current) => [...current, { role: 'assistant', text: message }]);
+      // Never leave the person with an error alone: the offline engine answers
+      // the same question where it can, and says so on the card.
+      const localAnswer = runCommand(text, {
+        tasks,
+        habits,
+        habitLogs,
+        goals,
+        projects,
+        stages,
+        series,
+        todayKey,
+        sessions,
+        lastSuggestionReason: topInsightReason,
+      });
+      const fallback = localAnswer.unknown
+        ? 'این را هم نمی‌دانم.'
+        : `${localAnswer.title}\n${localAnswer.lines.join('\n')}`;
+      setChat((current) => [
+        ...current,
+        { role: 'assistant', text: `${message}\n\nجواب آفلاین:\n${fallback}` },
+      ]);
       pushToast({ title: 'مدیر ابری پاسخ نداد', description: message, tone: 'warning' });
       return;
     }

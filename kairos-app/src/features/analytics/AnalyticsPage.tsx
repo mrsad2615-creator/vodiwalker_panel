@@ -31,12 +31,14 @@ import {
   shiftJalaaliMonth,
 } from '@/lib/date';
 import { formatDurationShort } from '@/lib/format';
+import { useApp } from '@/context/AppContext';
 import { LuxuryCard } from '@/components/ui/LuxuryCard';
 import { Numeric } from '@/components/ui/Numeric';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { sectionEyebrow } from '@/lib/sections';
 import { ActivityHeatmap } from '@/components/charts/ActivityHeatmap';
 import { LuxuryBarChart } from '@/components/charts/LuxuryBarChart';
+import { WeeklyTrendChart } from '@/components/charts/WeeklyTrendChart';
 import { LuxuryAreaChart } from '@/components/charts/LuxuryAreaChart';
 import { EmptyState } from '@/components/ui/EmptyState';
 
@@ -68,6 +70,7 @@ function DeltaBadge({ value, suffix = '%' }: { value: number; suffix?: string })
 }
 
 export function AnalyticsPage() {
+  const { settings } = useApp();
   const todayKey = getTodayKey();
   const todayJ = dateKeyToJalaali(todayKey);
 
@@ -93,6 +96,13 @@ export function AnalyticsPage() {
         focusSessions.filter((s) => s.dateKey === dk).reduce((acc, s) => acc + s.durationMinutes, 0)
       );
       const habitsDone = habitLogs.filter((l) => l.dateKey === dk && l.status === 'completed').length;
+      // Same weekday, seven days earlier: the only fair comparison in a
+      // seven-point chart, and the number the tooltip quotes.
+      const prevKey = addDays(dk, -7);
+      const prevTaskDone = tasks.filter((t) => t.status === 'completed' && t.completedDate === prevKey).length;
+      const prevFocusMin = Math.round(
+        focusSessions.filter((s) => s.dateKey === prevKey).reduce((acc, s) => acc + s.durationMinutes, 0)
+      );
       return {
         dateKey: dk,
         weekday: PERSIAN_WEEKDAYS_SHORT[getPersianWeekdayIndex(dk)],
@@ -100,6 +110,9 @@ export function AnalyticsPage() {
         tasksDone,
         focusMin,
         habitsDone,
+        prevTaskDone,
+        prevFocusMin,
+        isToday: dk === todayKey,
       };
     });
   }, [tasks, focusSessions, habitLogs, todayKey]);
@@ -222,15 +235,19 @@ export function AnalyticsPage() {
               />
             </div>
 
-            <LuxuryBarChart
+            <WeeklyTrendChart
               data={last7DaysData.map((d) => ({
                 key: d.dateKey,
                 label: d.weekday,
-                sublabel: `${d.shortDate} • ${d.focusMin} دقیقه تمرکز`,
+                dateLabel: d.shortDate,
                 value: d.focusMin,
-                highlighted: d.dateKey === todayKey,
+                previous: d.prevFocusMin,
+                isToday: d.isToday,
               }))}
-              unitSuffix="m"
+              target={settings.dailyFocusGoalMinutes}
+              unitSuffix=" دقیقه"
+              valueLabel="تمرکز"
+              height={188}
             />
           </LuxuryCard>
 
@@ -249,14 +266,19 @@ export function AnalyticsPage() {
               />
             </div>
 
-            <LuxuryBarChart
+            <WeeklyTrendChart
               data={last7DaysData.map((d) => ({
                 key: d.dateKey,
                 label: d.weekday,
-                sublabel: `${d.shortDate} • ${d.tasksDone} وظیفه تکمیل‌شده`,
+                dateLabel: d.shortDate,
                 value: d.tasksDone,
-                highlighted: d.dateKey === todayKey,
+                previous: d.prevTaskDone,
+                isToday: d.isToday,
               }))}
+              target={settings.dailyTaskGoal}
+              unitSuffix=" کار"
+              valueLabel="وظیفهٔ بسته‌شده"
+              height={188}
             />
           </LuxuryCard>
 

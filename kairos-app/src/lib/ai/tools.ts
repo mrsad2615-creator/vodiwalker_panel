@@ -13,6 +13,10 @@ import {
 } from '@/lib/db';
 import { getTodayKey } from '@/lib/date';
 import { buildDailyBrief, buildWeeklyReview } from '@/lib/coach';
+import { buildDayPlan } from '@/lib/planner';
+import { bestFocusWindow } from '@/lib/insights';
+import { addDays } from '@/lib/date';
+import { undoLast } from '@/lib/undo';
 import { snapshotForManager } from './snapshot';
 
 /**
@@ -46,7 +50,14 @@ export type ToolName =
   | 'list_habits'
   | 'log_habit'
   | 'update_settings'
-  | 'navigate';
+  | 'navigate'
+  | 'search'
+  | 'plan_day'
+  | 'focus_stats'
+  | 'create_tasks'
+  | 'reschedule_overdue'
+  | 'postpone_task'
+  | 'undo_last';
 
 /** Writes are the ones that change data; the UI asks before them by default. */
 export const WRITE_TOOLS: readonly ToolName[] = [
@@ -58,6 +69,10 @@ export const WRITE_TOOLS: readonly ToolName[] = [
   'toggle_stage',
   'log_habit',
   'update_settings',
+  'create_tasks',
+  'reschedule_overdue',
+  'postpone_task',
+  'undo_last',
 ];
 
 export interface ToolResult {
@@ -291,6 +306,89 @@ export const AI_TOOLS = [
         },
         required: ['tab'],
       },
+    },
+  },
+  {
+    type: 'function' as const,
+    function: {
+      name: 'search',
+      description: 'جست‌وجوی یک عبارت در کارها، پروژه‌ها، عادت‌ها و هدف‌ها. برای وقتی اسم دقیق را نمی‌دانی.',
+      parameters: {
+        type: 'object',
+        properties: { query: str('بخشی از نام یا عنوان') },
+        required: ['query'],
+      },
+    },
+  },
+  {
+    type: 'function' as const,
+    function: {
+      name: 'plan_day',
+      description: 'برنامهٔ پیشنهادی امروز با ظرفیت اندازه‌گیری‌شده و دلیل هر بلوک.',
+      parameters: { type: 'object', properties: {}, required: [] },
+    },
+  },
+  {
+    type: 'function' as const,
+    function: {
+      name: 'focus_stats',
+      description: 'آمار تمرکز هفت روز اخیر: دقیقهٔ هر روز، مجموع، بهترین بازهٔ ساعت.',
+      parameters: { type: 'object', properties: {}, required: [] },
+    },
+  },
+  {
+    type: 'function' as const,
+    function: {
+      name: 'create_tasks',
+      description: 'ساخت چند وظیفه در یک قدم. برای وقتی کاربر یک فهرست می‌دهد.',
+      parameters: {
+        type: 'object',
+        properties: {
+          titles: { type: 'array', items: { type: 'string' }, description: 'عنوان‌ها، حداکثر ۱۰' },
+          dueDate: str('موعد مشترک YYYY-MM-DD؛ اختیاری'),
+          category: {
+            type: 'string',
+            enum: ['work', 'personal', 'health', 'learning', 'finance', 'creative'],
+          },
+        },
+        required: ['titles'],
+      },
+    },
+  },
+  {
+    type: 'function' as const,
+    function: {
+      name: 'reschedule_overdue',
+      description: 'کارهای عقب‌افتاده را به امروز منتقل می‌کند تا از صف کهنه بیرون بیایند.',
+      parameters: {
+        type: 'object',
+        properties: { limit: num('حداکثر تعداد، پیش‌فرض ۵') },
+        required: [],
+      },
+    },
+  },
+  {
+    type: 'function' as const,
+    function: {
+      name: 'postpone_task',
+      description: 'موعد یک وظیفه را چند روز جلو می‌برد.',
+      parameters: {
+        type: 'object',
+        properties: {
+          id: str('شناسهٔ وظیفه'),
+          titleQuery: str('بخشی از عنوان، اگر شناسه نداری'),
+          days: num('چند روز جلو برود، پیش‌فرض ۱'),
+        },
+        required: [],
+      },
+    },
+  },
+  {
+    type: 'function' as const,
+    function: {
+      name: 'undo_last',
+      description: 'آخرین تغییر قابل‌برگشت را برمی‌گرداند (ویرایش کار، تیک مرحله، ثبت عادت).',
+      parameters: { type: 'object', properties: {}, required: [] },
     },
   },
 ];
@@ -587,6 +685,172 @@ export async function executeAiTool(
       const allowed = ['tasks', 'projects', 'habits', 'focus', 'analytics'];
       if (!allowed.includes(tab)) return { ok: false, summary: 'این بخش وجود ندارد.' };
       return { ok: true, summary: `رفتن به ${tab}`, data: { tab } };
+    }
+
+    case 'search': {
+      const query = asString(args.query).toLowerCase();
+      if (!query) return { ok: false, summary: 'عبارت جست‌وجو خالی است.' };
+      const [tasks, projects, habits, goals] = await Promise.all([
+        db.tasks.toArray(),
+        db.projects.toArray(),
+        db.habits.toArray(),
+        db.goals.toArray(),
+      ]);
+      const hits = [
+        ...tasks
+          .filter((task) => !task.archived && task.title.toLowerCase().includes(query))
+          .map((task) => ({ type: 'task', id: task.id, title: task.title, status: task.status })),
+        ...projects
+          .filter((project) => project.title.toLowerCase().includes(query))
+          .map((project) => ({ type: 'project', id: project.id, title: project.title })),
+        ...habits
+          .filter((habit) => !habit.archived && habit.name.toLowerCase().includes(query))
+          .map((habit) => ({ type: 'habit', id: habit.id, title: habit.name })),
+        ...goals
+          .filter((goal) => goal.title.toLowerCase().includes(query))
+          .map((goal) => ({ type: 'goal', id: goal.id, title: goal.title })),
+      ];
+      return {
+        ok: true,
+        summary: hits.length === 0 ? 'چیزی با این عبارت پیدا نشد.' : `${hits.length} نتیجه`,
+        data: hits.slice(0, 20),
+      };
+    }
+
+    case 'plan_day': {
+      const snapshot = await snapshotForManager();
+      const plan = buildDayPlan({
+        tasks: snapshot.tasks,
+        sessions: snapshot.sessions,
+        todayKey,
+        goalMinutes: snapshot.goalMinutes ?? 120,
+      });
+      return {
+        ok: true,
+        summary: `${plan.blocks.length} بلوک در ${plan.capacityMinutes} دقیقه`,
+        data: {
+          capacityMinutes: plan.capacityMinutes,
+          capacityNote: plan.capacityNote,
+          capacityUnknown: plan.capacityUnknown,
+          blocks: plan.blocks.map((block) => ({
+            title: block.title,
+            minutes: block.minutes,
+            reason: block.reason,
+          })),
+          overflow: plan.overflow.map((block) => ({ title: block.title, minutes: block.minutes })),
+        },
+      };
+    }
+
+    case 'focus_stats': {
+      const sessions = await db.focusSessions.toArray();
+      const days = Array.from({ length: 7 }, (_, index) => {
+        const dateKey = addDays(todayKey, index - 6);
+        const minutes = sessions
+          .filter((session) => session.dateKey === dateKey)
+          .reduce((sum, session) => sum + session.durationMinutes, 0);
+        return { dateKey, minutes: Math.round(minutes) };
+      });
+      const window = bestFocusWindow(sessions);
+      return {
+        ok: true,
+        summary: `${days.reduce((sum, day) => sum + day.minutes, 0)} دقیقه در ۷ روز`,
+        data: {
+          days,
+          bestWindow: window
+            ? { from: window.startHour, to: window.endHour, sessions: window.sessions }
+            : null,
+        },
+      };
+    }
+
+    case 'create_tasks': {
+      const rawTitles = Array.isArray(args.titles) ? args.titles : [];
+      const titles = rawTitles.map((value) => asString(value)).filter(Boolean).slice(0, 10);
+      if (titles.length === 0) return { ok: false, summary: 'هیچ عنوانی داده نشد.' };
+      const dueDate = asDate(args.dueDate);
+      const category = CATEGORIES.includes(asString(args.category) as TaskCategory)
+        ? (asString(args.category) as TaskCategory)
+        : 'work';
+      const created: { id: string; title: string }[] = [];
+      for (const title of titles) {
+        const task = await createTask({
+          title,
+          description: '',
+          dueDate,
+          dueTime: null,
+          priority: 'medium',
+          quadrant: 'q2',
+          category,
+          tags: [],
+          status: 'todo',
+          subtasks: [],
+          recurrence: 'none',
+          reminderEnabled: false,
+          reminderOffsetMin: 0,
+          goalId: null,
+          projectId: null,
+          estimateMin: null,
+        });
+        created.push({ id: task.id, title: task.title });
+      }
+      return {
+        ok: true,
+        summary: `${created.length} وظیفه ساخته شد: ${created.map((task) => task.title).join('، ')}`,
+        data: created,
+      };
+    }
+
+    case 'reschedule_overdue': {
+      const limit = Math.min(20, asNumber(args.limit) ?? 5);
+      const overdue = (await db.tasks.toArray())
+        .filter(
+          (task) =>
+            !task.archived &&
+            task.status !== 'completed' &&
+            task.dueDate !== null &&
+            task.dueDate < todayKey
+        )
+        .slice(0, limit);
+      for (const task of overdue) {
+        await updateTask(task.id, { dueDate: todayKey });
+      }
+      return {
+        ok: overdue.length > 0,
+        summary:
+          overdue.length > 0
+            ? `${overdue.length} کار به امروز منتقل شد (قابل برگشت).`
+            : 'کار عقب‌افتاده‌ای نبود.',
+        data: overdue.map((task) => ({ id: task.id, title: task.title })),
+      };
+    }
+
+    case 'postpone_task': {
+      const task = await findTask(args);
+      if (!task) return { ok: false, summary: 'وظیفه پیدا نشد.' };
+      const days = Math.min(60, asNumber(args.days) ?? 1);
+      const base = task.dueDate && task.dueDate >= todayKey ? task.dueDate : todayKey;
+      const next = addDays(base, days);
+      await updateTask(task.id, { dueDate: next });
+      return {
+        ok: true,
+        summary: `«${task.title}» به ${next} منتقل شد.`,
+        data: { id: task.id, dueDate: next },
+      };
+    }
+
+    case 'undo_last': {
+      const result = await undoLast();
+      if (!result.ok) {
+        return {
+          ok: false,
+          summary:
+            result.reason === 'empty'
+              ? 'چیزی برای برگرداندن نیست.'
+              : 'این تغییر قابل برگشت نیست (حذف‌ها برگشت‌پذیر نیستند).',
+        };
+      }
+      return { ok: true, summary: `«${result.entry?.label ?? 'آخرین تغییر'}» برگردانده شد.` };
     }
 
     default:

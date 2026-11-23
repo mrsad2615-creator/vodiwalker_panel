@@ -43,6 +43,7 @@ import { exportBackupFile, readBackupFile, saveTextFile } from '@/lib/backup';
 import { tasksToCsv, habitLogsToCsv, focusSessionsToCsv } from '@/lib/csv';
 import { APP_VERSION, BUILD_NUMBER, BUILD_SHA } from '@/lib/buildInfo';
 import { AI_MODEL_HINT, testAiConnection } from '@/lib/ai/client';
+import { AI_PROVIDERS, providerFor } from '@/lib/ai/providers';
 
 export function SettingsPage() {
   const { settings, pushToast } = useApp();
@@ -458,6 +459,47 @@ export function SettingsPage() {
           می‌نویسی فرستاده می‌شود. کلید API فقط روی همین دستگاه ذخیره می‌شود و{' '}
           <span className="text-[var(--text-2)]">در فایل پشتیبان نوشته نمی‌شود</span>.
         </p>
+
+        {/* Pick a provider: fills the address and a known-good model, then the
+            only thing left is the key. */}
+        <div className="space-y-1.5">
+          <span className="block text-[10.5px] text-[var(--text-2)]">سرویس</span>
+          <div className="flex flex-wrap gap-1.5">
+            {AI_PROVIDERS.map((provider) => (
+              <button
+                key={provider.id}
+                type="button"
+                onClick={() => {
+                  setAiBaseUrl(provider.baseUrl);
+                  if (provider.model) setAiModel(provider.model);
+                }}
+                aria-pressed={providerFor(aiBaseUrl)?.id === provider.id}
+                className={`rounded-full px-2.5 py-1 text-[10px] transition-colors ${
+                  providerFor(aiBaseUrl)?.id === provider.id
+                    ? 'bg-[var(--accent)] text-[var(--accent-on)]'
+                    : 'border border-[var(--border)] text-[var(--text-2)]'
+                }`}
+              >
+                {provider.name}
+              </button>
+            ))}
+          </div>
+          {providerFor(aiBaseUrl) && (
+            <p className="text-[9.5px] leading-4 text-[var(--text-3)]">
+              {providerFor(aiBaseUrl)!.note}{' '}
+              {providerFor(aiBaseUrl)!.keyUrl && (
+                <a
+                  href={providerFor(aiBaseUrl)!.keyUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="font-medium text-[var(--accent-fg)] underline decoration-dotted"
+                >
+                  دریافت کلید ←
+                </a>
+              )}
+            </p>
+          )}
+        </div>
 
         <div>
           <label htmlFor="ai-base" className="mb-1.5 block text-[11px] text-[var(--text-2)]">

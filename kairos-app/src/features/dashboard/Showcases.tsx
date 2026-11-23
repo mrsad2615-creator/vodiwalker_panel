@@ -11,6 +11,7 @@ import type {
   TaskBreakdown,
   WeekComparison,
 } from '@/lib/homeMetrics';
+import { buildSmoothPath } from '@/components/charts/geometry';
 import type { Insight } from '@/lib/insights';
 import type { DayPlan } from '@/lib/planner';
 
@@ -500,19 +501,26 @@ export function AnalyticsShowcase({
   dense?: boolean;
 }) {
   const points = series.slice(-14);
-  const max = Math.max(1, ...points.map((p) => p.activity));
-  const w = 100;
-  const h = 30;
-  const step = points.length > 1 ? w / (points.length - 1) : w;
-  const line = points
-    .map((p, i) => `${(i * step).toFixed(2)},${(h - (p.activity / max) * (h - 4) - 2).toFixed(2)}`)
-    .join(' ');
-  const area = `0,${h} ${line} ${w},${h}`;
+  const w = 240;
+  const h = 62;
+  const padY = 6;
+  const peak = Math.max(1, ...points.map((point) => point.activity));
+  const coords = points.map((point, index) => ({
+    x: points.length > 1 ? (index / (points.length - 1)) * w : w / 2,
+    y: padY + (h - padY * 2) * (1 - point.activity / peak),
+  }));
+  const line = buildSmoothPath(coords);
+  const area = `${line} L ${w} ${h} L 0 ${h} Z`;
+  const average = points.length
+    ? points.reduce((sum, point) => sum + point.activity, 0) / points.length
+    : 0;
+  const averageY = padY + (h - padY * 2) * (1 - average / peak);
+  const last = coords[coords.length - 1];
   const delta = comparison.deltaPercent;
 
   return (
     <ShowcaseCard
-      eyebrow="INSIGHT"
+      eyebrow="TREND"
       title="روند دو هفته"
       meta={delta === null ? undefined : `${delta > 0 ? '+' : ''}${delta}%`}
       dense={dense}
@@ -527,24 +535,49 @@ export function AnalyticsShowcase({
         </button>
       }
     >
-      <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" className="h-[46px] w-full">
+      {/* A sparkline with a real baseline, an average reference and a marked
+          "now" — a line without those is decoration, not a trend. */}
+      <svg
+        viewBox={`0 0 ${w} ${h}`}
+        className="h-[52px] w-full"
+        preserveAspectRatio="none"
+        role="img"
+        aria-label={`روند فعالیت ${points.length} روز اخیر، میانگین ${Math.round(average)}`}
+      >
         <defs>
-          <linearGradient id="kairos-spark" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="var(--accent)" stopOpacity="0.42" />
+          <linearGradient id="kairos-small-trend" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="var(--accent)" stopOpacity="0.34" />
             <stop offset="100%" stopColor="var(--accent)" stopOpacity="0" />
           </linearGradient>
         </defs>
-        <polygon points={area} fill="url(#kairos-spark)" />
-        <polyline
-          points={line}
+        <line
+          x1="0"
+          x2={w}
+          y1={averageY}
+          y2={averageY}
+          stroke="var(--text-3)"
+          strokeOpacity="0.4"
+          strokeDasharray="3 4"
+          vectorEffect="non-scaling-stroke"
+        />
+        <path d={area} fill="url(#kairos-small-trend)" />
+        <path
+          d={line}
           fill="none"
           stroke="var(--accent-fg)"
-          strokeWidth="1.4"
+          strokeWidth="1.6"
           strokeLinejoin="round"
           strokeLinecap="round"
           vectorEffect="non-scaling-stroke"
         />
+        {last && (
+          <>
+            <circle cx={last.x} cy={last.y} r="2.6" fill="var(--accent-fg)" />
+            <circle cx={last.x} cy={last.y} r="5.5" fill="var(--accent-fg)" fillOpacity="0.16" />
+          </>
+        )}
       </svg>
+
 
       <div className="mt-1.5 grid grid-cols-3 gap-2 text-center">
         {[

@@ -24,6 +24,17 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.draw.shadow
+import dev.hgallery.app.ui.motion.HgMotion
+import dev.hgallery.app.ui.motion.rememberReduceMotion
+import dev.hgallery.app.ui.theme.hgColors
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -47,8 +58,20 @@ import dev.hgallery.app.ui.theme.TimecodeLabel
 import dev.hgallery.core.PlayerPolicy
 import dev.hgallery.core.PlayerState
 
-/** The translucent scrim the player's chrome sits on, at the reference's weight. */
-private val ChromeScrim = Color(0x66000000)
+/**
+ * The scrims behind the chrome.
+ *
+ * A flat 40% black over a bright frame gave white text about 2.4:1, which is below the
+ * floor for body text. A vertical gradient is darker where the text sits and clear
+ * where the picture matters, so the title stays readable without dimming the film.
+ */
+private val TopScrim = Brush.verticalGradient(
+    listOf(Color(0xCC000000), Color(0x80000000), Color(0x00000000)),
+)
+
+private val BottomScrim = Brush.verticalGradient(
+    listOf(Color(0x00000000), Color(0x99000000), Color(0xD9000000)),
+)
 
 /**
  * The top row: close, title, orientation.
@@ -66,13 +89,15 @@ fun PlayerTopBar(
 ) {
     AnimatedVisibility(
         visible = visible,
-        enter = fadeIn(tween(140)),
-        exit = fadeOut(tween(180)),
+        // The top bar drops in from above and leaves upward, so the direction matches
+        // where it came from. A cross-fade alone reads as a flicker.
+        enter = fadeIn(tween(140)) + slideInVertically(tween(180, easing = HgMotion.emphasizedDecelerate)) { -it },
+        exit = fadeOut(tween(160)) + slideOutVertically(tween(160, easing = HgMotion.emphasizedAccelerate)) { -it },
     ) {
         Column(
             Modifier
                 .fillMaxWidth()
-                .background(ChromeScrim)
+                .background(TopScrim)
                 .statusBarsPadding(),
         ) {
             Row(
@@ -132,7 +157,20 @@ data class PlayerActions(
     val onFillScreen: () -> Unit,
 )
 
-/** The thin progress line: thickens while held, grows a thumb only while held. */
+/**
+ * The progress line.
+ *
+ * ## What changed
+ *
+ * It used to be two rectangles. A rectangle does not say "drag me": the thumb appeared
+ * only after the finger was already down, so the only way to learn the control was to
+ * try it. The track is now a rounded capsule with a thumb that is always present, small
+ * at rest and larger while held, and the played portion grows under a spring so a tap
+ * to seek shows movement instead of a jump.
+ *
+ * The track thickens from 3 dp to 5 dp while held, which is the reference's behaviour
+ * and also enlarges the target exactly when the user has committed to using it.
+ */
 @Composable
 fun PlayerProgress(
     fraction: Float,
@@ -141,11 +179,33 @@ fun PlayerProgress(
     onMove: (Float) -> Unit,
     onEnd: () -> Unit,
 ) {
-    val trackHeight = if (scrubbing) 4.dp else 2.5.dp
+    val reduceMotion = rememberReduceMotion()
+    val playedFraction by animateFloatAsState(
+        targetValue = fraction.coerceIn(0f, 1f),
+        // While a finger is on the line the value must follow it exactly; a spring
+        // there would lag behind the finger and feel broken.
+        animationSpec = if (scrubbing) {
+            spring(stiffness = Spring.StiffnessHigh)
+        } else {
+            HgMotion.defaultEffects<Float>(reduceMotion)
+        },
+        label = "playedFraction",
+    )
+    val trackHeight by animateDpAsState(
+        targetValue = if (scrubbing) 5.dp else 3.dp,
+        animationSpec = HgMotion.fastSpatial(reduceMotion),
+        label = "trackHeight",
+    )
+    val thumbSize by animateDpAsState(
+        targetValue = if (scrubbing) 16.dp else 9.dp,
+        animationSpec = HgMotion.fastSpatial(reduceMotion),
+        label = "thumbSize",
+    )
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(30.dp)
+            .height(34.dp)
             .testTag(HgTestTags.VIDEO_PROGRESS)
             .pointerInput(Unit) {
                 detectHorizontalDragGestures(
@@ -166,15 +226,37 @@ fun PlayerProgress(
             },
         contentAlignment = Alignment.CenterStart,
     ) {
-        Box(Modifier.fillMaxWidth().height(trackHeight).background(Color.White.copy(alpha = 0.22f)))
-        Box(Modifier.fillMaxWidth(fraction).height(trackHeight).background(Color.White))
-        if (scrubbing) {
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp)
+                .height(trackHeight)
+                .clip(RoundedCornerShape(50))
+                .background(Color.White.copy(alpha = 0.26f)),
+        )
+        Box(
+            Modifier
+                .fillMaxWidth(playedFraction)
+                .padding(start = 12.dp)
+                .height(trackHeight)
+                .clip(RoundedCornerShape(50))
+                .background(Color.White),
+        )
+        // The thumb rides the end of the played portion. It is offset from the same
+        // 12 dp inset as the track, or it would sit outside the bar at 0%.
+        Box(
+            Modifier
+                .fillMaxWidth(playedFraction)
+                .padding(start = 12.dp),
+            contentAlignment = Alignment.CenterEnd,
+        ) {
             Box(
-                Modifier.fillMaxWidth(fraction).height(trackHeight),
-                contentAlignment = Alignment.CenterEnd,
-            ) {
-                Box(Modifier.size(13.dp).clip(CircleShape).background(Color.White))
-            }
+                Modifier
+                    .size(thumbSize)
+                    .clip(CircleShape)
+                    .background(Color.White)
+                    .shadow(elevation = 3.dp, shape = CircleShape),
+            )
         }
     }
 }
@@ -193,13 +275,13 @@ fun PlayerBottomBar(
 ) {
     AnimatedVisibility(
         visible = visible,
-        enter = fadeIn(tween(140)),
-        exit = fadeOut(tween(180)),
+        enter = fadeIn(tween(140)) + slideInVertically(tween(200, easing = HgMotion.emphasizedDecelerate)) { it },
+        exit = fadeOut(tween(160)) + slideOutVertically(tween(160, easing = HgMotion.emphasizedAccelerate)) { it },
     ) {
         Column(
             Modifier
                 .fillMaxWidth()
-                .background(ChromeScrim)
+                .background(BottomScrim)
                 .navigationBarsPadding()
                 .padding(bottom = 6.dp),
         ) {
@@ -246,7 +328,7 @@ fun PlayerBottomBar(
                     icon = HgIcons.FillScreen,
                     contentDescription = stringResource(R.string.video_fill_screen),
                     onClick = actions.onFillScreen,
-                    tint = if (transport.fillScreen) Color(0xFF0A84FF) else Color.White,
+                    tint = if (transport.fillScreen) hgColors.accentWarm else Color.White,
                     modifier = Modifier.testTag(HgTestTags.VIDEO_FILL),
                 )
             }
@@ -288,7 +370,7 @@ private fun SpeedControl(speed: Float, onPick: (Float) -> Unit) {
                     Text(
                         text = PlayerPolicy.speedLabel(option),
                         style = TimecodeLabel,
-                        color = if (selected) Color(0xFF0A84FF) else Color.White,
+                        color = if (selected) hgColors.accentWarm else Color.White,
                         modifier = Modifier
                             .fillMaxWidth()
                             .pointerInput(option) {

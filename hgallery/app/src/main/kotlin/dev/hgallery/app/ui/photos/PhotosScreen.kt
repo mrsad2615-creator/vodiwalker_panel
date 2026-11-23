@@ -246,11 +246,12 @@ private fun SelectionAwarePhotos(
                 columns = GridCells.Fixed(columns),
                 horizontalArrangement = Arrangement.spacedBy(HgMetrics.GridGap),
                 verticalArrangement = Arrangement.spacedBy(HgMetrics.GridGap),
-                contentPadding = PaddingValues(
-                    start = HgMetrics.Gutter,
-                    end = HgMetrics.Gutter,
-                    bottom = 24.dp,
-                ),
+                // Edge to edge. The old grid inset every row by the title's 20 dp
+                // gutter, which is why four columns on a 320 dp screen produced
+                // postage stamps with a margin around them: the outer margin cost
+                // more width than the photographs. The title keeps its gutter; the
+                // grid does not, and the gap between cells carries the rhythm now.
+                contentPadding = PaddingValues(bottom = 24.dp),
                 modifier = Modifier
                     .fillMaxSize()
                     .testTag(HgTestTags.PHOTOS_GRID),

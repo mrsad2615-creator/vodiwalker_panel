@@ -60,8 +60,26 @@ class MediaActions(context: Context) {
         return MediaStore.createTrashRequest(resolver, uris, true).intentSender
     }
 
+    /**
+     * The `IntentSender` for Android's own consent dialog before a MediaStore row
+     * that another app owns is modified.
+     *
+     * Needed because a direct `ContentResolver.update` on such a row silently
+     * changes nothing: on Android 11+ MediaProvider requires either ownership or an
+     * explicit user grant, and it reports the refusal as "0 rows updated" rather
+     * than an exception. Favouriting was therefore a no-op that looked like a
+     * successful tap, which is the worst kind of failure to debug from screenshots.
+     */
+    fun buildWriteRequest(uris: List<Uri>): IntentSender? {
+        if (uris.isEmpty()) return null
+        if (Build.VERSION.SDK_INT < API_TRASH) return null
+        return runCatching {
+            MediaStore.createWriteRequest(resolver, uris).intentSender
+        }.getOrNull()
+    }
+
     private companion object {
-        /** Android 11: `MediaStore.createTrashRequest`. */
+        /** Android 11: `createTrashRequest` and `createWriteRequest`. */
         const val API_TRASH = 30
     }
 

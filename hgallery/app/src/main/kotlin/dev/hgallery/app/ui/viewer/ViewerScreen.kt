@@ -53,6 +53,11 @@ import dev.hgallery.core.MediaItem
 import kotlinx.coroutines.launch
 import androidx.compose.ui.res.stringResource
 import dev.hgallery.app.R
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.IntentSenderRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.ui.platform.LocalContext
 
 /**
  * Full-screen viewer.
@@ -76,7 +81,38 @@ fun ViewerScreen(
     onClose: () -> Unit,
 ) {
     val coroutine = rememberCoroutineScope()
-    val viewerContext = androidx.compose.ui.platform.LocalContext.current
+    val context = LocalContext.current
+
+    // Favouriting a row this app does not own needs the user's consent on Android
+    // 11+, and a refused write is reported as "0 rows" rather than as an error. The
+    // toggle therefore asks for the grant and retries once; without this the heart
+    // simply never filled and nothing anywhere said why.
+    var pendingFavouriteId by remember { mutableStateOf<Long?>(null) }
+    val favouriteConsent = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartIntentSenderForResult(),
+    ) { result ->
+        val id = pendingFavouriteId
+        pendingFavouriteId = null
+        if (result.resultCode == Activity.RESULT_OK && id != null) {
+            coroutine.launch { container.mediaStore.toggleFavorite(id) }
+        }
+    }
+
+    fun favourite(id: Long) {
+        coroutine.launch {
+            if (container.mediaStore.toggleFavorite(id)) return@launch
+            val sender = container.mediaStore.favouriteWriteRequest(id)
+            if (sender == null) {
+                // Nothing was written and the platform offers no dialog to ask for.
+                // Saying so is the difference between a bug and a mystery.
+                Toast.makeText(context, R.string.favourite_failed, Toast.LENGTH_SHORT).show()
+            } else {
+                pendingFavouriteId = id
+                favouriteConsent.launch(IntentSenderRequest.Builder(sender).build())
+            }
+        }
+    }
+    val viewerContext = context
     val initialIndex = remember(startId, items) {
         items.indexOfFirst { it.id == startId }.coerceAtLeast(0)
     }
@@ -225,9 +261,7 @@ fun ViewerScreen(
                             contentDescription = stringResource(
                                 if (current.isFavorite) R.string.remove_favourite else R.string.add_favourite,
                             ),
-                            onClick = {
-                                coroutine.launch { container.mediaStore.toggleFavorite(current.id) }
-                            },
+                            onClick = { favourite(current.id) },
                             tint = if (current.isFavorite) Color(0xFFFF6B5A) else Color.White,
                         )
                         // Not implemented: disabled rather than misleading.

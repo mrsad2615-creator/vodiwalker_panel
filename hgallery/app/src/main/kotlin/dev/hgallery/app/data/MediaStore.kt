@@ -65,7 +65,26 @@ class MediaStore(
         _loading.value = true
     }
 
-    /** Favourite toggle, applied optimistically and rolled back if the platform refuses. */
+    /**
+     * The consent dialog for a favourite write, if the platform wants one.
+     *
+     * Null on platforms with no such API, and also null when the write needs no
+     * grant — the caller then retries the toggle directly, which succeeds.
+     */
+    fun favouriteWriteRequest(id: Long): android.content.IntentSender? {
+        val current = _items.value.firstOrNull { it.id == id } ?: return null
+        return actions.buildWriteRequest(listOf(android.net.Uri.parse(current.uri)))
+    }
+
+    /**
+     * Favourite toggle, applied optimistically and rolled back if the platform refuses.
+     *
+     * Returns false both when the row was never written *and* when the platform
+     * wanted the user's consent first; the caller distinguishes the two by asking
+     * [favouriteWriteRequest] and relaunching after consent. Before this, a refusal
+     * was indistinguishable from a tap that did nothing, because `update` reports it
+     * as "0 rows" rather than as an error.
+     */
     suspend fun toggleFavorite(id: Long): Boolean {
         val current = _items.value.firstOrNull { it.id == id } ?: return false
         val target = !current.isFavorite

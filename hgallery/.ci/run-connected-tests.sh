@@ -327,7 +327,14 @@ if tap_tag_or_text "first-photo" 'content-desc="Photo, '; then
   sleep 2
   shot 23-viewer-before-favourite.png
   if tap_tag_or_text "viewer-favourite" 'content-desc="Add to favourites"'; then
-    sleep 2
+    sleep 3
+    # Android shows its own "Allow this app to modify this file?" dialog, because the
+    # fixture photos belong to MediaStore rather than to this app. A user must answer
+    # it, so the harness answers it too; without this the write is refused and the
+    # heart stays hollow, which is exactly what the first attempt photographed.
+    if tap_tag_or_text "allow-modify" 'text="Allow"'; then
+      sleep 3
+    fi
     shot 24-viewer-favourited.png
     if tap_tag_or_text "viewer-back" 'content-desc="Back"'; then
       sleep 2

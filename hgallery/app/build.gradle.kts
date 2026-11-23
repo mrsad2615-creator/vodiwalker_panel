@@ -14,8 +14,13 @@ android {
         applicationId = "dev.hgallery.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.1.0"
+        // The workflow passes its run number so the tag, the release title and the
+        // version the app reports in Settings are the same number. Without it every
+        // APK said 0.1.0 while the tag said 0.1.157, and a bug report naming the
+        // version pointed at no particular build.
+        val releaseRun = providers.gradleProperty("HG_RELEASE_VERSION").orNull
+        versionCode = releaseRun?.toIntOrNull() ?: 1
+        versionName = releaseRun?.let { "0.1.$it" } ?: "0.1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true
     }

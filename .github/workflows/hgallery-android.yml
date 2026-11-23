@@ -334,6 +334,9 @@ jobs:
           export ORG_GRADLE_PROJECT_HG_KEYSTORE_PASSWORD="$PASS"
           export ORG_GRADLE_PROJECT_HG_KEY_ALIAS="hgallery"
           export ORG_GRADLE_PROJECT_HG_KEY_PASSWORD="$PASS"
+          # Same number as the tag and the release title, so the version the app
+          # reports in Settings identifies the release it came from.
+          export ORG_GRADLE_PROJECT_HG_RELEASE_VERSION="$GITHUB_RUN_NUMBER"
           # Piped through tee so the failure reporter below can read it. The job
           # failed here once and the annotations carried nothing but "exit code 1".
           set -o pipefail
@@ -359,6 +362,9 @@ jobs:
           BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
           "$BT/aapt2" dump badging "$APK" | head -8
           "$BT/apksigner" verify --print-certs "$APK" | head -6
+          # Fail here rather than ship an APK whose version does not match its tag.
+          "$BT/aapt2" dump badging "$APK" | grep -q "versionName='0.1.${GITHUB_RUN_NUMBER}'" \
+            || { echo "::error title=version::the APK is not version 0.1.${GITHUB_RUN_NUMBER}"; exit 1; }
           sha256sum "$APK" | tee SHA256SUMS.txt
 
       - name: Publish the release

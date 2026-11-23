@@ -193,11 +193,16 @@ fun ViewerScreen(
                         color = Color.White,
                     )
                     Spacer(Modifier.weight(1f))
+                    // The overflow menu is not built yet. It stays visible, because
+                    // the reference has it and the header looks wrong without it, but
+                    // it is disabled: a control that answers a tap with nothing is
+                    // the failure this screen was audited for once already.
                     HgIconButton(
                         icon = HgIcons.More,
                         contentDescription = stringResource(R.string.more_options),
                         onClick = {},
-                        tint = Color.White,
+                        enabled = false,
+                        tint = Color.White.copy(alpha = 0.35f),
                     )
                 }
                 if (current != null) {

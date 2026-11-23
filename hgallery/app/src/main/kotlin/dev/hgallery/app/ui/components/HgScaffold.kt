@@ -99,7 +99,12 @@ fun HgIconButton(
             .clip(RoundedCornerShape(50))
             .clickable(enabled = enabled, onClick = onClick)
             .semantics {
-                this.contentDescription = contentDescription
+                // Not implemented controls are disabled at their call sites. Saying
+                // so is part of the control: a greyed icon whose accessibility name
+                // still promises an action is misleading to the one user who cannot
+                // see that it is grey.
+                this.contentDescription =
+                    if (enabled) contentDescription else "$contentDescription, unavailable"
                 role = Role.Button
             },
         contentAlignment = Alignment.Center,

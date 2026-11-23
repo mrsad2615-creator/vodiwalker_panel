@@ -61,6 +61,11 @@ oversight that went unnoticed.
   filtering rules for all of them are unit-tested; what is unverified is the screen
   on those two axes. The chip row scrolls horizontally, which the harness handles by
   swiping and re-reading the hierarchy up to three times.
+* **Three controls are visible but disabled, and now say so.** The viewer's Edit
+  and Details and its overflow menu are drawn but greyed, because the features
+  behind them are absent. Their accessibility names end in ", unavailable" so a
+  screen-reader user is not told a disabled control will act. The Photos and Albums
+  toolbars no longer draw an overflow button at all: there was nothing behind it.
 * **Persian plurals.** Lint's `ImpliedQuantity` check found that Persian's
   singular form also covers zero, so the delete bodies now carry the count in
   both variants. The wording was reviewed by inspection, not by a native speaker.

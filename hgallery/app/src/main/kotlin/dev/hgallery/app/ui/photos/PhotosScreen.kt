@@ -157,7 +157,9 @@ private fun SelectionAwarePhotos(
         Column(Modifier.fillMaxWidth()) {
             HgToolbar(
                 onSearch = onSearch,
-                onMore = {},
+                // No overflow button: it had no destination, and an icon that opens
+                // nothing is worse than an absent one.
+                onMore = null,
                 viewAction = {
                     // Selection is reachable without a long press, so the feature
                     // is discoverable and can be driven by a test.

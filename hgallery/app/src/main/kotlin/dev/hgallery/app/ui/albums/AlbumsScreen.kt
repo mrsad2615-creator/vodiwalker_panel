@@ -82,7 +82,9 @@ fun AlbumsScreen(
 
     Column(modifier = modifier.fillMaxSize().background(palette.page)) {
         Spacer(Modifier.statusBarsPadding())
-        HgToolbar(onSearch = onSearch, onMore = {}, modifier = Modifier.padding(end = 6.dp))
+        // No overflow button: there is nothing behind it yet, and a menu that opens
+        // empty is the inert-control failure this project exists to avoid.
+        HgToolbar(onSearch = onSearch, modifier = Modifier.padding(end = 6.dp))
         HgScreenTitle(title = stringResource(R.string.tab_albums))
         Spacer(Modifier.height(18.dp))
 

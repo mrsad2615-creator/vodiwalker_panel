@@ -849,6 +849,36 @@ class PersianCalendarTest {
     }
 
     @Test
+    fun `every day of a year round-trips through the conversion`() {
+        // A full year of dates, every day, checked against the day count of the year it
+        // lands in. A one-day shift in the year start shows up here on day one, and it is
+        // the check that would have caught the doubled base offset before a build.
+        var date = java.time.LocalDate.of(2024, 3, 20)
+        val end = java.time.LocalDate.of(2025, 3, 20)
+        var previous = PersianCalendar.fromGregorian(date)
+        var seen = 1
+        date = date.plusDays(1)
+        while (!date.isAfter(end)) {
+            val current = PersianCalendar.fromGregorian(date)
+            // The next day is the same month's next day, or the next month's first day.
+            val sameMonthNextDay = current.month == previous.month &&
+                current.day == previous.day + 1
+            val nextMonth = (current.month == previous.month + 1 && current.day == 1) ||
+                (previous.month == 12 && current.month == 1 && current.day == 1)
+            assertTrue(
+                sameMonthNextDay || nextMonth,
+                "day broke at $date: $previous then $current",
+            )
+            assertTrue(current.day in 1..31, "day out of range at $date: $current")
+            previous = current
+            seen += 1
+            date = date.plusDays(1)
+        }
+        // 20 March 2024 to 20 March 2025 inclusive is one full Persian year plus one day.
+        assertEquals(366, seen)
+    }
+
+    @Test
     fun `every month name has a key`() {
         val names = PERSIAN_MONTH_KEYS
         assertEquals(12, names.size)

@@ -58,7 +58,12 @@ object PersianCalendar {
         1635, 2060, 2097, 2192, 2262, 2324, 2394, 2456, 3178,
     )
 
-    /** A Persian year is at most 366 days; used to bound the walk below. */
+    /**
+     * The most days a Persian year can hold.
+     *
+     * Used to reject a year start that ends up after the date it is meant to precede.
+     */
+
     private const val DAYS_PER_YEAR_MAX = 366
 
     /** Converts an ISO date to the Persian date that names the same day. */
@@ -103,8 +108,9 @@ object PersianCalendar {
     /**
      * The number of leap years in the 33-year cycle that contains [year].
      *
-     * Exposed because it is the one value a test can check without a full conversion: a
-     * year is leap when this differs from the previous year's value.
+     * Cumulative, and seeded with its base offset. It is not a leap flag: the difference
+     * between two years lags by one at the boundaries between cycle runs, so a leap year
+     * is measured from the length of the year instead.
      */
     fun leapYearsInCycle(year: Int): Int {
         var leap = -14
@@ -154,7 +160,10 @@ object PersianCalendar {
      * Gregorian leap counts, which is why it is not a constant.
      */
     private fun marchDayOf(jalaliYear: Int, gregorianYear: Int): Int {
-        val leapJalali = leapYearsInCycle(jalaliYear) + 14
+        // The count already carries its base offset, so it is used as it is. Adding the
+        // base a second time shifted every year start by fourteen days, which put
+        // January dates outside their own year.
+        val leapJalali = leapYearsInCycle(jalaliYear)
         val leapGregorian = gregorianYear / 4 -
             ((gregorianYear / 100 + 1) * 3) / 4 - 150
         return NOMINAL_MARCH_START + leapJalali - leapGregorian

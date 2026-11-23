@@ -14,7 +14,14 @@ set -u
 
 ALBUM_NAME="hgallery-shots"
 OUT_DIR="ui-shots"
-DEVICE_DIR="/sdcard/Pictures/$ALBUM_NAME"
+# Screenshots must not land anywhere MediaStore indexes. They used to be written to
+# /sdcard/Pictures, so every capture became a gallery item: the app photographed
+# itself, the grid showed screenshots of its own toolbar, the Photos count read "24
+# photos and 2 videos" when the fixtures are 8 and 2, and the search shot said "29
+# results" for an empty query. /data/local/tmp is outside every scanned volume, so
+# the library now contains only the fixtures and every count in a screenshot is
+# about the app rather than about the harness.
+DEVICE_DIR="/data/local/tmp/$ALBUM_NAME"
 PKG="${HGPKG:-dev.hgallery.app.debug}"
 ACTIVITY="dev.hgallery.app.MainActivity"
 
@@ -51,6 +58,10 @@ fi
 # one bucket to draw, and their EXIF dates differ so the timeline must group
 # them into separate day sections rather than collapsing everything into Today.
 echo "== pushing fixture media so the timeline has real content =="
+# Remove the folder earlier revisions of this script left in Pictures. On a reused
+# emulator those captures stay in MediaStore and would keep appearing as library
+# items, which is the artefact this change exists to remove.
+adb shell rm -rf "/sdcard/Pictures/hgallery-shots" >/dev/null 2>&1
 adb shell rm -rf "$DEVICE_DIR" >/dev/null 2>&1
 adb shell mkdir -p "$DEVICE_DIR/Camera" >/dev/null 2>&1
 adb shell mkdir -p "$DEVICE_DIR/Screenshots" >/dev/null 2>&1

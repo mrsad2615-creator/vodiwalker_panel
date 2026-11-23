@@ -39,11 +39,15 @@ class MainActivity : ComponentActivity() {
         }
 
         setContent {
-            HgTheme {
-                // Edge-to-edge means the app paints behind the status bar, so
-                // the system bar icons must be dark on the light background.
-                WindowCompat.getInsetsController(window, window.decorView)
-                    .isAppearanceLightStatusBars = true
+            val systemDark = androidx.compose.foundation.isSystemInDarkTheme()
+            HgTheme(dark = systemDark) {
+                // Edge-to-edge means the app paints behind the bars. The icon colour
+                // must follow the theme: hard-coding "light icons" inverted them in
+                // dark mode, which is where this app is most often used.
+                WindowCompat.getInsetsController(window, window.decorView).apply {
+                    isAppearanceLightStatusBars = !systemDark
+                    isAppearanceLightNavigationBars = !systemDark
+                }
                 val appContainer = remember { container }
                 HGalleryApp(container = appContainer)
             }

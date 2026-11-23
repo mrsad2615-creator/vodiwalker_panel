@@ -54,6 +54,11 @@ import dev.hgallery.app.ui.components.FavouriteBadge
 import dev.hgallery.app.ui.components.SelectionBadge
 import dev.hgallery.app.ui.components.mediaDescription
 import dev.hgallery.app.ui.icons.HgIcons
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import dev.hgallery.app.ui.motion.hgScale
+import dev.hgallery.app.ui.motion.rememberPressScale
+import dev.hgallery.app.ui.theme.hgColors
+import dev.hgallery.app.ui.theme.hgShapes
 import dev.hgallery.app.ui.theme.HgMetrics
 import dev.hgallery.app.ui.theme.hgPalette
 import dev.hgallery.core.MediaItem
@@ -143,7 +148,7 @@ private fun SelectionAwarePhotos(
     val columns = if (monthView) HgMetrics.MonthColumns else HgMetrics.PhotosColumns
     val thumbnails = remember { container.thumbnails }
 
-    Column(modifier = modifier.fillMaxSize().background(palette.page)) {
+    Column(modifier = modifier.fillMaxSize().background(hgColors.background)) {
         Spacer(Modifier.statusBarsPadding())
 
         // In selection mode the title is replaced by the count, exactly as R3
@@ -321,11 +326,16 @@ internal fun ThumbnailCell(
 ) {
     val selected = selection.contains(item.id)
     val label = mediaDescription(item)
+    val interaction = remember { MutableInteractionSource() }
+    // The tile acknowledges the finger before the viewer opens. Without this a tap on
+    // a photograph and a tap on inert background feel identical until the transition.
+    val pressScale = rememberPressScale(interaction = interaction)
     Box(
         modifier = Modifier
             .testTag(HgTestTags.thumbnail(item.id))
             .aspectRatio(1f)
-            .clip(RoundedCornerShape(3.dp))
+            .hgScale(pressScale)
+            .clip(RoundedCornerShape(hgShapes.tile))
             .semantics {
                 contentDescription = label
                 // `this.` is required: the enclosing scope has a `selected`
@@ -333,6 +343,8 @@ internal fun ThumbnailCell(
                 this.selected = selected
             }
             .combinedClickable(
+                interactionSource = interaction,
+                indication = null,
                 onClick = onClick,
                 onLongClick = onLongClick,
             ),
@@ -340,7 +352,7 @@ internal fun ThumbnailCell(
         MediaThumbnail(
             item = item,
             store = store,
-            cornerRadius = 3,
+            cornerRadius = 0,
             describeImage = false,
             modifier = Modifier.fillMaxSize(),
         )

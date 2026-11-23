@@ -1,6 +1,7 @@
 package dev.hgallery.app.data
 
 import android.content.Context
+import dev.hgallery.core.CalendarLabels
 import dev.hgallery.core.DateGrouping
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -59,13 +60,27 @@ class AppContainer(context: Context) {
      * with Today/Yesterday for the newest two.
      */
     fun dateHeaderFormatter(locale: Locale): (java.time.LocalDate, String) -> String {
-        val yearFormatter = DateTimeFormatter.ofPattern("d MMMM yyyy", locale)
-        val monthFormatter = DateTimeFormatter.ofPattern("d MMMM", locale)
+        // The calendar follows the language. A Persian reader gets a Persian date, and a
+        // header omits its year only inside that calendar's current year.
+        val calendar = CalendarLabels.calendarFor(locale.toLanguageTag())
+        val formatLocale = CalendarLabels.localeFor(calendar, locale)
+        val yearFormatter = DateTimeFormatter.ofPattern(
+            CalendarLabels.dayPattern(includeYear = true),
+            formatLocale,
+        )
+        val monthFormatter = DateTimeFormatter.ofPattern(
+            CalendarLabels.dayPattern(includeYear = false),
+            formatLocale,
+        )
         return { date, fallback ->
             when (fallback) {
                 "Today", "Yesterday" -> fallback
                 else -> {
-                    val sameYear = date.year == java.time.LocalDate.now(zone).year
+                    val sameYear = CalendarLabels.sameYear(
+                        date,
+                        java.time.LocalDate.now(zone),
+                        calendar,
+                    )
                     date.format(if (sameYear) monthFormatter else yearFormatter)
                 }
             }
@@ -77,7 +92,11 @@ class AppContainer(context: Context) {
 
     /** `Mal 2026` style header for the month level of the timeline. */
     fun monthFormatter(locale: Locale): (java.time.YearMonth) -> String {
-        val formatter = DateTimeFormatter.ofPattern("MMMM yyyy", locale)
+        val calendar = CalendarLabels.calendarFor(locale.toLanguageTag())
+        val formatter = DateTimeFormatter.ofPattern(
+            CalendarLabels.MONTH_PATTERN,
+            CalendarLabels.localeFor(calendar, locale),
+        )
         return { month -> month.format(formatter) }
     }
 

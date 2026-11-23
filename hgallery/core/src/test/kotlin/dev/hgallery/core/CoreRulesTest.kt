@@ -732,3 +732,59 @@ class ExifOrientationTest {
         assertEquals(6, ExifOrientation.rotate(5, 0))
     }
 }
+
+class CalendarLabelsTest {
+
+    @Test
+    fun `persian asks for the persian calendar and everything else for gregorian`() {
+        assertEquals(HgCalendar.PERSIAN, CalendarLabels.calendarFor("fa"))
+        assertEquals(HgCalendar.PERSIAN, CalendarLabels.calendarFor("fa-IR"))
+        assertEquals(HgCalendar.GREGORIAN, CalendarLabels.calendarFor("en-US"))
+        assertEquals(HgCalendar.GREGORIAN, CalendarLabels.calendarFor("de"))
+    }
+
+    @Test
+    fun `a header inside the year omits the year and one outside keeps it`() {
+        assertEquals("d MMMM", CalendarLabels.dayPattern(includeYear = false))
+        assertEquals("d MMMM yyyy", CalendarLabels.dayPattern(includeYear = true))
+    }
+
+    @Test
+    fun `the persian locale asks the platform for the persian calendar`() {
+        val locale = CalendarLabels.localeFor(HgCalendar.PERSIAN, java.util.Locale.ENGLISH)
+        // The extension is what makes the platform render Persian months and years.
+        assertTrue(locale.toLanguageTag().contains("ca-persian"))
+    }
+
+    @Test
+    fun `a gregorian locale is the one it was given`() {
+        assertEquals(
+            java.util.Locale.ENGLISH,
+            CalendarLabels.localeFor(HgCalendar.GREGORIAN, java.util.Locale.ENGLISH),
+        )
+    }
+}
+
+class CalendarYearTest {
+
+    private val march20 = java.time.LocalDate.of(2025, 3, 20)
+    private val march22 = java.time.LocalDate.of(2025, 3, 22)
+
+    @Test
+    fun `two dates in one gregorian year share a gregorian year`() {
+        assertTrue(CalendarLabels.sameYear(march20, march22, HgCalendar.GREGORIAN))
+    }
+
+    @Test
+    fun `the same two dates fall in different persian years`() {
+        // 20 March 2025 is still 1403; 22 March 2025 is 1404. A header that compared
+        // `LocalDate.year` would print both without a year and hide the change.
+        assertFalse(CalendarLabels.sameYear(march20, march22, HgCalendar.PERSIAN))
+    }
+
+    @Test
+    fun `a date is always in its own year`() {
+        assertTrue(CalendarLabels.sameYear(march20, march20, HgCalendar.PERSIAN))
+        assertTrue(CalendarLabels.sameYear(march20, march20, HgCalendar.GREGORIAN))
+    }
+}

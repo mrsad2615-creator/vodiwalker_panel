@@ -23,8 +23,10 @@ import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import dev.hgallery.app.data.rememberPlayerController
 import dev.hgallery.app.ui.components.HgTestTags
+import dev.hgallery.app.HGalleryApplication
 import dev.hgallery.core.MediaItem
 import dev.hgallery.core.PlayerPolicy
+import dev.hgallery.core.VideoQueue
 import kotlinx.coroutines.delay
 
 /**
@@ -61,15 +63,35 @@ import kotlinx.coroutines.delay
 @Composable
 fun VideoPlayerScreen(
     item: MediaItem,
+    queue: List<MediaItem>,
+    filmstripEnabled: Boolean,
+    autoplayNext: Boolean,
+    onSelectItem: (Long) -> Unit,
     onClose: () -> Unit,
 ) {
     val context = LocalContext.current
     val activity = context as? android.app.Activity
     val controller = rememberPlayerController(item.uri)
+    // The strip draws frames with the same bounded cache as every other screen.
+    val app = LocalContext.current.applicationContext as HGalleryApplication
+    val thumbnailStore = app.container.thumbnails
+
+    // The strip's own mode. Compact is the default because the picture is the point.
+    var filmstripExpanded by remember { mutableStateOf(false) }
+    val showFilmstrip = filmstripEnabled && queue.size > 1
 
     var chromeVisible by remember { mutableStateOf(true) }
     var chromePinned by remember { mutableStateOf(false) }
     var fillScreen by remember { mutableStateOf(false) }
+
+    // A new clip from the strip starts playing without a second tap: the user already said
+    // "play this one" by choosing it. Only the first clip waits for a press, because
+    // opening a video is a request to see it, not always a request for sound.
+    var startedFromStrip by remember { mutableStateOf(false) }
+    LaunchedEffect(item.id) {
+        if (startedFromStrip) controller.player.playWhenReady = true
+        startedFromStrip = true
+    }
 
     val chrome = PlayerPolicy.chromeFor(
         state = controller.state,
@@ -105,6 +127,16 @@ fun VideoPlayerScreen(
             ) {
                 chromeVisible = false
             }
+        }
+    }
+
+    // Advance at the end of a clip, but only when the user asked for it in Settings.
+    // `reachedEnd` is the latch the controller already sets, so this does not depend on
+    // polling the position and cannot fire twice for one clip.
+    LaunchedEffect(controller.reachedEnd, item.id) {
+        if (controller.reachedEnd && autoplayNext) {
+            val next = VideoQueue.next(queue, item.id)
+            if (next != null) onSelectItem(next.id)
         }
     }
 
@@ -173,30 +205,45 @@ fun VideoPlayerScreen(
             )
         }
 
+        // The strip and the transport bar share the bottom edge, in one column: the
+        // strip sits above the bar and both appear and disappear with the chrome. A strip
+        // that outlived the chrome would be the one element the user cannot dismiss.
         Box(Modifier.align(Alignment.BottomCenter)) {
-            PlayerBottomBar(
-                visible = chrome.visible,
-                transport = PlayerTransport(
-                    isPlaying = controller.state.isPlaying,
-                    positionMs = chrome.displayPositionMs,
-                    durationMs = controller.durationMs,
-                    fraction = chrome.displayFraction,
-                    scrubbing = chrome.scrubbing,
-                    speed = controller.speed,
-                    fillScreen = fillScreen,
-                ),
-                actions = PlayerActions(
-                    onTogglePlay = {
-                        controller.togglePlay()
-                        chromeVisible = true
-                    },
-                    onScrubStart = { controller.beginScrub() },
-                    onScrubMove = { controller.moveScrub(it) },
-                    onScrubEnd = { controller.endScrub() },
-                    onSpeed = { controller.changeSpeed(it) },
-                    onFillScreen = { fillScreen = !fillScreen },
-                ),
-            )
+            Column {
+                if (showFilmstrip && chrome.visible) {
+                    VideoFilmstrip(
+                        queue = queue,
+                        selectedId = item.id,
+                        store = thumbnailStore,
+                        expanded = filmstripExpanded,
+                        onToggleExpanded = { filmstripExpanded = !filmstripExpanded },
+                        onSelect = onSelectItem,
+                    )
+                }
+                PlayerBottomBar(
+                    visible = chrome.visible,
+                    transport = PlayerTransport(
+                        isPlaying = controller.state.isPlaying,
+                        positionMs = chrome.displayPositionMs,
+                        durationMs = controller.durationMs,
+                        fraction = chrome.displayFraction,
+                        scrubbing = chrome.scrubbing,
+                        speed = controller.speed,
+                        fillScreen = fillScreen,
+                    ),
+                    actions = PlayerActions(
+                        onTogglePlay = {
+                            controller.togglePlay()
+                            chromeVisible = true
+                        },
+                        onScrubStart = { controller.beginScrub() },
+                        onScrubMove = { controller.moveScrub(it) },
+                        onScrubEnd = { controller.endScrub() },
+                        onSpeed = { controller.changeSpeed(it) },
+                        onFillScreen = { fillScreen = !fillScreen },
+                    ),
+                )
+            }
         }
     }
 }

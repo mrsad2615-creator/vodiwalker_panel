@@ -17,14 +17,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import dev.hgallery.app.R
 import dev.hgallery.app.data.AppContainer
 import dev.hgallery.app.ui.albums.AlbumDetailScreen
 import dev.hgallery.app.ui.albums.AlbumsScreen
+import dev.hgallery.app.ui.discover.DiscoverScreen
+import dev.hgallery.app.ui.highlights.HighlightsScreen
 import dev.hgallery.app.ui.photos.PhotosScreen
-import dev.hgallery.app.ui.placeholder.PlaceholderScreen
+import dev.hgallery.app.ui.settings.SettingsScreen
 import dev.hgallery.app.ui.search.SearchScreen
 import dev.hgallery.app.ui.shell.HgBottomBar
 import dev.hgallery.app.ui.shell.HgTab
@@ -33,6 +33,7 @@ import dev.hgallery.app.ui.video.VideoPlayerScreen
 import dev.hgallery.app.ui.viewer.ViewerScreen
 import dev.hgallery.core.Album
 import dev.hgallery.core.AlbumBuilder
+import dev.hgallery.core.VideoQueue
 
 /**
  * Application shell.
@@ -58,8 +59,13 @@ fun HGalleryApp(container: AppContainer) {
     var viewerId by remember { mutableStateOf<Long?>(null) }
     var playerId by remember { mutableStateOf<Long?>(null) }
     var searchOpen by remember { mutableStateOf(false) }
+    var settingsOpen by remember { mutableStateOf(false) }
 
     val items by container.mediaStore.items.collectAsStateWithLifecycle()
+    val settings by container.settings.settings.collectAsStateWithLifecycle()
+    // One queue for the whole app: the strip and the autoplay advance read the same list,
+    // so the two cannot disagree about which video is next.
+    val videoQueue = remember(items) { VideoQueue.build(items) }
 
     LaunchedEffect(Unit) { container.mediaStore.load() }
 
@@ -73,6 +79,10 @@ fun HGalleryApp(container: AppContainer) {
     }
     BackHandler(enabled = playerId == null && viewerId != null) { viewerId = null }
     BackHandler(enabled = playerId == null && viewerId == null && openAlbum != null) { openAlbum = null }
+    // Settings sits above the tabs and below the viewer: it is a place, not a mode.
+    BackHandler(enabled = playerId == null && viewerId == null && openAlbum == null && settingsOpen) {
+        settingsOpen = false
+    }
 
     // One entry point for "open this item": a video goes to the player, an image
     // to the viewer. Deciding here means every grid in the app behaves the same
@@ -100,6 +110,13 @@ fun HGalleryApp(container: AppContainer) {
         return
     }
 
+    if (settingsOpen) {
+        SettingsScreen(container = container, onBack = { settingsOpen = false })
+        return
+    }
+
+    val openSettings: () -> Unit = { settingsOpen = true }
+
     Box(Modifier.fillMaxSize().background(palette.page)) {
         Column(Modifier.fillMaxSize()) {
             Box(Modifier.weight(1f)) {
@@ -123,14 +140,24 @@ fun HGalleryApp(container: AppContainer) {
                                 container = container,
                                 onOpenItem = openItem,
                                 onSearch = { searchOpen = true },
+                                onOpenSettings = openSettings,
                             )
                             HgTab.Albums -> AlbumsScreen(
                                 container = container,
                                 onOpenAlbum = { openAlbum = it },
                                 onSearch = { searchOpen = true },
+                                onOpenSettings = openSettings,
                             )
-                            HgTab.Highlights -> PlaceholderScreen(stringResource(R.string.tab_highlights))
-                            HgTab.Discover -> PlaceholderScreen(stringResource(R.string.tab_discover))
+                            HgTab.Highlights -> HighlightsScreen(
+                                container = container,
+                                onOpenItem = openItem,
+                                onSearch = { searchOpen = true },
+                            )
+                            HgTab.Discover -> DiscoverScreen(
+                                container = container,
+                                onOpenItem = openItem,
+                                onSearch = { searchOpen = true },
+                            )
                         }
                     }
                 }
@@ -144,6 +171,12 @@ fun HGalleryApp(container: AppContainer) {
             if (media != null) {
                 VideoPlayerScreen(
                     item = media,
+                    queue = videoQueue,
+                    filmstripEnabled = settings.filmstripVisible,
+                    autoplayNext = settings.autoplayNext,
+                    // Switching from the strip replaces the item, not the screen: the
+                    // player stays mounted, so playback continues in one place.
+                    onSelectItem = { playerId = it },
                     onClose = { playerId = null },
                 )
             }

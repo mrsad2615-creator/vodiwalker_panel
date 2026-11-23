@@ -27,6 +27,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
@@ -139,7 +140,12 @@ fun HgToolbar(
             HgIconButton(HgIcons.Search, stringResource(R.string.search), onSearch)
         }
         if (onMore != null) {
-            HgIconButton(HgIcons.More, stringResource(R.string.more_options), onMore)
+            HgIconButton(
+                icon = HgIcons.More,
+                contentDescription = stringResource(R.string.more_options),
+                onClick = onMore,
+                modifier = Modifier.testTag(HgTestTags.MORE_BUTTON),
+            )
         }
         Spacer(Modifier.width(8.dp))
     }
@@ -206,3 +212,30 @@ fun HgDivider(modifier: Modifier = Modifier) {
 /** Bottom inset for a screen whose content runs under the gesture bar. */
 val navigationBarPadding: androidx.compose.foundation.layout.PaddingValues
     @Composable get() = WindowInsets.navigationBars.asPaddingValues()
+
+/**
+ * A centred title and one line of detail, for the states that are not content: no media,
+ * an unreadable library, nothing in a section.
+ *
+ * It takes a [detail] string rather than an exception: the caller decides what a failure
+ * means to the user, and an exception message is not a sentence.
+ */
+@Composable
+fun MessageState(title: String, detail: String) {
+    Box(Modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                title,
+                style = androidx.compose.material3.MaterialTheme.typography.titleMedium,
+                color = hgPalette.textPrimary,
+            )
+            Spacer(Modifier.height(6.dp))
+            Text(
+                detail,
+                style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+                color = hgPalette.textSecondary,
+                textAlign = TextAlign.Center,
+            )
+        }
+    }
+}

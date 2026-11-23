@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      Android 12 and later own the splash screen completely. The windowSplashScreen*
+      attributes exist only from API 31, so they live here: putting them in values/
+      fails the resource merge on older devices, where the parser rejects the names.
+
+      The icon is the same mark as the launcher, on the same background, so the splash
+      frames the product rather than showing a generic app-sized thumbnail.
+    -->
+    <style name="Theme.HGallery.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_logo</item>
+        <item name="windowSplashScreenIconBackgroundColor">@color/splash_background</item>
+        <item name="postSplashScreenTheme">@style/Theme.HGallery</item>
+    </style>
+</resources>

@@ -334,3 +334,224 @@ class AlbumBuilderTest {
         assertEquals(listOf(1L, 2L), AlbumBuilder.itemsOf(items, 10L).map { it.id })
     }
 }
+
+class GridDensityTest {
+
+    @Test
+    fun `a spread shows fewer columns and a pinch shows more`() {
+        assertEquals(3, GridDensity.afterPinch(startColumns = 4, scale = 1.4f))
+        assertEquals(6, GridDensity.afterPinch(startColumns = 4, scale = 0.7f))
+    }
+
+    @Test
+    fun `no movement keeps the current density`() {
+        assertEquals(4, GridDensity.afterPinch(startColumns = 4, scale = 1f))
+    }
+
+    @Test
+    fun `the gesture cannot leave the supported range`() {
+        assertEquals(2, GridDensity.afterPinch(startColumns = 2, scale = 8f))
+        assertEquals(6, GridDensity.afterPinch(startColumns = 6, scale = 0.1f))
+    }
+
+    @Test
+    fun `a broken scale does not change the grid`() {
+        assertEquals(4, GridDensity.afterPinch(startColumns = 4, scale = 0f))
+        assertEquals(4, GridDensity.afterPinch(startColumns = 4, scale = Float.NaN))
+    }
+
+    @Test
+    fun `a stored value outside the range is clamped`() {
+        assertEquals(2, GridDensity.clamp(1))
+        assertEquals(6, GridDensity.clamp(9))
+        assertEquals(4, GridDensity.clamp(4))
+    }
+}
+
+class HighlightsBuilderTest {
+
+    private val zone = java.time.ZoneId.of("UTC")
+
+    private fun item(
+        id: Long,
+        dayMs: Long,
+        bucket: Long = 10L,
+        name: String = "Camera",
+        size: Long = 2_000_000L,
+        favourite: Boolean = false,
+    ) = MediaItem(
+        id = id,
+        uri = "content://media/external/images/media/$id",
+        displayName = "IMG_$id.jpg",
+        mimeType = "image/jpeg",
+        sizeBytes = size,
+        dateTakenMs = dayMs,
+        width = 4000,
+        height = 3000,
+        bucketId = bucket,
+        bucketName = name,
+        isFavorite = favourite,
+    )
+
+    private fun millisAt(day: Int): Long =
+        java.time.LocalDate.of(2025, 3, day).atStartOfDay(zone).toInstant().toEpochMilli()
+
+    @Test
+    fun `a day with three items becomes a highlight`() {
+        val items = listOf(item(1, millisAt(4)), item(2, millisAt(4) + 1), item(3, millisAt(4) + 2))
+        val highlights = HighlightsBuilder.build(items, zone)
+        assertEquals(1, highlights.size)
+        assertEquals(3, highlights.single().itemCount)
+        assertEquals("Camera", highlights.single().title)
+    }
+
+    @Test
+    fun `a day with two items does not`() {
+        val items = listOf(item(1, millisAt(4)), item(2, millisAt(4) + 1))
+        assertTrue(HighlightsBuilder.build(items, zone).isEmpty())
+    }
+
+    @Test
+    fun `two places on one day stay apart`() {
+        val items = listOf(
+            item(1, millisAt(4), bucket = 10L, name = "Camera"),
+            item(2, millisAt(4) + 1, bucket = 10L, name = "Camera"),
+            item(3, millisAt(4) + 2, bucket = 10L, name = "Camera"),
+            item(4, millisAt(4) + 3, bucket = 20L, name = "Screenshots"),
+            item(5, millisAt(4) + 4, bucket = 20L, name = "Screenshots"),
+            item(6, millisAt(4) + 5, bucket = 20L, name = "Screenshots"),
+        )
+        val highlights = HighlightsBuilder.build(items, zone)
+        assertEquals(2, highlights.size)
+        assertEquals(setOf("Camera", "Screenshots"), highlights.map { it.title }.toSet())
+    }
+
+    @Test
+    fun `the newest highlight comes first`() {
+        val old = (1L..3L).map { item(it, millisAt(2) + it) }
+        val recent = (4L..6L).map { item(it, millisAt(9) + it) }
+        val highlights = HighlightsBuilder.build(old + recent, zone)
+        assertEquals("2025-03-09", highlights.first().subtitle)
+    }
+
+    @Test
+    fun `a nameless bucket still forms a highlight`() {
+        val items = (1L..3L).map { item(it, millisAt(4) + it, bucket = 0L, name = "") }
+        val highlights = HighlightsBuilder.build(items, zone)
+        assertEquals("2025-03-04", highlights.single().title)
+    }
+}
+
+class DiscoverBuilderTest {
+
+    private val zone = java.time.ZoneId.of("UTC")
+    private val today = java.time.LocalDate.of(2025, 3, 4)
+
+    private fun item(
+        id: Long,
+        date: java.time.LocalDate,
+        year: Int = 2025,
+        size: Long = 500_000L,
+        favourite: Boolean = false,
+    ) = MediaItem(
+        id = id,
+        uri = "content://media/external/images/media/$id",
+        displayName = "IMG_$id.jpg",
+        mimeType = "image/jpeg",
+        sizeBytes = size,
+        dateTakenMs = java.time.LocalDate.of(year, date.month, date.dayOfMonth)
+            .atStartOfDay(zone).toInstant().toEpochMilli(),
+        width = 100,
+        height = 100,
+        isFavorite = favourite,
+    )
+
+    @Test
+    fun `on this day only looks at earlier years`() {
+        val items = listOf(
+            item(1, today),
+            item(2, today, year = 2024),
+            item(3, java.time.LocalDate.of(2024, 3, 5)),
+        )
+        val content = DiscoverBuilder.build(items, today, zone)
+        assertEquals(listOf(2L), content.onThisDay.map { it.id })
+    }
+
+    @Test
+    fun `sections with nothing in them are dropped`() {
+        val content = DiscoverBuilder.build(emptyList(), today, zone)
+        assertTrue(content.isEmpty)
+    }
+
+    @Test
+    fun `years are newest first and counted`() {
+        val items = listOf(
+            item(1, today, year = 2025),
+            item(2, today, year = 2024),
+            item(3, today, year = 2024),
+        )
+        val years = DiscoverBuilder.build(items, today, zone).years
+        assertEquals(listOf("year-2025", "year-2024"), years.map { it.key })
+        assertEquals(2, years.first { it.key == "year-2024" }.itemCount)
+    }
+
+    @Test
+    fun `small files are not called large`() {
+        val items = listOf(item(1, today, size = 900_000L), item(2, today, size = 4_000_000L))
+        val largest = DiscoverBuilder.build(items, today, zone).largest
+        assertEquals(listOf(2L), largest.map { it.id })
+    }
+}
+
+class VideoQueueTest {
+
+    private fun video(id: Long, day: Long) = MediaItem(
+        id = id,
+        uri = "content://media/external/video/media/$id",
+        displayName = "VID_$id.mp4",
+        mimeType = "video/mp4",
+        sizeBytes = 1_000_000L,
+        dateTakenMs = day,
+        width = 1920,
+        height = 1080,
+        durationMs = 60_000L,
+    )
+
+    private fun image(id: Long, day: Long) = MediaItem(
+        id = id,
+        uri = "content://media/external/images/media/$id",
+        displayName = "IMG_$id.jpg",
+        mimeType = "image/jpeg",
+        sizeBytes = 1_000L,
+        dateTakenMs = day,
+        width = 100,
+        height = 100,
+    )
+
+    @Test
+    fun `only videos enter the queue, newest first`() {
+        val queue = VideoQueue.build(listOf(video(1, 100), image(9, 500), video(2, 300)))
+        assertEquals(listOf(2L, 1L), queue.map { it.id })
+    }
+
+    @Test
+    fun `next and previous follow the queue`() {
+        val queue = VideoQueue.build(listOf(video(1, 100), video(2, 200), video(3, 300)))
+        assertEquals(2L, VideoQueue.next(queue, 3L)?.id)
+        assertEquals(1L, VideoQueue.previous(queue, 2L)?.id)
+    }
+
+    @Test
+    fun `the ends of the queue do not wrap`() {
+        val queue = VideoQueue.build(listOf(video(1, 100), video(2, 200)))
+        assertEquals(null, VideoQueue.next(queue, 1L))
+        assertEquals(null, VideoQueue.previous(queue, 2L))
+    }
+
+    @Test
+    fun `an unknown id has no neighbours`() {
+        val queue = VideoQueue.build(listOf(video(1, 100)))
+        assertEquals(null, VideoQueue.next(queue, 99L))
+        assertEquals(-1, VideoQueue.indexOf(queue, 99L))
+    }
+}

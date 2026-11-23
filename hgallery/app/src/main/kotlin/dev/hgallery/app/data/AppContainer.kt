@@ -29,6 +29,20 @@ class AppContainer(context: Context) {
 
     val mediaStore = MediaStore(repository, thumbnails, actions)
 
+    /** Theme, grid density and the remaining preferences. */
+    val settings = SettingsRepository(appContext)
+
+    /**
+     * The installed version, read from the package manager.
+     *
+     * Settings shows it because a user reporting a problem is asked for a version, and
+     * the value must be the installed one rather than a constant copied into the build
+     * file twice.
+     */
+    fun versionName(): String = runCatching {
+        appContext.packageManager.getPackageInfo(appContext.packageName, 0).versionName
+    }.getOrNull() ?: "unknown"
+
     val zone: ZoneId = ZoneId.systemDefault()
 
     /**

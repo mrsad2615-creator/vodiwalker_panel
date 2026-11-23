@@ -154,6 +154,26 @@ val hgSpacing: HgSpacing
     @Composable get() = LocalHgSpacing.current
 
 /**
+ * Which theme the app should use.
+ *
+ * Three states, not two: SYSTEM is the default, and a two-state toggle cannot express
+ * it. The value is stored by name, so adding a state later cannot silently shift an
+ * existing preference onto a different one.
+ */
+enum class HgThemeMode {
+    SYSTEM,
+    LIGHT,
+    DARK,
+    ;
+
+    companion object {
+        /** Parses a stored preference, falling back to SYSTEM for anything unrecognised. */
+        fun fromStored(value: String?): HgThemeMode =
+            entries.firstOrNull { it.name == value } ?: SYSTEM
+    }
+}
+
+/**
  * Theme entry point.
  *
  * Two jobs: map the roles onto Material's scheme so that a standard component cannot
@@ -206,6 +226,19 @@ fun HgTheme(
             content = content,
         )
     }
+}
+
+/**
+ * Resolves a stored mode against the platform setting.
+ *
+ * Kept out of [HgTheme] so the rule can be tested: SYSTEM must follow the platform,
+ * LIGHT and DARK must ignore it. A screen that receives the wrong answer here looks
+ * broken in a way the theme itself cannot fix.
+ */
+fun resolveDark(mode: HgThemeMode, systemDark: Boolean): Boolean = when (mode) {
+    HgThemeMode.SYSTEM -> systemDark
+    HgThemeMode.LIGHT -> false
+    HgThemeMode.DARK -> true
 }
 
 /**

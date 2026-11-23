@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      Dark launch window. The base theme asks for dark status bar icons because the light
+      background needs them; on a dark background that produces invisible icons during
+      launch. Overridden here rather than set at runtime, because the window exists before
+      the activity does.
+    -->
+    <style name="Theme.HGallery" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/splash_background</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+</resources>

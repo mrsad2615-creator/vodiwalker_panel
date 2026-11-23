@@ -16,6 +16,7 @@ object HgTestTags {
     const val VIEWER = "viewer"
     const val PHOTOS_GRID = "photos-grid"
     const val VIEW_SWITCH = "photos-view-switch"
+    const val MORE_BUTTON = "toolbar-more"
 
     // Selection, from reference R3.
     const val EXIT_SELECTION = "selection-exit"
@@ -43,4 +44,27 @@ object HgTestTags {
 
     /** The details sheet in the viewer. */
     const val DETAILS_SHEET = "details-sheet"
+
+    // Highlights and Discover.
+    const val HIGHLIGHTS_LIST = "highlights-list"
+    const val DISCOVER_LIST = "discover-list"
+    const val DISCOVER_ON_THIS_DAY = "discover-on-this-day"
+    const val DISCOVER_FAVOURITES = "discover-favourites"
+    const val DISCOVER_LARGEST = "discover-largest"
+    fun highlight(key: String) = "highlight-$key"
+    fun discoverItem(id: Long) = "discover-item-$id"
+    fun discoverYear(key: String) = "discover-$key"
+
+    // The video filmstrip.
+    const val FILMSTRIP = "video-filmstrip"
+    const val FILMSTRIP_HANDLE = "video-filmstrip-handle"
+    fun filmstripCell(id: Long) = "filmstrip-cell-$id"
+
+    // Settings.
+    const val SETTINGS_LIST = "settings-list"
+    const val SETTINGS_BACK = "settings-back"
+    const val GRID_SLIDER = "settings-grid-slider"
+    const val FILMSTRIP_SWITCH = "settings-filmstrip"
+    const val AUTOPLAY_SWITCH = "settings-autoplay"
+    fun themeOption(mode: String) = "settings-theme-$mode"
 }

@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  HYBRID GALLERY — monochrome launcher icon, for Android 13 themed icons.
+
+  The system recolours this to the user's wallpaper palette, so it must carry shape
+  only: no gradients, no alpha, one fill colour. The geometry is identical to the
+  full-colour foreground, because a themed icon that changes shape when the theme
+  changes looks like two different products.
+
+  The spine is punched out of the frames rather than drawn white, because a white
+  element would be recoloured to the same tone as the frames and the H would vanish.
+  That is why the two frames are separate paths with a gap rather than one path.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Left frame, with its right edge cut at the spine. -->
+    <path
+        android:pathData="M27,30 L47,30 A5,5 0 0 1 52,35 L52,73 A5,5 0 0 1 47,78 L27,78 A5,5 0 0 1 22,73 L22,35 A5,5 0 0 1 27,30 Z"
+        android:fillColor="#000000" />
+
+    <!-- Right frame, with its left edge cut at the spine. -->
+    <path
+        android:pathData="M61,30 L81,30 A5,5 0 0 1 86,35 L86,73 A5,5 0 0 1 81,78 L61,78 A5,5 0 0 1 56,73 L56,35 A5,5 0 0 1 61,30 Z"
+        android:fillColor="#000000" />
+
+    <!--
+      The spine, punched with the even-odd rule so the gap between the frames becomes
+      a solid bar. Drawing the bar in the same colour as the frames is what produces
+      the H once the system recolours everything.
+    -->
+    <path
+        android:pathData="M45,26 L63,26 L63,82 L45,82 Z M49,34 L59,34 L59,74 L49,74 Z"
+        android:fillColor="#000000"
+        android:fillType="evenOdd" />
+</vector>

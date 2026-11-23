@@ -22,7 +22,6 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -67,6 +66,7 @@ fun AlbumsScreen(
     container: AppContainer,
     onOpenAlbum: (Album) -> Unit,
     onSearch: () -> Unit,
+    onOpenSettings: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val palette = hgPalette
@@ -82,9 +82,13 @@ fun AlbumsScreen(
 
     Column(modifier = modifier.fillMaxSize().background(palette.page)) {
         Spacer(Modifier.statusBarsPadding())
-        // No overflow button: there is nothing behind it yet, and a menu that opens
-        // empty is the inert-control failure this project exists to avoid.
-        HgToolbar(onSearch = onSearch, modifier = Modifier.padding(end = 6.dp))
+        // Settings is behind the overflow slot. It was left empty while it had no
+        // destination; it has one now, so the slot is used.
+        HgToolbar(
+            onSearch = onSearch,
+            onMore = onOpenSettings,
+            modifier = Modifier.padding(end = 6.dp),
+        )
         HgScreenTitle(title = stringResource(R.string.tab_albums))
         Spacer(Modifier.height(18.dp))
 

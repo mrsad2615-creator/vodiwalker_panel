@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Gallery</string>
+    <string name="app_name">Hybrid Gallery</string>
 
     <string name="tab_photos">Photos</string>
     <string name="tab_albums">Albums</string>
@@ -124,4 +124,60 @@
         <item quantity="one">%d result</item>
         <item quantity="other">%d results</item>
     </plurals>
+    <string name="permission_title">See your photos</string>
+    <string name="permission_body">Gallery reads photos and videos on this device. Nothing is uploaded. Nothing leaves your phone.</string>
+    <string name="permission_denied_body">Gallery cannot read your photos. To allow access, open Settings and turn on Photos and videos.</string>
+    <string name="permission_offline_note">This app has no internet permission.</string>
+    <string name="permission_allow">Allow access</string>
+    <string name="permission_open_settings">Open settings</string>
+
+    <!-- Highlights -->
+    <string name="highlights_subtitle">Days worth going back to</string>
+    <string name="highlights_empty_title">No highlights yet</string>
+    <string name="highlights_empty_body">A day with three or more photos in one folder becomes a highlight.</string>
+    <plurals name="highlight_count">
+        <item quantity="one">%1$d item</item>
+        <item quantity="other">%1$d items</item>
+    </plurals>
+
+    <!-- Discover -->
+    <string name="discover_subtitle">What is in your library</string>
+    <string name="discover_empty_title">Nothing to discover yet</string>
+    <string name="discover_empty_body">This tab reads your library only. It shows items once your library has some.</string>
+    <string name="discover_on_this_day">On this day</string>
+    <string name="discover_favourites">Favourites</string>
+    <string name="discover_years">By year</string>
+    <string name="discover_largest">Largest files</string>
+    <plurals name="discover_year_count">
+        <item quantity="one">%1$d item</item>
+        <item quantity="other">%1$d items</item>
+    </plurals>
+
+    <plurals name="filmstrip_count">
+        <item quantity="one">%1$d video</item>
+        <item quantity="other">%1$d videos</item>
+    </plurals>
+
+    <!-- Settings -->
+    <string name="settings">Settings</string>
+    <string name="settings_appearance">Appearance</string>
+    <string name="settings_theme_system">Follow the system</string>
+    <string name="settings_theme_light">Light</string>
+    <string name="settings_theme_dark">Dark</string>
+    <string name="settings_grid">Photos grid</string>
+    <string name="settings_grid_density">Columns</string>
+    <string name="settings_grid_columns">%1$d columns</string>
+    <string name="settings_grid_detail">You can also pinch the grid to change this.</string>
+    <string name="settings_video">Video</string>
+    <string name="settings_filmstrip">Show the filmstrip</string>
+    <string name="settings_filmstrip_detail">A row of videos under the player, for switching without leaving it.</string>
+    <string name="settings_autoplay">Play the next video</string>
+    <string name="settings_autoplay_detail">Continue to the next video when the current one ends.</string>
+    <string name="settings_privacy">Privacy</string>
+    <string name="settings_offline_title">No network access</string>
+    <string name="settings_offline_body">This app has no internet permission. Nothing leaves this device.</string>
+    <string name="settings_storage_title">Your files stay where they are</string>
+    <string name="settings_storage_body">The gallery reads the media already on this device. It keeps no copy of your photos.</string>
+    <string name="settings_about">About</string>
+    <string name="settings_version_title">Version</string>
 </resources>

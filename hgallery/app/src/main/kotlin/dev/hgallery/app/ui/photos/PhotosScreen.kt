@@ -26,6 +26,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -61,9 +62,11 @@ import dev.hgallery.app.ui.theme.hgColors
 import dev.hgallery.app.ui.theme.hgPalette
 import dev.hgallery.app.ui.theme.hgShapes
 import dev.hgallery.app.ui.theme.HgMetrics
+import dev.hgallery.core.GridDensity
 import dev.hgallery.core.MediaItem
 import dev.hgallery.core.Selection
 import java.util.Locale
+import kotlinx.coroutines.launch
 
 /**
  * The Photos timeline.
@@ -84,14 +87,54 @@ fun PhotosScreen(
     container: AppContainer,
     onOpenItem: (Long) -> Unit,
     onSearch: () -> Unit,
+    onOpenSettings: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     SelectionAwarePhotos(
         container = container,
         onOpenItem = onOpenItem,
         onSearch = onSearch,
+        onOpenSettings = onOpenSettings,
         modifier = modifier,
     )
+}
+
+/**
+ * Watches one pinch and reports the density it asks for.
+ *
+ * `awaitEachGesture` ends the gesture when the last finger lifts. A hand-written loop that
+ * waits for "fewer than two fingers" can miss a frame where both lifted, and the gesture
+ * then stays open and eats the next tap.
+ *
+ * The origin is the first frame with two fingers down. The second finger arrives at an
+ * unknown distance, so using its arrival as the origin makes every pinch start with a jump.
+ */
+private suspend fun androidx.compose.ui.input.pointer.PointerInputScope.detectDensityPinch(
+    columns: Int,
+    onDensityChange: (Int) -> Unit,
+) {
+    androidx.compose.foundation.gestures.awaitEachGesture {
+        var startDistance = 0f
+        var lastDistance = 0f
+        while (true) {
+            val event = awaitPointerEvent()
+            val pressed = event.changes.filter { it.pressed }
+            if (pressed.size < 2) {
+                if (startDistance == 0f) continue
+                break
+            }
+            val distance = (pressed[0].position - pressed[1].position).getDistance()
+            if (startDistance == 0f) startDistance = distance
+            lastDistance = distance
+        }
+        if (startDistance > 0f && lastDistance > 0f) {
+            val target = GridDensity.afterPinch(
+                startColumns = columns,
+                scale = lastDistance / startDistance,
+            )
+            if (target != columns) onDensityChange(target)
+        }
+    }
 }
 
 @Composable
@@ -99,6 +142,7 @@ private fun SelectionAwarePhotos(
     container: AppContainer,
     onOpenItem: (Long) -> Unit,
     onSearch: () -> Unit,
+    onOpenSettings: () -> Unit,
     modifier: Modifier,
 ) {
     val items by container.mediaStore.items.collectAsStateWithLifecycle()
@@ -144,8 +188,12 @@ private fun SelectionAwarePhotos(
         }
     }
 
-    val columns = if (monthView) HgMetrics.MonthColumns else HgMetrics.PhotosColumns
+    // Month view is a fixed six columns; day view follows the stored density, which the
+    // pinch gesture and the Settings slider both write.
+    val settings by container.settings.settings.collectAsStateWithLifecycle()
+    val columns = if (monthView) HgMetrics.MonthColumns else GridDensity.clamp(settings.gridColumns)
     val thumbnails = remember { container.thumbnails }
+    val scope = rememberCoroutineScope()
 
     Column(modifier = modifier.fillMaxSize().background(hgColors.background)) {
         Spacer(Modifier.statusBarsPadding())
@@ -161,9 +209,9 @@ private fun SelectionAwarePhotos(
         Column(Modifier.fillMaxWidth()) {
             HgToolbar(
                 onSearch = onSearch,
-                // No overflow button: it had no destination, and an icon that opens
-                // nothing is worse than an absent one.
-                onMore = null,
+                // The overflow slot holds Settings. While it had no destination the
+                // slot was left empty; an icon that opens nothing is worse than none.
+                onMore = onOpenSettings,
                 viewAction = {
                     // Selection is reachable without a long press, so the feature
                     // is discoverable and can be driven by a test.
@@ -213,31 +261,11 @@ private fun SelectionAwarePhotos(
             else -> Box(
                 Modifier
                     .fillMaxSize()
-                    .pointerInput(Unit) {
-                        awaitPointerEventScope {
-                            while (true) {
-                                val down = awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Initial)
-                                val pressed = down.changes.filter { it.pressed }
-                                if (pressed.size >= 2) {
-                                    val start = (pressed[0].position - pressed[1].position).getDistance()
-                                    var current = start
-                                    // Follow both pointers until one lifts.
-                                    while (true) {
-                                        val move = awaitPointerEvent(
-                                            androidx.compose.ui.input.pointer.PointerEventPass.Initial,
-                                        )
-                                        val still = move.changes.filter { it.pressed }
-                                        if (still.size < 2) break
-                                        current = (still[0].position - still[1].position).getDistance()
-                                    }
-                                    val ratio = if (start > 0f) current / start else 1f
-                                    if (ratio > 1.35f && !monthView) {
-                                        monthView = true
-                                    } else if (ratio < 0.7f && monthView) {
-                                        monthView = false
-                                    }
-                                }
-                            }
+                    // Pinch to change density. The detector sits on the container so
+                    // the gesture also works over the gaps between cells.
+                    .pointerInput(columns) {
+                        detectDensityPinch(columns) { target ->
+                            scope.launch { container.settings.setGridColumns(target) }
                         }
                     },
             ) {

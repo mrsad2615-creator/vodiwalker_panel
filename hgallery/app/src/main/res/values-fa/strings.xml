@@ -5,7 +5,7 @@
   whole activity, because `supportsRtl` is declared in the manifest.
 -->
 <resources>
-    <string name="app_name">گالری</string>
+    <string name="app_name">گالری هیبرید</string>
 
     <string name="tab_photos">تصاویر</string>
     <string name="tab_albums">آلبوم‌ها</string>
@@ -128,5 +128,61 @@
     <plurals name="search_result_count">
         <item quantity="one">%d نتیجه</item>
         <item quantity="other">%d نتیجه</item>
+    </plurals>
+    <string name="permission_title">عکس‌هایتان را ببینید</string>
+    <string name="permission_body">گالری عکس‌ها و ویدیوهای این دستگاه را می‌خواند. چیزی بارگذاری نمی‌شود. چیزی از گوشی خارج نمی‌شود.</string>
+    <string name="permission_denied_body">گالری نمی‌تواند عکس‌های شما را بخواند. برای اجازه‌دادن، تنظیمات را باز کنید و دسترسی عکس‌ها و ویدیوها را روشن کنید.</string>
+    <string name="permission_offline_note">این برنامه اجازهٔ اینترنت ندارد.</string>
+    <string name="permission_allow">اجازه دادن</string>
+    <string name="permission_open_settings">باز کردن تنظیمات</string>
+
+    <!-- Highlights -->
+    <string name="highlights_subtitle">روزهایی که ارزش دیدن دوباره دارند</string>
+    <string name="highlights_empty_title">هنوز برجسته‌ای نیست</string>
+    <string name="highlights_empty_body">روزی که سه عکس یا بیشتر در یک پوشه داشته باشد، برجسته می‌شود.</string>
+    <plurals name="highlight_count">
+        <item quantity="one">%1$d مورد</item>
+        <item quantity="other">%1$d مورد</item>
+    </plurals>
+
+    <!-- Discover -->
+    <string name="discover_subtitle">آنچه در کتابخانهٔ شما هست</string>
+    <string name="discover_empty_title">هنوز چیزی برای کشف نیست</string>
+    <string name="discover_empty_body">این بخش فقط کتابخانهٔ شما را می‌خواند. وقتی کتابخانه محتوا داشته باشد، موارد را نشان می‌دهد.</string>
+    <string name="discover_on_this_day">در چنین روزی</string>
+    <string name="discover_favourites">موردعلاقه‌ها</string>
+    <string name="discover_years">بر اساس سال</string>
+    <string name="discover_largest">بزرگ‌ترین فایل‌ها</string>
+    <plurals name="discover_year_count">
+        <item quantity="one">%1$d مورد</item>
+        <item quantity="other">%1$d مورد</item>
+    </plurals>
+
+    <!-- Settings -->
+    <string name="settings">تنظیمات</string>
+    <string name="settings_appearance">ظاهر</string>
+    <string name="settings_theme_system">پیروی از سیستم</string>
+    <string name="settings_theme_light">روشن</string>
+    <string name="settings_theme_dark">تیره</string>
+    <string name="settings_grid">شبکهٔ عکس‌ها</string>
+    <string name="settings_grid_density">ستون‌ها</string>
+    <string name="settings_grid_columns">%1$d ستون</string>
+    <string name="settings_grid_detail">می‌توانید با دو انگشت روی شبکه هم این را تغییر دهید.</string>
+    <string name="settings_video">ویدیو</string>
+    <string name="settings_filmstrip">نمایش نوار ویدیو</string>
+    <string name="settings_filmstrip_detail">ردیفی از ویدیوها زیر پخش‌کننده، برای جابه‌جایی بدون ترک آن.</string>
+    <string name="settings_autoplay">پخش ویدیوی بعدی</string>
+    <string name="settings_autoplay_detail">با پایان ویدیوی فعلی، ویدیوی بعدی پخش شود.</string>
+    <string name="settings_privacy">حریم خصوصی</string>
+    <string name="settings_offline_title">بدون دسترسی به شبکه</string>
+    <string name="settings_offline_body">این برنامه اجازهٔ اینترنت ندارد. چیزی از این دستگاه خارج نمی‌شود.</string>
+    <string name="settings_storage_title">فایل‌های شما همان‌جا می‌مانند</string>
+    <string name="settings_storage_body">گالری رسانه‌های موجود روی این دستگاه را می‌خواند. نسخه‌ای از عکس‌های شما نگه نمی‌دارد.</string>
+    <string name="settings_about">درباره</string>
+    <string name="settings_version_title">نسخه</string>
+
+    <plurals name="filmstrip_count">
+        <item quantity="one">%1$d ویدیو</item>
+        <item quantity="other">%1$d ویدیو</item>
     </plurals>
 </resources>

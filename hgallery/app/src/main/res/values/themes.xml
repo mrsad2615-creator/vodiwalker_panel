@@ -1,12 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!--
-      The activity window is drawn by Compose, so the platform theme only has to
-      supply a background that matches the reference (#FFFFFF) and hide the
-      action bar. Edge-to-edge is enabled from the activity itself.
+      The activity window is drawn by Compose, so the platform theme only has to supply
+      a background that matches the first frame and hide the action bar. Edge-to-edge is
+      enabled from the activity itself.
+
+      The splash theme lives in values-v31 because its attributes exist only on API 31
+      and later; on older releases the platform splash is the launcher icon on the
+      window background, which is the closest compliant behaviour.
     -->
     <style name="Theme.HGallery" parent="android:Theme.Material.Light.NoActionBar">
-        <item name="android:windowBackground">@android:color/white</item>
+        <item name="android:windowBackground">@color/splash_background</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
         <item name="android:windowLightStatusBar">true</item>

@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The mark for the system splash screen.
+
+  Android draws this at 288 dp inside a 192 dp circle, so the artwork must be inset:
+  the frames occupy the middle 40 percent. Reusing the launcher foreground here would
+  have drawn it at full bleed and the platform would have cropped the H.
+
+  The colours are the light-theme accents. The splash screen has no access to the
+  Compose theme, so it cannot swap for dark mode; a mid-tone pair that holds contrast
+  on both a light and a dark window is the compromise, and the window background is
+  fixed light for the same reason.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <group
+        android:pivotX="54"
+        android:pivotY="54"
+        android:scaleX="0.62"
+        android:scaleY="0.62">
+        <path
+            android:pathData="M27,30 L47,30 A5,5 0 0 1 52,35 L52,73 A5,5 0 0 1 47,78 L27,78 A5,5 0 0 1 22,73 L22,35 A5,5 0 0 1 27,30 Z"
+            android:fillColor="#0068E8" />
+        <path
+            android:pathData="M61,30 L81,30 A5,5 0 0 1 86,35 L86,73 A5,5 0 0 1 81,78 L61,78 A5,5 0 0 1 56,73 L56,35 A5,5 0 0 1 61,30 Z"
+            android:fillColor="#E8623C" />
+        <path
+            android:pathData="M49,30 L59,30 L59,78 L49,78 Z"
+            android:fillColor="#F7F7F9" />
+    </group>
+</vector>

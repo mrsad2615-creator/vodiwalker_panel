@@ -1,5 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  Adaptive launcher icon.
+
+  The background is a flat near-black rather than the previous pure white: the mark's
+  two accent frames are light, and they disappeared against white on a home screen
+  with a light wallpaper. A dark plate gives both frames contrast in every launcher
+  theme, and it matches the app's own dark surfaces.
+
+  A monochrome layer is declared as well, so Android 13 themed icons render the mark
+  in the user's wallpaper palette instead of falling back to a grey square.
+-->
 <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
     <background android:drawable="@color/ic_launcher_background" />
     <foreground android:drawable="@drawable/ic_launcher_foreground" />
+    <monochrome android:drawable="@drawable/ic_launcher_monochrome" />
 </adaptive-icon>

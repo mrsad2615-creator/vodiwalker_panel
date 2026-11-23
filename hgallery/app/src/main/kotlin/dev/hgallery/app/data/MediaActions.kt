@@ -2,6 +2,7 @@ package dev.hgallery.app.data
 
 import android.app.PendingIntent
 import android.content.ClipData
+import android.content.ContentUris
 import android.content.Context
 import android.content.Intent
 import android.content.IntentSender
@@ -63,6 +64,25 @@ class MediaActions(context: Context) {
         // caller falls back to its own confirmation dialog.
         @Suppress("NewApi") // guarded by the API_TRASH check directly above
         return MediaStore.createTrashRequest(resolver, uris, true).intentSender
+    }
+
+    /**
+     * The `content://media/external/images/media/<id>` or `.../video/media/<id>` URI
+     * for an item.
+     *
+     * The list query walks `MediaStore.Files`, so every stored URI is
+     * `.../file/<id>`. That URI is fine for reading and deleting but the favourite
+     * APIs reject it outright with "All requested items must be Media items": they
+     * are typed to the images and video collections. Converting at the boundary is
+     * cheaper and safer than storing three URI shapes on every item.
+     */
+    fun mediaUriFor(id: Long, mimeType: String): Uri {
+        val collection = if (mimeType.startsWith("video/")) {
+            MediaStore.Video.Media.EXTERNAL_CONTENT_URI
+        } else {
+            MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+        }
+        return ContentUris.withAppendedId(collection, id)
     }
 
     /**

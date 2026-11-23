@@ -332,7 +332,10 @@ if tap_tag_or_text "first-photo" 'content-desc="Photo, '; then
     # fixture photos belong to MediaStore rather than to this app. A user must answer
     # it, so the harness answers it too; without this the write is refused and the
     # heart stays hollow, which is exactly what the first attempt photographed.
-    if tap_tag_or_text "allow-modify" 'text="Allow"'; then
+    # Android's own dialog for a favourite write: "Allow HGallery to change this
+    # photo's favourite status?" with Allow / Don't allow. The wording varies by
+    # version, so several spellings are accepted.
+    if tap_tag_or_text "allow-modify" 'text="Allow"|text="ALLOW"|text="allow"'; then
       sleep 3
     fi
     # Whatever the screen shows, the reason is in the app's own log lines. The XML

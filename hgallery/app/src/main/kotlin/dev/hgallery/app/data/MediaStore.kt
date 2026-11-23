@@ -74,7 +74,7 @@ class MediaStore(
     fun favouriteWriteRequest(id: Long): android.content.IntentSender? {
         val current = _items.value.firstOrNull { it.id == id } ?: return null
         return actions.buildFavouriteRequest(
-            uris = listOf(android.net.Uri.parse(current.uri)),
+            uris = listOf(actions.mediaUriFor(current.id, current.mimeType)),
             favourite = !current.isFavorite,
         )
     }
@@ -91,7 +91,8 @@ class MediaStore(
     suspend fun toggleFavorite(id: Long): Boolean {
         val current = _items.value.firstOrNull { it.id == id } ?: return false
         val target = !current.isFavorite
-        val uri = android.net.Uri.parse(current.uri)
+        // The typed URI, not the stored `.../file/<id>` one: see mediaUriFor.
+        val uri = actions.mediaUriFor(current.id, current.mimeType)
         val ok = repository.setFavorite(uri, target)
         if (ok) {
             _items.value = _items.value.map { if (it.id == id) it.copy(isFavorite = target) else it }

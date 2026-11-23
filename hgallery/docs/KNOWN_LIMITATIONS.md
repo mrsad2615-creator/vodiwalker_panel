@@ -66,6 +66,9 @@ oversight that went unnoticed.
   behind them are absent. Their accessibility names end in ", unavailable" so a
   screen-reader user is not told a disabled control will act. The Photos and Albums
   toolbars no longer draw an overflow button at all: there was nothing behind it.
+  The Albums screen's ADD ALBUM link is greyed for the same reason, though the
+  reference shows it in the accent colour; the visual difference is deliberate and
+  is the only place this build knowingly departs from a reference control's styling.
 * **Persian plurals.** Lint's `ImpliedQuantity` check found that Persian's
   singular form also covers zero, so the delete bodies now carry the count in
   both variants. The wording was reviewed by inspection, not by a native speaker.

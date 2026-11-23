@@ -307,25 +307,22 @@ fi
 
 # Search: the magnifier used to be wired to an empty lambda, so this is the first
 # run in which the screen it should have opened can be photographed at all.
-# Favourites: mark one grid item, then photograph the heart it should draw.
-# The heart is a decor overlay, so the only honest evidence that it works is to see
-# one on a tile. The harness taps the first cell, long-presses is the selection path,
-# and the heart is toggled from the viewer - which is exactly the path a user takes.
+# Favourites: mark one grid item, then photograph the heart it should draw. The heart
+# is decor, so the only honest evidence that it works is to see one on a tile, and the
+# only user path to it is the viewer's favourite control.
 echo "== photographing favourite overlay =="
-# The app must be in front before a tap means anything. An earlier version pressed
-# BACK unconditionally here, which popped the empty search and then the app itself,
-# so the next tap landed on the launcher and opened a browser.
+# The app must be in front, and on a known screen. force-stop rather than am start:
+# `am start` on a running task resumes whatever screen it was left on, and the video
+# section leaves an album open. Every tap after that then addressed an album listing
+# two clips, which is how this step kept reporting "no photo tile" while the app was
+# plainly working. A previous version also pressed BACK unconditionally here, which
+# popped the empty search and then the app itself, so the next tap landed on the
+# launcher and opened a browser.
+adb shell am force-stop "$PKG"
 adb shell am start -W -n "$PKG/$ACTIVITY" > /dev/null 2>&1
-sleep 3
+sleep 4
 # Tap the tile by its description rather than by a coordinate: every cell announces
 # "Photo, <name>", so the first one is addressable no matter where the grid puts it.
-# Straight to the Camera album: sort order and the date-spreading above both decide
-# which thumbnail is first on the Photos tab, and a video landed there. The audience
-# asset is the same either way, but an album full of stills makes the step
-# deterministic.
-if tap_tag_or_text "camera-album" 'content-desc="Camera, [0-9]"'; then
-  sleep 2
-fi
 if tap_tag_or_text "first-photo" 'content-desc="Photo, '; then
   sleep 2
   shot 23-viewer-before-favourite.png
@@ -345,12 +342,11 @@ if tap_tag_or_text "first-photo" 'content-desc="Photo, '; then
 else
   echo "::warning title=e2e::no photo tile was addressable on the Photos tab"
 fi
+adb shell am force-stop "$PKG"
 adb shell am start -W -n "$PKG/$ACTIVITY" > /dev/null 2>&1
-sleep 2
+sleep 4
 
 echo "== photographing search =="
-adb shell input keyevent KEYCODE_BACK
-sleep 2
 # Start from the Photos tab: both Photos and Albums now open search, but only Photos
 # has nothing else to tap in that corner, so the sequence stays deterministic.
 adb shell input tap $((W / 8)) $((H - 55))

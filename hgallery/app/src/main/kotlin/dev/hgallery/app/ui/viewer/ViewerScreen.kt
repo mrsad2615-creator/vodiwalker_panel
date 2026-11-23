@@ -50,10 +50,14 @@ import dev.hgallery.app.ui.components.HgDeleteDialog
 import dev.hgallery.app.ui.components.HgIconButton
 import dev.hgallery.app.ui.components.HgTestTags
 import dev.hgallery.core.MediaItem
+
+/** One log tag for this screen, so the harness can isolate its lines from logcat. */
+private const val TAG = "HGalleryViewer"
 import kotlinx.coroutines.launch
 import androidx.compose.ui.res.stringResource
 import dev.hgallery.app.R
 import android.app.Activity
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
@@ -94,6 +98,7 @@ fun ViewerScreen(
     ) { result ->
         val id = pendingFavouriteId
         pendingFavouriteId = null
+        Log.w(TAG, "favourite consent result=${result.resultCode} id=$id")
         if (result.resultCode == Activity.RESULT_OK && id != null) {
             coroutine.launch { container.mediaStore.toggleFavorite(id) }
         }
@@ -101,8 +106,11 @@ fun ViewerScreen(
 
     fun favourite(id: Long) {
         coroutine.launch {
-            if (container.mediaStore.toggleFavorite(id)) return@launch
+            val direct = container.mediaStore.toggleFavorite(id)
+            Log.w(TAG, "favourite id=$id direct=$direct")
+            if (direct) return@launch
             val sender = container.mediaStore.favouriteWriteRequest(id)
+            Log.w(TAG, "favourite id=$id sender=${sender != null}")
             if (sender == null) {
                 // Nothing was written and the platform offers no dialog to ask for.
                 // Saying so is the difference between a bug and a mystery.

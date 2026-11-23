@@ -73,7 +73,10 @@ class MediaStore(
      */
     fun favouriteWriteRequest(id: Long): android.content.IntentSender? {
         val current = _items.value.firstOrNull { it.id == id } ?: return null
-        return actions.buildWriteRequest(listOf(android.net.Uri.parse(current.uri)))
+        return actions.buildFavouriteRequest(
+            uris = listOf(android.net.Uri.parse(current.uri)),
+            favourite = !current.isFavorite,
+        )
     }
 
     /**

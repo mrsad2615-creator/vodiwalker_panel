@@ -8,6 +8,7 @@ import android.content.IntentSender
 import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
+import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import dev.hgallery.core.DeleteOutcome
@@ -61,26 +62,42 @@ class MediaActions(context: Context) {
     }
 
     /**
-     * The `IntentSender` for Android's own consent dialog before a MediaStore row
-     * that another app owns is modified.
+     * The `IntentSender` for Android's own consent dialog before a row another app
+     * owns is marked as a favourite.
      *
      * Needed because a direct `ContentResolver.update` on such a row silently
      * changes nothing: on Android 11+ MediaProvider requires either ownership or an
      * explicit user grant, and it reports the refusal as "0 rows updated" rather
-     * than an exception. Favouriting was therefore a no-op that looked like a
-     * successful tap, which is the worst kind of failure to debug from screenshots.
+     * than as an exception. Favouriting was therefore a no-op that looked like a
+     * successful tap.
+     *
+     * Android 13 added `createFavoriteRequest` for exactly this column, and it is
+     * the one to prefer: `createWriteRequest` is for general writes and throws on
+     * the media URIs this app collects. Below 13 only the general request exists, so
+     * it is tried and its failure is reported rather than swallowed.
      */
-    fun buildWriteRequest(uris: List<Uri>): IntentSender? {
+    fun buildFavouriteRequest(uris: List<Uri>, favourite: Boolean): IntentSender? {
         if (uris.isEmpty()) return null
-        if (Build.VERSION.SDK_INT < API_TRASH) return null
+        val androidVersion = Build.VERSION.SDK_INT
+        if (androidVersion < API_TRASH) return null
         return runCatching {
-            MediaStore.createWriteRequest(resolver, uris).intentSender
-        }.getOrNull()
+            if (androidVersion >= API_FAVOURITE_REQUEST) {
+                MediaStore.createFavoriteRequest(resolver, uris, favourite).intentSender
+            } else {
+                MediaStore.createWriteRequest(resolver, uris).intentSender
+            }
+        }.onFailure { Log.w(TAG, "favourite request refused: ${it.javaClass.simpleName} ${it.message}") }
+            .getOrNull()
     }
 
     private companion object {
+        const val TAG = "HGalleryActions"
+
         /** Android 11: `createTrashRequest` and `createWriteRequest`. */
         const val API_TRASH = 30
+
+        /** Android 13: `createFavoriteRequest`, the consent path for `IS_FAVORITE`. */
+        const val API_FAVOURITE_REQUEST = 33
     }
 
     /**

@@ -136,7 +136,6 @@ private fun TabItem(
     modifier: Modifier = Modifier,
 ) {
     val colors = hgColors
-    val shapes = hgShapes
     val reduceMotion = rememberReduceMotion()
     val interaction = remember { MutableInteractionSource() }
     val pressScale = rememberPressScale(interaction = interaction)

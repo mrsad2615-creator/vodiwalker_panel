@@ -1,5 +1,11 @@
 package dev.hgallery.app.ui.search
 
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -44,17 +50,25 @@ fun SearchChipRows(
     albums: List<Album>,
     onChange: (SearchChips) -> Unit,
 ) {
+    // A fresh SearchChips, not a copy with fields zeroed: adding an axis to the type
+    // then cannot leave it set after "Clear" without the compiler noticing this
+    // constructor call.
+    val clear = { onChange(SearchChips(text = chips.text)) }
     Column {
         // Each row says what question it answers. Without the labels the two rows
         // are visually identical runs of grey pills, and nothing on the screen says
         // why pressing one chip replaces the chip beside it while pressing another
         // adds to it: the first row is one choice per axis, the second is albums.
-        RowLabel(stringResource(R.string.search_filters_label))
+        SectionHeader(
+            title = stringResource(R.string.search_filters_label),
+            showClear = chips.hasFilters,
+            onClear = clear,
+        )
         KindChips(chips = chips, onChange = onChange)
 
         if (albums.isNotEmpty()) {
             Spacer(Modifier.height(6.dp))
-            RowLabel(stringResource(R.string.search_albums_label))
+            SectionHeader(title = stringResource(R.string.search_albums_label))
             AlbumChips(chips = chips, albums = albums, onChange = onChange)
         }
 
@@ -62,15 +76,47 @@ fun SearchChipRows(
     }
 }
 
-/** A small overline that names what the row beneath it filters on. */
+/**
+ * A small overline that names what the row beneath it filters on, with the way to
+ * undo the filters on the same line.
+ *
+ * Clear belongs here rather than on the result-count line, where it was first put:
+ * at zero results there is no count, so it floated alone above the label it acts on.
+ * A section header and the action that resets that section is a pairing that holds
+ * at every result count.
+ */
 @Composable
-private fun RowLabel(text: String) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.labelSmall,
-        color = hgPalette.textTertiary,
-        modifier = Modifier.padding(start = HgMetrics.Gutter, bottom = 2.dp),
-    )
+private fun SectionHeader(
+    title: String,
+    showClear: Boolean = false,
+    onClear: () -> Unit = {},
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = HgMetrics.Gutter, end = 12.dp, bottom = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.labelSmall,
+            color = hgPalette.textTertiary,
+            modifier = Modifier.weight(1f),
+        )
+        if (showClear) {
+            Text(
+                text = stringResource(R.string.search_clear_filters),
+                style = MaterialTheme.typography.labelSmall,
+                color = hgPalette.accent,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(6.dp))
+                    .clickable(role = Role.Button, onClick = onClear)
+                    // Still a control, so still a 48dp target: the label is small by
+                    // design, the touch area must not be.
+                    .padding(horizontal = 8.dp, vertical = 12.dp),
+            )
+        }
+    }
 }
 
 /**

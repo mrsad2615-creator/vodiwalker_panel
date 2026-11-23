@@ -1,0 +1,21 @@
+# لینک‌های مستقیم فایل بازی — هر خط یک لینک
+#
+# نمونه (این‌ها فقط نمونه‌اند، جایگزینشان کن):
+# https://example.com/God.of.War.Ghost.of.Sparta.USA.PSP.iso
+# https://example.com/Tekken.6.USA.PSP.iso
+# https://example.com/Daxter.USA.PSP.cso
+#
+# نکته: لینک باید مستقیم به فایل باشد (نه صفحه‌ی دانلود).
+# اگر لینک صفحه باشد، فایل HTML دانلود می‌شود و اسکریپت ردش می‌کند.
+#
+# ── بازی‌های پوشه ۱ (نوستالژی) ──────────────────────────────────
+#   Crush · Sid Meier's Pirates! · Patapon · LocoRoco · Virtua Tennis
+#   Ape Escape · Burnout Legends · Ridge Racer · Mega Man Powered Up
+#   WipEout Pure · Jeanne d'Arc · Lumines II · Monster Hunter Freedom Unite
+#   GTA Liberty City Stories · Daxter
+#
+# ── بازی‌های پوشه ۲ (گرافیک) ────────────────────────────────────
+#   MotorStorm Arctic Edge · Tekken 6 · GTA Vice City Stories
+#   Resistance Retribution · Gran Turismo · MGS Peace Walker
+#   God of War Chains of Olympus · Kingdom Hearts BBS
+#   Crisis Core FFVII · God of War Ghost of Sparta

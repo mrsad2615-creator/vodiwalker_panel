@@ -1,0 +1,280 @@
+{
+  "meta": {
+    "title": "کالکشن PPSSPP",
+    "limit_gb": 10,
+    "hard_cap_gb": 9.7,
+    "updated": "2026-11-23",
+    "note_fa": "دو فایل ZIP، هر کدام زیر ۱۰ گیگ. حجم‌ها تقریبی (±۱۰٪) هستند و اسکریپت قبل از ساخت، حجم واقعی را می‌سنجد و اگر از سقف رد شود بازی اضافه را حذف می‌کند."
+  },
+  "folders": {
+    "nostalgia": {
+      "id": "nostalgia",
+      "name_fa": "نوستالژی",
+      "zip_name": "PSP_1_NOSTALGIA",
+      "color": "#4f8cff"
+    },
+    "graphics": {
+      "id": "graphics",
+      "name_fa": "گرافیک",
+      "zip_name": "PSP_2_GRAPHICS",
+      "color": "#ff5b8a"
+    }
+  },
+  "games": [
+    {
+      "id": "crush",
+      "folder": "nostalgia",
+      "title": "Crush",
+      "queries": ["Crush (USA) PSP", "Crush PSP ISO"],
+      "iso_mb": 260,
+      "cso_mb": 175,
+      "need_cso": true,
+      "sites": [
+        "https://vimm.net/vault/PSP",
+        "https://www.romspedia.com/roms/playstation-portable/crush",
+        "https://coolrom.com/roms/psp/"
+      ]
+    },
+    {
+      "id": "sid-meiers-pirates",
+      "folder": "nostalgia",
+      "title": "Sid Meier's Pirates!",
+      "queries": ["Sid Meiers Pirates (USA) PSP", "Pirates PSP ISO"],
+      "iso_mb": 280,
+      "cso_mb": 190,
+      "need_cso": true,
+      "sites": ["https://vimm.net/vault/PSP", "https://coolrom.com/roms/psp/"]
+    },
+    {
+      "id": "patapon",
+      "folder": "nostalgia",
+      "title": "Patapon",
+      "queries": ["Patapon (USA) PSP", "Patapon PSP ISO"],
+      "iso_mb": 380,
+      "cso_mb": 250,
+      "need_cso": true,
+      "sites": ["https://vimm.net/vault/PSP", "https://coolrom.com/roms/psp/"]
+    },
+    {
+      "id": "locoroco",
+      "folder": "nostalgia",
+      "title": "LocoRoco",
+      "queries": ["LocoRoco (USA) PSP", "LocoRoco PSP ISO"],
+      "iso_mb": 420,
+      "cso_mb": 280,
+      "need_cso": true,
+      "sites": ["https://vimm.net/vault/PSP", "https://coolrom.com/roms/psp/"]
+    },
+    {
+      "id": "virtua-tennis-world-tour",
+      "folder": "nostalgia",
+      "title": "Virtua Tennis: World Tour",
+      "queries": ["Virtua Tennis World Tour (USA) PSP", "Virtua Tennis PSP ISO"],
+      "iso_mb": 420,
+      "cso_mb": 280,
+      "need_cso": true,
+      "sites": ["https://vimm.net/vault/PSP", "https://coolrom.com/roms/psp/"]
+    },
+    {
+      "id": "ape-escape-on-the-loose",
+      "folder": "nostalgia",
+      "title": "Ape Escape: On the Loose",
+      "queries": ["Ape Escape On the Loose (USA) PSP", "Ape Escape PSP ISO"],
+      "iso_mb": 480,
+      "cso_mb": 330,
+      "need_cso": true,
+      "sites": ["https://vimm.net/vault/PSP", "https://coolrom.com/roms/psp/"]
+    },
+    {
+      "id": "burnout-legends",
+      "folder": "nostalgia",
+      "title": "Burnout Legends",
+      "queries": ["Burnout Legends (USA) PSP", "Burnout Legends PSP ISO"],
+      "iso_mb": 520,
+      "cso_mb": 340,
+      "need_cso": true,
+      "sites": ["https://vimm.net/vault/PSP", "https://coolrom.com/roms/psp/"]
+    },
+    {
+      "id": "ridge-racer",
+      "folder": "nostalgia",
+      "title": "Ridge Racer",
+      "queries": ["Ridge Racer (USA) PSP", "Ridge Racer PSP ISO"],
+      "iso_mb": 520,
+      "cso_mb": 350,
+      "need_cso": true,
+      "sites": ["https://vimm.net/vault/PSP", "https://coolrom.com/roms/psp/"]
+    },
+    {
+      "id": "mega-man-powered-up",
+      "folder": "nostalgia",
+      "title": "Mega Man Powered Up",
+      "queries": ["Mega Man Powered Up (USA) PSP", "Mega Man Powered Up PSP ISO"],
+      "iso_mb": 620,
+      "cso_mb": 420,
+      "need_cso": true,
+      "sites": ["https://vimm.net/vault/PSP", "https://coolrom.com/roms/psp/"]
+    },
+    {
+      "id": "wipeout-pure",
+      "folder": "nostalgia",
+      "title": "WipEout Pure",
+      "queries": ["Wipeout Pure (USA) PSP", "Wipeout Pure PSP ISO"],
+      "iso_mb": 640,
+      "cso_mb": 430,
+      "need_cso": true,
+      "sites": ["https://vimm.net/vault/PSP", "https://coolrom.com/roms/psp/"]
+    },
+    {
+      "id": "jeanne-darc",
+      "folder": "nostalgia",
+      "title": "Jeanne d'Arc",
+      "queries": ["Jeanne d'Arc (USA) PSP", "Jeanne d Arc PSP ISO"],
+      "iso_mb": 660,
+      "cso_mb": 440,
+      "need_cso": true,
+      "sites": ["https://vimm.net/vault/PSP", "https://coolrom.com/roms/psp/"]
+    },
+    {
+      "id": "spot-2",
+      "folder": "nostalgia",
+      "title": "Lumines II",
+      "queries": ["Lumines II (USA) PSP", "Lumines 2 PSP ISO"],
+      "iso_mb": 700,
+      "cso_mb": 470,
+      "need_cso": true,
+      "sites": ["https://vimm.net/vault/PSP", "https://coolrom.com/roms/psp/"]
+    },
+    {
+      "id": "monster-hunter-freedom-unite",
+      "folder": "nostalgia",
+      "title": "Monster Hunter Freedom Unite",
+      "queries": ["Monster Hunter Freedom Unite (USA) PSP", "MHFU PSP ISO"],
+      "iso_mb": 770,
+      "cso_mb": 500,
+      "need_cso": false,
+      "sites": ["https://vimm.net/vault/PSP", "https://coolrom.com/roms/psp/"]
+    },
+    {
+      "id": "gta-liberty-city-stories",
+      "folder": "nostalgia",
+      "title": "GTA: Liberty City Stories",
+      "queries": ["Grand Theft Auto Liberty City Stories (USA) PSP", "GTA LCS PSP ISO"],
+      "iso_mb": 820,
+      "cso_mb": 540,
+      "need_cso": false,
+      "sites": ["https://vimm.net/vault/PSP", "https://coolrom.com/roms/psp/"]
+    },
+    {
+      "id": "daxter",
+      "folder": "nostalgia",
+      "title": "Daxter",
+      "queries": ["Daxter (USA) PSP", "Daxter PSP ISO"],
+      "iso_mb": 1000,
+      "cso_mb": 660,
+      "need_cso": false,
+      "sites": ["https://vimm.net/vault/PSP", "https://coolrom.com/roms/psp/"]
+    },
+
+    {
+      "id": "motorstorm-arctic-edge",
+      "folder": "graphics",
+      "title": "MotorStorm: Arctic Edge",
+      "queries": ["MotorStorm Arctic Edge (USA) PSP", "Motorstorm Arctic Edge PSP ISO"],
+      "iso_mb": 700,
+      "cso_mb": 480,
+      "need_cso": false,
+      "sites": ["https://vimm.net/vault/PSP", "https://coolrom.com/roms/psp/"]
+    },
+    {
+      "id": "tekken-6",
+      "folder": "graphics",
+      "title": "Tekken 6",
+      "queries": ["Tekken 6 (USA) PSP", "Tekken 6 PSP ISO"],
+      "iso_mb": 800,
+      "cso_mb": 560,
+      "need_cso": false,
+      "sites": ["https://vimm.net/vault/PSP", "https://coolrom.com/roms/psp/"]
+    },
+    {
+      "id": "gta-vice-city-stories",
+      "folder": "graphics",
+      "title": "GTA: Vice City Stories",
+      "queries": ["Grand Theft Auto Vice City Stories (USA) PSP", "GTA VCS PSP ISO"],
+      "iso_mb": 820,
+      "cso_mb": 540,
+      "need_cso": false,
+      "sites": ["https://vimm.net/vault/PSP", "https://coolrom.com/roms/psp/"]
+    },
+    {
+      "id": "resistance-retribution",
+      "folder": "graphics",
+      "title": "Resistance: Retribution",
+      "queries": ["Resistance Retribution (USA) PSP", "Resistance Retribution PSP ISO"],
+      "iso_mb": 1000,
+      "cso_mb": 700,
+      "need_cso": false,
+      "sites": ["https://vimm.net/vault/PSP", "https://coolrom.com/roms/psp/"]
+    },
+    {
+      "id": "gran-turismo",
+      "folder": "graphics",
+      "title": "Gran Turismo",
+      "queries": ["Gran Turismo (USA) PSP", "Gran Turismo PSP ISO"],
+      "iso_mb": 1000,
+      "cso_mb": 700,
+      "need_cso": false,
+      "sites": ["https://vimm.net/vault/PSP", "https://coolrom.com/roms/psp/"]
+    },
+    {
+      "id": "metal-gear-solid-peace-walker",
+      "folder": "graphics",
+      "title": "Metal Gear Solid: Peace Walker",
+      "queries": ["Metal Gear Solid Peace Walker (USA) PSP", "MGS Peace Walker PSP ISO"],
+      "iso_mb": 1390,
+      "cso_mb": 970,
+      "need_cso": false,
+      "sites": ["https://vimm.net/vault/PSP", "https://coolrom.com/roms/psp/"]
+    },
+    {
+      "id": "god-of-war-chains-of-olympus",
+      "folder": "graphics",
+      "title": "God of War: Chains of Olympus",
+      "queries": ["God of War Chains of Olympus (USA) PSP", "Chains of Olympus PSP ISO"],
+      "iso_mb": 1400,
+      "cso_mb": 980,
+      "need_cso": false,
+      "sites": ["https://vimm.net/vault/PSP", "https://coolrom.com/roms/psp/"]
+    },
+    {
+      "id": "kingdom-hearts-birth-by-sleep",
+      "folder": "graphics",
+      "title": "Kingdom Hearts: Birth by Sleep",
+      "queries": ["Kingdom Hearts Birth by Sleep (USA) PSP", "Kingdom Hearts BBS PSP ISO"],
+      "iso_mb": 1500,
+      "cso_mb": 1040,
+      "need_cso": false,
+      "sites": ["https://vimm.net/vault/PSP", "https://coolrom.com/roms/psp/"]
+    },
+    {
+      "id": "crisis-core-final-fantasy-vii",
+      "folder": "graphics",
+      "title": "Crisis Core: Final Fantasy VII",
+      "queries": ["Crisis Core Final Fantasy VII (USA) PSP", "Crisis Core PSP ISO"],
+      "iso_mb": 1600,
+      "cso_mb": 1100,
+      "need_cso": false,
+      "sites": ["https://vimm.net/vault/PSP", "https://coolrom.com/roms/psp/"]
+    },
+    {
+      "id": "god-of-war-ghost-of-sparta",
+      "folder": "graphics",
+      "title": "God of War: Ghost of Sparta",
+      "queries": ["God of War Ghost of Sparta (USA) PSP", "Ghost of Sparta PSP ISO"],
+      "iso_mb": 1620,
+      "cso_mb": 1120,
+      "need_cso": false,
+      "sites": ["https://vimm.net/vault/PSP", "https://coolrom.com/roms/psp/"]
+    }
+  ]
+}

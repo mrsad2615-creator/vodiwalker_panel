@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -115,7 +116,7 @@ private suspend fun androidx.compose.ui.input.pointer.PointerInputScope.detectDe
     columns: Int,
     onDensityChange: (Int) -> Unit,
 ) {
-    androidx.compose.foundation.gestures.awaitEachGesture {
+    awaitEachGesture {
         val startDistance = awaitPinchStartDistance() ?: return@awaitEachGesture
         val endDistance = awaitPinchEndDistance()
         if (endDistance <= 0f) return@awaitEachGesture

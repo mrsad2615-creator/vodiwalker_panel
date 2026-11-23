@@ -117,6 +117,9 @@ dependencies {
     // because a compile-time import that arrives by accident is a build that breaks
     // on an unrelated version bump.
     implementation("androidx.fragment:fragment:1.8.5")
+    // The platform EXIF class is missing the lens and ISO tags. This one carries the
+    // full tag set and is what every camera app uses. Apache 2.0.
+    implementation("androidx.exifinterface:exifinterface:1.3.7")
 
     // Media3 for video playback. ExoPlayer replaces MediaPlayer because the
     // platform player cannot report buffered position or speed reliably, and its

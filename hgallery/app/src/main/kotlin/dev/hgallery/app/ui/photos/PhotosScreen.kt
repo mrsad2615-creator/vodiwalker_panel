@@ -60,7 +60,6 @@ import dev.hgallery.app.ui.motion.rememberPressScale
 import dev.hgallery.app.ui.theme.hgColors
 import dev.hgallery.app.ui.theme.hgShapes
 import dev.hgallery.app.ui.theme.HgMetrics
-import dev.hgallery.app.ui.theme.hgPalette
 import dev.hgallery.core.MediaItem
 import dev.hgallery.core.Selection
 import java.util.Locale
@@ -101,7 +100,6 @@ private fun SelectionAwarePhotos(
     onSearch: () -> Unit,
     modifier: Modifier,
 ) {
-    val palette = hgPalette
     val items by container.mediaStore.items.collectAsStateWithLifecycle()
     val loading by container.mediaStore.loading.collectAsStateWithLifecycle()
     val error by container.mediaStore.error.collectAsStateWithLifecycle()

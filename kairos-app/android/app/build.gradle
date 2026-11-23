@@ -7,8 +7,8 @@ android {
         applicationId "app.kairos.productivity"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 36
-        versionName "3.8.1"
+        versionCode 37
+        versionName "3.8.2"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -16,6 +16,26 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    /*
+     * One signing identity, forever.
+     *
+     * Gradle normally generates ~/.android/debug.keystore fresh on every CI
+     * runner. Two builds then have different signatures, Android refuses to
+     * install the newer one over the older one, and the user is left with a
+     * dead launcher shortcut — exactly the "the icon is broken and does
+     * nothing" report. The key below is committed on purpose (this is a
+     * personal, non-store build with no server trust) so that every future APK
+     * installs over the previous one and keeps the data.
+     */
+    signingConfigs {
+        debug {
+            storeFile file('../signing/kairos.p12')
+            storePassword 'kairos2024'
+            keyAlias 'kairos'
+            keyPassword 'kairos2024'
+        }
+    }
+
     buildTypes {
         release {
             minifyEnabled false

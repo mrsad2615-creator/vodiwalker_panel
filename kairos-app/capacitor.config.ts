@@ -33,14 +33,10 @@ const config: CapacitorConfig = {
       backgroundColor: '#000000',
       showSpinner: false,
     },
-    // Requests from the WebView are browser requests: the provider's CORS policy
-    // decides whether they are allowed, and several refuse an `Authorization`
-    // preflight from an app origin. CapacitorHttp performs them in Java instead —
-    // no CORS, no preflight, no mixed-content block. This is what makes the API
-    // work on a real phone, not just in the desktop preview.
-    CapacitorHttp: {
-      enabled: true,
-    },
+    // Native HTTP is used explicitly (see src/lib/ai/transport.ts) rather than by
+    // letting the plugin patch window.fetch for the whole app: the patch would
+    // intercept every request the WebView makes, and one failure there is a blank
+    // screen, not a failed API call.
     LocalNotifications: {
       iconColor: '#6D4AFF',
       sound: 'default',

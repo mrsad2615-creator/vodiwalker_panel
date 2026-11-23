@@ -2,4 +2,7 @@
 <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
     <background android:drawable="@color/ic_launcher_background"/>
     <foreground android:drawable="@mipmap/ic_launcher_foreground"/>
+    <!-- Android 13+ themed icons: without a monochrome layer a launcher renders
+         a flat coloured blob, which reads as a broken icon. -->
+    <monochrome android:drawable="@drawable/ic_splash_mark"/>
 </adaptive-icon>

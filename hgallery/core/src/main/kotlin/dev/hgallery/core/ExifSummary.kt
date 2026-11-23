@@ -50,11 +50,17 @@ object ExifOrientation {
     const val ROTATE_180 = 3
     const val ROTATE_270 = 8
 
-    /** The rotation, in degrees clockwise, that a stored value asks the viewer to apply. */
+    /**
+     * The rotation, in degrees clockwise, that a stored value asks the viewer to apply.
+     *
+     * The four mirrored values are included: 5 is a mirrored 90, so the rotation it asks
+     * for is 90 even though the app cannot render the mirror. Losing the mirror is a
+     * visible change, and losing the rotation as well would be a larger one.
+     */
     fun degrees(value: Int): Int = when (value) {
-        ROTATE_90 -> 90
-        ROTATE_180 -> 180
-        ROTATE_270 -> 270
+        5, ROTATE_90 -> 90
+        4, ROTATE_180 -> 180
+        7, ROTATE_270 -> 270
         else -> 0
     }
 

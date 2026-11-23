@@ -767,24 +767,25 @@ class CalendarLabelsTest {
 
 class CalendarYearTest {
 
-    private val march20 = java.time.LocalDate.of(2025, 3, 20)
-    private val march22 = java.time.LocalDate.of(2025, 3, 22)
+    // Persian year 1404 began on 21 March 2025: the boundary is between these two days.
+    private val lastDayOf1403 = java.time.LocalDate.of(2025, 3, 20)
+    private val firstDayOf1404 = java.time.LocalDate.of(2025, 3, 21)
 
     @Test
     fun `two dates in one gregorian year share a gregorian year`() {
-        assertTrue(CalendarLabels.sameYear(march20, march22, HgCalendar.GREGORIAN))
+        assertTrue(CalendarLabels.sameYear(lastDayOf1403, firstDayOf1404, HgCalendar.GREGORIAN))
     }
 
     @Test
     fun `the same two dates fall in different persian years`() {
-        // 20 March 2025 is still 1403; 22 March 2025 is 1404. A header that compared
-        // `LocalDate.year` would print both without a year and hide the change.
-        assertFalse(CalendarLabels.sameYear(march20, march22, HgCalendar.PERSIAN))
+        // A header that compared `LocalDate.year` would print both without a year and
+        // hide the turn of the year.
+        assertFalse(CalendarLabels.sameYear(lastDayOf1403, firstDayOf1404, HgCalendar.PERSIAN))
     }
 
     @Test
     fun `a date is always in its own year`() {
-        assertTrue(CalendarLabels.sameYear(march20, march20, HgCalendar.PERSIAN))
-        assertTrue(CalendarLabels.sameYear(march20, march20, HgCalendar.GREGORIAN))
+        assertTrue(CalendarLabels.sameYear(lastDayOf1403, lastDayOf1403, HgCalendar.PERSIAN))
+        assertTrue(CalendarLabels.sameYear(firstDayOf1404, firstDayOf1404, HgCalendar.GREGORIAN))
     }
 }

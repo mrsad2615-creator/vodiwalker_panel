@@ -62,9 +62,9 @@ fun megapixels(item: MediaItem): String {
 }
 
 /** Integer division with one decimal place, without pulling in a formatter. */
-private fun tenths(millionths: Double): String {
-    val scaled = kotlin.math.round(millionths * DECIMAL_BASE).toLong()
-    return "${scaled / 10L}.${scaled % 10L}"
+private fun tenths(value: Double): String {
+    val scaled = kotlin.math.round(value * DECIMAL_BASE).toLong()
+    return "${scaled / DECIMAL_BASE_INT}.${scaled % DECIMAL_BASE_INT}"
 }
 
 /**
@@ -95,3 +95,6 @@ private const val ZERO_TENTHS = "0.0"
 
 /** Multiplier for one decimal place. */
 private const val DECIMAL_BASE = 10.0
+
+/** The same multiplier as an integer, for splitting a scaled value. */
+private const val DECIMAL_BASE_INT = 10L

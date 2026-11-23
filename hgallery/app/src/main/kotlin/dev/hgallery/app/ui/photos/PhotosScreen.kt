@@ -228,10 +228,10 @@ private fun SelectionAwarePhotos(
         AddToAlbumSheet(
             albums = customAlbums,
             onDismiss = { addToAlbumOpen = false },
-            onPick = { album ->
+            onPick = { picked ->
                 addToAlbumOpen = false
                 scope.launch {
-                    var updated = album
+                    var updated = picked
                     chosen.forEach { updated = dev.hgallery.core.AlbumRules.addItem(updated, it) }
                     container.customAlbums.save(updated)
                     model.exit()

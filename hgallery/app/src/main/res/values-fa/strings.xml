@@ -218,6 +218,7 @@
     <string name="trash_loading">خواندن سطل زباله</string>
     <string name="trash_empty_title">سطل زباله خالی است</string>
     <string name="trash_empty_body">موارد حذف‌شده تا ۳۰ روز اینجا می‌مانند. نسخه‌ها در حافظهٔ خود برنامه هستند، پس حذف برنامه آن‌ها را پاک می‌کند.</string>
+    <string name="trash_restore">بازگرداندن</string>
     <string name="trash_empty_action">خالی کردن سطل</string>
     <string name="trash_empty_confirm_title">همهٔ سطل زباله حذف شود؟</string>
     <string name="trash_empty_confirm_body">این کار برگشت‌پذیر نیست.</string>

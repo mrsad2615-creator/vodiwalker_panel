@@ -198,6 +198,7 @@
     <string name="trash_loading">Reading the trash</string>
     <string name="trash_empty_title">The trash is empty</string>
     <string name="trash_empty_body">Items you delete are kept here for 30 days. The copies live in this app\'s storage, so uninstalling the app removes them.</string>
+    <string name="trash_restore">Restore</string>
     <string name="trash_empty_action">Empty the trash</string>
     <string name="trash_empty_confirm_title">Delete everything in the trash?</string>
     <string name="trash_empty_confirm_body">This cannot be undone.</string>

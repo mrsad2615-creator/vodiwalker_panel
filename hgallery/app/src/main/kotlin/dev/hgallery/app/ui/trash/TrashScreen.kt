@@ -264,7 +264,7 @@ private fun TrashRow(
             TextButton(
                 onClick = onRestore,
                 modifier = Modifier.testTag(HgTestTags.trashRestore(entry.itemId)),
-            ) { Text(stringResource(R.string.restore)) }
+            ) { Text(stringResource(R.string.trash_restore)) }
             TextButton(
                 onClick = { confirmingDelete = true },
                 modifier = Modifier.testTag(HgTestTags.trashDelete(entry.itemId)),

@@ -1,8 +1,8 @@
 package dev.hgallery.app.data
 
 import android.content.Context
-import androidx.exifinterface.media.ExifInterface
 import android.net.Uri
+import androidx.exifinterface.media.ExifInterface
 import dev.hgallery.core.ExifFormat
 import dev.hgallery.core.ExifSummary
 import kotlinx.coroutines.Dispatchers
@@ -51,16 +51,16 @@ class ExifReader(private val context: Context) {
                         ?.takeIf { it.isNotBlank() }
                         ?: exif.getAttribute(ExifInterface.TAG_LENS_MAKE).orEmpty(),
                     aperture = ExifFormat.aperture(
-                        exif.getAttributeDouble(ExifInterface.TAG_F_NUMBER, 0.0),
+                        exif.getAttributeDouble(ExifInterface.TAG_F_NUMBER, NO_DOUBLE),
                     ),
                     shutter = ExifFormat.shutter(
-                        exif.getAttributeDouble(ExifInterface.TAG_EXPOSURE_TIME, 0.0),
+                        exif.getAttributeDouble(ExifInterface.TAG_EXPOSURE_TIME, NO_DOUBLE),
                     ),
                     iso = ExifFormat.iso(
-                        exif.getAttributeInt(ExifInterface.TAG_ISO_SPEED, 0),
+                        exif.getAttributeInt(ExifInterface.TAG_ISO_SPEED, NO_INT),
                     ),
                     focalLength = ExifFormat.focalLength(
-                        exif.getAttributeDouble(ExifInterface.TAG_FOCAL_LENGTH, 0.0),
+                        exif.getAttributeDouble(ExifInterface.TAG_FOCAL_LENGTH, NO_DOUBLE),
                     ),
                     orientationDegrees = orientationDegrees(exif),
                 )
@@ -80,7 +80,7 @@ class ExifReader(private val context: Context) {
             ExifInterface.ORIENTATION_ROTATE_90 -> QUARTER_TURN
             ExifInterface.ORIENTATION_ROTATE_180 -> HALF_TURN
             ExifInterface.ORIENTATION_ROTATE_270 -> THREE_QUARTERS_TURN
-            else -> 0
+            else -> NO_ROTATION
         }
 
     private companion object {
@@ -88,5 +88,10 @@ class ExifReader(private val context: Context) {
         const val QUARTER_TURN = 90
         const val HALF_TURN = 180
         const val THREE_QUARTERS_TURN = 270
+
+        /** What `getAttribute*` returns when the tag is absent. */
+        const val NO_DOUBLE = 0.0
+        const val NO_INT = 0
+        const val NO_ROTATION = 0
     }
 }

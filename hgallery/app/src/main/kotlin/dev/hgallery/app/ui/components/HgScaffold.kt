@@ -33,6 +33,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import dev.hgallery.app.ui.icons.HgIcons
 import dev.hgallery.app.ui.theme.HgMetrics
 import dev.hgallery.app.ui.theme.hgPalette
@@ -55,28 +56,30 @@ fun HgScreenTitle(
     title: String,
     modifier: Modifier = Modifier,
     subtitle: String? = null,
-    subtitleCentred: Boolean = false,
 ) {
     val palette = hgPalette
     Column(modifier = modifier.fillMaxWidth()) {
         Text(
             text = title,
-            style = androidx.compose.material3.MaterialTheme.typography.headlineLarge,
+            style = androidx.compose.material3.MaterialTheme.typography.displaySmall,
             color = palette.textPrimary,
+            // Negative tracking on a title this size. At display size the default
+            // spacing opens gaps that read as loose; tightening it is what makes a
+            // large title look drawn rather than typed.
+            letterSpacing = (-1).sp,
             modifier = Modifier.padding(start = HgMetrics.Gutter, end = HgMetrics.Gutter),
         )
         if (subtitle != null) {
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(4.dp))
+            // The subtitle sits with the title, not centred under it. Centring was a
+            // leftover from matching one reference frame, and it left the count
+            // floating away from the word it describes.
             Text(
                 text = subtitle,
-                style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+                style = androidx.compose.material3.MaterialTheme.typography.bodyMedium,
                 color = palette.textSecondary,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .then(
-                        if (subtitleCentred) Modifier else Modifier.padding(start = HgMetrics.Gutter),
-                    ),
-                textAlign = if (subtitleCentred) TextAlign.Center else TextAlign.Start,
+                modifier = Modifier.padding(start = HgMetrics.Gutter, end = HgMetrics.Gutter),
+                textAlign = TextAlign.Start,
             )
         }
     }

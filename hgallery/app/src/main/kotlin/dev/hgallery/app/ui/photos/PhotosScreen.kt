@@ -190,7 +190,6 @@ private fun SelectionAwarePhotos(
             HgScreenTitle(
                 title = stringResource(R.string.tab_photos),
                 subtitle = if (items.isNotEmpty()) summary else null,
-                subtitleCentred = true,
             )
             Spacer(Modifier.height(14.dp))
             }

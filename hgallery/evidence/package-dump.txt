@@ -1,53 +1,53 @@
 Activity Resolver Table:
   Non-Data Actions:
       android.intent.action.MAIN:
-        ab2d525 dev.hgallery.app.debug/dev.hgallery.app.MainActivity filter ab436fa
+        ef3ad59 dev.hgallery.app.debug/dev.hgallery.app.MainActivity filter 8681d1e
           Action: "android.intent.action.MAIN"
           Category: "android.intent.category.LAUNCHER"
 
 Receiver Resolver Table:
   Non-Data Actions:
       androidx.profileinstaller.action.SAVE_PROFILE:
-        6d7c4ab dev.hgallery.app.debug/androidx.profileinstaller.ProfileInstallReceiver filter 97ec8c6
+        67b9ff dev.hgallery.app.debug/androidx.profileinstaller.ProfileInstallReceiver filter e74ed2a
           Action: "androidx.profileinstaller.action.SAVE_PROFILE"
       androidx.profileinstaller.action.INSTALL_PROFILE:
-        6d7c4ab dev.hgallery.app.debug/androidx.profileinstaller.ProfileInstallReceiver filter f0d0708
+        67b9ff dev.hgallery.app.debug/androidx.profileinstaller.ProfileInstallReceiver filter 11013cc
           Action: "androidx.profileinstaller.action.INSTALL_PROFILE"
       androidx.profileinstaller.action.SKIP_FILE:
-        6d7c4ab dev.hgallery.app.debug/androidx.profileinstaller.ProfileInstallReceiver filter 8e09ea1
+        67b9ff dev.hgallery.app.debug/androidx.profileinstaller.ProfileInstallReceiver filter 5a8c615
           Action: "androidx.profileinstaller.action.SKIP_FILE"
       androidx.profileinstaller.action.BENCHMARK_OPERATION:
-        6d7c4ab dev.hgallery.app.debug/androidx.profileinstaller.ProfileInstallReceiver filter b4c0087
+        67b9ff dev.hgallery.app.debug/androidx.profileinstaller.ProfileInstallReceiver filter 87f71b
           Action: "androidx.profileinstaller.action.BENCHMARK_OPERATION"
 
 Domain verification status:
 
 Permissions:
-  Permission [dev.hgallery.app.debug.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION] (3b8c9a4):
+  Permission [dev.hgallery.app.debug.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION] (5745371):
     sourcePackage=dev.hgallery.app.debug
     uid=10174 gids=[] type=0 prot=signature
-    perm=PermissionInfo{bf6030d dev.hgallery.app.debug.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION}
+    perm=PermissionInfo{e5a2556 dev.hgallery.app.debug.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION}
 
 Registered ContentProviders:
   dev.hgallery.app.debug/androidx.startup.InitializationProvider:
-    Provider{5bb72c2 dev.hgallery.app.debug/androidx.startup.InitializationProvider}
+    Provider{a4649d7 dev.hgallery.app.debug/androidx.startup.InitializationProvider}
 
 ContentProvider Authorities:
   [dev.hgallery.app.debug.androidx-startup]:
-    Provider{5bb72c2 dev.hgallery.app.debug/androidx.startup.InitializationProvider}
-      applicationInfo=ApplicationInfo{1d328d3 dev.hgallery.app.debug}
+    Provider{a4649d7 dev.hgallery.app.debug/androidx.startup.InitializationProvider}
+      applicationInfo=ApplicationInfo{db722c4 dev.hgallery.app.debug}
 
 Key Set Manager:
   [dev.hgallery.app.debug]
       Signing KeySets: 53
 
 Packages:
-  Package [dev.hgallery.app.debug] (38adc10):
+  Package [dev.hgallery.app.debug] (b29b5ad):
     userId=10174
-    pkg=Package{58cc309 dev.hgallery.app.debug}
-    codePath=/data/app/~~bP7_HHeSIGbK6qCU4-9HtA==/dev.hgallery.app.debug-XiQ1Tl2d_QdZgvPX_EQKDg==
-    resourcePath=/data/app/~~bP7_HHeSIGbK6qCU4-9HtA==/dev.hgallery.app.debug-XiQ1Tl2d_QdZgvPX_EQKDg==
-    legacyNativeLibraryDir=/data/app/~~bP7_HHeSIGbK6qCU4-9HtA==/dev.hgallery.app.debug-XiQ1Tl2d_QdZgvPX_EQKDg==/lib
+    pkg=Package{6eb40e2 dev.hgallery.app.debug}
+    codePath=/data/app/~~i48LSCMMi0-sQnIQg6NIkw==/dev.hgallery.app.debug-IVAzkxs1IlE3rRmH2zSqcA==
+    resourcePath=/data/app/~~i48LSCMMi0-sQnIQg6NIkw==/dev.hgallery.app.debug-IVAzkxs1IlE3rRmH2zSqcA==
+    legacyNativeLibraryDir=/data/app/~~i48LSCMMi0-sQnIQg6NIkw==/dev.hgallery.app.debug-IVAzkxs1IlE3rRmH2zSqcA==/lib
     extractNativeLibs=false
     primaryCpuAbi=x86_64
     secondaryCpuAbi=null
@@ -63,10 +63,10 @@ Packages:
     forceQueryable=false
     dataDir=/data/user/0/dev.hgallery.app.debug
     supportsScreens=[small, medium, large, xlarge, resizeable, anyDensity]
-    timeStamp=2026-11-23 10:12:05
-    lastUpdateTime=2026-11-23 10:12:05
+    timeStamp=2026-11-23 10:35:18
+    lastUpdateTime=2026-11-23 10:35:18
     packageSource=0
-    signatures=PackageSignatures{251f90e version:2, signatures:[c68418ec], past signatures:[]}
+    signatures=PackageSignatures{bbac73 version:2, signatures:[4180c601], past signatures:[]}
     installPermissionsFixed=false
     pkgFlags=[ DEBUGGABLE HAS_CODE ALLOW_CLEAR_USER_DATA ]
     declared permissions:
@@ -80,14 +80,14 @@ Packages:
     install permissions:
       android.permission.ACCESS_NETWORK_STATE: granted=true
       dev.hgallery.app.debug.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION: granted=true
-    User 0: ceDataInode=147464 installed=true hidden=false suspended=false distractionFlags=0 stopped=true notLaunched=true enabled=0 instant=false virtual=false
+    User 0: ceDataInode=140742 installed=true hidden=false suspended=false distractionFlags=0 stopped=true notLaunched=true enabled=0 instant=false virtual=false
       installReason=0
-      firstInstallTime=2026-11-23 10:12:05
+      firstInstallTime=2026-11-23 10:35:18
       uninstallReason=0
       overlay paths:
         /product/overlay/NavigationBarModeGestural/NavigationBarModeGesturalOverlay.apk
-        /data/resource-cache/com.android.systemui-neutral-A19s.frro
-        /data/resource-cache/com.android.systemui-accent-fQxl.frro
+        /data/resource-cache/com.android.systemui-neutral-1VNM.frro
+        /data/resource-cache/com.android.systemui-accent-lmRa.frro
       legacy overlay paths:
         /product/overlay/NavigationBarModeGestural/NavigationBarModeGesturalOverlay.apk
       runtime permissions:
@@ -107,7 +107,7 @@ Queries:
 
 Dexopt state:
   [dev.hgallery.app.debug]
-    path: /data/app/~~bP7_HHeSIGbK6qCU4-9HtA==/dev.hgallery.app.debug-XiQ1Tl2d_QdZgvPX_EQKDg==/base.apk
+    path: /data/app/~~i48LSCMMi0-sQnIQg6NIkw==/dev.hgallery.app.debug-IVAzkxs1IlE3rRmH2zSqcA==/base.apk
       x86_64: [status=run-from-apk] [reason=unknown]
   BgDexopt state:
     enabled:true
@@ -119,7 +119,7 @@ Dexopt state:
     mLastExecutionDurationIncludingSleepMs:0
     mLastExecutionStartUptimeMs:0
     mLastExecutionDurationMs:0
-    now:256025
+    now:274017
     mLastCancelledPackages:
     mFailedPackageNamesPrimary:
     mFailedPackageNamesSecondary:

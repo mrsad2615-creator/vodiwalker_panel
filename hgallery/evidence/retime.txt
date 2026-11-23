@@ -1,1 +1,1 @@
-retimed 1 rows into 1 day groups
+retimed 0 rows into 0 day groups

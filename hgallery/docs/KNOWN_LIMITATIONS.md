@@ -74,6 +74,16 @@ oversight that went unnoticed.
   grid already loaded. Camera make, lens, aperture, ISO and the original capture time
   are EXIF, which means opening the file and parsing it; none of that is shown, so the
   sheet must not be read as an EXIF panel.
+* **The redesign is not measured against a device.** Every visual judgement in this
+  revision comes from the emulator at one density, in light mode only. Dark mode is
+  defined and the theme applies it, but no dark screenshot exists, so its contrast is
+  unverified. Nothing has been checked at 120 Hz, on a real phone, or with a font scale
+  other than 1.0. The motion is a spring vocabulary taken from published constants, and
+  it has been watched only through still frames: no frame timing was recorded, so
+  "smooth" would be an unsupported claim.
+* **Reduced motion is implemented and untested.** The helpers collapse to an instant
+  change when the platform animation scale is zero, but no run has set that scale and
+  photographed the result.
 * **Persian plurals.** Lint's `ImpliedQuantity` check found that Persian's
   singular form also covers zero, so the delete bodies now carry the count in
   both variants. The wording was reviewed by inspection, not by a native speaker.

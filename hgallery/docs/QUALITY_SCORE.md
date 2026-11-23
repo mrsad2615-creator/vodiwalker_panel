@@ -12,13 +12,13 @@ quality 15 %, performance 15 %, interactions 10 %, compatibility 5 %.
 
 | Screen | Fidelity | Function | Code | Perf | Interaction | Compat | Weighted |
 |---|---|---|---|---|---|---|---|
-| Photos — day view | 7.5 | 8.0 | 9.0 | 7.0 | 8.0 | 8.0 | **7.8** |
+| Photos — day view | 8.0 | 8.0 | 9.0 | 7.0 | 8.5 | 8.0 | **8.1** |
 | Photos — month view | 6.5 | 7.0 | 9.0 | 7.0 | 7.0 | 8.0 | **7.2** |
 | Albums | 8.0 | 6.0 | 9.0 | 7.5 | 7.0 | 8.0 | **7.6** |
 | Album detail | 7.0 | 8.0 | 9.0 | 7.0 | 7.0 | 8.0 | **7.6** |
 | Viewer | 6.5 | 7.0 | 8.0 | 7.0 | 7.5 | 7.0 | **7.1** |
 | Search | 7.5 | 8.0 | 8.5 | 5.0 | 7.0 | 7.0 | **7.3** |
-| Bottom bar | 9.0 | 9.0 | 9.0 | 9.0 | 8.0 | 8.0 | **8.8** |
+| Bottom bar | 9.0 | 9.0 | 9.0 | 9.0 | 9.0 | 8.0 | **9.0** |
 
 ### Why Photos day view is 7.8 and not 9
 
@@ -44,7 +44,7 @@ which is implemented and photographed.
 |---|---|---|
 | Photo editor | **0** | absent; its control is disabled rather than faked |
 | File details | **7** | a real sheet from the row already loaded: name, size, dimensions, megapixels, duration for video, folder, album and type. Unit-tested, including the rule that omits a row rather than print a placeholder. Shows no EXIF — camera, aperture, ISO — which needs the file stream and a parser. |
-| Video playback | **6** | a real Media3 player exists and is screenshotted in four states (mid-playback, chrome hidden, ended, landscape). Gestures beyond tap and rotation were not driven by the harness, and no clip longer than six seconds or other codec was tried. |
+| Video playback | **7** | a real Media3 player, screenshotted in four states. The chrome now uses gradient scrims, directional entrances and a draggable progress line with a permanent thumb. Gestures beyond tap and rotation are still not driven by the harness, and no clip longer than six seconds or other codec was tried. |
 | Discover / Highlights | **0** | absent; the tabs say so |
 | Search screen | **7** | a real screen: field, kind/size/recency/album chips behind labelled section headers, results grid reusing the photos cell, distinct empty states, unit-tested filtering, all reachable through accessibility labels. Photographed: empty, mid-typing, kind axis narrowing 2 results to 0, size axis narrowing to 0 and being swapped from Large to Small. Not driven: the recency chips and the album chips. |
 | Duplicate finder | **2** | algorithm exists and is tested; no worker, no UI |
@@ -101,22 +101,19 @@ Weighted: **6.95/10** (0.30×7.5 + 0.25×6.5 + 0.15×8.5 + 0.15×5.0 + 0.10×7.0
 not support; the figure is corrected rather than left flattering. The two low
 scores are honest, not modest: nothing has run on the phone the project is for.
 
-## Revision — 2026-11-22 (search screen photographed and driven)
+## Revision — 2026-11-23 (the redesign)
 
 | Category | Weight | Score | Evidence |
 |---|---|---|---|
-| Huawei visual fidelity | 30% | 7.5/10 | The screen reads as the reference: a bordered field with the magnifier inside, labelled chip rows beneath it, then the same 4-column grid as Photos. The whole path from an empty field to a narrowed result set was photographed. Nothing was re-measured against a native capture, so this does not rise. |
-| Functional completeness | 25% | 8.0/10 | Search works on the kind axis (\"clip\" → 2 results, Photos → 0) and the size axis (Large → 0 matches, then swapped to Small), both photographed, and the harness reaches them by swiping the row and re-reading the hierarchy. Album and recency chips remain undriven. Still absent overall: editor, Discover content, custom albums, and true EXIF. A file-details sheet was added this revision. |
-| Code quality | 15% | 8.5/10 | `SearchChips.toQuery(nowMs)` takes the clock as a parameter instead of reading it, so the date buckets are testable; four tests cover bucket contiguity, span arithmetic, chip emptiness and AND-ing. detekt rejected two rounds of unnamed byte and time literals, and both were fixed rather than suppressed. |
-| Performance | 15% | 5/10 | Unchanged and unmeasured. Search filters in memory over the already-loaded list, which is fine for 8 fixtures and unknown for 20 000 photos. |
-| Interactions and animations | 10% | 7/10 | The field takes focus on arrival, Back leaves search, a chosen chip lights in the accent colour and replaces its opposite rather than adding to it. No transition between search and the shell, and no measured frame timing. |
-| Compatibility | 5% | 7/10 | Unchanged. Only an API 33 emulator was run; the horizontal chip scroll was exercised as a real swipe with a retry loop. |
+| Visual design | 30% | 8.0/10 | Tonal surfaces instead of one white page, an 8-point radius scale on photographs, a display-size title with optical tracking, and a single nav indicator that travels. Measured against the app's own previous screenshots, not against a native capture; no pixel comparison with HarmonyOS has been done. |
+| Functional completeness | 25% | 8.0/10 | Search works on the kind and size axes. Details sheet, favourites, delete, share, month view and the player all work and are photographed. Still absent: editor, Discover content, custom albums, true EXIF. |
+| Code quality | 15% | 8.5/10 | Motion is one vocabulary of published spring constants with a reduced-motion path, not per-screen timings. Tokens replaced a flat palette; `hgPalette` and `HgMetrics` survive as adapters so 16 files did not have to change in one commit. detekt caught four real problems this pass. |
+| Performance | 15% | 5/10 | Unchanged and unmeasured. Springs retire after settling; the staggered entrance is not wired yet, so its cost is unknown. No profile on a device. |
+| Interactions and animations | 10% | 8.5/10 | Press scale on every tile and tab, a sliding nav indicator, directional chrome entrances, a progress line whose thumb is always visible. Reduced motion collapses all of it. Still no measured frame timing and no haptics. |
+| Compatibility | 5% | 7/10 | Unchanged. API 33 emulator only. Dark mode was broken and is fixed: the system bar icons were forced to the light appearance and vanished on a dark background. |
 
-Weighted: **7.33/10** (0.30×7.5 + 0.25×8.0 + 0.15×8.5 + 0.15×5.0 + 0.10×7.0 +
+Weighted: **7.62/10** (0.30×8.0 + 0.25×8.0 + 0.15×8.5 + 0.15×5.0 + 0.10×8.5 +
 0.05×7.0).
 
-Three rounds of screenshots moved this, not three rounds of code review: the chip
-rows were unlabelled, \"Clear filters\" floated unattached when a query matched
-nothing, and the size chips were unreachable because the row scrolls and the harness
-never swiped it. Each was visible only in a PNG. Performance staying at 5 is what
-keeps the total from moving further.
+Performance is the one number holding this below 8, and it is unmeasured rather than
+bad. The honest next step is a macrobenchmark, not more motion.

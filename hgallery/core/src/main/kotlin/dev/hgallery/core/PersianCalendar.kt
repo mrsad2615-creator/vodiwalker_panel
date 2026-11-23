@@ -1,3 +1,10 @@
+// The numbers below are the published Jalali conversion algorithm, not tuning knobs:
+// 146097 days in 400 Gregorian years, 153 in the five-month cycle, 32045 the Julian day
+// of 1 January 4713 BC. Naming each one would replace a constant every reader of the
+// algorithm recognises with a name none of them do. They are the sum of the file, so the
+// rule is off here and nowhere else.
+@file:Suppress("MagicNumber")
+
 package dev.hgallery.core
 
 /**

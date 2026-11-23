@@ -1,5 +1,7 @@
 package dev.hgallery.app.ui.search
 
+import androidx.compose.foundation.clickable
+import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -110,14 +112,16 @@ fun SearchScreen(
             focus = focus,
         )
 
-        SearchChipRows(chips = chips, albums = albums, onChange = { chips = it })
-
-        Text(
-            text = pluralStringResource(R.plurals.search_result_count, results.size, results.size),
-            style = MaterialTheme.typography.bodySmall,
-            color = palette.textSecondary,
-            modifier = Modifier.padding(start = HgMetrics.Gutter, top = 4.dp, bottom = 8.dp),
+        ResultRow(
+            count = results.size,
+            showClear = chips.hasFilters,
+            // A fresh SearchChips, not a copy with fields zeroed: adding an axis to
+            // the type then cannot leave it set after "Clear" without the compiler
+            // noticing this constructor call.
+            onClear = { chips = SearchChips(text = chips.text) },
         )
+
+        SearchChipRows(chips = chips, albums = albums, onChange = { chips = it })
 
         if (results.isEmpty()) {
             EmptyResults(chips)
@@ -126,6 +130,52 @@ fun SearchScreen(
                 results = results,
                 thumbnails = thumbnails,
                 onOpenItem = onOpenItem,
+            )
+        }
+    }
+}
+
+/**
+ * How many results, and the way out of a filter that produced none.
+ *
+ * These are one row because they answer the same question. The clear control used
+ * to sit between the two chip rows, where it looked like a third row and belonged
+ * to whichever row happened to be below it; the empty state says "try clearing
+ * one" and the thing that does it is now on the same line as the count it changes.
+ *
+ * The count is hidden when nothing matches: the empty state already says so in
+ * larger type, and "0 results" above "No matches" is the same fact twice.
+ */
+@Composable
+private fun ResultRow(count: Int, showClear: Boolean, onClear: () -> Unit) {
+    val palette = hgPalette
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = HgMetrics.Gutter, end = 12.dp, top = 6.dp, bottom = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = if (count == 0) {
+                ""
+            } else {
+                pluralStringResource(R.plurals.search_result_count, count, count)
+            },
+            style = MaterialTheme.typography.bodySmall,
+            color = palette.textSecondary,
+            modifier = Modifier.weight(1f),
+        )
+        if (showClear) {
+            Text(
+                text = stringResource(R.string.search_clear_filters),
+                style = MaterialTheme.typography.labelLarge,
+                color = palette.accent,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .clickable(role = Role.Button, onClick = onClear)
+                    // 48dp target: this is a text link by design, but it is still a
+                    // control and must be reachable without aiming.
+                    .padding(horizontal = 8.dp, vertical = 12.dp),
             )
         }
     }

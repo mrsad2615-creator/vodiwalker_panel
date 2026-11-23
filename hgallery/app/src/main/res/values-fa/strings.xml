@@ -112,6 +112,8 @@
     <string name="search_no_results_body">چیزی با این نام در گالری شما نیست.</string>
     <string name="search_no_results_filters">با این فیلترها چیزی پیدا نشد. یکی از فیلترها را بردارید.</string>
     <string name="search_no_results_both">با این فیلترها چیزی با آن نام پیدا نشد. یکی را پاک کنید.</string>
+    <string name="search_filters_label">فیلترها</string>
+    <string name="search_albums_label">آلبوم‌ها</string>
     <string name="search_clear_filters">پاک کردن فیلترها</string>
     <string name="favourite_badge">موردعلاقه</string>
     <string name="favourite_failed">تغییر موردعلاقه انجام نشد. کتابخانه اجازه نداد.</string>

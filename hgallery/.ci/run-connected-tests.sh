@@ -365,28 +365,25 @@ adb shell am start -W -n "$PKG/$ACTIVITY" > /dev/null 2>&1
 sleep 4
 
 echo "== photographing search =="
-# Start from the Photos tab: both Photos and Albums now open search, but only Photos
-# has nothing else to tap in that corner, so the sequence stays deterministic.
-adb shell input tap $((W / 8)) $((H - 55))
-sleep 3
-tap_and_shot $((W / 8 * 3)) 17-albums-before-search.png
-adb shell input tap $((W / 8)) $((H - 55))
-sleep 2
+# The app was just force-stopped and relaunched, so it is on the Photos tab with no
+# viewer and no album open. Both tabs open search, but the Photos corner holds
+# nothing else, so the tap is unambiguous. Do not tap anywhere before this: the
+# grid's first cell is a photo tile, and tapping it opens the viewer.
 if tap_tag_or_text "search-button" 'content-desc="Search"'; then
   sleep 2
-  shot 18-search-empty.png
+  shot 30-search-empty.png
   type_text "clip"
-  shot 19-search-text.png
+  shot 31-search-text.png
   # Photos first: "clip" matches two videos, so choosing Photos must drop to one
   # still result. That is the shot that proves the kind axis filters rather than
   # merely highlights.
   if tap_tag_or_text "chip-photos" 'content-desc="Photos"'; then
     sleep 2
-    shot 20-search-photos.png
+    shot 32-search-photos.png
   fi
   if tap_tag_or_text "chip-videos" 'content-desc="Videos"'; then
     sleep 2
-    shot 21-search-videos.png
+    shot 33-search-videos.png
   fi
   # The chip row is a horizontal scroll, so Large is off the right edge until the
   # row is swiped. Swiping is what a user does; the row cannot be widened.
@@ -396,13 +393,13 @@ if tap_tag_or_text "search-button" 'content-desc="Search"'; then
     sleep 2
     # "clip" AND Videos AND Large: the fixtures are 1.5-1.9 MB, so this must find
     # nothing. Photographing the empty state is the proof that the axes AND, not OR.
-    shot 22-search-no-results.png
+    shot 34-search-no-results.png
   else
     echo "::warning title=e2e::the Large chip was not on screen after swiping"
   fi
   adb shell input keyevent KEYCODE_BACK
   sleep 2
-  shot 23-after-search.png
+  shot 35-after-search.png
 else
   echo "::warning title=e2e::search button not found"
 fi

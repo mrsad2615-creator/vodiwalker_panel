@@ -1,14 +1,9 @@
 package dev.hgallery.app.ui.search
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.semantics.Role
 import dev.hgallery.app.ui.theme.hgPalette
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -49,24 +44,16 @@ fun SearchChipRows(
     onChange: (SearchChips) -> Unit,
 ) {
     Column {
+        // Each row says what question it answers. Without the labels the two rows
+        // are visually identical runs of grey pills, and nothing on the screen says
+        // why pressing one chip replaces the chip beside it while pressing another
+        // adds to it: the first row is one choice per axis, the second is albums.
+        RowLabel(stringResource(R.string.search_filters_label))
         KindChips(chips = chips, onChange = onChange)
 
-        // The empty state tells the user to clear a filter. Every chip does clear
-        // itself when pressed again, but that asks the user to work out which chip
-        // is lit and that pressing it again goes backwards; one visible "Clear"
-        // answers the sentence directly. It is absent until there is something to
-        // clear, so it never takes space from a search that has no filters.
-        if (chips.hasFilters) {
-            ClearFilters(
-                // A fresh SearchChips, not a copy with fields zeroed: adding a new
-                // axis to the type then cannot leave it set after "Clear" without
-                // the compiler noticing the constructor call.
-                onClear = { onChange(SearchChips(text = chips.text)) },
-            )
-        }
-
         if (albums.isNotEmpty()) {
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(6.dp))
+            RowLabel(stringResource(R.string.search_albums_label))
             AlbumChips(chips = chips, albums = albums, onChange = onChange)
         }
 
@@ -74,32 +61,15 @@ fun SearchChipRows(
     }
 }
 
-/**
- * "Clear" for the chips, not for the typed text.
- *
- * The text is the thing the user deliberately typed and can delete with the
- * keyboard's own backspace; the chips are what they cannot see all of. Clearing
- * keeps the text, so "clip" survives clearing and the results narrow back from
- * nothing to the two clips.
- */
+/** A small overline that names what the row beneath it filters on. */
 @Composable
-private fun ClearFilters(onClear: () -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = HgMetrics.Gutter, vertical = 2.dp),
-        horizontalArrangement = Arrangement.End,
-    ) {
-        Text(
-            text = stringResource(R.string.search_clear_filters),
-            style = MaterialTheme.typography.labelLarge,
-            color = hgPalette.accent,
-            modifier = Modifier
-                .clip(RoundedCornerShape(8.dp))
-                .clickable(role = Role.Button, onClick = onClear)
-                .padding(horizontal = 8.dp, vertical = 6.dp),
-        )
-    }
+private fun RowLabel(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.labelSmall,
+        color = hgPalette.textTertiary,
+        modifier = Modifier.padding(start = HgMetrics.Gutter, bottom = 2.dp),
+    )
 }
 
 /**

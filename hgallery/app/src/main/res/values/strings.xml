@@ -107,6 +107,8 @@
     <string name="search_no_results_body">Nothing in your library matches that name.</string>
     <string name="search_no_results_filters">Nothing matches with these filters. Try clearing one.</string>
     <string name="search_no_results_both">No match for that name with these filters. Try clearing one.</string>
+    <string name="search_filters_label">Filters</string>
+    <string name="search_albums_label">Albums</string>
     <string name="search_clear_filters">Clear filters</string>
     <string name="favourite_badge">Favourite</string>
     <string name="favourite_failed">Could not change the favourite. Your library did not allow the change.</string>

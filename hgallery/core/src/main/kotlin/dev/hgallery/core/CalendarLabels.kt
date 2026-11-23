@@ -52,15 +52,6 @@ object CalendarLabels {
     const val MONTH_PATTERN = "MMMM yyyy"
 
     /**
-     * The locale to format with.
-     *
-     * A Persian calendar needs a locale that asks for it, so a Persian device gets a
-     * locale that renders the Persian calendar even when the device language is not
-     * Persian — for example an English phone read by a Persian speaker. The reverse is
-     * not done: a Persian phone in English is only possible if the app is set to English,
-     * and then its dates follow the language.
-     */
-    /**
      * Whether two dates are in the same year of [calendar].
      *
      * Not `LocalDate.year == LocalDate.year`: a Persian year starts around 21 March, so
@@ -77,17 +68,16 @@ object CalendarLabels {
         }
 
     /**
-     * The locale to format with.
+     * The locale to take month and day names from, for a language tag.
      *
-     * Deliberately the language's own locale, with no calendar extension. `java.time` on
-     * Android ignores a `-u-ca-` extension and silently formats in the calendar of the
-     * default locale, so the extension was a promise this platform does not keep. The
-     * conversion is done in [PersianCalendar] instead, and only the month and day names
-     * come from here.
+     * Deliberately nothing but the language: no `-u-ca-` extension. `java.time` on Android
+     * accepts that extension and then ignores it, formatting in the default calendar
+     * without an error, so it was a promise the platform does not keep. The conversion is
+     * done by [PersianCalendar]; only the names come from here.
      */
-    fun localeFor(calendar: HgCalendar, base: java.util.Locale): java.util.Locale =
-        when (calendar) {
-            HgCalendar.GREGORIAN -> base
+    fun localeFor(languageTag: String): java.util.Locale =
+        when (calendarFor(languageTag)) {
+            HgCalendar.GREGORIAN -> java.util.Locale.forLanguageTag(languageTag)
             HgCalendar.PERSIAN -> java.util.Locale("fa", "IR")
         }
 }

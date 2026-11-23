@@ -80,7 +80,7 @@ class AppContainer(context: Context) {
                     }
                 }
                 else -> {
-                    val formatLocale = CalendarLabels.localeFor(HgCalendar.GREGORIAN, locale)
+                    val formatLocale = CalendarLabels.localeFor(locale.toLanguageTag())
                     val sameYear = date.year == java.time.LocalDate.now(zone).year
                     val pattern = CalendarLabels.dayPattern(includeYear = !sameYear)
                     date.format(DateTimeFormatter.ofPattern(pattern, formatLocale))
@@ -94,13 +94,16 @@ class AppContainer(context: Context) {
         val calendar = CalendarLabels.calendarFor(locale.toLanguageTag())
         return { month ->
             if (calendar == HgCalendar.PERSIAN) {
-                val persian = PersianCalendar.fromGregorian(month.atDay(15))
+                // The middle of the month is always inside the month in both calendars,
+                // so one sample day is enough to name it. The first and last days can
+                // belong to the neighbouring Persian month.
+                val persian = PersianCalendar.fromGregorian(month.atDay(MID_MONTH_SAMPLE_DAY))
                 "${PERSIAN_MONTH_NAMES[persian.month - 1]} ${persian.year}"
             } else {
                 month.format(
                     DateTimeFormatter.ofPattern(
                         CalendarLabels.MONTH_PATTERN,
-                        CalendarLabels.localeFor(HgCalendar.GREGORIAN, locale),
+                        CalendarLabels.localeFor(locale.toLanguageTag()),
                     ),
                 )
             }
@@ -110,16 +113,16 @@ class AppContainer(context: Context) {
     fun sections(items: List<dev.hgallery.core.MediaItem>, locale: Locale) =
         DateGrouping.group(items, zone, java.time.LocalDate.now(zone), dateHeaderFormatter(locale))
 
-    /** `Mal 2026` style header for the month level of the timeline. */
-    fun monthFormatter(locale: Locale): (java.time.YearMonth) -> String {
-        val calendar = CalendarLabels.calendarFor(locale.toLanguageTag())
-        val formatter = DateTimeFormatter.ofPattern(
-            CalendarLabels.MONTH_PATTERN,
-            CalendarLabels.localeFor(calendar, locale),
-        )
-        return { month -> month.format(formatter) }
-    }
-
     fun months(items: List<dev.hgallery.core.MediaItem>, locale: Locale) =
         dev.hgallery.core.MonthGrouping.group(items, zone, monthFormatter(locale))
+
+    private companion object {
+        /**
+         * The day sampled to name a month.
+         *
+         * A Gregorian month can start and end inside a different Persian month, so the
+         * first or last day could name the wrong one. The fifteenth is inside both.
+         */
+        const val MID_MONTH_SAMPLE_DAY = 15
+    }
 }

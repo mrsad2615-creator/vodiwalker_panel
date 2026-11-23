@@ -754,7 +754,7 @@ class CalendarLabelsTest {
         // `java.time` accepts `-u-ca-persian` and then ignores it, so the conversion is
         // done by the app. This asserts the locale carries no calendar promise it cannot
         // keep, and that the conversion gives the right numbers.
-        val locale = CalendarLabels.localeFor(HgCalendar.PERSIAN, java.util.Locale.ENGLISH)
+        val locale = CalendarLabels.localeFor("fa-IR")
         assertEquals("fa", locale.language)
         assertFalse(locale.toLanguageTag().contains("ca-persian"))
         val persian = PersianCalendar.fromGregorian(java.time.LocalDate.of(2025, 3, 21))
@@ -764,10 +764,10 @@ class CalendarLabelsTest {
     }
 
     @Test
-    fun `a gregorian locale is the one it was given`() {
+    fun `a gregorian language keeps its own locale`() {
         assertEquals(
-            java.util.Locale.ENGLISH,
-            CalendarLabels.localeFor(HgCalendar.GREGORIAN, java.util.Locale.ENGLISH),
+            java.util.Locale.GERMAN,
+            CalendarLabels.localeFor("de-DE"),
         )
     }
 }

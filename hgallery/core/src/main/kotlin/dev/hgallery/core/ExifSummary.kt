@@ -58,9 +58,9 @@ object ExifOrientation {
      * visible change, and losing the rotation as well would be a larger one.
      */
     fun degrees(value: Int): Int = when (value) {
-        5, ROTATE_90 -> 90
-        4, ROTATE_180 -> 180
-        7, ROTATE_270 -> 270
+        MIRRORED_90, ROTATE_90 -> QUARTER_TURN
+        MIRRORED_180, ROTATE_180 -> HALF_TURN
+        MIRRORED_270, ROTATE_270 -> THREE_QUARTER_TURN
         else -> 0
     }
 
@@ -73,12 +73,23 @@ object ExifOrientation {
      */
     fun rotate(current: Int, degrees: Int): Int =
         when ((degrees(current) + degrees) % FULL_TURN) {
-            90 -> ROTATE_90
-            180 -> ROTATE_180
-            270 -> ROTATE_270
+            QUARTER_TURN -> ROTATE_90
+            HALF_TURN -> ROTATE_180
+            THREE_QUARTER_TURN -> ROTATE_270
             else -> NORMAL
         }
 
+    /** The three mirrored values whose rotation the viewer can still apply. */
+    private const val MIRRORED_90 = 5
+    private const val MIRRORED_180 = 4
+    private const val MIRRORED_270 = 7
+
+    /** Rotations in degrees clockwise. */
+    private const val QUARTER_TURN = 90
+    private const val HALF_TURN = 180
+    private const val THREE_QUARTER_TURN = 270
+
+    /** A full turn: rotations are reduced modulo this. */
     private const val FULL_TURN = 360
 }
 

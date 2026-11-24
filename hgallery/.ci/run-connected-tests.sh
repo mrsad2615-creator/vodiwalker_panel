@@ -260,6 +260,13 @@ echo "== photographing the launch sequence =="
 adb shell am force-stop "$PKG"
 adb shell am start -W -n "$PKG/$ACTIVITY" > /dev/null 2>&1
 adb shell screencap -p "$DEVICE_DIR/44-launch-sequence.png" >/dev/null 2>&1
+# A second capture, a third of a second later. One capture is a coin flip: the first
+# run caught the ignition phase, the next caught the frame before Compose had drawn
+# anything, because `-W` returns when the activity is *drawn* and on a fast runner that
+# can be the window background alone. Two frames from one launch make it much more
+# likely that at least one shows the mark, and they cost 0.3 s.
+sleep 0.3
+adb shell screencap -p "$DEVICE_DIR/45-launch-sequence-late.png" >/dev/null 2>&1
 if adb shell test -s "$DEVICE_DIR/44-launch-sequence.png"; then
   echo "captured 44-launch-sequence.png"
 else

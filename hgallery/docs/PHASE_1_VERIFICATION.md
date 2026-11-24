@@ -211,10 +211,31 @@ one found a real defect:
 
 ## 12. Release
 
-- Tag: `hgallery-v0.1.167`
-- Commit: `3003025`
+- Tag: `hgallery-v0.1.171`
+- Commit: `41b8109`
+- CI run: https://github.com/mrsad2615-creator/vodiwalker_panel/actions/runs/45345582226
 - APK size: 17,091,805 bytes
-- Download: https://github.com/mrsad2615-creator/vodiwalker_panel/releases/download/hgallery-v0.1.167/hgallery.apk
-- Checksum: see `SHA256SUMS.txt` on the same release. This document does not
-  quote the value, because the download failed during this session and an
-  unverified digest is worse than none.
+- Download: https://github.com/mrsad2615-creator/vodiwalker_panel/releases/download/hgallery-v0.1.171/hgallery.apk
+
+All four jobs of run 45345582226 succeeded: domain tests, debug APK, signed
+release APK, and the emulator run with its UI tests and screenshots.
+
+The release also carries `SHA256SUMS.txt`:
+https://github.com/mrsad2615-creator/vodiwalker_panel/releases/download/hgallery-v0.1.171/SHA256SUMS.txt
+
+This document does not quote the digest. The sandbox that wrote this file cannot
+download a release asset: the TLS connection closes on the redirect to the asset
+host. A digest copied from anywhere other than a completed download is a guess,
+and a wrong digest in a security document is worse than a missing one. Download
+both files and compare them on your machine.
+
+## 13. Summary of this phase, in the terms of the acceptance rule
+
+| Class | Contents |
+|---|---|
+| Implemented and tested | Player identity across a clip change; mute state and volume per entry path; `load()` state reset; release finality; 9 device tests; 6 `videosAfter` tests; 4 audio-policy tests; all four CI jobs green. |
+| Implemented, not fully tested | The viewer's video page. It builds and it is photographed nowhere yet, because no harness step opens a clip from the viewer. The picture on the player's second clip is photographed and inspected. |
+| Not implemented | Brightness, volume gesture, gesture lock, previous/next controls, MediaSession, foreground service, frame preview, subtitles, audio track selection. These are later phases. |
+| Blocked | Sound itself. No audio sink exists on the CI emulator. Needs a person and a phone. |
+| Failed tests | None in the final run. Three CI failures happened earlier in the phase and each found a real defect; section 11 lists them. |
+| Known limitations | A photograph pushed onto a clip in the viewer pages one step instead of handing over. `ViewerReplace` was designed and removed because nothing called it; see section 7. |

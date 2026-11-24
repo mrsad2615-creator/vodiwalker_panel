@@ -1,6 +1,11 @@
 name: NEUROX native checks
 on:
   workflow_dispatch:
+    inputs:
+      publish_tested_apk:
+        description: 'Publish the already-tested NEUROX 0.5 development APK as a direct download'
+        type: boolean
+        default: false
   push:
     paths: ['neurox/**', '.github/workflows/neurox.yml']
   pull_request:
@@ -12,6 +17,7 @@ permissions:
   contents: read
 jobs:
   native-build:
+    if: ${{ !inputs.publish_tested_apk }}
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -64,6 +70,7 @@ jobs:
             neurox/app/build/reports/
             neurox/core/data/schemas/
   emulator-tests:
+    if: ${{ !inputs.publish_tested_apk }}
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -96,3 +103,32 @@ jobs:
             neurox/**/build/reports/androidTests/
             neurox/**/build/outputs/androidTest-results/
             neurox/test-output/android-device.log
+
+  publish-tested-download:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.publish_tested_apk }}
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: neurox-debug-not-a-production-release
+          path: download
+          run-id: 45504195689
+          github-token: ${{ github.token }}
+      - name: Verify tested APK and publish direct development download
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          cd download
+          echo '768a1d8ead3692059dfe626cb3744057c8189607dd771e0804af3c3509d4a036  app-debug.apk' | sha256sum --check
+          mv app-debug.apk neurox-0.5.0-dev.apk
+          sha256sum neurox-0.5.0-dev.apk > SHA256SUMS.txt
+          gh release create neurox-v0.5.0-dev-download neurox-0.5.0-dev.apk SHA256SUMS.txt \
+            --target 4f755290a557abdee1fca62a761b006130194b95 \
+            --prerelease --latest=false \
+            --title 'NEUROX 0.5.0-dev — test APK (not final redesign)' \
+            --notes 'Direct APK download of the existing debug build verified by run 45504195689 (45 emulator tests). Development preview only, not a production release. The new six-text content reviewer is separate and is not integrated into this APK. The full redesign and all 34 exercises are not complete. Debug signing may differ from earlier installations; preserve your data before changing installations.'

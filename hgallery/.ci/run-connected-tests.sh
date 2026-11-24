@@ -290,19 +290,67 @@ adb shell am start -n "$PKG/$ACTIVITY" > /dev/null 2>&1
 wait $RECORDER 2>/dev/null || true
 sleep 1
 adb pull "$LAUNCH_MP4" "$OUT_DIR/launch.mp4" >/dev/null 2>&1
+
+# `screenrecord` on the Android emulator writes raw H.264 in an MP4 container, and
+# this container is readable enough that the recording is kept as the evidence of
+# motion once it exists. It is pulled to `ui-shots` and the workflow copies only
+# `*.png` into `evidence/`, so a run that records and cuts no frames would leave no
+# trace. There is a fallback for that below.
+if [ -s "$OUT_DIR/launch.mp4" ]; then
+  echo "::notice title=e2e::recorded the launch to launch.mp4 ($(wc -c < "$OUT_DIR/launch.mp4") bytes)"
+else
+  echo "::warning title=e2e::screenrecord produced no file"
+fi
+
+# The frames are cut here only if ffmpeg exists. It does not exist on the Ubuntu
+# runner image this workflow uses, and installing it from the network is not
+# something a build step should do to take a picture. So the fallback is a still
+# taken with `screencap` *while* the sequence is running: launch, then capture
+# immediately, at the moment the animation scale is 1 so the cover lasts 900 ms
+# rather than one frame. That is what makes the still possible at all -- the earlier
+# attempts failed because animations were off, not because the camera was slow.
+FRAMES=0
 if [ -s "$OUT_DIR/launch.mp4" ] && command -v ffmpeg >/dev/null 2>&1; then
-  # Three moments: the ignition, the iris closing, and the lift. The offsets are
-  # relative to the recording, which begins about a second before the activity.
   for pair in "0.30 44-launch-ignition" "0.55 45-launch-aperture" "0.80 46-launch-lift"; do
     set -- $pair
     ffmpeg -y -loglevel error -ss "$1" -i "$OUT_DIR/launch.mp4" -frames:v 1 \
-      "$OUT_DIR/$2.png" 2>/dev/null \
-      && echo "captured $2.png from the recording at $1 s" \
-      || echo "::warning title=e2e::no frame at $1 s for $2"
+      "$OUT_DIR/$2.png" 2>/dev/null && FRAMES=$((FRAMES + 1))
   done
-else
-  echo "::warning title=e2e::could not record the launch; screenrecord or ffmpeg is absent"
+  [ "$FRAMES" -gt 0 ] && echo "::notice title=e2e::cut $FRAMES launch frames from the recording"
 fi
+if [ "$FRAMES" -eq 0 ]; then
+  # Two attempts. `screencap` takes about a second to start on this emulator, which is
+  # longer than the 900 ms sequence, so a single attempt is a coin flip even with
+  # animations on. Two relaunches halve the chance of a blank evidence folder; they do
+  # not remove it.
+  #
+  # A missing still is a warning, not a failure, and that is a deliberate limit: the
+  # animation is verified on every run by IgnitionTest, which asserts the cover exists,
+  # leaves the tree and does not replay on rotation. This step is the picture to go
+  # with that, and a picture that a slow camera misses is not a product defect.
+  echo "::notice title=e2e::ffmpeg is absent, so the launch is captured as a still"
+  for attempt in 1 2; do
+    adb shell am force-stop "$PKG"
+    adb shell am start -n "$PKG/$ACTIVITY" > /dev/null 2>&1
+    adb shell screencap -p "$DEVICE_DIR/44-launch-sequence.png" >/dev/null 2>&1
+    if adb shell test -s "$DEVICE_DIR/44-launch-sequence.png"; then
+      # A still of the finished grid is not a still of the launch. The cover is the only
+      # thing on screen that is not a photograph, so its presence is checkable by file
+      # size: the grid is dense and compresses to well over 100 kB, the cover to under
+      # 20 kB. Below the threshold the frame is of the cover, and the loop stops.
+      SIZE=$(adb shell stat -c %s "$DEVICE_DIR/44-launch-sequence.png" 2>/dev/null | tr -dc '0-9')
+      : "${SIZE:=0}"
+      if [ "$SIZE" -gt 0 ] && [ "$SIZE" -lt 60000 ]; then
+        echo "captured 44-launch-sequence.png ($SIZE bytes, the cover not the grid)"
+        break
+      fi
+      echo "::notice title=e2e::attempt $attempt caught the grid ($SIZE bytes), retrying"
+      adb shell rm -f "$DEVICE_DIR/44-launch-sequence.png"
+    fi
+    [ "$attempt" -eq 2 ] && echo "::warning title=e2e::the launch cover was not captured"
+  done
+fi
+
 # Motion off again, before the tests and the rest of the captures.
 for scale in animator_duration_scale transition_animation_scale window_animation_scale; do
   adb shell settings put global "$scale" 0 >/dev/null 2>&1

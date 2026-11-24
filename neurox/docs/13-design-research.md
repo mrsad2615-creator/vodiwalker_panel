@@ -1,5 +1,7 @@
 # Flagship design research and decision record
 
+**Superseded design decision:** the user rejected the 0.5 visual/content quality. Quiet Precision is historical exploration, not an accepted direction. See `15-reset-acceptance-fa.md` and `16-assessment-and-content-policy.md`. Preserve research evidence; do not reuse its selected style as if approved.
+
 Date: 2026-11-24. Baseline: native 0.4.0-dev, commit `4d96388`; 14 implemented exercises and 34 passing instrumented cases. This is a new product-wide design cycle, not acceptance of the unfinished product.
 
 ## Method and limits

@@ -9,8 +9,8 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class NavigationTest : NeuroxUiFixture() {
     @Test fun homeOpensAnActualExercise() {
-        compose.waitUntil(10_000) { compose.onAllNodesWithText("VISION").fetchSemanticsNodes().isNotEmpty() }
-        compose.onNodeWithText("VISION").performScrollTo().assertIsDisplayed().performClick()
+        compose.waitUntil(10_000) { compose.onAllNodesWithText("دیداری").fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithText("دیداری").performScrollTo().assertIsDisplayed().performClick()
         compose.waitUntil(10_000) { compose.onAllNodesWithText("تنظیم تمرین پیشنهادی").fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithText("تنظیم تمرین پیشنهادی").performScrollTo().performClick()
         compose.waitUntil(10_000) { compose.onAllNodesWithText("آغاز جلسه").fetchSemanticsNodes().isNotEmpty() }
@@ -38,7 +38,12 @@ class NavigationTest : NeuroxUiFixture() {
     @Test fun allFourStudioOverviewsHaveRealSetupAndBackNavigation() {
         for (module in com.neurox.domain.Module.entries) {
             compose.runOnUiThread { model.openModule(module) }
-            compose.waitUntil(5_000) { compose.onAllNodesWithText("${module.name} / STUDIO").fetchSemanticsNodes().isNotEmpty() }
+            compose.waitUntil(5_000) { compose.onAllNodesWithText("استودیوی ${when (module) {
+                com.neurox.domain.Module.VISION -> "دیداری"
+                com.neurox.domain.Module.REFLEX -> "واکنش"
+                com.neurox.domain.Module.READ -> "خواندن"
+                com.neurox.domain.Module.TYPE -> "تایپ"
+            }}").fetchSemanticsNodes().isNotEmpty() }
             compose.onNodeWithText("تنظیم تمرین پیشنهادی").performScrollTo().assertIsEnabled().performClick()
             compose.waitUntil(5_000) { model.screen.value == Screen.TRAINING.name }
             check(com.neurox.domain.Exercise.valueOf(model.selectedExercise.value).module == module)

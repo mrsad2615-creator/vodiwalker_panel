@@ -36,7 +36,7 @@ internal fun TrainingSetup(state: AppState, vm: AppViewModel) {
     val recommendation = Adaptive.recommend(difficulty, history, state.profile?.adaptive ?: true)
     var recommendationDecided by rememberSaveable(selected, difficulty, history.size) { mutableStateOf(false) }
     Page {
-        SectionTitle("TRAINING STUDIO", tr("تمرین با هدف", "Practice with purpose"), tr("ابتدا راهنما را بخوانید، سپس جلسه را آغاز کنید.", "Read the instructions before you start."))
+        SectionTitle(tr("آماده‌سازی تمرین", "TRAINING STUDIO"), tr("تمرین با هدف", "Practice with purpose"), tr("ابتدا راهنما را بخوانید، سپس جلسه را آغاز کنید.", "Read the instructions before you start."))
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Catalogue.runnable.forEach { item -> FilterChip(selected = exercise == item.exercise, onClick = { vm.chooseExercise(item.exercise) }, label = { Text(exerciseName(item.exercise)) }) }
         }
@@ -277,7 +277,7 @@ internal fun ResultScreen(vm: AppViewModel) {
     val result by vm.result.collectAsStateWithLifecycle()
     val training by vm.training.collectAsStateWithLifecycle()
     Page {
-        SectionTitle("SESSION REPORT", tr("یک قدم به جلو", "One step forward"))
+        SectionTitle(tr("گزارش جلسه", "SESSION REPORT"), tr("یک قدم به جلو", "One step forward"))
         result?.let { summary ->
             Panel {
                 Text(tr("نتیجه در حافظهٔ محلی ثبت شد.", "The result was saved on this device."))

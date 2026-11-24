@@ -23,20 +23,20 @@ internal fun OnboardingScreen(state: AppState, vm: AppViewModel) {
         when (step) {
             0 -> {
                 NeuroxEmblem(size = 64.dp)
-                SectionTitle("TRAIN YOUR MIND. MASTER YOUR SPEED.", tr("تمرینی برای شما، با سرعت خودتان", "A practice. Entirely yours."),
+                SectionTitle(tr("تمرین دقیق، پیشرفت آگاهانه", "TRAIN YOUR MIND. MASTER YOUR SPEED."), tr("تمرینی برای شما، با سرعت خودتان", "A practice. Entirely yours."),
                     tr("توجه، پاسخ دقیق، خواندن و تایپ را بدون نیاز به حساب یا اینترنت تمرین کنید.", "Practice attention, response, reading and typing without an account or internet."))
                 Panel {
                     Module.entries.forEach { module ->
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(NeuroxSpace.md)) {
                             NeuroxIcon(glyph(module), tint = moduleColor(module))
-                            Column { Text(module.name, style = MaterialTheme.typography.labelMedium); Text(moduleTitle(module)) }
+                            Column { Text(moduleName(module), style = MaterialTheme.typography.labelMedium); Text(moduleTitle(module)) }
                         }
                     }
                 }
                 Text(tr("تمرین‌ها تشخیص یا درمان پزشکی نیستند و نمرهٔ هوش عمومی ارائه نمی‌کنند.", "Exercises are not medical diagnosis or treatment and do not provide an intelligence score."))
             }
             1 -> {
-                SectionTitle("MAKE YOURSELF COMFORTABLE", tr("مطابق با شما", "Make yourself comfortable."))
+                SectionTitle(tr("تجربه‌ای مطابق با شما", "MAKE YOURSELF COMFORTABLE"), tr("مطابق با شما", "Make yourself comfortable."))
                 Panel {
                     Text(tr("زبان و جهت نوشتار", "Language & direction"), style = MaterialTheme.typography.titleMedium)
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(NeuroxSpace.xs)) {
@@ -57,7 +57,7 @@ internal fun OnboardingScreen(state: AppState, vm: AppViewModel) {
                 }
             }
             else -> {
-                SectionTitle("YOUR PACE / YOUR PRIVACY", tr("ریتمی قابل ادامه", "A rhythm you can keep."))
+                SectionTitle(tr("ریتم شما، حریم خصوصی شما", "YOUR PACE / YOUR PRIVACY"), tr("ریتمی قابل ادامه", "A rhythm you can keep."))
                 Panel {
                     Text(tr("هدف روزانهٔ اختیاری: ${number(goal)} دقیقه", "Optional daily goal: ${number(goal)} minutes"), style = MaterialTheme.typography.titleMedium)
                     Slider(value = goal.toFloat(), onValueChange = { goal = it.toInt() }, onValueChangeFinished = { vm.setDailyGoal(goal) }, valueRange = 5f..60f, steps = 54, enabled = !state.busy)

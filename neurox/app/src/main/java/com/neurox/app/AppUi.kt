@@ -45,6 +45,12 @@ internal val LocalPersian = staticCompositionLocalOf { true }
 @Composable internal fun tr(fa: String, en: String) = if (LocalPersian.current) fa else en
 @Composable internal fun number(value: Number, decimals: Int = 0): String = NumberFormat.getNumberInstance(if (LocalPersian.current) Locale.forLanguageTag("fa") else Locale.ENGLISH).apply { maximumFractionDigits = decimals }.format(value)
 @Composable internal fun exerciseName(exercise: Exercise): String = Catalogue.get(exercise).let { tr(it.fa, it.en) }
+@Composable internal fun moduleName(module: Module): String = when (module) {
+    Module.VISION -> tr("دیداری", "VISION")
+    Module.REFLEX -> tr("واکنش", "REFLEX")
+    Module.READ -> tr("خواندن", "READ")
+    Module.TYPE -> tr("تایپ", "TYPE")
+}
 internal fun glyph(module: Module) = when (module) { Module.VISION -> Glyph.VISION; Module.REFLEX -> Glyph.REFLEX; Module.READ -> Glyph.READ; Module.TYPE -> Glyph.TYPE }
 
 @Composable
@@ -75,7 +81,7 @@ fun NeuroxApp(vm: AppViewModel) {
                         }
                         NeuroxEmblem(size = 28.dp)
                         Spacer(Modifier.width(10.dp))
-                        Text("NEUROX", fontSize = 18.sp, fontWeight = FontWeight.Bold, letterSpacing = 3.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                        Text(tr("نوراکس", "NEUROX"), fontSize = 18.sp, fontWeight = FontWeight.Bold, letterSpacing = if (fa) 0.sp else 3.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                         if (showOffline) Text(tr("کاملاً آفلاین", "OFFLINE"), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         IconButton(onClick = { if (screen in listOf(Screen.SETTINGS, Screen.COLOR)) vm.back() else vm.openSettings() }) {
                             NeuroxIcon(Glyph.SETTINGS, label = tr("تنظیمات", "Settings"))
@@ -146,7 +152,7 @@ internal fun Page(content: @Composable ColumnScope.() -> Unit) {
 }
 @Composable internal fun SectionTitle(eyebrow: String, title: String, description: String? = null) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(eyebrow, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary, letterSpacing = 2.sp)
+        Text(eyebrow, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary, letterSpacing = if (LocalPersian.current) 0.sp else 2.sp)
         Text(title, style = MaterialTheme.typography.headlineMedium, modifier = Modifier.semantics { heading() })
         if (description != null) Text(description, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
@@ -182,7 +188,7 @@ private fun HomeScreen(state: AppState, vm: AppViewModel) {
     while (date in days) { streak++; date = date.minusDays(1) }
     Page {
         Text(tr("خوش آمدید، ${if (profile.guest) "مهمان" else profile.name}", "Welcome, ${profile.name}"), color = MaterialTheme.colorScheme.onSurfaceVariant)
-        SectionTitle("TRAIN YOUR POTENTIAL", tr("هر روز، دقیق‌تر\nاز دیروز.", "A sharper mind.\nOne session at a time."), tr("تمرینِ متمرکز. پیشرفتِ قابل‌اندازه‌گیری.", "Focused training. Measurable progress."))
+        SectionTitle(tr("با دقت تمرین کنید", "TRAIN YOUR POTENTIAL"), tr("هر روز، دقیق‌تر\nاز دیروز.", "A sharper mind.\nOne session at a time."), tr("تمرینِ متمرکز. پیشرفتِ قابل‌اندازه‌گیری.", "Focused training. Measurable progress."))
         Panel {
             FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(NeuroxSpace.xl), verticalArrangement = Arrangement.spacedBy(NeuroxSpace.md)) {
                 Metric(tr("سطح", "LEVEL"), number(Progression.level(xp)))
@@ -245,7 +251,7 @@ private fun ModuleCard(definition: ExerciseDefinition, index: Int, modifier: Mod
                 Spacer(Modifier.weight(1f))
                 Text("0$index", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            Text(definition.exercise.module.name, style = MaterialTheme.typography.titleMedium, letterSpacing = 2.sp)
+            Text(moduleName(definition.exercise.module), style = MaterialTheme.typography.titleMedium, letterSpacing = if (LocalPersian.current) 0.sp else 2.sp)
             Text(moduleTitle(definition.exercise.module), style = MaterialTheme.typography.titleMedium)
             Text(tr("${number(Catalogue.runnable.count { it.exercise.module == definition.exercise.module })} تمرین موجود", "${number(Catalogue.runnable.count { it.exercise.module == definition.exercise.module })} available exercises"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
@@ -257,7 +263,7 @@ internal fun SessionRow(session: SessionEntity) {
     val exercise = runCatching { Exercise.valueOf(session.exercise) }.getOrNull()
     val details = remember(session.checkpoint) { runCatching { CheckpointCodec.decode(session.checkpoint) } }
     Panel {
-        Text(details.getOrNull()?.config?.customExerciseName ?: exercise?.let { exerciseName(it) } ?: session.module, style = MaterialTheme.typography.titleMedium)
+        Text(details.getOrNull()?.config?.customExerciseName ?: exercise?.let { exerciseName(it) } ?: tr("تمرین ناشناخته", "Unknown exercise"), style = MaterialTheme.typography.titleMedium)
         val date = Instant.ofEpochMilli(session.startedAt).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("yyyy/MM/dd · HH:mm"))
         Text(date, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {

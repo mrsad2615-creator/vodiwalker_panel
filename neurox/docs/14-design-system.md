@@ -1,4 +1,6 @@
-# Quiet Precision design system
+# Quiet Precision design system — historical, not accepted
+
+The user rejected this direction and the associated content quality. Do not treat the browser checks below as visual approval. The new Persian-first light/pastel content-review surface is an early separate exploration, not a completed replacement design system. See docs 15 and 16.
 
 Status: implementation in progress, 2026-11-24. These rules cover all four systems. Browser evidence is not Android acceptance.
 

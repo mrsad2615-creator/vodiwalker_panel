@@ -55,5 +55,8 @@ for path in android_tests:
         if match.group(2).strip() != ": Unit":
             unsafe_signatures.append(f"{path.name}:{match.group(1)}")
 verify("coroutine JUnit tests declare Unit return type", not unsafe_signatures)
+ui_sources = list((PROJECT / "app/src/main/java/com/neurox/app").glob("*Ui.kt"))
+verify("section eyebrows use locale-aware text", not any(re.search(r'SectionTitle\(\s*"[A-Za-z]', p.read_text()) for p in ui_sources))
+verify("system labels do not expose raw module enum names", not any(re.search(r'Text\(\s*(?:module|entry|m|it|definition\.exercise\.module)\.name[,) ]', p.read_text()) for p in ui_sources))
 verify("Gradle wrapper present", (PROJECT / "gradle/wrapper/gradle-wrapper.jar").stat().st_size > 10000)
 print(f"STATIC RESULT: {count} checks passed")

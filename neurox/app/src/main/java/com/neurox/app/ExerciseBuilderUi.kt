@@ -37,7 +37,7 @@ internal fun ExerciseBuilderScreen(state: AppState, vm: AppViewModel) {
     val errors = blueprint.validate()
     val language = Language.valueOf(profile.language)
     Page {
-        SectionTitle("MY EXERCISES / BUILDER", if (id == null) tr("تمرین خودت را بساز", "Build your practice") else tr("ویرایش تمرین", "Edit exercise"),
+        SectionTitle(tr("تمرین‌های من / ساخت تمرین", "MY EXERCISES / BUILDER"), if (id == null) tr("تمرین خودت را بساز", "Build your practice") else tr("ویرایش تمرین", "Edit exercise"),
             tr("فقط قالب‌های آزموده‌شدهٔ هسته اجرا می‌شوند؛ هیچ کد دلخواهی اجرا نمی‌شود.", "Only finite built-in templates run. No user code is executed."))
         OutlinedTextField(value = name, onValueChange = { if (it.length <= 60) name = it }, label = { Text(tr("نام تمرین", "Exercise name")) }, modifier = Modifier.fillMaxWidth(), singleLine = true,
             isError = name.isNotEmpty() && "invalid_name" in errors)
@@ -45,7 +45,7 @@ internal fun ExerciseBuilderScreen(state: AppState, vm: AppViewModel) {
             Module.entries.forEach { module -> FilterChip(selected = template.module == module, onClick = {
                 templateName = Catalogue.primary.first { it.exercise.module == module }.exercise.name
                 if (templateName == Exercise.COMPREHENSION.name) difficulty = 1
-            }, label = { Text(module.name) }) }
+            }, label = { Text(moduleName(module)) }) }
         }
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Catalogue.runnable.filter { it.exercise.module == template.module }.forEach { definition ->

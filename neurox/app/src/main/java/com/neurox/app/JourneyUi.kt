@@ -39,16 +39,16 @@ internal fun moduleTitle(module: Module): String = when (module) {
 @Composable
 internal fun StudiosScreen(vm: AppViewModel) {
     Page {
-        SectionTitle("FOUR SYSTEMS / ONE STANDARD", tr("امروز چه چیزی تمرین می‌کنید؟", "What will you practice today?"),
+        SectionTitle(tr("چهار سیستم، یک کیفیت", "FOUR SYSTEMS / ONE STANDARD"), tr("امروز چه چیزی تمرین می‌کنید؟", "What will you practice today?"),
             tr("یک سیستم را انتخاب کنید. راهنما را بخوانید و با سطح مناسب خودتان شروع کنید.", "Choose a system. Read the instructions. Begin at a comfortable level."))
         Module.entries.forEach { module ->
             Panel {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(NeuroxSpace.md)) {
                     NeuroxIcon(glyph(module), Modifier.size(36.dp), moduleColor(module))
-                    Column { Text(module.name, color = moduleColor(module), style = MaterialTheme.typography.labelMedium); Text(moduleTitle(module), style = MaterialTheme.typography.titleLarge) }
+                    Column { Text(moduleName(module), color = moduleColor(module), style = MaterialTheme.typography.labelMedium); Text(moduleTitle(module), style = MaterialTheme.typography.titleLarge) }
                 }
                 Text(tr("${number(Catalogue.runnable.count { it.exercise.module == module })} تمرین موجود · تنظیم سطح · تاریخچهٔ محلی", "${number(Catalogue.runnable.count { it.exercise.module == module })} available exercises · adjustable level · local history"))
-                OutlinedButton(onClick = { vm.openModule(module) }, modifier = Modifier.fillMaxWidth()) { Text(tr("ورود به استودیو ${module.name}", "Open ${module.name} studio")) }
+                OutlinedButton(onClick = { vm.openModule(module) }, modifier = Modifier.fillMaxWidth()) { Text(tr("ورود به استودیوی ${moduleName(module)}", "Open ${module.name} studio")) }
             }
         }
         Text(tr("این تمرین‌ها جایگزین مراقبت پزشکی نیستند و نتیجهٔ آن‌ها معیار هوش عمومی نیست.", "These exercises do not replace medical care. Their results are not a measure of general intelligence."), style = MaterialTheme.typography.bodySmall)
@@ -69,14 +69,14 @@ internal fun ModuleOverview(state: AppState, vm: AppViewModel) {
     }
     val exercises = Catalogue.runnable.filter { it.exercise.module == module }
     Page {
-        SectionTitle("${module.name} / STUDIO", moduleTitle(module), tr("تمرین هدفمند، اندازه‌گیری واقعی، انتخاب آگاهانه.", "Purposeful practice. Actual measurements. Informed choices."))
+        SectionTitle(tr("استودیوی ${moduleName(module)}", "${module.name} / STUDIO"), moduleTitle(module), tr("تمرین هدفمند، اندازه‌گیری واقعی، انتخاب آگاهانه.", "Purposeful practice. Actual measurements. Informed choices."))
         FlowRow(horizontalArrangement = Arrangement.spacedBy(NeuroxSpace.xs)) {
-            Module.entries.forEach { entry -> FilterChip(selected = entry == module, onClick = { vm.openModule(entry) }, label = { Text(entry.name) }) }
+            Module.entries.forEach { entry -> FilterChip(selected = entry == module, onClick = { vm.openModule(entry) }, label = { Text(moduleName(entry)) }) }
         }
         Panel {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(NeuroxSpace.lg)) {
                 NeuroxIcon(glyph(module), Modifier.size(48.dp), moduleColor(module))
-                Column { Text(tr("هفت روز اخیر", "PAST SEVEN DAYS"), style = MaterialTheme.typography.labelSmall); Text(module.name, style = MaterialTheme.typography.titleLarge) }
+                Column { Text(tr("هفت روز اخیر", "PAST SEVEN DAYS"), style = MaterialTheme.typography.labelSmall); Text(moduleName(module), style = MaterialTheme.typography.titleLarge) }
             }
             if (insights.sessions == 0) Text(tr("هنوز جلسهٔ معتبر در این بازه ندارید. اولین نتیجه پس از تمرین نمایش داده می‌شود.", "No valid session in this period. Your first result appears after training."))
             else FlowRow(horizontalArrangement = Arrangement.spacedBy(NeuroxSpace.xl)) {
@@ -137,7 +137,7 @@ internal fun AchievementsScreen(state: AppState) {
     val facts = remember(state.sessions) { state.sessions.trainingFacts() }
     val milestones = remember(facts) { TrainingInsights.milestones(facts, System.currentTimeMillis(), ZoneId.systemDefault()) }
     Page {
-        SectionTitle("QUEST / MILESTONES", tr("گام‌های کوچک، دستاوردهای واقعی", "Small steps. Real milestones."), tr("بدون جریمه برای استراحت. دستاوردها از جلسات معتبر محلی محاسبه می‌شوند و XP اضافه ایجاد نمی‌کنند.", "No penalty for rest. Milestones come from valid local sessions and do not create extra XP."))
+        SectionTitle(tr("مسیر پیشرفت و دستاوردها", "QUEST / MILESTONES"), tr("گام‌های کوچک، دستاوردهای واقعی", "Small steps. Real milestones."), tr("بدون جریمه برای استراحت. دستاوردها از جلسات معتبر محلی محاسبه می‌شوند و XP اضافه ایجاد نمی‌کنند.", "No penalty for rest. Milestones come from valid local sessions and do not create extra XP."))
         milestones.forEach { progress ->
             val title = when (progress.id) {
                 "first_session" -> tr("اولین گام", "First step")

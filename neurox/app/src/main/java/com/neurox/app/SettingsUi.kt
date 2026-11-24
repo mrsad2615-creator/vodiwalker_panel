@@ -26,7 +26,7 @@ internal fun ProfileScreen(state: AppState, vm: AppViewModel) {
     LaunchedEffect(active.id) { showCreate = false }
     LaunchedEffect(state.profiles) { if (state.profiles.none { it.id == deleting }) deleting = null }
     Page {
-        SectionTitle("NEUROX IDENTITY", tr("مسیر شخصی شما", "Your personal journey"), tr("هر پروفایل تاریخچه، تنظیمات و علاقه‌مندی‌های جداگانه دارد.", "Each profile has separate history, preferences and favorites."))
+        SectionTitle(tr("پروفایل شخصی", "NEUROX IDENTITY"), tr("مسیر شخصی شما", "Your personal journey"), tr("هر پروفایل تاریخچه، تنظیمات و علاقه‌مندی‌های جداگانه دارد.", "Each profile has separate history, preferences and favorites."))
         OutlinedButton(onClick = { vm.navigate(Screen.ACHIEVEMENTS) }, modifier = Modifier.fillMaxWidth()) { Text(tr("دستاوردهای واقعی من", "My measured milestones")) }
         state.profiles.forEach { profile -> Panel {
             Text(if (profile.guest) tr("مهمان", "Guest") else profile.name, style = MaterialTheme.typography.titleLarge)
@@ -50,7 +50,7 @@ internal fun SettingsScreen(state: AppState, vm: AppViewModel) {
     val profile = requireNotNull(state.profile)
     var textScale by rememberSaveable(profile.id, profile.textScale) { mutableFloatStateOf(profile.textScale) }
     Page {
-        SectionTitle("PREFERENCES", tr("مطابق با شما", "Make it yours"))
+        SectionTitle(tr("تنظیمات", "PREFERENCES"), tr("مطابق با شما", "Make it yours"))
         Panel {
             Text(tr("زبان و جهت نوشتار", "Language & direction"), style = MaterialTheme.typography.titleMedium)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -94,7 +94,7 @@ internal fun SettingsScreen(state: AppState, vm: AppViewModel) {
             OutlinedButton(onClick = { vm.navigate(Screen.ONBOARDING) }, modifier = Modifier.fillMaxWidth()) { Text(tr("مرور آشنایی با NEUROX", "Review the introduction")) }
         }
         Panel {
-            Text("NEUROX · 0.5.0-dev", style = MaterialTheme.typography.titleMedium)
+            Text(tr("نوراکس · نسخهٔ توسعهٔ ۰٫۵", "NEUROX · 0.5.0-dev"), style = MaterialTheme.typography.titleMedium)
             Text(tr("نسخهٔ توسعه؛ آمادهٔ انتشار نهایی نیست. بدون مجوز اینترنت، بدون سرویس ابری و بدون آمار ساختگی.", "Development milestone. Not a production release. No internet permission, cloud service or invented statistics."))
             Text(tr("پیش از پاک‌کردن برنامه توجه کنید: رابط پشتیبان‌گیری و بازیابی هنوز آماده نیست.", "Before uninstalling: the backup and restore interface is not available yet."), color = MaterialTheme.colorScheme.error)
         }
@@ -114,7 +114,7 @@ internal fun ColorStudio(state: AppState, vm: AppViewModel) {
     val light = ColorMath.parseHex(lightHex)
     val validName = themeName.trim().length in 1..30 && themeName.none { it.isISOControl() }
     Page {
-        SectionTitle("COLOR STUDIO", tr("رنگِ تمرکز شما", "Your color of focus"), tr("رنگ‌ها تغییر می‌کنند؛ منطق تمرین و چیدمان ثابت می‌مانند.", "Colors change. Training logic and layout stay the same."))
+        SectionTitle(tr("استودیوی رنگ", "COLOR STUDIO"), tr("رنگِ تمرکز شما", "Your color of focus"), tr("رنگ‌ها تغییر می‌کنند؛ منطق تمرین و چیدمان ثابت می‌مانند.", "Colors change. Training logic and layout stay the same."))
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             FilterChip(selected = previewDark, onClick = { previewDark = true }, label = { Text(tr("پیش‌نمایش تیره", "Dark preview")) })
             FilterChip(selected = !previewDark, onClick = { previewDark = false }, label = { Text(tr("پیش‌نمایش روشن", "Light preview")) })
@@ -123,7 +123,7 @@ internal fun ColorStudio(state: AppState, vm: AppViewModel) {
             Surface(color = MaterialTheme.colorScheme.background, shape = MaterialTheme.shapes.medium, border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline), modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                     NeuroxEmblem()
-                    Text("NEUROX / VISION", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onBackground)
+                    Text(tr("نوراکس / دیداری", "NEUROX / VISION"), style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onBackground)
                     Text(tr("دقت در جزئیات", "Precision in every detail"), color = MaterialTheme.colorScheme.primary)
                     LinearProgressIndicator(progress = { 0.5f }, modifier = Modifier.fillMaxWidth())
                     Text(tr("نمونهٔ نمایشی رنگ؛ این نوار آمار تمرین نیست.", "Theme sample only. This bar is not training data."), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onBackground)

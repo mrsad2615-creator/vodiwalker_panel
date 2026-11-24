@@ -23,10 +23,10 @@ internal fun AnalyticsScreen(state: AppState) {
     val threshold = LocalDate.now().minusDays(days.toLong() - 1).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
     val values = state.sessions.filter { it.status == "COMPLETE" && it.valid && it.baseline == baseline && (module == "ALL" || it.module == module) && it.startedAt >= threshold }
     Page {
-        SectionTitle("PERFORMANCE / INSIGHTS", tr("پیشرفت، با شواهد", "Progress, with evidence"), tr("هر شاخص فقط در زمینهٔ خودش معنا دارد؛ سرعت خواندن و زمان واکنش با هم مقایسه نمی‌شوند.", "Metrics stay in their own context. Reading speed is not compared with reaction time."))
+        SectionTitle(tr("تحلیل و پیشرفت", "PERFORMANCE / INSIGHTS"), tr("پیشرفت، با شواهد", "Progress, with evidence"), tr("هر شاخص فقط در زمینهٔ خودش معنا دارد؛ سرعت خواندن و زمان واکنش با هم مقایسه نمی‌شوند.", "Metrics stay in their own context. Reading speed is not compared with reaction time."))
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             FilterChip(selected = module == "ALL", onClick = { module = "ALL" }, label = { Text(tr("همه", "All")) })
-            Module.entries.forEach { FilterChip(selected = module == it.name, onClick = { module = it.name }, label = { Text(it.name) }) }
+            Module.entries.forEach { FilterChip(selected = module == it.name, onClick = { module = it.name }, label = { Text(moduleName(it)) }) }
         }
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             listOf(7, 30, 365, 3650).forEach { d -> FilterChip(selected = days == d, onClick = { days = d }, label = { Text(if (d == 3650) tr("ده سال", "10 years") else tr("${number(d)} روز", "${number(d)} days")) }) }
@@ -51,7 +51,7 @@ internal fun AnalyticsScreen(state: AppState) {
             Module.entries.filter { m -> module == "ALL" || module == m.name }.forEach { m ->
                 val subset = values.filter { it.module == m.name }
                 if (subset.isNotEmpty()) Panel {
-                    Text(m.name, style = MaterialTheme.typography.titleMedium)
+                    Text(moduleName(m), style = MaterialTheme.typography.titleMedium)
                     val mean = subset.map { it.accuracy }.average()
                     Text(tr("میانگین دقت جلسات: ${number(mean * 100, 1)}٪", "Mean session accuracy: ${number(mean * 100, 1)}%"))
                     LinearProgressIndicator(progress = { mean.toFloat().coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth())
@@ -87,7 +87,7 @@ internal fun LibraryScreen(state: AppState, vm: AppViewModel) {
     }
     LaunchedEffect(state.customExercises) { if (state.customExercises.none { it.id == deleting }) deleting = null }
     Page {
-        SectionTitle("NEUROX LIBRARY", tr("کتابخانهٔ تمرین", "Your practice library"), tr("تمرین‌های اصلی و تمرین‌های شخصی، همگی محلی اجرا می‌شوند.", "Original and personal exercises run locally."))
+        SectionTitle(tr("کتابخانهٔ تمرین", "NEUROX LIBRARY"), tr("کتابخانهٔ تمرین", "Your practice library"), tr("تمرین‌های اصلی و تمرین‌های شخصی، همگی محلی اجرا می‌شوند.", "Original and personal exercises run locally."))
         OutlinedTextField(value = search, onValueChange = { if (it.length <= 100) search = it }, label = { Text(tr("جست‌وجو", "Search")) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             listOf("ORIGINAL" to tr("اصلی", "Original"), "CUSTOM" to tr("تمرین‌های من", "My exercises"), "FAVORITES" to tr("علاقه‌مندی‌ها", "Favorites")).forEach { (value, label) ->
@@ -96,12 +96,12 @@ internal fun LibraryScreen(state: AppState, vm: AppViewModel) {
         }
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             FilterChip(selected = module == "ALL", onClick = { module = "ALL" }, label = { Text(tr("همه", "All")) })
-            Module.entries.forEach { m -> FilterChip(selected = module == m.name, onClick = { module = m.name }, label = { Text(m.name) }) }
+            Module.entries.forEach { m -> FilterChip(selected = module == m.name, onClick = { module = m.name }, label = { Text(moduleName(m)) }) }
         }
         Button(onClick = { vm.openBuilder() }, modifier = Modifier.fillMaxWidth()) { Text(tr("ساخت تمرین شخصی", "Build a personal exercise")) }
         if (values.isEmpty() && custom.isEmpty()) Text(tr("تمرینی با این فیلتر پیدا نشد.", "No exercises match these filters."))
         values.forEach { definition -> Panel {
-            Text(definition.exercise.module.name, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+            Text(moduleName(definition.exercise.module), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
             Text(exerciseName(definition.exercise), style = MaterialTheme.typography.titleLarge)
             Text(tr(definition.instructionFa, definition.instructionEn))
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

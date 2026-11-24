@@ -3,7 +3,7 @@ const app=document.getElementById('app');
 const fa=new Intl.NumberFormat('fa-IR');
 const n=x=>fa.format(x);
 const esc=x=>String(x).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const skill={Eامتیاز تجربهLICIT_INFORMATION:'اطلاعات صریح',INFERENCE:'استنباط',MAIN_IDEA:'ایدهٔ اصلی',EVIDENCE_EVALUATION:'ارزیابی شواهد',APPLICATION:'کاربرد استدلال'};
+const skill={EXPLICIT_INFORMATION:'اطلاعات صریح',INFERENCE:'استنباط',MAIN_IDEA:'ایدهٔ اصلی',EVIDENCE_EVALUATION:'ارزیابی شواهد',APPLICATION:'کاربرد استدلال'};
 const levelNames={1:'روشن و کاربردی',2:'تحلیل و استنباط',3:'استدلال چندلایه'};
 const letters=['الف','ب','پ','ت'];
 const state={bank:null,level:1,current:null,index:0,selected:null,answers:[],submitted:false,note:'',large:false};

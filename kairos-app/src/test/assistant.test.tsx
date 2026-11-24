@@ -205,7 +205,7 @@ describe('the manager', () => {
     fireEvent.click(screen.getByRole('button', { name: 'مرکز فرمان' }));
 
     const brief = await screen.findByTestId('manager-brief');
-    expect(brief.textContent).toContain('قرارداد');
+    await waitFor(() => expect(brief.textContent).toContain('قرارداد'));
     // A deterministic recommendation is not presented as statistical confidence.
     expect(brief.textContent).toMatch(/قواعد محلی/);
     expect(brief.textContent).not.toMatch(/اطمینان/);

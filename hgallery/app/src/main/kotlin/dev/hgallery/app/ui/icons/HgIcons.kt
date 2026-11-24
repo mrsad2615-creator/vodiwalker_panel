@@ -570,4 +570,33 @@ object HgIcons {
         lineTo(16f, 11.4f)
         lineTo(20f, 15f)
     }
+
+    /**
+     * Settings: a gear, drawn as eight teeth on a ring.
+     *
+     * The teeth are short radial strokes at 45 degree steps. A single closed
+     * gear outline at this stroke weight turns into a blob at 24 dp, which is
+     * why the teeth are separate marks and the ring carries the read.
+     */
+    val Settings: ImageVector = icon("HG.Settings") {
+        moveTo(12f, 15.1f)
+        arcToRelative(3.1f, 3.1f, 0f, true, false, 0.001f, 0f)
+        close()
+        moveTo(12f, 3.4f)
+        verticalLineTo(6.2f)
+        moveTo(12f, 17.8f)
+        verticalLineTo(20.6f)
+        moveTo(3.4f, 12f)
+        horizontalLineTo(6.2f)
+        moveTo(17.8f, 12f)
+        horizontalLineTo(20.6f)
+        moveTo(5.9f, 5.9f)
+        lineTo(7.9f, 7.9f)
+        moveTo(16.1f, 16.1f)
+        lineTo(18.1f, 18.1f)
+        moveTo(18.1f, 5.9f)
+        lineTo(16.1f, 7.9f)
+        moveTo(7.9f, 16.1f)
+        lineTo(5.9f, 18.1f)
+    }
 }

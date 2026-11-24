@@ -27,8 +27,14 @@ object HgTestTags {
 
     /** The large page title. Its bounds are asserted, so it needs a stable name. */
     const val SCREEN_TITLE = "screen-title"
-    const val VIEW_SWITCH = "photos-view-switch"
     const val MORE_BUTTON = "toolbar-more"
+
+    // The home overflow menu. Three rows, each with its own tag so a test can
+    // select one without depending on text, which changes with the locale.
+    const val OVERFLOW_BUTTON = "photos-overflow"
+    const val MENU_SELECT_ALL = "menu-select-all"
+    const val MENU_VIEW = "menu-view"
+    const val MENU_SETTINGS = "menu-settings"
 
     // Selection, from reference R3.
     const val EXIT_SELECTION = "selection-exit"
@@ -37,7 +43,6 @@ object HgTestTags {
     const val SELECTION_DELETE = "selection-delete"
     const val SELECTION_SELECT_ALL = "selection-select-all"
     const val SELECTION_BAR = "selection-bar"
-    const val SELECT_BUTTON = "photos-select-button"
     const val SELECTION_ADD_TO_ALBUM = "selection-add-to-album"
     fun tick(id: Long) = "tick-$id"
 

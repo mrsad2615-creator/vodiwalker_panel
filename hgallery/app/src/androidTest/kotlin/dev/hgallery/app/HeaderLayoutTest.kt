@@ -1,5 +1,6 @@
 package dev.hgallery.app
 
+import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
@@ -83,9 +84,48 @@ class HeaderLayoutTest {
     @Test
     fun theHeaderControlsAreStillReachable() {
         openPhotos()
-        rule.onNodeWithTag(HgTestTags.SELECT_BUTTON).assertIsDisplayed()
-        rule.onNodeWithTag(HgTestTags.VIEW_SWITCH).assertIsDisplayed()
-        rule.onNodeWithTag(HgTestTags.MORE_BUTTON).assertIsDisplayed()
+        rule.onNodeWithTag(HgTestTags.OVERFLOW_BUTTON).assertIsDisplayed()
         rule.onNodeWithTag(HgTestTags.FILTER_CHIPS).assertIsDisplayed()
+    }
+
+    /**
+     * The chip row keeps its width.
+     *
+     * The second attempt at this header put two 48 dp buttons on the chip row.
+     * They took the width the scrolling chips needed and the third chip ended up
+     * half covered, which the screenshot showed. A chip row that reaches the
+     * screen edge minus the gutter proves nothing took its space.
+     */
+    @Test
+    fun theChipRowIsNotCoveredByAnything() {
+        openPhotos()
+        val chips = rule.onNodeWithTag(HgTestTags.FILTER_CHIPS).fetchSemanticsNode().boundsInRoot
+        val screen = rule.onRoot().fetchSemanticsNode().size.width
+        assertTrue(
+            "chip row ends at ${chips.right} of $screen: something is on top of it",
+            chips.right >= screen - 8,
+        )
+    }
+
+    /** The three menu rows appear, and each one is a legal touch target. */
+    @Test
+    fun theOverflowMenuOffersEverySecondaryAction() {
+        openPhotos()
+        rule.onNodeWithTag(HgTestTags.OVERFLOW_BUTTON).performClick()
+        rule.waitForIdle()
+        rule.onNodeWithTag(HgTestTags.MENU_SELECT_ALL).assertIsDisplayed()
+        rule.onNodeWithTag(HgTestTags.MENU_VIEW).assertIsDisplayed()
+        rule.onNodeWithTag(HgTestTags.MENU_SETTINGS).assertIsDisplayed()
+        val row = rule.onNodeWithTag(HgTestTags.MENU_VIEW).fetchSemanticsNode().boundsInRoot
+        assertTrue("menu row is ${row.height}px tall, below one line", row.height > 0)
+    }
+
+    /** A menu row announces its label, so it is not silent to a screen reader. */
+    @Test
+    fun theMenuRowsAnnounceTheirLabels() {
+        openPhotos()
+        rule.onNodeWithTag(HgTestTags.OVERFLOW_BUTTON).performClick()
+        rule.waitForIdle()
+        rule.onNodeWithTag(HgTestTags.MENU_SETTINGS).assertHasClickAction()
     }
 }

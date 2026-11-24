@@ -47,6 +47,7 @@ import dev.hgallery.app.data.AppContainer
 import dev.hgallery.app.data.HgSettings
 import dev.hgallery.app.data.ThumbnailStore
 import dev.hgallery.app.ui.components.HgIconButton
+import dev.hgallery.app.ui.components.HgOverflowMenu
 import dev.hgallery.app.ui.components.HgScreenTitle
 import dev.hgallery.app.ui.albums.AddToAlbumSheet
 import dev.hgallery.app.ui.components.HgSelectionActions
@@ -275,14 +276,18 @@ private fun SelectionAwarePhotos(
             )
         } else {
             Column(Modifier.fillMaxWidth()) {
-                // The design draws two controls beside the title, and the chip row
-                // underneath. That split is not decoration: four 48 dp targets on a
-                // 320 dp screen leave about 88 dp for a 32 sp title, and "Photos"
-                // broke one letter per line on the emulator. Two targets leave 144 dp,
-                // which holds the word at its largest supported width.
+                // The design draws two controls beside the title. That is not
+                // decoration: four 48 dp targets on a 320 dp screen leave about
+                // 88 dp for a 32 sp title, and "Photos" broke one letter per line
+                // on the emulator. Two leave 144 dp, which holds the word at the
+                // largest supported width.
                 //
-                // The row owns the gutter. HgScreenTitle does not draw one, so before
-                // this the inset was counted twice and the title lost another 20 dp.
+                // Select-all and the month switch are behind the overflow. Putting
+                // them on the chip row instead was tried and is worse: the chips
+                // are a scrolling row, and the buttons took the width the chips
+                // needed, so the third chip was half covered by the second button.
+                //
+                // The row owns the gutter. HgScreenTitle does not draw one.
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -301,54 +306,20 @@ private fun SelectionAwarePhotos(
                         contentDescription = stringResource(R.string.search),
                         onClick = onSearch,
                     )
-                    // The overflow slot holds Settings, and the library controls below
-                    // are the only other way to reach selection and month view. An icon
-                    // that opens nothing is worse than no icon, so every slot here has
-                    // a destination.
-                    HgIconButton(
-                        icon = HgIcons.More,
-                        contentDescription = stringResource(R.string.more_options),
-                        onClick = onOpenSettings,
-                        modifier = Modifier.testTag(HgTestTags.MORE_BUTTON),
+                    HgOverflowMenu(
+                        onSelectAll = { model.selectAll(existingIds) },
+                        onToggleView = { monthView = !monthView },
+                        monthView = monthView,
+                        onOpenSettings = onOpenSettings,
                     )
                 }
 
-                // One row for filters and for the two library controls.
-                //
-                // Selection moved here from the title row, where the redesign left no
-                // room for it. Putting it on this row keeps it reachable without a long
-                // press, which is what the SelectionTest asserts, and it is the same row
-                // the design uses for the chips, so the height is unchanged.
-                Row(
-                    Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Box(Modifier.weight(1f)) {
-                        GalleryFilterChips(
-                            items = items,
-                            selected = filter,
-                            onSelect = { filter = it },
-                        )
-                    }
-                    // A pinch alone is undiscoverable, and a gesture that cannot be
-                    // driven from a test is a gesture nobody checks.
-                    HgIconButton(
-                        icon = HgIcons.SelectAll,
-                        contentDescription = stringResource(R.string.select),
-                        onClick = { model.selectAll(existingIds) },
-                        modifier = Modifier.testTag(HgTestTags.SELECT_BUTTON),
-                    )
-                    HgIconButton(
-                        icon = if (monthView) HgIcons.GridDay else HgIcons.GridMonth,
-                        contentDescription = stringResource(
-                            if (monthView) R.string.view_day else R.string.view_month,
-                        ),
-                        onClick = { monthView = !monthView },
-                        modifier = Modifier
-                            .padding(end = hgSpacing.gutter - 12.dp)
-                            .testTag(HgTestTags.VIEW_SWITCH),
-                    )
-                }
+                Spacer(Modifier.height(10.dp))
+                GalleryFilterChips(
+                    items = items,
+                    selected = filter,
+                    onSelect = { filter = it },
+                )
                 Spacer(Modifier.height(10.dp))
             }
         }

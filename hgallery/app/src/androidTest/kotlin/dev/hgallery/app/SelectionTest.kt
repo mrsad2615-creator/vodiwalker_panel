@@ -39,10 +39,31 @@ class SelectionTest {
             ?.config
             ?.getOrNull(androidx.compose.ui.semantics.SemanticsProperties.TestTag)
 
+    /**
+     * Select-all lives in the overflow menu now.
+     *
+     * It shared the title row with three other controls, which on a 320 dp screen
+     * left the title too little width to draw. The menu is one extra tap and the
+     * control is still reachable without a long press, which is what this test
+     * exists to protect.
+     */
     @Test
     fun theSelectControlIsReachable() {
         openPhotos()
-        rule.onNodeWithTag(HgTestTags.SELECT_BUTTON).assertIsDisplayed()
+        rule.onNodeWithTag(HgTestTags.OVERFLOW_BUTTON).performClick()
+        rule.waitForIdle()
+        rule.onNodeWithTag(HgTestTags.MENU_SELECT_ALL).assertIsDisplayed()
+    }
+
+    /** The menu row selects everything and closes the menu. */
+    @Test
+    fun selectAllFromTheMenuEntersSelectionMode() {
+        openPhotos()
+        rule.onNodeWithTag(HgTestTags.OVERFLOW_BUTTON).performClick()
+        rule.waitForIdle()
+        rule.onNodeWithTag(HgTestTags.MENU_SELECT_ALL).performClick()
+        rule.waitForIdle()
+        rule.onNodeWithTag(HgTestTags.SELECTION_BAR).assertIsDisplayed()
     }
 
     @Test
@@ -64,7 +85,7 @@ class SelectionTest {
         rule.onNodeWithTag(HgTestTags.EXIT_SELECTION).performClick()
         rule.waitForIdle()
         // The toolbar is back, which is what "selection ended" means visually.
-        rule.onNodeWithTag(HgTestTags.SELECT_BUTTON).assertIsDisplayed()
+        rule.onNodeWithTag(HgTestTags.SCREEN_TITLE).assertIsDisplayed()
     }
 
     @Test

@@ -351,27 +351,48 @@ adb shell input tap $((W / 2)) $((H / 2))
 sleep 3
 shot 07-viewer-chrome-hidden.png
 
-# Back out of the viewer, then switch to month view with the toolbar control.
+# Back out of the viewer, then switch to month view.
 # A synthetic two-finger pinch through `sendevent` was tried first and produced a
 # 0.0% change: it never reached the app. The switch is the same state change in a
 # form that can be driven and therefore checked.
 adb shell input keyevent KEYCODE_BACK
 sleep 3
-# By label. The old fraction, 0.58 of the width, is the select-all box in the current
-# toolbar; it opened selection mode and the month view was never photographed.
-if tap_tag_or_text "view-switch" 'content-desc="Switch to month view"'; then
-  sleep 3
+
+# The month switch moved into the overflow menu when four controls on the title
+# row squeezed the title to one letter per line. The menu rows announce their own
+# labels, so the old pattern would not match the trigger. This opens the menu,
+# photographs it, and then taps the row by its label.
+#
+# The row names the destination, not the current state: when the screen is in day
+# view the row reads "Switch to month view", and after the tap it reads the
+# opposite. That is why the trigger is matched by the overflow's own label and the
+# menu row by the destination.
+if tap_tag_or_text "overflow" 'content-desc="More options"'; then
+  sleep 2
+  if tap_tag_or_text "view-switch" 'content-desc="Switch to month view"'; then
+    sleep 3
+  else
+    echo "::error title=e2e::the month-view row was not addressable in the menu"
+  fi
 else
-  echo "::error title=e2e::the month-view control was not addressable"
+  echo "::error title=e2e::the overflow menu was not addressable"
 fi
 shot 08-month-view.png
+
+# Back to day view through the same menu, so the selection shots that follow are
+# taken in the view the rest of the run assumes.
+if tap_tag_or_text "overflow-back" 'content-desc="More options"'; then
+  sleep 2
+  if tap_tag_or_text "view-switch-back" 'content-desc="Switch to day view"'; then
+    sleep 3
+  else
+    echo "::warning title=e2e::could not return to day view from the menu"
+  fi
+fi
 
 # Multi-selection, photographed the way a user enters it: a long press on the
 # first tile. `input swipe` with equal start and end is a long press on this
 # Android version; the duration is what makes it a press rather than a tap.
-if tap_tag_or_text "view-switch-back" 'content-desc="Switch to day view"'; then
-  sleep 3
-fi
 # Long press the first tile by its label rather than by coordinate.
 long_press_tag_or_text "first-photo-select" 'content-desc="Photo, '
 sleep 4

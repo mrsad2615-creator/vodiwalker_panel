@@ -167,6 +167,7 @@ public class ChronoPlugin extends Plugin {
         intent.putExtra(ChronoService.EXTRA_SUBTITLE, call.getString("subtitle", ""));
         intent.putExtra(ChronoService.EXTRA_REMAINING, call.getInt("remainingSeconds", 0));
         intent.putExtra(ChronoService.EXTRA_TOTAL, call.getInt("totalSeconds", 0));
+        intent.putExtra(ChronoService.EXTRA_ELAPSED, call.getInt("elapsedSeconds", 0));
         intent.putExtra(ChronoService.EXTRA_RUNNING, call.getBoolean("running", true));
         try {
             ChronoService.push(getContext(), intent);

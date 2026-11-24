@@ -17,6 +17,7 @@ interface ChronoNotificationOptions {
   subtitle: string;
   remainingSeconds: number;
   totalSeconds: number;
+  elapsedSeconds: number;
   running: boolean;
 }
 
@@ -51,11 +52,12 @@ export function notificationText(state: FocusClockState): ChronoNotificationOpti
   const minutes = Math.round(phaseDurationSeconds(state) / 60);
   return {
     label: mode ? mode.label : 'تمرکز',
-    subtitle: segment
+    subtitle: state.mode === 'free' ? 'بدون محدودیت زمانی' : segment
       ? `${segment.label} · ${minutes} دقیقه`
       : `${Math.max(0, Math.round(state.remainingSeconds / 60))} دقیقه`,
     remainingSeconds: Math.max(0, Math.round(state.remainingSeconds)),
     totalSeconds: Math.max(0, Math.round(phaseDurationSeconds(state))),
+    elapsedSeconds: Math.max(0, Math.round(state.elapsedSeconds)),
     running: state.isRunning,
   };
 }

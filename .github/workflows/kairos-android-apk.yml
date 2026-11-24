@@ -15,8 +15,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  VERSION: '3.15.0'
-  TAG: 'kairos-v3.15.0'
+  VERSION: '3.16.0'
+  TAG: 'kairos-v3.16.0'
 
 jobs:
   build-android-apk:
@@ -37,6 +37,13 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '21'
+
+      - name: Test widget timer arithmetic
+        working-directory: kairos-app
+        run: |
+          mkdir -p /tmp/kairos-chrono-tests
+          javac -encoding UTF-8 -d /tmp/kairos-chrono-tests android/app/src/main/java/app/kairos/productivity/ChronoMirrorMath.java android/test/ChronoMirrorMathTest.java
+          java -cp /tmp/kairos-chrono-tests app.kairos.productivity.ChronoMirrorMathTest
 
       - name: Setup Android SDK
         run: |

@@ -37,6 +37,7 @@ describe('shortcut model', () => {
     await boot();
     const nav = screen.getByRole('navigation', { name: 'ناوبری اصلی' });
     expect(within(nav).getAllByRole('button')).toHaveLength(6);
+    expect(within(nav).getByRole('button', { name: 'خانه' })).toHaveAttribute('aria-current', 'page');
     fireEvent.click(within(nav).getByRole('button', { name: 'بیشتر' }));
     const directory = await screen.findByRole('dialog', { name: 'بخش‌های دیگر' });
     for (const label of ['خانه', 'وظایف', 'عادت‌ها', 'تمرکز', 'انگیزه', 'پروژه‌ها', 'تقویم', 'تحلیل عملکرد', 'تنظیمات']) {
@@ -50,6 +51,8 @@ describe('shortcut model', () => {
     await waitFor(() => expect(within(nav).getByRole('button', { name: 'پروژه‌ها' })).toBeInTheDocument());
     fireEvent.click(within(nav).getByRole('button', { name: 'پروژه‌ها' }));
     await screen.findByTestId('projects-ready');
+    expect(within(nav).getByRole('button', { name: 'پروژه‌ها' })).toHaveAttribute('aria-current', 'page');
+    expect(within(nav).getByRole('button', { name: 'خانه' })).not.toHaveAttribute('aria-current');
   });
 });
 

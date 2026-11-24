@@ -5,7 +5,7 @@
     android:layout_height="match_parent"
     android:background="@drawable/chrono_widget_bg"
     android:orientation="vertical"
-    android:padding="16dp">
+    android:padding="10dp">
 
     <TextView
         android:id="@+id/widget_brand"
@@ -23,9 +23,9 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="2dp"
         android:fontFamily="sans-serif-light"
-        android:text="۲۵:۰۰"
+        android:text="--:--"
         android:textColor="#FFFFFFFF"
-        android:textSize="32sp" />
+        android:textSize="28sp" />
 
     <TextView
         android:id="@+id/widget_meta"
@@ -36,4 +36,14 @@
         android:text="آمادهٔ شروع"
         android:textColor="#B3FFFFFF"
         android:textSize="11sp" />
+    <ProgressBar
+        android:id="@+id/widget_progress"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="match_parent"
+        android:layout_height="4dp"
+        android:layout_marginTop="4dp"
+        android:max="100"
+        android:progress="0"
+        android:progressTint="#B7A3FF"
+        android:progressBackgroundTint="#55FFFFFF" />
 </LinearLayout>

@@ -8,13 +8,14 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Build;
 import android.widget.RemoteViews;
+import android.view.View;
 
 /**
  * Home-screen widget for the running session.
  *
  * It reads the same SharedPreferences mirror the foreground service writes, so it
  * needs no connection to the WebView: the widget is correct even when the page is
- * gone. Tapping anywhere opens KAIROS on the focus screen.
+ * gone. Tapping opens KAIROS.
  *
  * Refresh cadence: the service ticks it once a minute while a session runs. The
  * system's own `updatePeriodMillis` cannot go below 30 minutes, which for a
@@ -25,25 +26,6 @@ public final class ChronoWidget {
     static final String ACTION_TICK = "app.kairos.chrono.WIDGET_TICK";
 
     private ChronoWidget() {}
-
-    /** Persian digits, because the widget is read, not parsed. */
-    private static String fa(long value) {
-        String digits = "۰۱۲۳۴۵۶۷۸۹";
-        String latin = String.valueOf(value);
-        StringBuilder out = new StringBuilder();
-        for (int i = 0; i < latin.length(); i++) {
-            char c = latin.charAt(i);
-            out.append(c >= '0' && c <= '9' ? digits.charAt(c - '0') : c);
-        }
-        return out.toString();
-    }
-
-    static String clockText(long leftMs) {
-        long total = Math.max(0, leftMs / 1000);
-        long minutes = total / 60;
-        long seconds = total % 60;
-        return fa(minutes) + ":" + (seconds < 10 ? "۰" : "") + fa(seconds);
-    }
 
     /** Rebuilds every placed widget from the shared mirror. */
     static void refresh(Context context) {
@@ -60,19 +42,27 @@ public final class ChronoWidget {
         String subtitle = prefs.getString("subtitle", "");
         boolean running = prefs.getBoolean("running", false);
         long endAt = prefs.getLong("endAt", 0L);
-        long left = running ? Math.max(0, endAt - System.currentTimeMillis())
-                : Math.max(0, prefs.getInt("remaining", 0) * 1000L);
+        long now = System.currentTimeMillis();
+        boolean present = prefs.getBoolean("present", false);
+        int total = prefs.getInt("total", 0);
+        long left = ChronoMirrorMath.remaining(running, endAt, prefs.getInt("remaining", 0), now);
+        long elapsed = ChronoMirrorMath.elapsed(running, prefs.getLong("anchor", 0L), prefs.getInt("elapsed", 0), now);
 
         RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.chrono_widget);
-        views.setTextViewText(R.id.widget_time, endAt > 0 ? clockText(left) : "۲۵:۰۰");
+        views.setTextViewText(R.id.widget_time, present ? ChronoMirrorMath.clock(total > 0 ? left : elapsed) : "--:--");
+        int progress = ChronoMirrorMath.progress(total, left);
+        views.setViewVisibility(R.id.widget_progress, present && progress >= 0 ? View.VISIBLE : View.GONE);
+        if (progress >= 0) views.setProgressBar(R.id.widget_progress, 100, progress, false);
 
         String meta;
-        if (endAt == 0L) {
+        if (!present) {
             meta = "آمادهٔ شروع · برای باز کردن ضربه بزنید";
         } else if (running) {
             meta = (label == null ? "تمرکز" : label) + (subtitle.isEmpty() ? "" : " · " + subtitle);
+        } else if (prefs.getBoolean("completed", false)) {
+            meta = "این بازه به پایان رسید · " + (label == null ? "تمرکز" : label);
         } else {
-            meta = "متوقف شد · " + (label == null ? "تمرکز" : label);
+            meta = "مکث · " + (label == null ? "تمرکز" : label);
         }
         views.setTextViewText(R.id.widget_meta, meta);
 

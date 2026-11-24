@@ -48,6 +48,7 @@ public class ChronoService extends Service {
     public static final String EXTRA_SUBTITLE = "subtitle";
     public static final String EXTRA_REMAINING = "remainingSeconds";
     public static final String EXTRA_TOTAL = "totalSeconds";
+    public static final String EXTRA_ELAPSED = "elapsedSeconds";
     public static final String EXTRA_RUNNING = "running";
 
     private static final String CHANNEL_ID = "kairos_chrono";
@@ -65,7 +66,8 @@ public class ChronoService extends Service {
         public void run() {
             if (!sRunning) return;
             sRunning = false;
-            getSharedPreferences(PREFS, MODE_PRIVATE).edit().putBoolean("running", false).apply();
+            getSharedPreferences(PREFS, MODE_PRIVATE).edit().putBoolean("running", false).putInt("remaining", 0).putBoolean("completed", true).apply();
+            ChronoWidget.refresh(ChronoService.this);
             SoundscapeBus.playBell();
             announceCompletion();
         }
@@ -101,24 +103,42 @@ public class ChronoService extends Service {
             SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
             sRunning = prefs.getBoolean("running", false);
             publish();
+            scheduleEnd();
             return START_STICKY;
         }
 
         String action = intent.getAction();
         if (ACTION_STOP.equals(action)) {
             endHandler.removeCallbacks(endRunnable);
+            sRunning = false;
+            getSharedPreferences(PREFS, MODE_PRIVATE).edit().clear().apply();
+            ChronoWidget.refresh(this);
             stopForeground(true);
             stopSelf();
             return START_NOT_STICKY;
         }
 
         if (ACTION_TOGGLE.equals(action)) {
-            sRunning = !sRunning;
+            SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
+            long now = System.currentTimeMillis();
+            int total = prefs.getInt("total", 0);
+            sRunning = prefs.getBoolean("running", false);
+            if (sRunning) {
+                long left = ChronoMirrorMath.remaining(true, prefs.getLong("endAt", 0L), 0, now);
+                long elapsed = ChronoMirrorMath.elapsed(true, prefs.getLong("anchor", 0L), prefs.getInt("elapsed", 0), now);
+                prefs.edit().putInt("remaining", (int) ((left + 999L) / 1000L))
+                        .putInt("elapsed", (int) (elapsed / 1000L)).putBoolean("running", false).apply();
+                sRunning = false;
+            } else {
+                if (total > 0 && prefs.getInt("remaining", 0) <= 0) return START_STICKY;
+                sRunning = true;
+                prefs.edit().putLong("endAt", now + prefs.getInt("remaining", 0) * 1000L)
+                        .putLong("anchor", now).putBoolean("running", true).apply();
+            }
             scheduleEnd();
-            getSharedPreferences(PREFS, MODE_PRIVATE).edit().putBoolean("running", sRunning).apply();
             publish();
-            // Let the page know, if it is alive. When it is not, the clock is
-            // re-anchored from the saved run the next time KAIROS opens.
+            // Broadcast is best effort; JS persistence remains authoritative.
+            // If the WebView is absent this does not update its saved run.
             Intent control = new Intent(ChronoPlugin.EVENT_CONTROL);
             control.setPackage(getPackageName());
             control.putExtra("action", sRunning ? "resume" : "pause");
@@ -130,6 +150,7 @@ public class ChronoService extends Service {
         String subtitle = intent.getStringExtra(EXTRA_SUBTITLE);
         int remaining = intent.getIntExtra(EXTRA_REMAINING, 0);
         int total = intent.getIntExtra(EXTRA_TOTAL, 0);
+        int elapsed = intent.getIntExtra(EXTRA_ELAPSED, 0);
         boolean running = intent.getBooleanExtra(EXTRA_RUNNING, true);
 
         sRunning = running;
@@ -139,6 +160,10 @@ public class ChronoService extends Service {
                 .putString("subtitle", subtitle == null ? "" : subtitle)
                 .putInt("remaining", remaining)
                 .putInt("total", total)
+                .putInt("elapsed", elapsed)
+                .putLong("anchor", System.currentTimeMillis())
+                .putBoolean("present", true)
+                .putBoolean("completed", false)
                 .putLong("endAt", System.currentTimeMillis() + remaining * 1000L)
                 .putBoolean("running", running)
                 .apply();
@@ -159,10 +184,10 @@ public class ChronoService extends Service {
         endHandler.removeCallbacks(endRunnable);
         if (!sRunning) return;
 
-        long endAt = getSharedPreferences(PREFS, MODE_PRIVATE).getLong("endAt", 0L);
-        long delay = endAt - System.currentTimeMillis();
-        if (delay <= 0) return;
-        endHandler.postDelayed(endRunnable, Math.min(delay, 24L * 60L * 60L * 1000L));
+        SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
+        if (prefs.getInt("total", 0) <= 0) return;
+        long delay = prefs.getLong("endAt", 0L) - System.currentTimeMillis();
+        endHandler.postDelayed(endRunnable, Math.max(0L, delay));
     }
 
     /** A high-importance "time is up" card, separate from the running mirror. */
@@ -225,9 +250,11 @@ public class ChronoService extends Service {
         String subtitle = prefs.getString("subtitle", "");
         int total = prefs.getInt("total", 0);
         long endAt = prefs.getLong("endAt", System.currentTimeMillis());
-        long left = Math.max(0, endAt - System.currentTimeMillis());
+        long now = System.currentTimeMillis();
+        long left = ChronoMirrorMath.remaining(sRunning, endAt, prefs.getInt("remaining", 0), now);
+        long elapsed = ChronoMirrorMath.elapsed(sRunning, prefs.getLong("anchor", 0L), prefs.getInt("elapsed", 0), now);
 
-        Notification notification = buildNotification(label, subtitle, left, total, sRunning);
+        Notification notification = buildNotification(label, subtitle, total > 0 ? left : elapsed, total, sRunning);
 
         try {
             // The typed overload is only required — and only legal — from Android
@@ -259,6 +286,7 @@ public class ChronoService extends Service {
     @Override
     public void onDestroy() {
         widgetHandler.removeCallbacks(widgetTick);
+        endHandler.removeCallbacks(endRunnable);
         super.onDestroy();
     }
 
@@ -284,9 +312,9 @@ public class ChronoService extends Service {
                 .setOngoing(true)
                 .setOnlyAlertOnce(true)
                 .setShowWhen(true)
-                .setWhen(System.currentTimeMillis() + leftMs)
+                .setWhen(System.currentTimeMillis() + (total > 0 ? leftMs : -leftMs))
                 .setUsesChronometer(running)
-                .setChronometerCountDown(true)
+                .setChronometerCountDown(total > 0)
                 .setPriority(NotificationCompat.PRIORITY_LOW)
                 .setCategory(NotificationCompat.CATEGORY_STOPWATCH)
                 .addAction(0, running ? "توقف" : "ادامه", togglePending)

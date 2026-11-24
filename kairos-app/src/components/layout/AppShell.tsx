@@ -5,7 +5,7 @@ import {
   CheckSquare,
   ChevronLeft,
   Home,
-  RefreshCw,
+  Flame,
   MoreHorizontal,
   Settings,
   Timer,
@@ -32,7 +32,7 @@ import { updateSettings } from '@/lib/db';
 const DESTINATIONS: { id: NavTab; label: string; hint: string; icon: typeof Home }[] = [
   { id: 'dashboard', label: 'خانه', hint: 'نمای کلی روز', icon: Home },
   { id: 'tasks', label: 'وظایف', hint: 'کارها و اولویت‌ها', icon: CheckSquare },
-  { id: 'habits', label: 'عادت‌ها', hint: 'عادت‌ها و پیگیری', icon: RefreshCw },
+  { id: 'habits', label: 'عادت‌ها', hint: 'عادت‌ها و پیگیری', icon: Flame },
   { id: 'focus', label: 'تمرکز', hint: 'زمان‌سنج و فضای صوتی', icon: Timer },
   { id: 'motivation', label: 'انگیزه', hint: 'قدرت، حرکت و امید', icon: Lightning },
   { id: 'projects', label: 'پروژه‌ها', hint: 'هدف ← پروژه ← مرحله ← کار', icon: FolderOpen },
@@ -269,9 +269,9 @@ export function AppShell({ children }: { children: ReactNode }) {
 
         <nav
           aria-label="ناوبری اصلی"
-          className="app-safe-tabbar app-safe-x pointer-events-none fixed inset-x-0 bottom-0 z-40 mx-auto w-full max-w-[480px] px-3"
+          className="app-safe-tabbar app-safe-x pointer-events-none fixed inset-x-0 bottom-0 z-40 mx-auto w-full max-w-[480px] px-2"
         >
-          <div className="luxury-glass-dock pointer-events-auto grid grid-cols-6 items-center gap-0.5 p-1">
+          <div className="kairos-nav-dock pointer-events-auto grid grid-cols-6 items-stretch">
             {primaryTabs.map((item) => {
               const Icon = item.icon;
               const isActive = activeTab === item.id;
@@ -281,14 +281,14 @@ export function AppShell({ children }: { children: ReactNode }) {
                   type="button"
                   onClick={() => handleNav(item.id)}
                   aria-current={isActive ? 'page' : undefined}
-                  className={`flex flex-col items-center justify-center gap-1 rounded-[11px] py-2 transition-colors ${
-                    isActive ? 'bg-[var(--surface-3)] text-[var(--text)]' : 'text-[var(--text-3)]'
-                  }`}
+                  aria-label={item.label}
+                  className="kairos-nav-item"
+                  data-active={isActive}
                 >
-                  <span aria-hidden="true" className="kairos-nav-orb" data-active={isActive}>
-                    <Icon size={20} weight={isActive ? 'fill' : 'regular'} className="kairos-nav-glyph" />
+                  <span aria-hidden="true" className="kairos-nav-icon">
+                    <Icon size={22} weight={isActive ? 'duotone' : 'regular'} />
                   </span>
-                  <span className="max-w-full truncate px-0.5 text-[10px] leading-none">{item.label}</span>
+                  <span className="kairos-nav-label">{item.label}</span>
                 </button>
               );
             })}
@@ -301,14 +301,14 @@ export function AppShell({ children }: { children: ReactNode }) {
               }}
               aria-expanded={moreOpen}
               aria-current={isSecondaryActive ? 'page' : undefined}
-              className={`flex flex-col items-center justify-center gap-1 rounded-[11px] py-2 transition-colors ${
-                isSecondaryActive ? 'bg-[var(--surface-3)] text-[var(--text)]' : 'text-[var(--text-3)]'
-              }`}
+              aria-label="بیشتر"
+              className="kairos-nav-item"
+              data-active={isSecondaryActive || moreOpen}
             >
-              <span aria-hidden="true" className="kairos-nav-orb" data-active={isSecondaryActive || moreOpen}>
-                <MoreHorizontal size={20} weight={isSecondaryActive ? 'fill' : 'regular'} className="kairos-nav-glyph" />
+              <span aria-hidden="true" className="kairos-nav-icon">
+                <MoreHorizontal size={22} weight={isSecondaryActive || moreOpen ? 'duotone' : 'regular'} />
               </span>
-              <span className="text-[10px] leading-none">بیشتر</span>
+              <span className="kairos-nav-label">بیشتر</span>
             </button>
           </div>
         </nav>

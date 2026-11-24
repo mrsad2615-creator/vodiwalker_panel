@@ -3,6 +3,7 @@ package dev.hgallery.core
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
 class DurationFormatterTest {
@@ -611,26 +612,28 @@ class PlayerAudioPolicyTest {
 
     @Test
     fun `a clip the user chose plays with sound`() {
-        assertFalse(PlayerPolicy.startsMuted(PlayerPolicy.Entry.DIRECT))
+        assertFalse(PlayerPolicy.onArrival(PlayerPolicy.Entry.DIRECT).muted)
     }
 
     @Test
-    fun `a clip reached by swiping starts muted`() {
-        assertTrue(PlayerPolicy.startsMuted(PlayerPolicy.Entry.SWIPE))
+    fun `both paths start the clip, so neither reads as a still photograph`() {
+        assertTrue(PlayerPolicy.onArrival(PlayerPolicy.Entry.DIRECT).autoplay)
+        assertTrue(PlayerPolicy.onArrival(PlayerPolicy.Entry.SWIPE).autoplay)
     }
 
     @Test
-    fun `paging onto a clip starts it, so the picture is moving while it is muted`() {
-        assertTrue(PlayerPolicy.autoplaysWhenSwipedOnto())
+    fun `only a deliberate choice may make noise`() {
+        assertFalse(PlayerPolicy.onArrival(PlayerPolicy.Entry.DIRECT).muted)
+        assertTrue(PlayerPolicy.onArrival(PlayerPolicy.Entry.SWIPE).muted)
     }
 
     @Test
-    fun `the two entry paths differ, which is the whole point of the rule`() {
+    fun `the two entry paths differ in sound, which is the whole point of the rule`() {
         // If these became equal, one of the two complaints would return: either a camera
         // roll that talks, or a video that opens silent after a deliberate tap.
-        assertTrue(
-            PlayerPolicy.startsMuted(PlayerPolicy.Entry.SWIPE) !=
-                PlayerPolicy.startsMuted(PlayerPolicy.Entry.DIRECT),
+        assertNotEquals(
+            PlayerPolicy.onArrival(PlayerPolicy.Entry.SWIPE),
+            PlayerPolicy.onArrival(PlayerPolicy.Entry.DIRECT),
         )
     }
 }

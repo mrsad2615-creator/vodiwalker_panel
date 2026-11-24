@@ -40,7 +40,7 @@ import kotlinx.coroutines.delay
 class PlayerController(
     context: Context,
     startUri: String,
-    /** True when this clip must open without sound. See `PlayerPolicy.startsMuted`. */
+    /** True when this clip must open without sound. See `PlayerPolicy.onArrival`. */
     startMuted: Boolean = false,
 ) {
 

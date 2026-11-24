@@ -79,9 +79,10 @@ fun VideoPlayerScreen(
 ) {
     val context = LocalContext.current
     val activity = context as? android.app.Activity
-    // A clip reached by swiping starts muted; a clip the user tapped keeps its sound.
-    // The decision is in PlayerPolicy, so this line states it rather than deciding it.
-    val startMuted = PlayerPolicy.startsMuted(entry)
+    // A clip reached by swiping starts muted; a clip the user tapped keeps its sound, and
+    // both start playing. The decision is in PlayerPolicy, so this line states it rather
+    // than deciding it.
+    val startMuted = PlayerPolicy.onArrival(entry).muted
     val controller = rememberPlayerController(item.uri, startMuted = startMuted)
     // The strip draws frames with the same bounded cache as every other screen.
     val app = LocalContext.current.applicationContext as HGalleryApplication

@@ -48,6 +48,18 @@ import dev.hgallery.app.ui.components.HgDeleteDialog
 import dev.hgallery.app.ui.components.HgIconButton
 import dev.hgallery.app.ui.components.HgTestTags
 import dev.hgallery.core.MediaItem
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Icon
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.clickable
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+import dev.hgallery.app.ui.components.MediaThumbnail
+import dev.hgallery.app.ui.components.mediaDescription
+import dev.hgallery.app.ui.theme.hgColors
+import dev.hgallery.core.PlayerPolicy
 import kotlinx.coroutines.launch
 import androidx.compose.ui.res.stringResource
 import dev.hgallery.app.R
@@ -81,6 +93,14 @@ fun ViewerScreen(
     container: AppContainer,
     startId: Long,
     items: List<MediaItem>,
+    /**
+     * Opens [id] in the player, because the viewer cannot play it here.
+     *
+     * The viewer is a pager of stills with one player page. When a still is pushed onto a
+     * clip, the screen changes rather than the page: a bitmap cannot start moving. See
+     * `ViewerReplace.Action.HAND_OVER`.
+     */
+    onOpenVideo: (Long) -> Unit,
     onClose: () -> Unit,
 ) {
     val coroutine = rememberCoroutineScope()
@@ -155,7 +175,15 @@ fun ViewerScreen(
         ) { page ->
             val item = items.getOrNull(page)
             if (item != null) {
-                ZoomableImage(item, container)
+                // A clip is not the reason this screen exists, but it is a real item in
+                // the timeline and it gets a real page. Before this branch existed, a
+                // clip opened in the viewer decoded as an image, failed, and drew a black
+                // rectangle on a page that claimed to be paging through the album.
+                if (item.isVideo) {
+                    VideoPage(item, container, onOpenVideo)
+                } else {
+                    ZoomableImage(item, container)
+                }
             }
         }
 
@@ -413,5 +441,90 @@ private fun ZoomableImage(item: MediaItem, container: AppContainer) {
                     translationY = offset.y,
                 ),
         )
+    }
+}
+
+/**
+ * The page that stands in for a clip inside the viewer.
+ *
+ * ## Why it is a poster and a play button, and not a player
+ *
+ * A full player per page would mean one decoder per page, and `beyondViewportPageCount`
+ * keeps a page on each side alive. Three decoders for one visible clip is the cost this
+ * screen cannot pay.
+ *
+ * Instead the page shows the clip's own poster frame from the existing thumbnail cache and
+ * offers a way in. Forward is still a page turn — the video page replaces its content in
+ * place by the `ViewerReplace` rule; a tap on the poster hands the clip to the player,
+ * which is the screen built for it.
+ *
+ * This is not a disabled control: it opens the clip.
+ */
+@Composable
+private fun VideoPage(item: MediaItem, container: AppContainer, onOpenVideo: (Long) -> Unit) {
+    val play = stringResource(R.string.video_play)
+    val duration = PlayerPolicy.timecode(item.durationMs)
+    val label = mediaDescription(item)
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .testTag(HgTestTags.viewerVideoPage(item.id)),
+        contentAlignment = Alignment.Center,
+    ) {
+        MediaThumbnail(
+            item = item,
+            store = container.thumbnails,
+            modifier = Modifier.fillMaxSize(),
+            cornerRadius = 0,
+            // The badge belongs on a grid tile, where it is the only sign that a cell is
+            // a clip. Here the play target and the duration say it, and a corner badge
+            // over a centred play button is noise.
+            showVideoBadge = false,
+            // The page names itself below the target; the poster must not name it twice.
+            describeImage = false,
+        )
+
+        // One target, centred, with the label on it. A poster with an invisible tap area
+        // would be a tap that does nothing in most of the places a thumb lands.
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            val palette = hgColors
+            Box(
+                modifier = Modifier
+                    .size(64.dp)
+                    .clip(CircleShape)
+                    .background(palette.accent)
+                    .clickable(onClick = { onOpenVideo(item.id) })
+                    // A colour alone does not say this opens a video, and a poster is
+                    // not obviously a button. The name carries it for a screen reader.
+                    .semantics(mergeDescendants = true) {
+                        contentDescription = play
+                        role = Role.Button
+                    }
+                    .testTag(HgTestTags.viewerVideoPlay(item.id)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = HgIcons.Play,
+                    contentDescription = null,
+                    tint = palette.onAccent,
+                    modifier = Modifier.size(26.dp),
+                )
+            }
+            Text(
+                text = duration,
+                style = MaterialTheme.typography.labelMedium,
+                color = Color.White,
+                modifier = Modifier.padding(top = 10.dp),
+            )
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+                color = Color.White.copy(alpha = 0.75f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(top = 2.dp, start = 16.dp, end = 16.dp),
+            )
+        }
     }
 }

@@ -106,33 +106,26 @@ object PlayerPolicy {
     }
 
     /**
-     * True when the player must start with sound off.
+     * How a clip must behave at the moment the viewer arrives at it.
      *
-     * ## Why the two paths differ
-     *
-     * A direct tap is a request to watch. The user chose this clip, so it plays with
-     * sound, which is what they asked for.
-     *
-     * A swipe is not. The user is moving through a camera roll, and a clip that starts
-     * talking under a finger that only meant to reach the next photograph is the fault
-     * this rule removes. Such a clip starts muted, keeps playing, and carries a visible
-     * sound control so it is obvious how to unmute.
-     *
-     * This is deliberately independent of the "autoplay next" setting, so a user who
-     * turns automatic advance off still gets the swipe rule, and a user who turns it on
-     * does not get a loud clip they did not ask for. `HgSettings.autoplayNext` decides
-     * what happens when a clip *ends*; this decides how a clip *arrives*.
+     * @property muted true when the clip must make no sound until the user asks for it
+     * @property autoplay true when it must start moving without a tap
      */
-    fun startsMuted(entry: Entry): Boolean = entry == Entry.SWIPE
+    data class Arrival(val muted: Boolean, val autoplay: Boolean)
 
     /**
-     * True when the clip that follows should start on its own after paging.
+     * The arrival policy for a clip, as one answer rather than two independent rules.
      *
-     * It should: the user moved to it. It starts muted by [startsMuted], so moving is
-     * costless, and making the user press play after every swipe would be the opposite
-     * complaint.
+     * Both paths autoplay. A clip that sits at frame zero waiting for a tap reads as a
+     * still photograph, and the user has already asked to see it — by tapping its tile, or
+     * by swiping onto it. What differs is sound: only a deliberate choice is allowed to
+     * make noise.
+     *
+     * Written as one function returning both values because they are decided together.
+     * Two separate functions made it possible to change one and forget the other, and the
+     * pair that results is not a policy anyone chose.
      */
-    fun autoplaysWhenSwipedOnto(): Boolean = true
+    fun onArrival(entry: Entry): Arrival = Arrival(muted = entry == Entry.SWIPE, autoplay = true)
 
     fun shouldAutoHide(
         state: PlayerState,

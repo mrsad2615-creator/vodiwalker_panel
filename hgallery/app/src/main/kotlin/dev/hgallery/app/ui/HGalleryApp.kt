@@ -242,6 +242,14 @@ fun HGalleryApp(container: AppContainer) {
                 container = container,
                 startId = openId,
                 items = items,
+                // A still pushed onto a clip cannot play it, so the screen changes. This
+                // is the hand-over branch of `ViewerReplace`: the player takes the id, and
+                // the entry is DIRECT because the user pushed toward this clip on purpose.
+                onOpenVideo = { id ->
+                    viewerId = null
+                    playerEntry = PlayerPolicy.Entry.DIRECT
+                    playerId = id
+                },
                 onClose = { viewerId = null },
             )
         }

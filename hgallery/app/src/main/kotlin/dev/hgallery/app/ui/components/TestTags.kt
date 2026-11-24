@@ -49,6 +49,10 @@ object HgTestTags {
     const val VIDEO_FILL = "video-fill"
     const val VIDEO_MUTE = "video-mute"
 
+    /** The page a clip occupies inside the viewer, and the target that opens it. */
+    fun viewerVideoPage(id: Long) = "viewer-video-$id"
+    fun viewerVideoPlay(id: Long) = "viewer-video-play-$id"
+
     // Search.
     const val SEARCH_FIELD = "search-field"
     const val SEARCH_RESULTS = "search-results"

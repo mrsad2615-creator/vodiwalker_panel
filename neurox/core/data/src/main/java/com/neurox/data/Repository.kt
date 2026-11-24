@@ -94,9 +94,7 @@ class NeuroxRepository(context: Context, private val database: NeuroxDatabase = 
             if (old.status != "ACTIVE") return@withTransaction
             require(old.exercise == checkpoint.config.exercise.name && old.baseline == checkpoint.config.baseline)
             val previous = CheckpointCodec.decode(old.checkpoint)
-            require(previous.config == checkpoint.config) { "Session configuration cannot change after start" }
-            if (checkpoint.attempts.size < previous.attempts.size ||
-                (checkpoint.attempts.size == previous.attempts.size && checkpoint.elapsedMs < previous.elapsedMs)) return@withTransaction
+            if (!CheckpointProgress.accept(previous, checkpoint)) return@withTransaction
             val summary = Scoring.summarize(checkpoint)
             val status = if (aborted) "ABORTED" else if (checkpoint.completed) "COMPLETE" else "ACTIVE"
             dao.updateSession(old.copy(
@@ -107,6 +105,13 @@ class NeuroxRepository(context: Context, private val database: NeuroxDatabase = 
                 wpm = summary.wpm, xp = if (aborted) 0 else summary.xp,
             ))
         }
+    }
+    /** Abort the latest durable row, not a possibly stale caller snapshot. */
+    suspend fun abortSession(id: String, profileId: String) = database.withTransaction {
+        val latest = requireNotNull(dao.session(id, profileId)) { "Session does not belong to this profile" }
+        if (latest.status == "ACTIVE") dao.updateSession(latest.copy(
+            status = "ABORTED", endedAt = System.currentTimeMillis(), valid = false, xp = 0,
+        ))
     }
     suspend fun setFavorite(profileId: String, exercise: Exercise, value: Boolean) {
         if (value) dao.favorite(FavoriteEntity(profileId, exercise.name)) else dao.unfavorite(profileId, exercise.name)

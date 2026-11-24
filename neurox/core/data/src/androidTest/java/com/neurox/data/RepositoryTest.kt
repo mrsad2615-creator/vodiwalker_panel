@@ -209,4 +209,46 @@ class RepositoryTest {
         assertEquals(decoded, CheckpointCodec.decode(CheckpointCodec.encode(decoded)))
     }
 
+    @Test fun appendCannotRewriteAlreadyRecordedAttempts() = runBlocking {
+        val config = TrainingConfig(Exercise.FOCUS_LOCK, rounds = 3)
+        val session = repository.startSession("guest", config)
+        val previous = Checkpoint(config, listOf(Attempt(Outcome.INCORRECT, 300)), 1000, false)
+        repository.saveSession(session.id, "guest", previous)
+        val changed = previous.copy(attempts = listOf(Attempt(Outcome.CORRECT, 300), Attempt(Outcome.CORRECT, 200)), elapsedMs = 2000)
+        var rejected = false
+        try { repository.saveSession(session.id, "guest", changed) } catch (_: IllegalArgumentException) { rejected = true }
+        assertTrue(rejected)
+        assertEquals(previous, CheckpointCodec.decode(repository.sessions("guest").first().single().checkpoint))
+    }
+    @Test fun abortUsesLatestDurableProgressAndCannotBeReactivated() = runBlocking {
+        val config = TrainingConfig(Exercise.FOCUS_LOCK, rounds = 3)
+        val session = repository.startSession("guest", config)
+        // Simulates a queued write committing after a caller read the active row.
+        val stale = requireNotNull(repository.activeSession("guest"))
+        val latest = Checkpoint(config, listOf(Attempt(Outcome.CORRECT, 250)), 1000, false)
+        repository.saveSession(session.id, "guest", latest)
+        repository.abortSession(stale.id, "guest")
+        repository.saveSession(session.id, "guest", latest.copy(elapsedMs = 2000))
+        val saved = repository.sessions("guest").first().single()
+        assertEquals("ABORTED", saved.status)
+        assertEquals(latest, CheckpointCodec.decode(saved.checkpoint))
+        assertEquals(0, saved.xp)
+        assertFalse(saved.valid)
+        assertNull(repository.activeSession("guest"))
+        repository.startSession("guest", TrainingConfig(Exercise.QUICK_TAP))
+    }
+    @Test fun abortCannotChangeAnotherProfileOrCompletedSession() = runBlocking {
+        val owner = repository.createProfile("Owner")
+        val config = TrainingConfig(Exercise.FOCUS_LOCK, rounds = 1)
+        val session = repository.startSession(owner, config)
+        var rejected = false
+        try { repository.abortSession(session.id, "guest") } catch (_: IllegalArgumentException) { rejected = true }
+        assertTrue(rejected)
+        assertEquals("ACTIVE", repository.activeSession(owner)?.status)
+        repository.saveSession(session.id, owner, finished(config))
+        val completed = repository.sessions(owner).first().single()
+        repository.abortSession(session.id, owner)
+        assertEquals(completed, repository.sessions(owner).first().single())
+    }
+
 }

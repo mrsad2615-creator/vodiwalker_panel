@@ -129,6 +129,7 @@ fun main() {
     exerciseExpansionTests()
     builderAndMatchingTests()
     colorAndDirectionTests()
+    checkpointProgressTests()
     println("\nRESULT: $passed passed, $failed failed")
     check(failed == 0) { "$failed test cases failed" }
 }

@@ -4,10 +4,10 @@
 
 | Check | Result | Evidence and scope |
 |---|---|---|
-| Core and cipher cases | 199 PASS, 0 FAIL | Production Kotlin domain/cipher; Kotlin 2.2.21, JVM 17 |
-| Static invariants and XML | 34 PASS | Includes offline manifest, assets and preserved Python sources |
+| Core and cipher cases | 209 PASS, 0 FAIL | Production Kotlin domain/cipher; Kotlin 2.2.21, JVM 17 |
+| Static invariants and XML | 35 PASS | Includes offline manifest, assets and preserved Python sources |
 | Production migration SQL | 4 PASS | Local SQLite preservation, index, foreign key and cascade checks |
-| Kotlin syntax | 43 files, 0 parse errors | Local scan after color/direction implementation; not Android type checking |
+| Kotlin syntax | 45 files, 0 parse errors | Local scan after color/direction implementation; not Android type checking |
 | CI evidence parser | 6 PASS | Complete/reordered chunks, partial/duplicate/unsafe/malformed exports |
 | Android compile, Room/KSP, lint | PASS | Native job in runs `45479907006` and `45481036708` |
 | Android instrumentation APK compilation | PASS | Both data and app test APKs compiled in run `45481036708` |
@@ -52,8 +52,16 @@ Physical-device, TalkBack, accessibility audit, frame timing, memory, battery, r
 
 Local raw output is ignored under `test-output/`. Reproduce with `scripts/test-core.sh`, `scripts/check-kotlin-syntax.sh` and `python3 -m unittest discover -s testing -p 'test_*.py'`. Use `python3 scripts/read-ci-evidence.py RUN_ID` to retrieve workflow conclusions, test failures, artifact links and APK metadata via the authenticated GitHub CLI without depending on downloadable log blobs. Add `--save-schema` only to recover complete generated schema evidence.
 
-## Source continuation 0.4 (native verification pending)
+## Source continuation 0.4
 
 Color Reaction adds four named fixed-color signals and four real choices. Direction Match presents physical arrows; levels above one randomize their position independently of the correct direction. Both use unpublished-stimulus protection, monotonic response timing, early/wrong/missed outcomes, input revision checks and checkpoint recovery. They are selectable in the built-in library and finite builder. Local tests now total 199 cases, including a full fourteen-exercise cross-product matrix and 22 new reaction checks. The first local run correctly failed the old three-per-module catalogue invariant; the invariant was updated to the implemented 3/5/3/3 counts, and the complete suite passed. No behavior test was removed.
 
-The available 0.3 APK does not include these new paths. Their native compile and new UI scenario require the next CI run. Test helper syntax remains a separate result from native compilation.
+Run `45483449140` at `cb798dbdcde4213018ecd1b3d0c0d11a018dff47` built 0.4 successfully, including lint and both instrumentation APKs. The emulator executed 28 cases: 27 passed, one failed, none skipped. All navigation tests now passed. The new combined color/direction scenario failed because it asserted a UI node as soon as the model changed, before semantics were ready. It has been split into isolated per-exercise tests that wait for UI semantics. The corrective run is pending; the original failure is not hidden.
+
+[Version 0.4 debug artifact](https://github.com/mrsad2615-creator/vodiwalker_panel/actions/runs/45483449140/artifacts/14963896983): APK 12,732,312 bytes, SHA-256 `ac0f92d0e708e681cca05e97f2ff87aa384c540159ce70894975cb400d97ab5a`. This supersedes the 0.3 source capabilities, but is still a development build with an unresolved device-test gate.
+
+### Persistence hardening after review (verification pending)
+
+An append-only checkpoint guard now rejects changes to recorded outcomes and active-time regression when adding attempts. Stale snapshots are safe no-ops. Ten new local production-domain cases passed, bringing the core total to 209; all 35 static checks, four local SQLite checks and six CI-parser cases passed.
+
+Inspection also found a discard race: an abort with an older checkpoint could be ignored by the stale-save guard, leaving a durable ACTIVE row after the UI cleared the engine. The new abort operation reads the latest row inside a transaction. ViewModel discard stops the ticker, saves current in-memory progress, then aborts transactionally. Three new Room cases cover immutable attempt prefixes, abort after a newer queued save, attempted reactivation, completed-row preservation and profile ownership. These new integration cases await CI and are not included in the previous 28-case count.

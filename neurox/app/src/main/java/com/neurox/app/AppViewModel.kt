@@ -184,7 +184,14 @@ class AppViewModel(private val repository: NeuroxRepository, private val saved: 
     }
     fun discard() = action {
         val found = repository.activeSession(requireProfile().id) ?: return@action
-        repository.saveSession(found.id, found.profileId, CheckpointCodec.decode(found.checkpoint), aborted = true)
+        ticker?.cancel()
+        if (session?.id == found.id) engine?.let { active ->
+            active.pause()
+            repository.saveSession(found.id, found.profileId, active.checkpoint())
+        }
+        // Queued checkpoints may have committed since activeSession(). Abort the
+        // latest durable row transactionally; queued writes cannot reactivate it.
+        repository.abortSession(found.id, found.profileId)
         engine = null; session = null; _training.value = null; navigate(Screen.HOME)
     }
     private suspend fun persistAndPublish(e: TrainingEngine) {

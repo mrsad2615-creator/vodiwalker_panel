@@ -14,7 +14,7 @@ DataStore keeps only the selected profile ID. If this ID is absent or no longer 
 
 A checkpoint has a format version, validated configuration, attempt list, elapsed active time and completion flag. Attempts contain numerical measurements and aggregate weak-key counts. They do not contain the user's typed string. Decode rejects unknown versions, invalid enum values, unsafe bounds and contradictory completion state.
 
-Use one transaction for session completion. Ignore repeated completion callbacks. Ignore checkpoints older than durable progress. Derive total XP from completed session rows. Do not create a second mutable reward total.
+Use one transaction for session completion. Ignore repeated completion callbacks. Ignore checkpoints older than durable progress. Require an identical recorded-attempt prefix and nondecreasing active time for every append. A discard operation must abort the latest durable row in a transaction, rather than send a potentially stale snapshot through the save guard. Queued saves cannot reactivate an aborted row. Derive total XP from completed session rows. Do not create a second mutable reward total.
 
 Room schema export is configured. Successful native CI generated the version-2 schema JSON. The first API export was truncated and was rejected. The complete chunked export from successful native run 45482317590 is now checked in at `core/data/schemas/com.neurox.data.NeuroxDatabase/2.json` (identity hash `cfc53d208dc748bbea7b91f8748a7636`). The local evidence reader validated the export before saving it. The instrumented 1-to-2 migration case passed in run 45481036708. Add explicit migrations and tests for future database versions. Never enable destructive migration as an upgrade strategy.
 

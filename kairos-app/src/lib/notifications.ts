@@ -182,18 +182,32 @@ export function getTaskReminderDate(task: Task): Date | null {
   return new Date(base.getTime() - offsetMs);
 }
 
-/**
- * Syncs upcoming task reminders to native Android AlarmManager / LocalNotifications.
- */
-export async function syncTaskRemindersNative(
+// Native calls can complete out of order. Serialising them ensures an older
+// visible-sample snapshot cannot re-schedule a reminder after a newer hide.
+let reminderSyncQueue: Promise<void> = Promise.resolve();
+
+/** Sync task reminders without cancelling unrelated instant notifications. */
+export function syncTaskRemindersNative(
+  tasks: Task[],
+  notificationsEnabled: boolean
+): Promise<void> {
+  if (!Capacitor.isNativePlatform()) return Promise.resolve();
+  reminderSyncQueue = reminderSyncQueue.then(() => syncTaskRemindersNativeNow(tasks, notificationsEnabled));
+  return reminderSyncQueue;
+}
+
+async function syncTaskRemindersNativeNow(
   tasks: Task[],
   notificationsEnabled: boolean
 ): Promise<void> {
   if (!Capacitor.isNativePlatform()) return;
   try {
     const pending = await LocalNotifications.getPending();
-    if (pending.notifications.length > 0) {
-      await LocalNotifications.cancel({ notifications: pending.notifications });
+    const taskReminders = pending.notifications.filter((notification) =>
+      typeof notification.extra?.taskId === 'string'
+    );
+    if (taskReminders.length > 0) {
+      await LocalNotifications.cancel({ notifications: taskReminders });
     }
     if (!notificationsEnabled) return;
 

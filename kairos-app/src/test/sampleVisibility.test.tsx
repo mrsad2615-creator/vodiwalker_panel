@@ -97,4 +97,28 @@ describe('hide and restore samples', () => {
     await chooseSampleVisibility(true);
     await waitFor(() => expect(result.current.tasks.some((task) => task.title === 'نمونهٔ ویرایش‌شده')).toBe(true));
   });
+  it('hides unmarked logs and stages of marked sample parents without changing real rows', async () => {
+    await chooseSampleVisibility(true, true);
+    const habit = (await db.habits.toArray()).find((row) => row.sample)!;
+    const log = (await db.habitLogs.toArray()).find((row) => row.habitId === habit.id)!;
+    const stage = (await db.projectStages.toArray()).find((row) => row.projectId === SAMPLE_PROJECT_ID)!;
+    await db.habitLogs.update(log.id, { sample: undefined, note: 'ویرایش کاربر' });
+    await db.projectStages.update(stage.id, { sample: undefined, title: 'مرحلهٔ ویرایش‌شده' });
+    const real = await realTask();
+    const { result } = renderHook(() => ({ logs: useHabitLogs(), stages: useProjectStages(), tasks: useTasks() }));
+    await waitFor(() => expect(result.current.stages.some((row) => row.id === stage.id)).toBe(true));
+    await chooseSampleVisibility(false);
+    await waitFor(() => {
+      expect(result.current.logs.some((row) => row.id === log.id)).toBe(false);
+      expect(result.current.stages.some((row) => row.id === stage.id)).toBe(false);
+      expect(result.current.tasks.some((row) => row.id === real.id)).toBe(true);
+    });
+    expect((await db.habitLogs.get(log.id))?.note).toBe('ویرایش کاربر');
+    await chooseSampleVisibility(true);
+    await waitFor(() => {
+      expect(result.current.logs.some((row) => row.id === log.id && row.note === 'ویرایش کاربر')).toBe(true);
+      expect(result.current.stages.some((row) => row.id === stage.id && row.title === 'مرحلهٔ ویرایش‌شده')).toBe(true);
+    });
+  });
+
 });

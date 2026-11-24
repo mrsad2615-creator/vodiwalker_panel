@@ -19,6 +19,17 @@ async function visibleRows<T extends { sample?: boolean }>(table: Table<T, strin
   return settings?.sampleVisible === false ? rows.filter((row) => row.sample !== true) : rows;
 }
 
+/** A log or stage belongs to its parent; hide it with a marked sample parent
+ * even when an older write did not copy the sample flag. Rows stay untouched. */
+async function visibleChildren<T extends { sample?: boolean }>(
+  table: Table<T, string>, parents: Table<{ id: string; sample?: boolean }, string>, parentId: (row: T) => string
+): Promise<T[]> {
+  const [rows, settings] = await Promise.all([table.toArray(), db.settings.get('default')]);
+  if (settings?.sampleVisible !== false) return rows;
+  const sampleIds = new Set((await parents.toArray()).filter((parent) => parent.sample === true).map((parent) => parent.id));
+  return rows.filter((row) => row.sample !== true && !sampleIds.has(parentId(row)));
+}
+
 const EMPTY_TASKS: Task[] = [];
 const EMPTY_HABITS: Habit[] = [];
 const EMPTY_HABIT_LOGS: HabitLog[] = [];
@@ -36,7 +47,7 @@ export function useHabits(): Habit[] {
 }
 
 export function useHabitLogs(): HabitLog[] {
-  return useLiveQuery(() => visibleRows(db.habitLogs), [], EMPTY_HABIT_LOGS);
+  return useLiveQuery(() => visibleChildren(db.habitLogs, db.habits, (row) => row.habitId), [], EMPTY_HABIT_LOGS);
 }
 
 export function useFocusSessions(): FocusSession[] {
@@ -68,7 +79,7 @@ export function useProjects(): Project[] {
 }
 
 export function useProjectStages(): ProjectStage[] {
-  return useLiveQuery(() => visibleRows(db.projectStages), [], EMPTY_STAGES);
+  return useLiveQuery(() => visibleChildren(db.projectStages, db.projects, (row) => row.projectId), [], EMPTY_STAGES);
 }
 
 export function useJournal(): JournalEntry[] {

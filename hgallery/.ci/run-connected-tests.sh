@@ -154,9 +154,16 @@ shot() {
   # Check the foreground before the capture, not after. A screenshot of another app is
   # worse than a missing screenshot: it gets reviewed as if it proved something. This
   # is how the launcher's home screen ended up in five evidence slots for several runs.
+  #
+  # `Pop-Up Window` is allowed because it is ours. A `DropdownMenu` or a dialog gets its
+  # own window, and that window becomes mCurrentFocus with a name that carries no
+  # package. Rejecting it made every shot after the overflow menu opened fail, which
+  # called the restart in assert_app_foreground, which then made the month, selection
+  # and delete sections report "app not in front". The bot deleted three evidence files
+  # as a result -- a gate that rejects the app's own dialog is not a strict gate.
   FOCUS_NOW=$(adb shell dumpsys window 2>/dev/null | grep -E "mCurrentFocus" | head -1)
   case "$FOCUS_NOW" in
-    *"$PKG"*) ;;
+    *"$PKG"*|*"Pop-Up Window"*) ;;
     *)
       echo "::error title=e2e::refusing to save $1: the app is not in front"
       echo "::error title=e2e::focus is: ${FOCUS_NOW:-unknown}"
@@ -176,6 +183,50 @@ shot() {
     return 1
   fi
   echo "captured $1"
+}
+
+# Tap a row of the overflow menu.
+#
+# `uiautomator dump` returns an empty hierarchy while a pop-up window holds focus,
+# which is what a `DropdownMenu` is: the run that added the menu produced "labels on
+# screen: none" and then refused every following screenshot. So this tries the dump
+# first, and falls back to geometry taken from the trigger's own bounds.
+#
+# The fallback is not a guess at the screen: the menu is anchored to the trigger, its
+# rows are `hgSpacing.minTouch` tall in the app's own layout, and the first row starts
+# one `hgSpacing.floatGap` below the trigger. It taps the horizontal centre of the
+# trigger, which is inside the menu when it opens below and left of it. If the app's
+# row height or padding changes, this offset must change with it -- and the menu
+# screenshots in the run are what reveal that.
+ANCHOR_CX=""
+ANCHOR_BOTTOM=""
+
+tap_menu_row() {
+  TAG="$1"; PATTERN="$2"; ROW="$3"
+  BOUNDS=$(node_centre "$PATTERN")
+  if [ -z "$BOUNDS" ]; then
+    echo "::notice title=e2e::the menu dump is empty, using the trigger geometry for $TAG"
+    if [ -z "$ANCHOR_BOTTOM" ]; then
+      echo "::error title=e2e::no trigger geometry recorded for the menu"
+      return 1
+    fi
+    DENS=$(adb shell wm density | tr -dc '0-9')
+    : "${DENS:=320}"
+    STEP=$(( 48 * DENS / 160 ))
+    GAP=$(( 8 * DENS / 160 ))
+    CX="$ANCHOR_CX"
+    CY=$(( ANCHOR_BOTTOM + GAP + ROW * STEP + STEP / 2 ))
+    echo "::notice title=e2e::tapping menu row $ROW at ($CX,$CY) below trigger bottom $ANCHOR_BOTTOM"
+    adb shell input tap "$CX" "$CY"
+    sleep 3
+    return 0
+  fi
+  set -- $BOUNDS
+  CX=$(( ($1 + $3) / 2 )); CY=$(( ($2 + $4) / 2 ))
+  echo "::notice title=e2e::tapped menu row $PATTERN at ($CX,$CY)"
+  adb shell input tap "$CX" "$CY"
+  sleep 3
+  return 0
 }
 
 # Long-press the first node whose label matches, using its own bounds.
@@ -247,7 +298,8 @@ assert_app_foreground() {
   WHERE="$1"
   FOCUS_NOW=$(adb shell dumpsys window 2>/dev/null | grep -E "mCurrentFocus" | head -1)
   case "$FOCUS_NOW" in
-    *"$PKG"*) return 0 ;;
+    # A dialogs and pop-up menus are our windows too: see the note in shot().
+    *"$PKG"*|*"Pop-Up Window"*) return 0 ;;
   esac
   echo "::error title=e2e::the app left the foreground before $WHERE"
   echo "::error title=e2e::focus is: ${FOCUS_NOW:-unknown}"
@@ -311,6 +363,9 @@ tap_tag_or_text() {
   fi
   set -- $BOUNDS
   CX=$(( ($1 + $3) / 2 )); CY=$(( ($2 + $4) / 2 ))
+  # Remember the target. A menu opened from this control is anchored to it, and the
+  # dump of a pop-up window is empty, so the geometry is the only handle left.
+  ANCHOR_CX="$CX"; ANCHOR_BOTTOM="$4"
   echo "::notice title=e2e::tapped $PATTERN at ($CX,$CY) bounds [$1,$2][$3,$4]"
   adb shell input tap "$CX" "$CY"
   sleep 3
@@ -367,9 +422,10 @@ sleep 3
 # view the row reads "Switch to month view", and after the tap it reads the
 # opposite. That is why the trigger is matched by the overflow's own label and the
 # menu row by the destination.
-if tap_tag_or_text "overflow" 'content-desc="More options"'; then
+if tap_tag_or_text "overflow" "content-desc=\"More options\""; then
   sleep 2
-  if tap_tag_or_text "view-switch" 'content-desc="Switch to month view"'; then
+  # Row 1 of the menu is the month/day switch: select-all is row 0.
+  if tap_menu_row "view-switch" "content-desc=\"Switch to month view\"" 1; then
     sleep 3
   else
     echo "::error title=e2e::the month-view row was not addressable in the menu"
@@ -381,9 +437,9 @@ shot 08-month-view.png
 
 # Back to day view through the same menu, so the selection shots that follow are
 # taken in the view the rest of the run assumes.
-if tap_tag_or_text "overflow-back" 'content-desc="More options"'; then
+if tap_tag_or_text "overflow-back" "content-desc=\"More options\""; then
   sleep 2
-  if tap_tag_or_text "view-switch-back" 'content-desc="Switch to day view"'; then
+  if tap_menu_row "view-switch-back" "content-desc=\"Switch to day view\"" 1; then
     sleep 3
   else
     echo "::warning title=e2e::could not return to day view from the menu"

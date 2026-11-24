@@ -442,6 +442,38 @@ if tap_tag_or_text "videos-album" 'content-desc="Videos|text="Videos'; then
     adb shell settings put system user_rotation 0
     adb shell settings put system accelerometer_rotation 1
     sleep 2
+
+    # == the media replacement, which is the path defect A lived on ==
+    #
+    # Every shot above is the same clip. The player used to build a new ExoPlayer
+    # per clip and leave the surface bound to the released one, so the failure
+    # only appeared when the item changed: sound continued, picture did not. A
+    # screenshot of the first clip cannot show that, however green the run is.
+    #
+    # The filmstrip under the clip carries both cells with their own labels, so
+    # the second one is reachable by name rather than by a guessed coordinate.
+    echo "::notice title=e2e::selecting the second clip to exercise the media replacement"
+    # The label comes from the fixture: the filmstrip cells read
+    # "Video, 5 seconds, clip-city.mp4" and "Video, 6 seconds, clip-lake.mp4".
+    # Matching the file name is deliberate: a bare `content-desc="Video, ` would
+    # find the clip already on screen and photograph the same one twice, which is
+    # the failure this step exists to avoid.
+    if tap_tag_or_text "second-video" 'content-desc="Video, .*clip-city'; then
+      sleep 3
+      # Past the auto-hide, then one tap to pin the chrome, because the surface
+      # must be photographed with its bars to show which clip is on screen.
+      adb shell input tap $((W / 2)) $((H * 30 / 100))
+      sleep 1
+      shot 40-video-second-clip.png
+      # A second tap hides the bars again: this is the shot that shows the picture
+      # of the NEW clip alone, which is what a released player could not draw.
+      adb shell input tap $((W / 2)) $((H * 30 / 100))
+      sleep 1
+      shot 41-video-second-clip-no-chrome.png
+    else
+      echo "::warning title=e2e::the filmstrip showed no second clip; the media replacement was not exercised"
+    fi
+
     adb shell input keyevent KEYCODE_BACK
     sleep 2
   else

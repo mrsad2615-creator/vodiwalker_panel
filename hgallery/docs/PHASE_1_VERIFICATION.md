@@ -105,6 +105,14 @@ All results below come from CI run 45336125604 at commit `3003025`.
 | Signed release APK | success |
 | Emulator run, UI tests and screenshots | success |
 
+A second run, 45338294450 at commit `6f99e08`, has all four jobs successful with
+`PlayerSessionTest` included in the instrumented suite. That job reports success
+and produces its screenshots; it does not print a per-test count into the run
+summary, so this document does not claim a count for the instrumented tests. The
+claim is exactly this: the job that runs
+`:app:connectedDebugAndroidTest` succeeded, and that task fails on any failing
+test.
+
 Test counts, from the source at this commit:
 
 - Core unit tests: **144** `@Test` functions in 7 files.
@@ -113,7 +121,28 @@ Test counts, from the source at this commit:
   two constant functions returned their own literals.
 - Instrumented test classes: 6.
 
-## 9. What is not verified
+## 9. What the emulator screenshots show, and what they do not
+
+Run 45338294450 produced these images. They were inspected, not assumed:
+
+| File | What it shows | What it proves |
+|---|---|---|
+| `evidence/13-video-player.png` | The clip's picture filling the frame, with its bars | A direct open draws the picture. It does not prove the fix: this is the first clip, and the first clip always worked. |
+| `evidence/15-video-player-ended.png` | The picture, the title `clip-lake.mp4`, the filmstrip with two cells, the mute icon, and the timecode `0:06 / 0:06` | Three separate things. The picture is drawn at the end of playback, so the surface is bound to a live player. The mute and unmute control exists and is drawn. The filmstrip offers a second cell. |
+
+What neither image shows: a change of clip. Defect A appeared only when the item
+changed on the same screen. No screenshot in that run tapped the second cell, so
+no screenshot in that run could have failed for the old reason. An earlier
+version of this document would have called the run evidence of the fix. It is
+not, and this section says so.
+
+To close that gap, `.ci/run-connected-tests.sh` now selects the second clip by
+its own label, `clip-city`, and photographs it twice: with the bars, then without
+them. Those images are `40-video-second-clip.png` and
+`41-video-second-clip-no-chrome.png`. They are produced by the next emulator run,
+not by run 45338294450.
+
+## 10. What is not verified
 
 State this clearly: this sandbox has no JDK, no Gradle distribution and no
 Android SDK. `./gradlew` exits 127 for `:core:test`, `:app:lintDebug` and
@@ -128,7 +157,7 @@ Not verified:
 - Picture-and-sound together. The CI emulator uses a software GPU and has no
   audio sink. A person must confirm this on a phone.
 
-## 10. Errors found by CI in this phase
+## 11. Errors found by CI in this phase
 
 Three CI failures occurred before the green run. They are recorded because each
 one found a real defect:
@@ -140,7 +169,7 @@ one found a real defect:
 3. `Platform declaration clash` for `setMuted`. `var muted` generates
    `setMuted(Z)V`. The file already documents this problem for `changeSpeed`.
 
-## 11. Release
+## 12. Release
 
 - Tag: `hgallery-v0.1.167`
 - Commit: `3003025`

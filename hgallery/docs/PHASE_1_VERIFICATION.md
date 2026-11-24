@@ -247,13 +247,66 @@ host. A digest copied from anywhere other than a completed download is a guess,
 and a wrong digest in a security document is worse than a missing one. Download
 both files and compare them on your machine.
 
-## 13. Summary of this phase, in the terms of the acceptance rule
+## 13. The NOIR redesign
+
+The user rejected the previous look as lifeless. That is a design judgement, not a
+defect, and the fix is a new direction rather than a patch. `NOIR_DESIGN_DIRECTION.md`
+records the direction and the reasons.
+
+What is in the code and verified:
+
+| Item | State | Evidence |
+|---|---|---|
+| Colour tokens, light and dark | Implemented, verified on device | The light values were sampled from an emulator screenshot: page `(247,245,241)`, accent `(198,96,20)`, both exact token matches. |
+| Application icon and splash mark | Implemented, verified by raster | The aperture geometry was rendered to PNG at 216, 108, 48 and 24 px and inspected. |
+| Home header, two controls and a menu | Implemented, verified on device | `01-photos.png` and `08-month-view.png`. |
+| Filter chips with counts | Implemented, verified on device | `01-photos.png`. Four chips, the selected one filled with the accent. |
+| Filter behaviour | Implemented, tested | 7 domain tests in `CoreRulesTest`. |
+| Vertical swipe to dismiss in the viewer | Implemented, tested | 4 device tests in `ViewerDismissTest`. |
+
+What is not done:
+
+| Item | State |
+|---|---|
+| Dark theme on device | Not verified. The CI emulator runs light mode only, so dark is built and untested on a screen. |
+| Shared-element transition from the grid to the viewer | Not implemented. |
+| Hybrid grid, the design's mixed tile sizes | Not implemented. The grid is still uniform. |
+| Player gesture set: brightness, volume, lock, long-press speed | Not implemented. |
+
+## 14. Two defects this phase found, and what let them through
+
+Both were in the home header, and both were introduced by the redesign.
+
+1. The title was drawn one character per line. `HgScreenTitle` added the screen
+   gutter and its caller padded the row as well, which spent 40 dp of a 320 dp
+   width on margins. Four 48 dp controls then took the rest.
+
+2. The first fix moved two of those controls onto the chip row, which took the
+   width the scrolling chips needed, so the third chip was half covered.
+
+Every instrumented test passed through both. `assertIsDisplayed` is true of a title
+one character wide, and it is true of a chip half under a button. The screenshots
+showed both immediately.
+
+The lessons are in the tests now. `HeaderLayoutTest` asserts the title is wider
+than it is tall, which a vertical wrap cannot satisfy, and that the chip row reaches
+the screen edge, which a covered chip cannot. Neither is a hard-coded pixel value,
+so both hold at any density.
+
+The third defect was in the harness, not the app. A `DropdownMenu` gets its own
+window named `Pop-Up Window`, and the foreground guard accepted only a window that
+carried the package name, so the app's own menu counted as a foreign app. The guard
+then force-restarted the app, and the evidence bot deleted three screenshots that
+never got written. The guard now accepts the app's own pop-up, and a pop-up from
+another app still fails.
+
+## 15. Summary of this phase, in the terms of the acceptance rule
 
 | Class | Contents |
 |---|---|
-| Implemented and tested | Player identity across a clip change; mute state and volume per entry path; `load()` state reset; release finality; 9 device tests; 6 `videosAfter` tests; 4 audio-policy tests; all four CI jobs green. |
-| Implemented, not fully tested | The viewer's video page. It builds and it is photographed nowhere yet, because no harness step opens a clip from the viewer. The picture on the player's second clip is photographed and inspected. |
-| Not implemented | Brightness, volume gesture, gesture lock, previous/next controls, MediaSession, foreground service, frame preview, subtitles, audio track selection. These are later phases. |
-| Blocked | Sound itself. No audio sink exists on the CI emulator. Needs a person and a phone. |
-| Failed tests | None in the final run. Three CI failures happened earlier in the phase and each found a real defect; section 11 lists them. |
-| Known limitations | A photograph pushed onto a clip in the viewer pages one step instead of handing over. `ViewerReplace` was designed and removed because nothing called it; see section 7. |
+| Implemented and tested | NOIR colour tokens (light verified on device, both themes in code); application icon and splash mark; home header with search and an overflow menu; filter chips and `GalleryFilter`; vertical swipe dismissal in the viewer; player identity across a clip change; mute state and volume per entry path; `load()` state reset; release finality. 9 player device tests, 4 dismissal device tests, 7 header device tests, 7 `GalleryFilter` domain tests, 6 `videosAfter` tests, 4 audio-policy tests. All four CI jobs green. |
+| Implemented, not fully tested | Dark theme: it builds and every token is in `HgTheme`, but the CI emulator runs light mode, so no screenshot shows it. Pinch and double-tap zoom about the touch point: the arithmetic is unit-checked by reading, not by a gesture test. |
+| Not implemented | Shared-element transition; hybrid grid; brightness, volume, lock and speed gestures in the player; MediaSession; foreground service; subtitles; audio track selection. |
+| Blocked | Sound. No audio sink exists on the CI emulator. Needs a person and a phone. Dark mode on device for the same reason: it needs a run that switches the emulator's theme. |
+| Failed tests | None in the final run. Earlier failures in this phase each found a real defect: an unresolved import, an unused property, a self-referencing checker, and the harness rejecting its own pop-up. |
+| Known limitations | The dismiss threshold, 0.18 of the height, is a judgement the emulator confirms for a full swipe. A partial pull in the range 0.10 to 0.18 is not photographed. A photograph pushed onto a clip in the viewer pages one step instead of handing over; `ViewerReplace` was designed and removed because nothing called it, see section 7. |

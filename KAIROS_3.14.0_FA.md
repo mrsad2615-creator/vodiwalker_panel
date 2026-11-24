@@ -19,3 +19,10 @@
 آزمون‌های خودکار مرورگر از شبیه‌سازی صدا استفاده می‌کنند و کیفیت شنیداری یا عملکرد واقعی Android را ثابت نمی‌کنند. ادامه: اعتبارسنجی شنیداری و حقوق ضبط‌ها، بهبود حلقه و تنظیم صدا، کنترل‌های واقعی ویجت، طراحی یکپارچهٔ حرکت قابل تنظیم و گسترش دستیار محلی بدون حذف داده. درخواست کل پروژه هنوز کامل نشده است.
 
 فایل‌های اصلی: `public/sounds/`، `src/lib/audio/recordings.ts`، `src/lib/audio/controller.ts`، `src/components/focus/SoundStudio.tsx`، `android/app/src/main/java/app/kairos/productivity/RecordedSoundscape.java`، `SoundscapeBus.java`، `KairosAudioPlugin.java`، `ChronoWidget.java`، `src/components/layout/AppShell.tsx` و `src/styles/design-system.css`.
+
+## نتیجهٔ آزمون و ساخت
+
+- `typecheck`، `lint` و ساخت وب موفق شدند؛ اجرای نهایی ۵۲ فایل و ۳۳۴ آزمون خودکار محلی موفق بود. پیش از آن یک تست به علت نبود پیاده‌سازی صوت در jsdom ناموفق شد؛ شبیه‌سازی صریح رسانه افزوده شد و آزمون‌ها دوباره اجرا شدند.
+- [ساخت و انتشار اندروید موفق](https://github.com/mrsad2615-creator/vodiwalker_panel/actions/runs/45495037896) از commit `906f3de33644c1dbdf2d6ba7b9885e30cd636125`؛ versionCode ۴۴.
+- [دریافت APK نسخهٔ ۳.۱۴.۰](https://github.com/mrsad2615-creator/vodiwalker_panel/releases/download/kairos-v3.14.0-b59/KAIROS-3.14.0-b59-906f3de.apk) با حجم ۱۵٬۲۰۲٬۴۰۸ بایت، زیر سقف ۲۰۰ مگابایت.
+- ابزار Mutagen تنها در محیط ساخت برای خواندن مشخصات صوت به‌کار رفت و به برنامه اضافه نشد. امضای موجود برای سازگاری ارتقا استفاده شد؛ کلید عمومی اصالت انتشار را تضمین نمی‌کند.

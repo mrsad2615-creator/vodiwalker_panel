@@ -586,7 +586,6 @@ private fun GalleryFilterChips(
     onSelect: (GalleryFilter.Kind) -> Unit,
 ) {
     val palette = hgColors
-    val shapes = hgShapes
     val spacing = hgSpacing
 
     LazyRow(

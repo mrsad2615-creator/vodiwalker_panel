@@ -360,3 +360,12 @@ and that a rotation mid-launch does not replay it.
 The still is taken at four times the product duration and its file name says so. A
 3.6-second launch must not be read as this build's own timing.
 
+The still is checked by its pixels before it is kept: `.ci/png_accent_pixels.py`
+decodes the PNG with the standard library and requires both a flat plate and the
+mark. The first version of this check used file size, and a blank frame at 22 kB
+passed where the real one at 14 kB would have failed -- the metric pointed backwards.
+Hue alone was not enough either: the photo grid measures 14,045 accent pixels because
+sunsets are orange. Flatness alone accepts a blank cover. The pair rejects all three
+wrong frames and accepts the right one, which is what the measurements in the commit
+record show.
+

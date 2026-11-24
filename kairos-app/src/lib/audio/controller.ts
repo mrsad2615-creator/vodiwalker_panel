@@ -1,6 +1,7 @@
 import { Capacitor, registerPlugin } from '@capacitor/core';
 import { soundStudio } from './engine';
-import type { SoundMix } from './layers';
+import { normalizeMix, type SoundMix } from './layers';
+import { recordedWebMixer, splitRecordedMix } from './recordings';
 
 /**
  * One interface, two engines.
@@ -10,8 +11,7 @@ import type { SoundMix } from './layers';
  * So native owns playback there (AudioTrack in a foreground service), and this
  * controller is the only thing the UI talks to.
  *
- * On the web (and in tests) the Web Audio engine still runs; it is the same
- * eleven layers, generated rather than streamed.
+ * On the web, recordings are local files; noise and tones use Web Audio.
  */
 
 interface KairosAudioPlugin {
@@ -25,6 +25,13 @@ interface KairosAudioPlugin {
 }
 
 const NativeAudio = registerPlugin<KairosAudioPlugin>('KairosAudio');
+
+async function applyWeb(mix: SoundMix, master: number): Promise<void> {
+  const safeMix = normalizeMix(mix);
+  const { generated } = splitRecordedMix(safeMix);
+  soundStudio.apply(generated, master);
+  await recordedWebMixer.apply(safeMix, master);
+}
 
 export type AudioEngine = 'native' | 'web';
 
@@ -49,10 +56,10 @@ export const audioController = {
         await NativeAudio.start(payload);
         return;
       } catch {
-        // Fall through to Web Audio: a refused service must not mean silence.
+        try { await NativeAudio.stop(); } catch { /* already stopped */ }
       }
     }
-    soundStudio.apply(mix, master);
+    await applyWeb(mix, master);
   },
 
   async update(mix: SoundMix, master: number): Promise<void> {
@@ -62,10 +69,10 @@ export const audioController = {
         await NativeAudio.update(payload);
         return;
       } catch {
-        // ignore — the web fallback below still gets the mix
+        try { await NativeAudio.stop(); } catch { /* already stopped */ }
       }
     }
-    soundStudio.apply(mix, master);
+    await applyWeb(mix, master);
   },
 
   async stop(): Promise<void> {
@@ -76,6 +83,7 @@ export const audioController = {
         // ignore
       }
     }
+    recordedWebMixer.stop();
     soundStudio.stop();
   },
 
@@ -88,6 +96,7 @@ export const audioController = {
         // ignore
       }
     }
+    recordedWebMixer.stop();
     soundStudio.stop(0.2);
   },
 
@@ -101,7 +110,7 @@ export const audioController = {
         // ignore
       }
     }
-    soundStudio.apply(mix, master);
+    await applyWeb(mix, master);
   },
 
   /** The end-of-session bell. Native on Android, Web Audio elsewhere. */

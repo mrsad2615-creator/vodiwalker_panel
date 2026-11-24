@@ -20,6 +20,7 @@ import androidx.core.content.ContextCompat;
 public final class SoundscapeBus {
 
     private static NativeSoundscape engine;
+    private static final RecordedSoundscape recordings = new RecordedSoundscape();
     private static boolean serviceRunning = false;
 
     private SoundscapeBus() {
@@ -30,9 +31,18 @@ public final class SoundscapeBus {
         return engine;
     }
 
-    public static synchronized void start(Context context, Map<String, Float> mix, float master) {
+    private static Map<String, Float> generatedOnly(Map<String, Float> mix) {
+        Map<String, Float> result = new HashMap<>();
+        for (Map.Entry<String, Float> entry : mix.entrySet()) {
+            if (RecordedSoundscape.fileFor(entry.getKey()) == null) result.put(entry.getKey(), entry.getValue());
+        }
+        return result;
+    }
+
+    public static synchronized void start(Context context, Map<String, Float> mix, float master) throws Exception {
+        recordings.setMix(context, mix, master);
         NativeSoundscape sound = engine();
-        sound.setMix(mix, master);
+        sound.setMix(generatedOnly(mix), master);
         sound.start();
 
         if (context != null && !serviceRunning) {
@@ -51,25 +61,29 @@ public final class SoundscapeBus {
         }
     }
 
-    public static synchronized void update(Map<String, Float> mix, float master) {
-        engine().setMix(mix, master);
+    public static synchronized void update(Context context, Map<String, Float> mix, float master) throws Exception {
+        recordings.setMix(context, mix, master);
+        engine().setMix(generatedOnly(mix), master);
     }
 
     public static synchronized void pause() {
+        recordings.pause();
         engine().pause();
     }
 
     public static synchronized void resume() {
+        recordings.resume();
         engine().resume();
     }
 
     public static synchronized void stop() {
+        recordings.stop();
         engine().stop();
         serviceRunning = false;
     }
 
     public static synchronized boolean isPlaying() {
-        return engine != null && engine.isRunning();
+        return recordings.isPlaying() || (engine != null && engine.isRunning());
     }
 
     public static synchronized boolean isStarted() {
@@ -79,6 +93,7 @@ public final class SoundscapeBus {
     /** Called by the service when it is destroyed by the system. */
     static synchronized void onServiceDestroyed() {
         serviceRunning = false;
+        recordings.stop();
         if (engine != null) engine.stop();
     }
 

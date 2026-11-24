@@ -42,8 +42,7 @@ public final class ChronoWidget {
         long total = Math.max(0, leftMs / 1000);
         long minutes = total / 60;
         long seconds = total % 60;
-        String ss = seconds < 10 ? "0" + seconds : String.valueOf(seconds);
-        return fa(minutes) + ":" + fa(Long.parseLong(ss));
+        return fa(minutes) + ":" + (seconds < 10 ? "۰" : "") + fa(seconds);
     }
 
     /** Rebuilds every placed widget from the shared mirror. */
@@ -61,7 +60,8 @@ public final class ChronoWidget {
         String subtitle = prefs.getString("subtitle", "");
         boolean running = prefs.getBoolean("running", false);
         long endAt = prefs.getLong("endAt", 0L);
-        long left = endAt > 0 ? Math.max(0, endAt - System.currentTimeMillis()) : 0L;
+        long left = running ? Math.max(0, endAt - System.currentTimeMillis())
+                : Math.max(0, prefs.getInt("remaining", 0) * 1000L);
 
         RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.chrono_widget);
         views.setTextViewText(R.id.widget_time, endAt > 0 ? clockText(left) : "۲۵:۰۰");

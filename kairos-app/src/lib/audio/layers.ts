@@ -1,8 +1,8 @@
 /**
  * Sound Studio — layer catalogue.
  *
- * Every layer is synthesised at runtime from noise and oscillators; the app ships
- * no third-party audio files and no samples of unknown licence. The catalogue is
+ * Nature and café layers use packaged recordings; noise and tones are generated.
+ * Source and licence details are recorded with the files. The catalogue is
  * pure data so the UI, the engine and the tests all agree on one source of truth.
  */
 
@@ -33,12 +33,12 @@ export interface LayerDefinition {
 }
 
 export const LAYERS: LayerDefinition[] = [
-  { id: 'rain', label: 'باران', hint: 'نویز فیلترشده، شبیه‌سازی باران', kind: 'nature' },
-  { id: 'ocean', label: 'اقیانوس', hint: 'موج آرام با تناوب ۱۲ ثانیه', kind: 'nature' },
-  { id: 'wind', label: 'باد', hint: 'باند باریک با مرکز متغیر', kind: 'nature' },
-  { id: 'fire', label: 'آتش', hint: 'خش‌خش هیزم با ترک‌های تصادفی', kind: 'nature' },
-  { id: 'forest', label: 'جنگل', hint: 'نویز فیلترشده، بدون آواز پرنده', kind: 'nature' },
-  { id: 'cafe', label: 'کافه', hint: 'همهمهٔ باند محدود', kind: 'nature' },
+  { id: 'rain', label: 'باران', hint: 'ضبط باران' , kind: 'nature' },
+  { id: 'ocean', label: 'اقیانوس', hint: 'ضبط موج دریا' , kind: 'nature' },
+  { id: 'wind', label: 'باد', hint: 'ضبط باد' , kind: 'nature' },
+  { id: 'fire', label: 'آتش', hint: 'ضبط آتش' , kind: 'nature' },
+  { id: 'forest', label: 'پرندگان', hint: 'ضبط آواز پرندگان' , kind: 'nature' },
+  { id: 'cafe', label: 'کافه', hint: 'ضبط فضای رستوران' , kind: 'nature' },
   { id: 'brown', label: 'نویز قهوه‌ای', hint: 'فرکانس‌های پایین، گرم', kind: 'noise' },
   { id: 'pink', label: 'نویز صورتی', hint: 'توازن طبیعی طیف', kind: 'noise' },
   { id: 'white', label: 'نویز سفید', hint: 'طیف یکنواخت', kind: 'noise' },
@@ -86,7 +86,7 @@ export const SOUND_PROFILES: SoundProfile[] = [
   {
     id: 'ritual',
     label: 'آیین ذهن',
-    hint: 'جنگل + بیت دوگوشی',
+    hint: 'پرندگان + بیت دوگوشی',
     mix: { forest: 0.35, binaural: 0.2 },
   },
   {

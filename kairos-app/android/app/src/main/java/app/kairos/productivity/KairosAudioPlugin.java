@@ -50,16 +50,26 @@ public class KairosAudioPlugin extends Plugin {
         }
         Map<String, Float> mix = readMix(call);
         if (mix == null) mix = new java.util.HashMap<>();
-        SoundscapeBus.start(getContext(), mix, readMaster(call));
-        resolveState(call);
+        try {
+            SoundscapeBus.start(getContext(), mix, readMaster(call));
+            resolveState(call);
+        } catch (Exception error) {
+            SoundscapeBus.stop();
+            call.reject("recorded_audio_start_failed", error);
+        }
     }
 
     @PluginMethod
     public void update(PluginCall call) {
         Map<String, Float> mix = readMix(call);
         if (mix == null) mix = new java.util.HashMap<>();
-        SoundscapeBus.update(mix, readMaster(call));
-        resolveState(call);
+        try {
+            SoundscapeBus.update(getContext(), mix, readMaster(call));
+            resolveState(call);
+        } catch (Exception error) {
+            SoundscapeBus.stop();
+            call.reject("recorded_audio_update_failed", error);
+        }
     }
 
     @PluginMethod

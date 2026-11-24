@@ -69,16 +69,15 @@ const KIND_LABEL: Record<LayerKind, string> = {
 /**
  * Sound Studio.
  *
- * Eleven real layers, four profiles, a sleep timer and a breathing pacer. Every
- * layer is generated in the Web Audio graph (see lib/audio/engine.ts), so there
- * is no licensed audio in the APK and no `false` feature: if it plays, it is
- * synthesised; if headphones are required, the card says so.
+ * Six packaged recordings, generated noise and tones, a sleep timer and breathing.
+ * Source attribution appears below; headphones requirements are explicit.
  */
 export function SoundStudio() {
   const persisted = useMemo(loadPersisted, []);
   const [mix, setMix] = useState<SoundMix>(persisted.mix);
   const [master, setMaster] = useState(persisted.master);
   const [playing, setPlaying] = useState(false);
+  const [playbackError, setPlaybackError] = useState(false);
   const [sleepMinutes, setSleepMinutes] = useState(0);
   const [sleepLeft, setSleepLeft] = useState(0);
 
@@ -107,7 +106,8 @@ export function SoundStudio() {
   // Start/stop owns the graph's lifetime…
   useEffect(() => {
     if (!playing) return;
-    void audioController.start(mix, master);
+    setPlaybackError(false);
+    void audioController.start(mix, master).catch(() => { setPlaybackError(true); setPlaying(false); });
     return () => {
       void audioController.stop();
     };
@@ -119,7 +119,7 @@ export function SoundStudio() {
   // …and level changes only move the faders.
   useEffect(() => {
     if (!playing) return;
-    void audioController.update(mix, master);
+    void audioController.update(mix, master).catch(() => { setPlaybackError(true); setPlaying(false); });
   }, [playing, mix, master]);
 
   // ── sleep timer ───────────────────────────────────────────────────────────
@@ -259,6 +259,7 @@ export function SoundStudio() {
           : 'موتور مرورگر: صدا تا وقتی این صفحه باز است پخش می‌شود.'}
       </p>
 
+      {playbackError && <p role="alert" className="text-xs text-[var(--danger)]">پخش صدا شروع نشد؛ دوباره تلاش کنید و صدای دستگاه را بررسی کنید.</p>}
       {/* Transport + master */}
       <div className="flex items-center gap-2">
         <button
@@ -389,11 +390,10 @@ export function SoundStudio() {
       </div>
 
       <p className="text-[8.5px] leading-4 text-[var(--text-3)]">
-        همهٔ لایه‌ها همین‌جا و در لحظه ساخته می‌شوند (نویز و نوسان‌ساز)؛ هیچ فایل صوتی از منبع
-        دیگری در اپ نیست. «بیت دوگوشی» فقط با هدفون اثر دارد — بدون هدفون هر دو گوش هر دو تُن را
-        می‌شنوند. نتیجهٔ آرامش یا تمرکز برای هر فرد متفاوت است؛ صدا را با حجم کم شروع کنید. تایمر خواب به اجرای صفحه وابسته است و ممکن است در پس‌زمینه دیر متوقف کند.
+        باران، موج، باد، پرندگان، آتش و کافه ضبط‌شده و همراه برنامه‌اند؛ نویز و تُن ساخته می‌شوند. «بیت دوگوشی» به هدفون نیاز دارد و اثر درمانی ثابت‌شده‌ای ادعا نمی‌شود. با صدای کم شروع کنید. تایمر خواب به صفحه وابسته است و در پس‌زمینه ممکن است دیر متوقف کند. منابع و مجوزها در گزارش نسخه و بخش منابع صدا ثبت شده‌اند.
       </p>
 
+      <details className="text-[10px] leading-5 text-[var(--text-3)]"><summary className="cursor-pointer text-[var(--text-2)]">منابع صداها</summary><p>ضبط‌ها از پروژهٔ Blanket هستند: باران alex36917 و موج Luftrum با مجوز CC BY؛ باد felix.blume و پرندگان kvgarlic با CC0؛ آتش ezwa و کافه stephan بنا بر فهرست Blanket در مالکیت عمومی‌اند. نسخهٔ دقیق مجوز CC BY در فهرست Blanket مشخص نشده و صفحات اصلی در این محیط مستقل بررسی نشده‌اند.</p><p dir="ltr" className="mt-2 break-all">https://github.com/rafaelmardojai/blanket/blob/2eaca9ba5a1b624adf90b6ccee1008efc46f0273/SOUNDS_LICENSING.md</p><p dir="ltr" className="break-all">https://freesound.org/people/alex36917/sounds/524605/ · https://freesound.org/people/Luftrum/sounds/48412/</p><p>فهرست کامل منابع و هش فایل‌ها در sounds/CREDITS.txt همراه برنامه است.</p></details>
       {/* Breathing pacer */}
       <div className="border-t border-[var(--border)] pt-3">
         <div className="flex items-center justify-between">

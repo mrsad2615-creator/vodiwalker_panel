@@ -1,0 +1,35 @@
+KAIROS — offline sound recordings / منابع ضبط‌های صوتی
+
+These unmodified Ogg files are redistributed from Blanket at commit
+2eaca9ba5a1b624adf90b6ccee1008efc46f0273:
+https://github.com/rafaelmardojai/blanket/tree/2eaca9ba5a1b624adf90b6ccee1008efc46f0273/data/resources/sounds
+Blanket's per-sound licensing and editing credits:
+https://github.com/rafaelmardojai/blanket/blob/2eaca9ba5a1b624adf90b6ccee1008efc46f0273/SOUNDS_LICENSING.md
+
+rain.ogg — Rain, alex36917, edited by Porrumentzio; CC BY (version unspecified by Blanket).
+Original: https://freesound.org/people/alex36917/sounds/524605/
+SHA-256 b84c1daf259a24283be40b7663656d17676df4eb60c1e0332820570db891848a
+
+waves.ogg — Waves, Luftrum, edited by Porrumentzio; CC BY (version unspecified by Blanket).
+Original: https://freesound.org/people/Luftrum/sounds/48412/
+SHA-256 20e1aec7c7542f71645275871650881ea33bc92bd9816b243ea920bb1daa51a0
+
+wind.ogg — Wind, felix.blume, edited by Porrumentzio; CC0 per Blanket.
+Original: https://freesound.org/people/felix.blume/sounds/217506/
+SHA-256 cfdc81be69cd5f434ebfeb708bdf094725f3052d76691f550ff0e10eee3e32d2
+
+birds.ogg — Birds, kvgarlic, edited by Porrumentzio; CC0 per Blanket.
+Original: https://freesound.org/people/kvgarlic/sounds/156826/
+SHA-256 e59b19c2a377d5835d07e7ec8f8c876b9f40ae7f703738b55d616ef96a1638b2
+
+fireplace.ogg — Fireplace, ezwa; Public Domain per Blanket.
+Original: https://soundbible.com/1543-Fireplace.html
+SHA-256 a6395379a32c2dc30dd870c4571ded4a5311435aacfe354b3a82a9b3ab98620b
+
+coffee-shop.ogg — Restaurant Ambiance, stephan; Public Domain per Blanket.
+Original: https://soundbible.com/1664-Restaurant-Ambiance.html
+SHA-256 397b5d95f06df69ba2989147cf9c37a417b2dc5950c1a16fbe6be6fa372d25ef
+
+Licence statement is from Blanket's source list. The original sites could not be
+independently accessed from this build environment, so the CC BY version and the
+current original-site statements have not been independently verified.

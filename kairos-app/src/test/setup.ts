@@ -18,3 +18,10 @@ if (typeof window !== 'undefined') {
     }),
   });
 }
+
+// jsdom has no media playback. Tests model a successful browser gesture here;
+// codec, audio output, and Android playback must be verified separately.
+if (typeof HTMLMediaElement !== 'undefined') {
+  HTMLMediaElement.prototype.play = () => Promise.resolve();
+  HTMLMediaElement.prototype.pause = () => {};
+}

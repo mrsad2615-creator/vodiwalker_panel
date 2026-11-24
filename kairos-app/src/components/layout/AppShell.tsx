@@ -285,12 +285,9 @@ export function AppShell({ children }: { children: ReactNode }) {
                     isActive ? 'bg-[var(--surface-3)] text-[var(--text)]' : 'text-[var(--text-3)]'
                   }`}
                 >
-                  <Icon
-                    size={18}
-                    weight={isActive ? 'fill' : 'regular'}
-                    className={isActive ? 'text-[var(--accent-fg)]' : ''}
-                    aria-hidden="true"
-                  />
+                  <span aria-hidden="true" className="kairos-nav-orb" data-active={isActive}>
+                    <Icon size={20} weight={isActive ? 'fill' : 'regular'} className="kairos-nav-glyph" />
+                  </span>
                   <span className="max-w-full truncate px-0.5 text-[10px] leading-none">{item.label}</span>
                 </button>
               );
@@ -308,12 +305,9 @@ export function AppShell({ children }: { children: ReactNode }) {
                 isSecondaryActive ? 'bg-[var(--surface-3)] text-[var(--text)]' : 'text-[var(--text-3)]'
               }`}
             >
-              <MoreHorizontal
-                size={18}
-                weight={isSecondaryActive ? 'fill' : 'regular'}
-                className={isSecondaryActive ? 'text-[var(--accent-fg)]' : ''}
-                aria-hidden="true"
-              />
+              <span aria-hidden="true" className="kairos-nav-orb" data-active={isSecondaryActive || moreOpen}>
+                <MoreHorizontal size={20} weight={isSecondaryActive ? 'fill' : 'regular'} className="kairos-nav-glyph" />
+              </span>
               <span className="text-[10px] leading-none">بیشتر</span>
             </button>
           </div>

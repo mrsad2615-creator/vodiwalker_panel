@@ -1,5 +1,5 @@
 import { normalizeMix, SOUND_PROFILES } from './layers';
-import { soundStudio } from './engine';
+import { audioController } from './controller';
 
 /**
  * Cross-surface sound commands.
@@ -24,9 +24,9 @@ export function requestSound(command: SoundCommand): void {
 
   // Fallback: nothing is listening, so drive the engine here.
   if (command.type === 'stop') {
-    soundStudio.stop();
+    void audioController.stop();
     return;
   }
   const profile = SOUND_PROFILES.find((p) => p.id === command.profileId);
-  if (profile) soundStudio.apply(normalizeMix(profile.mix), 0.8);
+  if (profile) void audioController.start(normalizeMix(profile.mix), 0.8).catch(() => undefined);
 }

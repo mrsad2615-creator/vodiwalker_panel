@@ -185,13 +185,28 @@ long_press_tag_or_text() {
 
 shot 01-photos.png
 
-# The bottom bar has four equal cells; read the real geometry, never a guess.
+# The screen size, for the taps below that must land anywhere but a control.
 SIZE=$(adb shell wm size | sed -n 's/.*: \([0-9]*\)x\([0-9]*\).*/\1 \2/p')
 W=$(echo "$SIZE" | cut -d' ' -f1)
 H=$(echo "$SIZE" | cut -d' ' -f2)
 [ -z "$W" ] && W=1080 && H=1920
 echo "screen ${W}x${H}"
-Y=$((H - 55))
+
+# Tap a bottom-bar destination by the name it announces, never by a coordinate.
+#
+# Every tap on the bar used to be `$((H - 55))`, which is inside the system
+# navigation area on a gesture-navigation device. It only ever worked because the
+# bar had no navigationBarsPadding() of its own and its content was drawn under the
+# inset. Fixing the bar moved its labels up, and this is the same fix on the harness
+# side: ask the hierarchy where the destination is.
+tap_tab() {
+  TAB="$1"
+  if tap_tag_or_text "tab-$TAB" "content-desc=\"$TAB\""; then
+    return 0
+  fi
+  echo "::error title=e2e::the $TAB destination was not addressable in the bottom bar"
+  return 1
+}
 
 # Dump the live view hierarchy once, into the artifacts directory.
 dump_ui() {
@@ -296,16 +311,18 @@ type_text() {
   sleep 2
 }
 
-tap_and_shot() {
-  adb shell input tap "$1" "$Y"
-  sleep 4
+# Tap a destination by name, then photograph it. The four coordinate taps this
+# replaces were the same `H - 55` guess as the Albums one above.
+tap_tab_and_shot() {
+  tap_tab "$1" || true
+  sleep 1
   shot "$2"
 }
 
-tap_and_shot $((W / 8 * 3)) 02-albums.png
-tap_and_shot $((W / 8 * 5)) 03-highlights.png
-tap_and_shot $((W / 8 * 7)) 04-discover.png
-tap_and_shot $((W / 8)) 05-photos-again.png
+tap_tab_and_shot "Albums" 02-albums.png
+tap_tab_and_shot "Highlights" 03-highlights.png
+tap_tab_and_shot "Discover" 04-discover.png
+tap_tab_and_shot "Photos" 05-photos-again.png
 
 # Open the first thumbnail by its accessibility label. The old coordinate assumed a
 # cell under the date header; when the grid's gutter changed the tap landed on empty
@@ -387,7 +404,7 @@ cat "$OUT_DIR/diag/view-change.txt" | head -2
 echo "== photographing the video player =="
 assert_app_foreground "the video section"
 # Every tap from here on is by tag, never by coordinate.
-adb shell input tap $((W / 8 * 3)) $((H - 55))
+tap_tab "Albums" || true
 sleep 3
 shot 11-albums-for-video.png
 

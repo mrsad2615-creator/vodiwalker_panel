@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.selection.selectable
@@ -31,6 +32,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.annotation.StringRes
 import dev.hgallery.app.R
@@ -80,7 +84,14 @@ fun HgBottomBar(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .background(colors.surface),
+            .background(colors.surface)
+            // The activity is edge-to-edge, so the window extends under the system
+            // navigation bar. This bar had no inset of its own, which put the labels
+            // and the indicator under the gesture bar: the four destinations were
+            // half-covered and unreachable at the bottom of the screen. The inset is
+            // applied to the container, so the surface still paints to the edge and
+            // only the content moves up.
+            .navigationBarsPadding(),
     ) {
         // A hairline, not a shadow: the bar sits on the page and a hard divider reads
         // as two separate screens.
@@ -155,6 +166,7 @@ private fun TabItem(
         label = "iconSize",
     )
 
+    val label = stringResource(tab.label)
     Column(
         modifier = modifier
             .testTag(HgTestTags.tab(tab.name))
@@ -166,6 +178,16 @@ private fun TabItem(
                 interactionSource = interaction,
                 indication = null,
             )
+            // The control is this Column, and it had no name of its own: the label
+            // lived in a Text child, so a screen reader announced four tabs called
+            // "tab" and nothing else. The name goes on the control, and the drawn
+            // label is cleared below so it is not read twice.
+            //
+            // The tag is not enough for the screenshot harness: a test tag is not part
+            // of the hierarchy `uiautomator` prints, so it tapped a coordinate instead,
+            // measured against a bar that sat under the system inset.
+            .semantics(mergeDescendants = true) { contentDescription = label }
+            .testTag(HgTestTags.TAB_LABEL_PREFIX + tab.name)
             .hgScale(pressScale),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
@@ -173,8 +195,6 @@ private fun TabItem(
         Box(contentAlignment = Alignment.Center) {
             Icon(
                 imageVector = tab.icon,
-                // The label below already names the destination; a second reading of
-                // the same word makes a screen reader say it twice.
                 contentDescription = null,
                 tint = tint,
                 modifier = Modifier.size(iconSize),
@@ -182,7 +202,7 @@ private fun TabItem(
         }
         Spacer(Modifier.height(3.dp))
         Text(
-            text = stringResource(tab.label),
+            text = label,
             style = if (selected) {
                 MaterialTheme.typography.labelMedium
             } else {
@@ -190,6 +210,8 @@ private fun TabItem(
             },
             color = tint,
             maxLines = 1,
+            // Drawn, not announced: the control above already carries this name.
+            modifier = Modifier.clearAndSetSemantics {},
         )
     }
 }

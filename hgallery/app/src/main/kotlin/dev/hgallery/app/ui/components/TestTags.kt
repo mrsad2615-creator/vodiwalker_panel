@@ -10,6 +10,15 @@ package dev.hgallery.app.ui.components
  */
 object HgTestTags {
     fun tab(name: String) = "tab-$name"
+    /**
+     * The stop a tap tool can find: the name the tab announces.
+     *
+     * `tab-*` is a test tag, and a test tag is not part of the view hierarchy that
+     * `uiautomator` prints. The screenshot harness taps by content description, so
+     * without this it had to guess a coordinate, and it guessed one that only worked
+     * while the bar was under the system navigation inset.
+     */
+    const val TAB_LABEL_PREFIX = "tab-label-"
     const val thumbPrefix = "thumb-"
     fun thumbnail(id: Long) = "$thumbPrefix$id"
     fun album(name: String) = "album-$name"

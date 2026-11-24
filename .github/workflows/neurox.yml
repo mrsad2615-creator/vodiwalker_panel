@@ -37,7 +37,13 @@ jobs:
       - name: Install standalone Kotlin compiler
         run: npm install --prefix ../.local/tools/kotlin kotlin-compiler@2.2.21 --no-audit --no-fund
       - name: Core tests and static invariants
+        env:
+          NEUROX_CONTENT_REVIEW_OUT: ${{ github.workspace }}/neurox/test-output/learning-content.json
         run: scripts/test-core.sh
+      - name: Install pinned browser review tools
+        run: scripts/bootstrap-design.sh
+      - name: Browser syntax, layout, accessibility and content review
+        run: python3 scripts/test-browser-review.py
       - name: Parse all Kotlin and Gradle source files
         run: scripts/check-kotlin-syntax.sh
       - name: Assemble and lint Android project
@@ -53,6 +59,8 @@ jobs:
           name: neurox-check-reports
           path: |
             neurox/test-output/*.*
+            neurox/test-output/design/
+            neurox/test-output/content-review/
             neurox/app/build/reports/
             neurox/core/data/schemas/
   emulator-tests:

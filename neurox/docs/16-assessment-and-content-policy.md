@@ -87,8 +87,16 @@ LD_LIBRARY_PATH="$PWD/.local/tools/design/sysroot/lib" node neurox/scripts/test-
 - All 18 questions were submitted in browser tests with correct/incorrect choices. Tests checked the selected-choice rationale, source quote, immutable submitted choice, actual summary counts, local export and reload clearing. No third-party requests were observed in that local run.
 - Agent visual inspection: mobile/desktop library and answer-feedback screenshots. This is not an adult user study, expert editorial approval, a renewed 20-screen redesign or Android acceptance.
 
-The older 44-case Android suite attests to 0.5, not this new editorial work. Report any later hosted run separately. No 0.6 version or APK is released by adding this policy.
+Hosted run `45503249874` at `41ca4f562c145bc963cb850b1e9fb173949d77f6` passed Android build/lint and 45 emulator cases (27 data/migration, 18 app), including the new Persian/English presentation regression. This attests to code wiring and regression behavior, not editorial approval or the light review design being implemented in Android. No 0.6 version or APK is released by adding this policy.
 
 ## First native Persian-label correction
 
 Localize the section eyebrows, brand wordmark and system names in Home, Studios, onboarding, setup, library, analytics, builder and settings. Do not change stored enum identifiers. Remove artificial letter spacing in Persian headings/wordmarks. Keep English when English is selected. A dedicated Compose regression checks Persian system names and the retained English route; update navigation expectations to the actual Persian labels. Two narrow static guards detect regressions in section labels/raw module enum display; these are not a full localization audit. Native validation remains a separate hosted gate.
+
+## Browser regression gate
+
+`test-browser-review.py` validates both JavaScript entry points, binds an ephemeral local server before browser launch, runs both review suites and closes the server before exit. The hosted workflow exports the bank from Kotlin tests and runs this browser gate before Android assembly. It uploads the generated reports/screenshots as build evidence. There is no new mandatory server or browser dependency in the Android application.
+
+One local rerun caught a syntax error after a visible-label replacement also changed an internal skill identifier. The identifier was restored, syntax checks were added to the supervisor and both complete browser suites passed again. This failure is retained as a process finding; the earlier green result was not used to conceal it. Do not use unchecked global replacements for localization.
+
+See `17-exercise-quality-contracts-fa.md` for distinct mechanics, level variables and acceptance contracts for every one of the 34 required exercises. Those contracts are not an implementation-completion claim.

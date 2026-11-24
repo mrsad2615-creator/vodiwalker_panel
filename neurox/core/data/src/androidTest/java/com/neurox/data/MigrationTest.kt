@@ -16,7 +16,7 @@ import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class MigrationTest {
-    @Test fun additiveMigrationValidatesAndPreservesLegacyRows() = runBlocking {
+    @Test fun additiveMigrationValidatesAndPreservesLegacyRows(): Unit = runBlocking {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val name = "migration-${java.util.UUID.randomUUID()}.db"
         val path = context.getDatabasePath(name).also { it.parentFile?.mkdirs() }

@@ -2,6 +2,7 @@
 """Static invariants. This does not replace an Android build or runtime tests."""
 import ast
 import hashlib
+import re
 from pathlib import Path
 import subprocess
 import xml.etree.ElementTree as ET
@@ -47,5 +48,12 @@ verify("duplicate completion guarded", 'if (old.status != "ACTIVE")' in reposito
 verify("font licence present", (PROJECT / "assets/licenses/Vazirmatn-OFL.txt").is_file())
 for path in sorted((PROJECT / "core/designsystem/src/main/res/font").glob("*.ttf")):
     verify(f"bundled TrueType {path.name}", path.read_bytes()[:4] == b"\x00\x01\x00\x00")
+android_tests = list(PROJECT.glob("**/src/androidTest/**/*.kt"))
+unsafe_signatures = []
+for path in android_tests:
+    for match in re.finditer(r"@Test\s+fun\s+(\w+)\(\)([^=\n]*)=\s*runBlocking", path.read_text()):
+        if match.group(2).strip() != ": Unit":
+            unsafe_signatures.append(f"{path.name}:{match.group(1)}")
+verify("coroutine JUnit tests declare Unit return type", not unsafe_signatures)
 verify("Gradle wrapper present", (PROJECT / "gradle/wrapper/gradle-wrapper.jar").stat().st_size > 10000)
 print(f"STATIC RESULT: {count} checks passed")

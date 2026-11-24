@@ -30,7 +30,7 @@ function noiseSource(ctx: AudioContext, color: NoiseColor): AudioBufferSourceNod
 }
 
 /** A slow sine LFO wired into an AudioParam (gain or filter frequency). */
-function lfo(ctx: AudioContext, param: AudioParam, frequency: number, depth: number) {
+function lfo(ctx: AudioContext, param: AudioParam, frequency: number, depth: number, sources: AudioScheduledSourceNode[]) {
   const osc = ctx.createOscillator();
   const amount = ctx.createGain();
   osc.frequency.value = frequency;
@@ -38,6 +38,7 @@ function lfo(ctx: AudioContext, param: AudioParam, frequency: number, depth: num
   amount.gain.value = depth;
   osc.connect(amount).connect(param);
   osc.start();
+  sources.push(osc);
   return osc;
 }
 
@@ -46,7 +47,7 @@ interface ChainParts {
   output: AudioNode;
 }
 
-function buildLayer(ctx: AudioContext, id: LayerId, handleTimers: number[]): ChainParts {
+function buildLayer(ctx: AudioContext, id: LayerId, handleTimers: number[], modulators: AudioScheduledSourceNode[]): ChainParts {
   switch (id) {
     case 'rain': {
       const source = noiseSource(ctx, 'white');
@@ -57,7 +58,7 @@ function buildLayer(ctx: AudioContext, id: LayerId, handleTimers: number[]): Cha
       soft.type = 'lowpass';
       soft.frequency.value = 7800;
       source.connect(band).connect(soft);
-      lfo(ctx, soft.frequency, 0.12, 900);
+      lfo(ctx, soft.frequency, 0.12, 900, modulators);
       return { input: [source], output: soft };
     }
 
@@ -68,7 +69,7 @@ function buildLayer(ctx: AudioContext, id: LayerId, handleTimers: number[]): Cha
       low.frequency.value = 620;
       const swell = ctx.createGain();
       swell.gain.value = 0.55;
-      lfo(ctx, swell.gain, 0.08, 0.4);
+      lfo(ctx, swell.gain, 0.08, 0.4, modulators);
       source.connect(low).connect(swell);
       return { input: [source], output: swell };
     }
@@ -79,7 +80,7 @@ function buildLayer(ctx: AudioContext, id: LayerId, handleTimers: number[]): Cha
       band.type = 'bandpass';
       band.frequency.value = 500;
       band.Q.value = 0.9;
-      lfo(ctx, band.frequency, 0.05, 320);
+      lfo(ctx, band.frequency, 0.05, 320, modulators);
       source.connect(band);
       return { input: [source], output: band };
     }
@@ -123,29 +124,7 @@ function buildLayer(ctx: AudioContext, id: LayerId, handleTimers: number[]): Cha
       leaves.frequency.value = 3200;
       leaves.Q.value = 0.7;
       source.connect(leaves);
-      lfo(ctx, leaves.frequency, 0.09, 700);
-
-      // Bird calls: two-note FM blips, quiet and occasional.
-      const bird = () => {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = 'sine';
-        const now = ctx.currentTime;
-        const base = 1800 + Math.random() * 900;
-        osc.frequency.setValueAtTime(base, now);
-        osc.frequency.exponentialRampToValueAtTime(base * 1.35, now + 0.08);
-        osc.frequency.exponentialRampToValueAtTime(base * 0.9, now + 0.18);
-        gain.gain.setValueAtTime(0.0001, now);
-        gain.gain.exponentialRampToValueAtTime(0.16, now + 0.03);
-        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.26);
-        osc.connect(gain).connect(leaves);
-        osc.start(now);
-        osc.stop(now + 0.3);
-        handleTimers.push(
-          window.setTimeout(bird, 4200 + Math.random() * 9000) as unknown as number
-        );
-      };
-      handleTimers.push(window.setTimeout(bird, 2600) as unknown as number);
+      lfo(ctx, leaves.frequency, 0.09, 700, modulators);
 
       return { input: [source], output: leaves };
     }
@@ -157,7 +136,7 @@ function buildLayer(ctx: AudioContext, id: LayerId, handleTimers: number[]): Cha
       low.frequency.value = 780;
       const murmur = ctx.createGain();
       murmur.gain.value = 0.7;
-      lfo(ctx, murmur.gain, 0.21, 0.25);
+      lfo(ctx, murmur.gain, 0.21, 0.25, modulators);
       source.connect(low).connect(murmur);
       return { input: [source], output: murmur };
     }
@@ -264,12 +243,18 @@ class SoundStudioEngine {
       let handle = this.layers.get(id);
       if (!handle) {
         const timers: number[] = [];
-        const parts = buildLayer(ctx, id, timers);
+        const modulators: AudioScheduledSourceNode[] = [];
+        const parts = buildLayer(ctx, id, timers, modulators);
         const gain = ctx.createGain();
         gain.gain.value = 0.0001;
-        parts.input.forEach((node) => node.connect(gain));
+        // Route the processed output, not the raw source, through the layer fader.
+        parts.output.connect(gain);
+        // Oscillators start when built; noise buffers must be started here.
+        parts.input.forEach((node) => {
+          if ('buffer' in node && 'start' in node) (node as AudioBufferSourceNode).start();
+        });
         gain.connect(this.master);
-        handle = { gain, sources: parts.input.filter((n) => 'start' in n) as AudioScheduledSourceNode[], timers };
+        handle = { gain, sources: [...modulators, ...parts.input.filter((n) => 'start' in n) as AudioScheduledSourceNode[]], timers };
         this.layers.set(id, handle);
       }
       handle.gain.gain.cancelScheduledValues(now);

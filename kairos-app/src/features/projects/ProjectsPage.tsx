@@ -26,6 +26,7 @@ import {
 } from '@/lib/projects';
 import type { Project, TaskCategory } from '@/types/domain';
 import { triggerHaptic } from '@/lib/native';
+import { addSampleProject, SAMPLE_PROJECT_ID } from '@/lib/sampleProject';
 
 /**
  * Projects — the room where a goal becomes work.
@@ -44,6 +45,22 @@ export function ProjectsPage() {
   const todayKey = getTodayKey();
   const [editing, setEditing] = useState<Project | null>(null);
   const [creating, setCreating] = useState(false);
+  const [confirmSample, setConfirmSample] = useState(false);
+  const [sampleBusy, setSampleBusy] = useState(false);
+  const { pushToast } = useApp();
+  const hasSampleProject = projects.some((project) => project.id === SAMPLE_PROJECT_ID && project.sample === true);
+
+  const createSample = async () => {
+    if (sampleBusy) return;
+    setSampleBusy(true);
+    try {
+      await addSampleProject();
+      setConfirmSample(false);
+      pushToast({ title: 'پروژهٔ نمونه اضافه شد', tone: 'success' });
+    } catch {
+      pushToast({ title: 'پروژهٔ نمونه اضافه نشد', description: 'داده‌های موجود تغییر نکردند؛ احتمالاً یکی از شناسه‌ها از قبل وجود دارد.', tone: 'warning' });
+    } finally { setSampleBusy(false); }
+  };
 
   const active = projects.filter((project) => project.status !== 'archived');
   const archived = projects.filter((project) => project.status === 'archived');
@@ -77,6 +94,19 @@ export function ProjectsPage() {
           </button>
         }
       />
+
+
+      {!hasSampleProject && (confirmSample ? (
+        <div role="region" aria-label="تأیید پروژهٔ نمونه" className="space-y-2 rounded-xl border border-[var(--border)] bg-[var(--surface-1)] p-3 text-[11px] leading-6">
+          <p>یک پروژهٔ ساختگی با سه مرحله و دو کار نمونه اضافه می‌شود. داده‌های فعلی تغییر نمی‌کنند؛ آمار می‌تواند ترکیبی شود.</p>
+          <div className="flex gap-2">
+            <button type="button" disabled={sampleBusy} onClick={() => void createSample()} className="btn-royal rounded-xl px-3 py-2 disabled:opacity-50">تأیید پروژهٔ نمونه</button>
+            <button type="button" disabled={sampleBusy} onClick={() => setConfirmSample(false)} className="btn-ghost-luxury rounded-xl px-3 py-2">انصراف</button>
+          </div>
+        </div>
+      ) : (
+        <button type="button" onClick={() => setConfirmSample(true)} className="rounded-xl border border-[var(--border)] px-3 py-2 text-[11px] text-[var(--accent-fg)]">افزودن پروژهٔ نمونه</button>
+      ))}
 
       {active.length === 0 ? (
         <Rail>

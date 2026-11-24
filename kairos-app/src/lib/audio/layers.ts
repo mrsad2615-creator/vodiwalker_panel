@@ -33,11 +33,11 @@ export interface LayerDefinition {
 }
 
 export const LAYERS: LayerDefinition[] = [
-  { id: 'rain', label: 'باران', hint: 'نویز فیلترشده + قطره‌های تصادفی', kind: 'nature' },
+  { id: 'rain', label: 'باران', hint: 'نویز فیلترشده، شبیه‌سازی باران', kind: 'nature' },
   { id: 'ocean', label: 'اقیانوس', hint: 'موج آرام با تناوب ۱۲ ثانیه', kind: 'nature' },
   { id: 'wind', label: 'باد', hint: 'باند باریک با مرکز متغیر', kind: 'nature' },
   { id: 'fire', label: 'آتش', hint: 'خش‌خش هیزم با ترک‌های تصادفی', kind: 'nature' },
-  { id: 'forest', label: 'جنگل', hint: 'برگ + آواز پرندهٔ گاه‌به‌گاه', kind: 'nature' },
+  { id: 'forest', label: 'جنگل', hint: 'نویز فیلترشده، بدون آواز پرنده', kind: 'nature' },
   { id: 'cafe', label: 'کافه', hint: 'همهمهٔ باند محدود', kind: 'nature' },
   { id: 'brown', label: 'نویز قهوه‌ای', hint: 'فرکانس‌های پایین، گرم', kind: 'noise' },
   { id: 'pink', label: 'نویز صورتی', hint: 'توازن طبیعی طیف', kind: 'noise' },

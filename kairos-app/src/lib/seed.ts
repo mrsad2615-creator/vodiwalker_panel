@@ -1,6 +1,7 @@
 import type { FocusSession, Goal, Habit, HabitLog, Task } from '@/types/domain';
 import { addDays, getPersianWeekdayIndex, getTodayKey } from './date';
 import { db, DEFAULT_SETTINGS, makeHabitLogId } from './db';
+import { insertSampleProject } from './sampleProject';
 
 /**
  * Deterministic synthetic history for the explicitly requested sample workspace.
@@ -546,7 +547,7 @@ export async function populateStarterWorkspace(todayKey: string = getTodayKey())
   const sampleGoals = goals.map((goal) => ({ ...goal, id: sampleId(goal.id), title: `نمونه · ${goal.title}`, sample: true as const }));
 
   await db.transaction(
-    'rw', [db.tasks, db.habits, db.habitLogs, db.focusSessions, db.goals, db.settings], async () => {
+    'rw', [db.tasks, db.habits, db.habitLogs, db.focusSessions, db.goals, db.settings, db.projects, db.projectStages], async () => {
       const existingSettings = await db.settings.get('default');
       // Existing sample installs should not be duplicated or refreshed over edits.
       if (existingSettings?.hasSampleData) throw new Error('sample-already-loaded');
@@ -557,6 +558,7 @@ export async function populateStarterWorkspace(todayKey: string = getTodayKey())
       await db.habitLogs.bulkAdd(sampleLogs);
       await db.focusSessions.bulkAdd(sampleSessions);
       await db.goals.bulkAdd(sampleGoals);
+      await insertSampleProject(todayKey);
       await db.settings.put({
         ...DEFAULT_SETTINGS, ...(existingSettings ?? {}), id: 'default',
         hasSampleData: true, sampleBannerDismissed: false, updatedAt: nowIso,

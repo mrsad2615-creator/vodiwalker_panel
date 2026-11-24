@@ -94,7 +94,9 @@ describe('protected local data', () => {
   it('keeps an existing project when mixing in sample data', async () => {
     await db.projects.put({ id: 'p', title: 'پروژه', description: '', category: 'work', status: 'active', goalId: null, startDate: null, dueDate: null, createdAt: 'x', updatedAt: 'x' });
     await populateStarterWorkspace();
-    expect(await db.projects.count()).toBe(1);
+    expect(await db.projects.count()).toBe(2);
+    expect((await db.projects.get('p'))?.title).toBe('پروژه');
+    expect((await db.projects.toArray()).some((project) => project.sample)).toBe(true);
     expect(await db.tasks.count()).toBeGreaterThan(0);
   });
 

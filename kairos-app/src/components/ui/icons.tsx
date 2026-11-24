@@ -16,6 +16,8 @@ export {
   Info,
   // navigation / structure
   Archive,
+  House as Home,
+  Lightning,
   FolderSimple as Folder,
   ArrowDownRight,
   ArrowsLeftRight as ArrowLeftRight,

@@ -39,7 +39,7 @@ export function SampleDataControl() {
   );
   return (
     <div role="region" aria-label="تأیید داده‌های نمونه" className="space-y-2 rounded-xl border border-[var(--accent-fg)]/25 bg-[var(--surface-1)] p-3 text-[11px] leading-6 text-[var(--text)]">
-      <p>وظیفه، عادت، هدف و سابقهٔ تمرکز نمونه کنار داده‌های شما اضافه می‌شوند؛ آمار ترکیبی خواهد شد. داده‌های فعلی پاک یا جایگزین نمی‌شوند.</p>
+      <p>وظیفه، عادت، هدف، پروژه با مرحله و کار، و سابقهٔ تمرکز نمونه کنار داده‌های شما اضافه می‌شوند؛ آمار ترکیبی خواهد شد. داده‌های فعلی پاک یا جایگزین نمی‌شوند.</p>
       <div className="flex gap-2">
         <button type="button" disabled={busy} onClick={() => void add()} className="btn-royal rounded-xl px-3 py-2 disabled:opacity-50">{busy ? 'در حال افزودن…' : 'تأیید و افزودن نمونه'}</button>
         <button type="button" disabled={busy} onClick={() => setConfirm(false)} className="btn-ghost-luxury rounded-xl px-3 py-2">انصراف</button>

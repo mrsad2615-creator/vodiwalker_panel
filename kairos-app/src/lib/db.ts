@@ -866,7 +866,7 @@ export async function importBackup(payload: KairosBackupPayload): Promise<Backup
     added += missing.length;
     skipped += rows.length - missing.length;
   }
-  const sampleEligibleRows = [...payload.tasks, ...payload.habits, ...payload.habitLogs, ...payload.focusSessions, ...payload.goals];
+  const sampleEligibleRows = [...payload.tasks, ...payload.habits, ...payload.habitLogs, ...payload.focusSessions, ...payload.goals, ...(payload.projects ?? []), ...(payload.projectStages ?? [])];
   // Old backups have no per-row provenance but can carry the legacy global flag.
   // Preserve the warning conservatively; never relabel an existing row by guessing.
   const containsSamples = sampleEligibleRows.some((row) => row.sample === true) ||

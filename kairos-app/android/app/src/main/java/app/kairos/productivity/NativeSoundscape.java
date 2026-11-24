@@ -5,7 +5,7 @@ import android.media.AudioFormat;
 import android.media.AudioTrack;
 import android.os.Build;
 
-import java.util.HashMap;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.Map;
 
 /**
@@ -47,7 +47,7 @@ public final class NativeSoundscape {
      *  into the soft clipper so quiet layers are still audible on a phone speaker. */
     private static final float OUTPUT_GAIN = 1.3f;
 
-    private final Map<String, Float> mix = new HashMap<>();
+    private final Map<String, Float> mix = new ConcurrentHashMap<>();
     private volatile float master = 0.8f;
     private volatile boolean running = false;
     private volatile boolean stopped = false;
@@ -443,9 +443,8 @@ public final class NativeSoundscape {
                 Preset p = new Preset(WHITE, HIGHPASS, 1400f, 0.6f);
                 p.lfoRate = 0.11f;
                 p.lfoDepth = 180f;
-                p.transientRate = 26f;
-                p.transientFreq = 2600f;
-                p.transientQ = 2.2f;
+                // Remove the periodic high-pitched synthetic droplets.
+                p.transientRate = 0f;
                 return p;
             }
             case "ocean": {
@@ -477,9 +476,8 @@ public final class NativeSoundscape {
                 Preset p = new Preset(PINK, BANDPASS, 3400f, 0.6f);
                 p.lfoRate = 0.08f;
                 p.lfoDepth = 700f;
-                p.transientRate = 0.6f;
-                p.transientFreq = 3000f;
-                p.transientQ = 6f;
+                // No artificial bird chirps: keep this texture unobtrusive.
+                p.transientRate = 0f;
                 return p;
             }
             case "cafe": {

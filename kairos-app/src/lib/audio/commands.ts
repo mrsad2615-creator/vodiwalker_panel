@@ -17,7 +17,10 @@ export type SoundCommand =
 
 export function requestSound(command: SoundCommand): void {
   if (typeof window === 'undefined') return;
-  window.dispatchEvent(new CustomEvent<SoundCommand>(SOUND_COMMAND_EVENT, { detail: command }));
+  // A mounted studio owns playback; never start the browser engine in parallel
+  // with its Android service. preventDefault means the command was handled.
+  const unhandled = window.dispatchEvent(new CustomEvent<SoundCommand>(SOUND_COMMAND_EVENT, { detail: command, cancelable: true }));
+  if (!unhandled) return;
 
   // Fallback: nothing is listening, so drive the engine here.
   if (command.type === 'stop') {

@@ -325,6 +325,18 @@ export function FocusPage() {
         </div>
       </header>
 
+      <details className="rounded-2xl border border-[var(--border)] bg-[var(--surface-1)] px-4 py-3 text-[11px] leading-6 text-[var(--text-2)]">
+        <summary className="cursor-pointer font-semibold text-[var(--text)]">راهنمای استفاده از تمرکز و صدا</summary>
+        <ol className="mt-2 list-inside list-decimal space-y-1">
+          <li>یک حالت انتخاب کنید: پومودورو برای تمرکز و استراحت، بلوک‌های عمیق برای چند نوبت کار، شمارش معکوس برای یک بازه و زمان‌سنج آزاد برای زمان نامحدود.</li>
+          <li>برای تنظیم زمان، دکمهٔ تنظیمات کنار عنوان را باز کنید. در صورت نیاز، یک وظیفه را پایین صفحه به جلسه پیوند دهید.</li>
+          <li>«شروع تمرکز» را بزنید. با «توقف موقت» می‌توانید مکث کنید. «بازنشانی» شمارش جاری را از نو آماده می‌کند.</li>
+          <li>برای پایان زودتر، پس از یک دقیقه «پایان و ثبت» را انتخاب کنید. در حالت آزاد، دکمهٔ تیک نیز جلسه را ثبت می‌کند.</li>
+          <li>در فضای صوتی، یک ترکیب را انتخاب کنید و صدای کلی یا هر لایه را کم و زیاد کنید؛ برای سکوت «توقف صدا» را بزنید.</li>
+        </ol>
+        <p className="mt-2 text-[var(--text-3)]">صداها فعلاً شبیه‌سازی‌شده‌اند، نه ضبط طبیعت. تایمر خواب صوتی به صفحه وابسته است و در پس‌زمینه ممکن است دقیق متوقف نشود. با صدای پایین شروع کنید.</p>
+      </details>
+
       {/* ── MODE LINE ────────────────────────────────────────────────────────
           Four modes as editorial tabs on a rule — no segmented pill. The hint is
           the actual configuration, so switching mode never hides a number. */}

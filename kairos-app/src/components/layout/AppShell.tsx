@@ -4,12 +4,12 @@ import {
   CalendarDays,
   CheckSquare,
   ChevronLeft,
-  Flame,
-  LayoutDashboard,
+  Home,
+  RefreshCw,
   MoreHorizontal,
   Settings,
   Timer,
-  Sparkles,
+  Lightning,
   Sliders,
 } from '@/components/ui/icons';
 import type { NavTab } from '@/types/domain';
@@ -29,12 +29,12 @@ import { Folder as FolderOpen } from '@/components/ui/icons';
 import { changeShortcut, normalizeShortcuts, SHORTCUTS, type ShortcutTab } from '@/lib/navigation';
 import { updateSettings } from '@/lib/db';
 
-const DESTINATIONS: { id: NavTab; label: string; hint: string; icon: typeof LayoutDashboard }[] = [
-  { id: 'dashboard', label: 'خانه', hint: 'نمای کلی روز', icon: LayoutDashboard },
+const DESTINATIONS: { id: NavTab; label: string; hint: string; icon: typeof Home }[] = [
+  { id: 'dashboard', label: 'خانه', hint: 'نمای کلی روز', icon: Home },
   { id: 'tasks', label: 'وظایف', hint: 'کارها و اولویت‌ها', icon: CheckSquare },
-  { id: 'habits', label: 'عادت‌ها', hint: 'عادت‌ها و پیگیری', icon: Flame },
+  { id: 'habits', label: 'عادت‌ها', hint: 'عادت‌ها و پیگیری', icon: RefreshCw },
   { id: 'focus', label: 'تمرکز', hint: 'زمان‌سنج و فضای صوتی', icon: Timer },
-  { id: 'motivation', label: 'انگیزه', hint: 'قدرت، حرکت و امید', icon: Sparkles },
+  { id: 'motivation', label: 'انگیزه', hint: 'قدرت، حرکت و امید', icon: Lightning },
   { id: 'projects', label: 'پروژه‌ها', hint: 'هدف ← پروژه ← مرحله ← کار', icon: FolderOpen },
   { id: 'calendar', label: 'تقویم', hint: 'نمای ماهانه شمسی و برنامه‌ی روز', icon: CalendarDays },
   { id: 'analytics', label: 'تحلیل عملکرد', hint: 'روند، گزارش ماهانه و سالانه', icon: BarChart3 },
@@ -287,7 +287,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 >
                   <Icon
                     size={18}
-                    weight={isActive ? 'fill' : 'duotone'}
+                    weight={isActive ? 'fill' : 'regular'}
                     className={isActive ? 'text-[var(--accent-fg)]' : ''}
                     aria-hidden="true"
                   />
@@ -310,7 +310,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             >
               <MoreHorizontal
                 size={18}
-                weight={isSecondaryActive ? 'fill' : 'duotone'}
+                weight={isSecondaryActive ? 'fill' : 'regular'}
                 className={isSecondaryActive ? 'text-[var(--accent-fg)]' : ''}
                 aria-hidden="true"
               />
@@ -371,7 +371,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                           isActive ? 'text-[var(--accent-fg)]' : 'text-[var(--text-2)]'
                         }`}
                       >
-                        <Icon size={16} weight={isActive ? 'fill' : 'duotone'} aria-hidden="true" />
+                        <Icon size={16} weight={isActive ? 'fill' : 'regular'} aria-hidden="true" />
                       </span>
                       <span className="min-w-0 flex-1">
                         <span className="block text-[13px] font-medium text-[var(--text)]">

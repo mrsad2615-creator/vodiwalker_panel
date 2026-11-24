@@ -210,6 +210,7 @@ export function SoundStudio() {
     const onCommand = (event: Event) => {
       const detail = (event as CustomEvent<SoundCommand>).detail;
       if (!detail) return;
+      event.preventDefault();
       if (detail.type === 'stop') {
         setMix({});
         setPlaying(false);
@@ -254,7 +255,7 @@ export function SoundStudio() {
           off and the headset buttons work. */}
       <p className="text-[9.5px] leading-4 text-[var(--text-3)]">
         {audioController.isNative
-          ? 'موتور نیتیو: با قفل‌شدن صفحه قطع نمی‌شود و از دکمه‌های هدفون فرمان می‌گیرد.'
+          ? 'پخش اندروید از سرویس استفاده می‌کند؛ عملکرد پس‌زمینه به محدودیت‌های گوشی بستگی دارد.'
           : 'موتور مرورگر: صدا تا وقتی این صفحه باز است پخش می‌شود.'}
       </p>
 
@@ -390,7 +391,7 @@ export function SoundStudio() {
       <p className="text-[8.5px] leading-4 text-[var(--text-3)]">
         همهٔ لایه‌ها همین‌جا و در لحظه ساخته می‌شوند (نویز و نوسان‌ساز)؛ هیچ فایل صوتی از منبع
         دیگری در اپ نیست. «بیت دوگوشی» فقط با هدفون اثر دارد — بدون هدفون هر دو گوش هر دو تُن را
-        می‌شنوند. پخش صدا با رفتن اپ به پس‌زمینه متوقف می‌شود.
+        می‌شنوند. نتیجهٔ آرامش یا تمرکز برای هر فرد متفاوت است؛ صدا را با حجم کم شروع کنید. تایمر خواب به اجرای صفحه وابسته است و ممکن است در پس‌زمینه دیر متوقف کند.
       </p>
 
       {/* Breathing pacer */}

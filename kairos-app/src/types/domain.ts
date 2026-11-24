@@ -282,6 +282,7 @@ export interface JournalEntry {
 export type ProjectStatus = 'active' | 'paused' | 'done' | 'archived';
 
 export interface Project {
+  sample?: boolean;
   id: string;
   /** Upward link. A project may exist without a goal — most do at first. */
   goalId: string | null;
@@ -305,6 +306,7 @@ export interface Project {
 export type StageKind = 'stage' | 'milestone';
 
 export interface ProjectStage {
+  sample?: boolean;
   id: string;
   projectId: string;
   title: string;

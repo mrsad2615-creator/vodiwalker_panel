@@ -113,6 +113,8 @@ export function sectionItems(): SearchableItem[] {
     { id: 'nav:focus', kind: 'section', title: 'تمرکز', subtitle: 'زمان‌سنج، سکوت و فضای صوتی', tab: 'focus', keywords: ['تایمر', 'پومودورو', 'صدا'] },
     { id: 'nav:tasks', kind: 'section', title: 'وظایف', subtitle: 'فهرست کارها و ماتریس آیزنهاور', tab: 'tasks', keywords: ['کار', 'تسک'] },
     { id: 'nav:habits', kind: 'section', title: 'عادت‌ها', subtitle: 'زنجیره‌ها و ثبت روزانه', tab: 'habits', keywords: ['روتین', 'زنجیره'] },
+    { id: 'nav:projects', kind: 'section', title: 'پروژه‌ها', subtitle: 'پروژه‌ها و مراحل', tab: 'projects', keywords: ['پروژه'] },
+    { id: 'nav:motivation', kind: 'section', title: 'نیروی حرکت', subtitle: 'جمله‌های امیدبخش و انرژی‌زا', tab: 'motivation', keywords: ['انگیزه', 'قدرت', 'امید'] },
     { id: 'nav:calendar', kind: 'section', title: 'تقویم', subtitle: 'نمای ماه و سال شمسی', tab: 'calendar', keywords: ['تاریخ', 'ماه', 'سال'] },
     { id: 'nav:analytics', kind: 'section', title: 'تحلیل عملکرد', subtitle: 'گزارش هفته، ماه و سال', tab: 'analytics', keywords: ['گزارش', 'آمار'] },
     { id: 'nav:settings', kind: 'section', title: 'تنظیمات', subtitle: 'ظاهر، یادآوری، پشتیبان', tab: 'settings', keywords: ['تنظیم', 'پشتیبان'] },

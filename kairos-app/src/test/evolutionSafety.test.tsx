@@ -80,24 +80,22 @@ describe('protected local data', () => {
     expect(await db.habits.count()).toBe(0);
   });
 
-  it('refuses sample data if any real row exists, without clearing it', async () => {
+  it('adds marked sample data alongside real data without replacing it', async () => {
     const task = await makeTask('واقعی');
-    await expect(populateStarterWorkspace()).rejects.toThrow('workspace-not-empty');
-    expect(await db.tasks.toArray()).toEqual([task]);
-    expect(await db.habits.count()).toBe(0);
-  });
-
-  it('allows explicitly requested sample data in an empty workspace and labels it', async () => {
     await populateStarterWorkspace();
-    expect(await db.tasks.count()).toBeGreaterThan(0);
+    expect(await db.tasks.get(task.id)).toEqual(task);
+    expect((await db.tasks.toArray()).some((row) => row.sample && row.title.startsWith('نمونه ·'))).toBe(true);
     expect((await db.settings.get('default'))?.hasSampleData).toBe(true);
+    const count = await db.tasks.count();
+    await expect(populateStarterWorkspace()).rejects.toThrow('sample-already-loaded');
+    expect(await db.tasks.count()).toBe(count);
   });
 
-  it('refuses sample data when only a project exists', async () => {
+  it('keeps an existing project when mixing in sample data', async () => {
     await db.projects.put({ id: 'p', title: 'پروژه', description: '', category: 'work', status: 'active', goalId: null, startDate: null, dueDate: null, createdAt: 'x', updatedAt: 'x' });
-    await expect(populateStarterWorkspace()).rejects.toThrow('workspace-not-empty');
+    await populateStarterWorkspace();
     expect(await db.projects.count()).toBe(1);
-    expect(await db.tasks.count()).toBe(0);
+    expect(await db.tasks.count()).toBeGreaterThan(0);
   });
 
   it('never reports closing the Android share sheet as a completed export', async () => {

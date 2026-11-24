@@ -4,7 +4,6 @@ import {
   Bell,
   Database,
   Download,
-  RefreshCw,
   ShieldCheck,
   Smartphone,
   TableIcon,
@@ -20,7 +19,7 @@ import {
   importBackup,
   updateSettings,
 } from '@/lib/db';
-import { populateStarterWorkspace } from '@/lib/seed';
+import { SampleDataControl } from '@/components/settings/SampleDataControl';
 import {
   fireInstantNotification,
   getNotificationPermission,
@@ -473,21 +472,7 @@ export function SettingsPage() {
         )}
 
         <div className="space-y-2 border-t border-[var(--accent-fg)]/10 pt-3">
-          <button
-            type="button"
-            onClick={async () => {
-              try {
-                await populateStarterWorkspace();
-                pushToast({ title: 'داده‌های نمونه بارگذاری شدند', description: 'این تاریخچه ساختگی است و فعالیت واقعی شما نیست.', tone: 'success' });
-              } catch {
-                pushToast({ title: 'داده‌های نمونه اضافه نشدند', description: 'برای محافظت از داده‌ها، نمونه فقط در فضای کاملاً خالی قابل بارگذاری است.', tone: 'warning' });
-              }
-            }}
-            className="btn-ghost-luxury flex w-full items-center justify-center gap-1.5 rounded-xl py-2 text-[11px] font-medium text-[var(--text-2)]"
-          >
-            <RefreshCw className="h-3.5 w-3.5" />
-            <span>بارگذاری داده‌های نمونه در فضای خالی</span>
-          </button>
+          <SampleDataControl />
 
           {!confirmWipe ? (
             <button

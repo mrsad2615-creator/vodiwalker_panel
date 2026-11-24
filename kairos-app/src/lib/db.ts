@@ -455,6 +455,7 @@ export async function setTaskStatus(
     if (!duplicate) {
       spawnedNext = await createTask({
         title: existing.title,
+        sample: existing.sample,
         description: existing.description,
         dueDate: nextDate,
         dueTime: existing.dueTime,
@@ -550,7 +551,9 @@ export async function upsertHabitLog(
   value: number,
   note?: string
 ): Promise<HabitLog> {
+  const habit = await db.habits.get(habitId);
   const log: HabitLog = {
+    sample: habit?.sample,
     id: makeHabitLogId(habitId, dateKey),
     habitId,
     dateKey,
@@ -863,9 +866,14 @@ export async function importBackup(payload: KairosBackupPayload): Promise<Backup
     added += missing.length;
     skipped += rows.length - missing.length;
   }
+  const sampleEligibleRows = [...payload.tasks, ...payload.habits, ...payload.habitLogs, ...payload.focusSessions, ...payload.goals];
+  // Old backups have no per-row provenance but can carry the legacy global flag.
+  // Preserve the warning conservatively; never relabel an existing row by guessing.
+  const containsSamples = sampleEligibleRows.some((row) => row.sample === true) ||
+    (sampleEligibleRows.length > 0 && payload.settings?.hasSampleData === true);
   await db.transaction(
     'rw',
-    [db.tasks, db.habits, db.habitLogs, db.focusSessions, db.goals, db.journal, db.projects, db.projectStages],
+    [db.tasks, db.habits, db.habitLogs, db.focusSessions, db.goals, db.journal, db.projects, db.projectStages, db.settings],
     async () => {
       await addMissing(db.tasks, payload.tasks);
       await addMissing(db.habits, payload.habits);
@@ -875,6 +883,10 @@ export async function importBackup(payload: KairosBackupPayload): Promise<Backup
       await addMissing(db.journal, payload.journal);
       await addMissing(db.projects, payload.projects);
       await addMissing(db.projectStages, payload.projectStages);
+      if (containsSamples) {
+        const current = await db.settings.get('default');
+        if (!current || !current.hasSampleData) await db.settings.put({ ...DEFAULT_SETTINGS, ...current, id: 'default', hasSampleData: true });
+      }
     }
   );
   await logEvent('data.imported', 'system', 'backup', {

@@ -14,6 +14,7 @@ import { FocusPage } from '@/features/focus/FocusPage';
 import { AnalyticsPage } from '@/features/analytics/AnalyticsPage';
 import { SettingsPage } from '@/features/settings/SettingsPage';
 import { ProjectsPage } from '@/features/projects/ProjectsPage';
+import { MotivationPage } from '@/features/motivation/MotivationPage';
 
 type SplashPhase = 'playing' | 'exiting' | 'done';
 
@@ -140,6 +141,7 @@ function KairosRouter() {
               {activeTab === 'focus' && <FocusPage />}
               {activeTab === 'analytics' && <AnalyticsPage />}
               {activeTab === 'settings' && <SettingsPage />}
+              {activeTab === 'motivation' && <MotivationPage />}
             </motion.div>
           </AnimatePresence>
 

@@ -333,7 +333,7 @@ export function runCommand(raw: string, context: CommandContext): CommandAnswer 
           ...(brief.recommendation
             ? [
                 `پیشنهاد من: ${brief.recommendation.text}`,
-                `دلیل: ${brief.recommendation.reason} (اطمینان: ${confidenceLabel(brief.recommendation.confidence)})`,
+                `دلیل: ${brief.recommendation.reason} (پیشنهاد بر پایهٔ قواعد محلی است.)`,
               ]
             : []),
         ],
@@ -541,7 +541,7 @@ export function runCommand(raw: string, context: CommandContext): CommandAnswer 
             title: `دلیل این پیشنهاد: ${brief.recommendation.text}`,
             lines: [
               brief.recommendation.reason,
-              `اطمینان: ${confidenceLabel(brief.recommendation.confidence)}`,
+              'این پیشنهاد بر پایهٔ قواعد محلی است، نه پیش‌بینی قطعی.',
             ],
             action: { label: 'رفتن به کارها', tab: brief.recommendation.tab },
           };
@@ -639,13 +639,6 @@ export const QUICK_COMMANDS = [
   'وضعیت عادت‌ها',
   'برای امروز برنامه بساز',
 ] as const;
-
-/** Persian label for a confidence level, so the UI never shows an English word. */
-export function confidenceLabel(confidence: 'high' | 'medium' | 'low'): string {
-  if (confidence === 'high') return 'بالا';
-  if (confidence === 'medium') return 'متوسط';
-  return 'کم — داده کم است';
-}
 
 /** Adapts the command context to what the coach and planner need. */
 function managerInput(context: CommandContext): ManagerInput {

@@ -26,6 +26,7 @@ describe('section identity', () => {
       'analytics',
       'projects',
       'settings',
+      'motivation',
     ];
     expect(SECTION_LIST).toHaveLength(tabs.length);
 

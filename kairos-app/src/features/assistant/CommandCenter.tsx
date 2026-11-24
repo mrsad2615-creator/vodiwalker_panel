@@ -15,7 +15,7 @@ import {
 } from '@/lib/queries';
 import { buildDailySeries } from '@/lib/homeMetrics';
 import { getTodayKey } from '@/lib/date';
-import { confidenceLabel, QUICK_COMMANDS, runCommand, type CommandAnswer } from '@/lib/commands';
+import { QUICK_COMMANDS, runCommand, type CommandAnswer } from '@/lib/commands';
 import { buildDailyBrief } from '@/lib/coach';
 import { pickInsights } from '@/lib/insights';
 import { triggerHaptic } from '@/lib/native';
@@ -172,8 +172,7 @@ export function CommandCenter() {
                   {brief.recommendation.text}
                 </p>
                 <p className="mt-0.5 text-[9.5px] leading-4 text-[var(--text-3)]">
-                  {brief.recommendation.reason} · اطمینان{' '}
-                  {confidenceLabel(brief.recommendation.confidence)}
+                  {brief.recommendation.reason} · پیشنهاد بر پایهٔ قواعد محلی است، نه پیش‌بینی قطعی.
                 </p>
                 <button
                   type="button"

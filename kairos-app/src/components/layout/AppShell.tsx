@@ -9,6 +9,8 @@ import {
   MoreHorizontal,
   Settings,
   Timer,
+  Sparkles,
+  Sliders,
 } from '@/components/ui/icons';
 import type { NavTab } from '@/types/domain';
 import { applySectionAppearance } from '@/lib/sections';
@@ -24,17 +26,15 @@ import { setupAndroidBackButton, triggerHaptic } from '@/lib/native';
 import { SearchSheet } from '@/components/search/SearchSheet';
 import { CommandCenter } from '@/features/assistant/CommandCenter';
 import { Folder as FolderOpen } from '@/components/ui/icons';
+import { changeShortcut, normalizeShortcuts, SHORTCUTS, type ShortcutTab } from '@/lib/navigation';
+import { updateSettings } from '@/lib/db';
 
-type PrimaryTab = Extract<NavTab, 'dashboard' | 'tasks' | 'habits' | 'focus'>;
-
-const PRIMARY_TABS: { id: PrimaryTab; label: string; icon: typeof LayoutDashboard }[] = [
-  { id: 'dashboard', label: 'خانه', icon: LayoutDashboard },
-  { id: 'tasks', label: 'وظایف', icon: CheckSquare },
-  { id: 'habits', label: 'عادت‌ها', icon: Flame },
-  { id: 'focus', label: 'تمرکز', icon: Timer },
-];
-
-const SECONDARY_TABS: { id: NavTab; label: string; hint: string; icon: typeof LayoutDashboard }[] = [
+const DESTINATIONS: { id: NavTab; label: string; hint: string; icon: typeof LayoutDashboard }[] = [
+  { id: 'dashboard', label: 'خانه', hint: 'نمای کلی روز', icon: LayoutDashboard },
+  { id: 'tasks', label: 'وظایف', hint: 'کارها و اولویت‌ها', icon: CheckSquare },
+  { id: 'habits', label: 'عادت‌ها', hint: 'عادت‌ها و پیگیری', icon: Flame },
+  { id: 'focus', label: 'تمرکز', hint: 'زمان‌سنج و فضای صوتی', icon: Timer },
+  { id: 'motivation', label: 'انگیزه', hint: 'قدرت، حرکت و امید', icon: Sparkles },
   { id: 'projects', label: 'پروژه‌ها', hint: 'هدف ← پروژه ← مرحله ← کار', icon: FolderOpen },
   { id: 'calendar', label: 'تقویم', hint: 'نمای ماهانه شمسی و برنامه‌ی روز', icon: CalendarDays },
   { id: 'analytics', label: 'تحلیل عملکرد', hint: 'روند، گزارش ماهانه و سالانه', icon: BarChart3 },
@@ -48,11 +48,15 @@ export function AppShell({ children }: { children: ReactNode }) {
     settings,
     toasts,
     dismissToast,
+    pushToast,
     focus,
     searchOpen,
     setSearchOpen,
   } = useApp();
   const [moreOpen, setMoreOpen] = useState(false);
+  const [editingNav, setEditingNav] = useState(false);
+  const [draftShortcuts, setDraftShortcuts] = useState<ShortcutTab[]>(() => normalizeShortcuts(settings.navShortcuts));
+  const [savingNav, setSavingNav] = useState(false);
   const [chrome, setChrome] = useState<ScrollChrome>(INITIAL_CHROME);
 
   // One palette for the product; the section only records which room it is.
@@ -69,6 +73,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   const handleNav = (tab: NavTab) => {
     setMoreOpen(false);
+    setEditingNav(false);
     if (tab === activeTab) return;
     // Revealing the bar is part of navigating, not of an effect that may land
     // after the user has already started reading.
@@ -84,6 +89,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     void setupAndroidBackButton(() => {
       if (moreOpen) {
         setMoreOpen(false);
+        setEditingNav(false);
         return true;
       }
       if (activeTab !== 'dashboard') {
@@ -96,6 +102,15 @@ export function AppShell({ children }: { children: ReactNode }) {
     });
     return () => remove?.();
   }, [moreOpen, activeTab, setActiveTab]);
+
+  useEffect(() => {
+    if (!moreOpen) return;
+    const onEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') { setMoreOpen(false); setEditingNav(false); }
+    };
+    window.addEventListener('keydown', onEscape);
+    return () => window.removeEventListener('keydown', onEscape);
+  }, [moreOpen]);
 
   const liveFocusDisplay =
     focus.mode === 'pomodoro'
@@ -114,7 +129,13 @@ export function AppShell({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('keydown', onKey);
   }, [searchOpen, setSearchOpen]);
 
-  const isSecondaryActive = SECONDARY_TABS.some((t) => t.id === activeTab);
+  const shortcuts = normalizeShortcuts(settings.navShortcuts);
+  const primaryTabs = DESTINATIONS.filter((item) => item.id === 'dashboard');
+  for (const id of shortcuts) {
+    const item = DESTINATIONS.find((destination) => destination.id === id);
+    if (item) primaryTabs.push(item);
+  }
+  const isSecondaryActive = !primaryTabs.some((item) => item.id === activeTab);
 
   // The shell scrolls its <main>, not the document, so a tab change has to reset
   // the scroll position explicitly (otherwise you land mid-page on a new screen).
@@ -155,7 +176,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <SearchSheet open={searchOpen} onClose={() => setSearchOpen(false)} />
       {/* One command surface, on every screen: a question box that answers from
           local rows and says "I don't know" instead of guessing. */}
-      {activeTab !== 'focus' && <CommandCenter />}
+      <CommandCenter />
 
       {/* Shell owns the viewport; only `.app-scroll` moves. */}
       <div className="app-shell app-safe-frame relative mx-auto w-full max-w-[480px]">
@@ -238,6 +259,11 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
         )}
 
+        {settings.hasSampleData && (
+          <div role="status" className="mx-4 mt-3 rounded-xl border border-[var(--accent-fg)]/25 bg-[var(--surface-1)] px-3 py-2 text-[10px] leading-5 text-[var(--text-2)]">
+            داده‌های نمونه فعال‌اند؛ آمار و تحلیل‌ها می‌توانند ترکیبی از اطلاعات واقعی و ساختگی باشند.
+          </div>
+        )}
         <div className="app-safe-content px-4 pt-4">{children}</div>
         </main>
 
@@ -245,8 +271,8 @@ export function AppShell({ children }: { children: ReactNode }) {
           aria-label="ناوبری اصلی"
           className="app-safe-tabbar app-safe-x pointer-events-none fixed inset-x-0 bottom-0 z-40 mx-auto w-full max-w-[480px] px-3"
         >
-          <div className="luxury-glass-dock pointer-events-auto grid grid-cols-5 items-center gap-0.5 p-1">
-            {PRIMARY_TABS.map((item) => {
+          <div className="luxury-glass-dock pointer-events-auto grid grid-cols-6 items-center gap-0.5 p-1">
+            {primaryTabs.map((item) => {
               const Icon = item.icon;
               const isActive = activeTab === item.id;
               return (
@@ -265,7 +291,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                     className={isActive ? 'text-[var(--accent-fg)]' : ''}
                     aria-hidden="true"
                   />
-                  <span className="text-[10px] leading-none">{item.label}</span>
+                  <span className="max-w-full truncate px-0.5 text-[10px] leading-none">{item.label}</span>
                 </button>
               );
             })}
@@ -298,7 +324,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             <button
               type="button"
               aria-label="بستن فهرست"
-              onClick={() => setMoreOpen(false)}
+              onClick={() => { setMoreOpen(false); setEditingNav(false); }}
               className="absolute inset-0 bg-black/60"
             />
             <div
@@ -307,8 +333,29 @@ export function AppShell({ children }: { children: ReactNode }) {
               aria-label="بخش‌های دیگر"
               className="app-safe-bottom-sheet relative w-full max-w-[480px] px-3"
             >
-              <div className="luxury-glass-sheet overflow-hidden p-2">
-                {SECONDARY_TABS.map((item) => {
+              <div className="luxury-glass-sheet max-h-[80dvh] overflow-y-auto p-2">
+                <div className="flex items-center justify-between gap-2 px-3 py-3">
+                  <div><p className="text-sm font-bold text-[var(--text)]">همهٔ بخش‌ها</p><p className="mt-1 text-[10px] text-[var(--text-3)]">میان‌برهای نوار پایین را خودت انتخاب کن</p></div>
+                  <button type="button" onClick={() => { setDraftShortcuts(normalizeShortcuts(settings.navShortcuts)); setEditingNav((value) => !value); }} className="flex items-center gap-1 rounded-xl border border-[var(--border)] px-3 py-2 text-[10px] text-[var(--accent-fg)]"><Sliders size={15} /> شخصی‌سازی</button>
+                </div>
+                {editingNav && (
+                  <div className="space-y-2 rounded-xl border border-[var(--border)] bg-[var(--surface-1)] p-3">
+                    <p className="text-[10px] leading-5 text-[var(--text-2)]">خانه و فهرست ثابت‌اند؛ چهار جایگاه دیگر را انتخاب کن. انتخاب تکراری، جای دو مورد را عوض می‌کند.</p>
+                    {draftShortcuts.map((id, index) => (
+                      <label key={index} className="flex items-center justify-between gap-3 text-[11px] text-[var(--text-2)]">
+                        <span>میان‌بر {index + 1}</span>
+                        <select aria-label={`میان‌بر ${index + 1}`} value={id} onChange={(event) => setDraftShortcuts((current) => changeShortcut(current, index, event.target.value as ShortcutTab))} className="luxury-input max-w-[65%] py-1 text-xs">
+                          {SHORTCUTS.map((tab) => <option key={tab} value={tab}>{DESTINATIONS.find((item) => item.id === tab)?.label}</option>)}
+                        </select>
+                      </label>
+                    ))}
+                    <div className="flex gap-2">
+                      <button type="button" disabled={savingNav} onClick={async () => { setSavingNav(true); try { await updateSettings({ navShortcuts: draftShortcuts }); setEditingNav(false); pushToast({ title: 'میان‌برها ذخیره شدند', tone: 'success' }); } catch { pushToast({ title: 'ذخیره انجام نشد', tone: 'warning' }); } finally { setSavingNav(false); } }} className="btn-royal rounded-xl px-3 py-2 text-[11px] disabled:opacity-50">ذخیرهٔ میان‌برها</button>
+                      <button type="button" onClick={() => setEditingNav(false)} className="btn-ghost-luxury rounded-xl px-3 py-2 text-[11px]">انصراف</button>
+                    </div>
+                  </div>
+                )}
+                {DESTINATIONS.map((item) => {
                   const Icon = item.icon;
                   const isActive = activeTab === item.id;
                   return (

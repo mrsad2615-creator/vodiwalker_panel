@@ -28,6 +28,7 @@ export const SECTION_IDENTITIES: Record<NavTab, SectionIdentity> = {
   calendar: { id: 'calendar', eyebrow: 'CALENDAR' },
   analytics: { id: 'analytics', eyebrow: 'INSIGHT' },
   settings: { id: 'settings', eyebrow: 'STUDIO' },
+  motivation: { id: 'motivation', eyebrow: 'MOMENTUM' },
 };
 
 export const SECTION_LIST: SectionIdentity[] = Object.values(SECTION_IDENTITIES);

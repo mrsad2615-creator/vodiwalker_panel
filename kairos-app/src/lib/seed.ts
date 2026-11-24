@@ -3,8 +3,8 @@ import { addDays, getPersianWeekdayIndex, getTodayKey } from './date';
 import { db, DEFAULT_SETTINGS, makeHabitLogId } from './db';
 
 /**
- * Deterministic pseudo-random helper so starter history looks natural, realistic,
- * and consistent across tests while remaining 100% genuine stored IndexedDB data.
+ * Deterministic synthetic history for the explicitly requested sample workspace.
+ * These events are fictional, even though they are stored locally.
  */
 function seededUnit(seed: number): number {
   const x = Math.sin(seed * 9301 + 49297) * 233280;
@@ -108,7 +108,7 @@ export async function populateStarterWorkspace(todayKey: string = getTodayKey())
     },
   ];
 
-  // Generate 95 days of genuine historical logs (including completed, partial, missed, AND intentional unlogged gaps!)
+  // Generate 95 days of synthetic historical logs (including completed, partial, missed, AND intentional unlogged gaps!)
   const habitLogs: HabitLog[] = [];
   for (let offset = -95; offset <= 0; offset++) {
     const dk = addDays(todayKey, offset);
@@ -399,7 +399,7 @@ export async function populateStarterWorkspace(todayKey: string = getTodayKey())
     },
   ];
 
-  // Add historical completed/overdue tasks across the last 70 days for genuine Monthly & Annual Reviews
+  // Add historical completed/overdue tasks across the last 70 days to illustrate Monthly & Annual Reviews
   const histTitles = [
     { title: 'بازبینی اسپرینت و اولویت‌بندی بک‌لاگ', cat: 'work' as const, q: 'q1' as const },
     { title: 'تمرین کدنویسی الگوریتم و معماری تمیز', cat: 'learning' as const, q: 'q2' as const },
@@ -531,31 +531,35 @@ export async function populateStarterWorkspace(todayKey: string = getTodayKey())
     },
   ];
 
+  // Stable namespaced IDs make repeat requests idempotent and keep sample
+  // records separate from all previously existing IDs and links.
+  const sampleId = (id: string) => `sample-v1:${id}`;
+  const sampleHabits = habits.map((habit) => ({ ...habit, id: sampleId(habit.id), name: `نمونه · ${habit.name}`, reminderTime: null, sample: true as const }));
+  const sampleTasks = tasks.map((task) => ({ ...task, id: sampleId(task.id), title: `نمونه · ${task.title}`, reminderEnabled: false, sample: true as const }));
+  const sampleLogs = habitLogs.map((log) => ({
+    ...log, habitId: sampleId(log.habitId), id: makeHabitLogId(sampleId(log.habitId), log.dateKey), sample: true as const,
+  }));
+  const sampleSessions = focusSessions.map((session) => ({
+    ...session, id: sampleId(session.id), taskId: session.taskId ? sampleId(session.taskId) : null,
+    taskTitleSnapshot: session.taskTitleSnapshot ? `نمونه · ${session.taskTitleSnapshot}` : null, sample: true as const,
+  }));
+  const sampleGoals = goals.map((goal) => ({ ...goal, id: sampleId(goal.id), title: `نمونه · ${goal.title}`, sample: true as const }));
+
   await db.transaction(
-    'rw',
-    [db.tasks, db.habits, db.habitLogs, db.focusSessions, db.goals, db.settings,
-      db.journal, db.projects, db.projectStages, db.activeRun],
-    async () => {
-      // Check inside the same transaction as the inserts: never clear or replace
-      // a real row, even if another operation started while this button was open.
-      const counts = await Promise.all([
-        db.tasks.count(), db.habits.count(), db.habitLogs.count(), db.focusSessions.count(),
-        db.goals.count(), db.journal.count(), db.projects.count(), db.projectStages.count(), db.activeRun.count(),
-      ]);
-      if (counts.some((count) => count > 0)) throw new Error('workspace-not-empty');
+    'rw', [db.tasks, db.habits, db.habitLogs, db.focusSessions, db.goals, db.settings], async () => {
       const existingSettings = await db.settings.get('default');
-      await db.tasks.bulkPut(tasks);
-      await db.habits.bulkPut(habits);
-      await db.habitLogs.bulkPut(habitLogs);
-      await db.focusSessions.bulkPut(focusSessions);
-      await db.goals.bulkPut(goals);
+      // Existing sample installs should not be duplicated or refreshed over edits.
+      if (existingSettings?.hasSampleData) throw new Error('sample-already-loaded');
+      // bulkAdd is intentionally fail-closed: an unexpected ID collision aborts
+      // the whole transaction, never overwriting an existing row.
+      await db.tasks.bulkAdd(sampleTasks);
+      await db.habits.bulkAdd(sampleHabits);
+      await db.habitLogs.bulkAdd(sampleLogs);
+      await db.focusSessions.bulkAdd(sampleSessions);
+      await db.goals.bulkAdd(sampleGoals);
       await db.settings.put({
-        ...DEFAULT_SETTINGS,
-        ...(existingSettings ?? {}),
-        id: 'default',
-        hasSampleData: true,
-        sampleBannerDismissed: false,
-        updatedAt: nowIso,
+        ...DEFAULT_SETTINGS, ...(existingSettings ?? {}), id: 'default',
+        hasSampleData: true, sampleBannerDismissed: false, updatedAt: nowIso,
       });
     }
   );

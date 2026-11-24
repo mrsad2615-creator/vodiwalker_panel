@@ -10,7 +10,8 @@ export type NavTab =
   | 'calendar'
   | 'focus'
   | 'analytics'
-  | 'settings';
+  | 'settings'
+  | 'motivation';
 
 export type TaskStatus = 'todo' | 'in_progress' | 'completed';
 
@@ -42,6 +43,8 @@ export interface Subtask {
 }
 
 export interface Task {
+  /** True only for explicitly added fictional sample records. */
+  sample?: boolean;
   id: string;
   title: string;
   description: string;
@@ -106,6 +109,8 @@ export type HabitScheduleType = 'daily' | 'specific_days' | 'weekly_target';
 export type HabitTrackingMode = 'boolean' | 'quantitative';
 
 export interface Habit {
+  /** True only for explicitly added fictional sample records. */
+  sample?: boolean;
   id: string;
   name: string;
   description: string;
@@ -138,6 +143,8 @@ export interface Habit {
 export type HabitLogStatus = 'completed' | 'partial' | 'missed';
 
 export interface HabitLog {
+  /** True only for explicitly added fictional sample records. */
+  sample?: boolean;
   /** Deterministic composite key `${habitId}::${dateKey}` to prevent duplicates */
   id: string;
   habitId: string;
@@ -157,6 +164,8 @@ export interface HabitLog {
 export type FocusModeType = 'pomodoro' | 'free' | 'interval' | 'countdown';
 
 export interface FocusSession {
+  /** True only for explicitly added fictional sample records. */
+  sample?: boolean;
   id: string;
   mode: FocusModeType;
   /** Actual focused duration in minutes (rounded to 1 decimal or integer >= 1) */
@@ -173,6 +182,8 @@ export interface FocusSession {
 }
 
 export interface Goal {
+  /** True only for explicitly added fictional sample records. */
+  sample?: boolean;
   id: string;
   title: string;
   description: string;
@@ -219,6 +230,9 @@ export interface UserSettings {
   /** Tracks whether starter sample dataset is currently active */
   hasSampleData: boolean;
   sampleBannerDismissed: boolean;
+  /** Four customizable shortcuts; home and the directory are fixed. */
+  navShortcuts?: NavTab[];
+  motivationFavorites?: string[];
   /* ── The optional cloud manager (3.7) ──────────────────────────────────────
      Off by default. With it off, the offline engine answers and nothing ever
      leaves the device. With it on, only the conversation and a compact summary

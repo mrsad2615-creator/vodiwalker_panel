@@ -204,8 +204,9 @@ describe('the manager', () => {
 
     const brief = await screen.findByTestId('manager-brief');
     expect(brief.textContent).toContain('قرارداد');
-    // Confidence is always stated, in Persian.
-    expect(brief.textContent).toMatch(/اطمینان/);
+    // A deterministic recommendation is not presented as statistical confidence.
+    expect(brief.textContent).toMatch(/قواعد محلی/);
+    expect(brief.textContent).not.toMatch(/اطمینان/);
     expect(brief.textContent).not.toMatch(/high|medium|low/);
   });
 });

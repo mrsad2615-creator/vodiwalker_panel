@@ -35,6 +35,7 @@ import { formatDurationShort, PRIORITY_META } from '@/lib/format';
 import { triggerHaptic } from '@/lib/native';
 import { useApp } from '@/context/AppContext';
 import { Numeric } from '@/components/ui/Numeric';
+import { SampleDataControl } from '@/components/settings/SampleDataControl';
 import { HabitIcon } from '@/components/ui/KairosMark';
 import { Rail, RailRow } from '@/components/ui/Rail';
 import {
@@ -451,14 +452,7 @@ export function DashboardPage() {
         </button>
       )}
 
-      {settings.hasSampleData && (
-        <div className="flex items-center justify-between gap-3 border-s-2 border-[var(--accent-fg)]/40 px-3 py-2">
-          <p className="text-[10.5px] leading-4 text-[var(--text-3)]">
-            داده‌های نمونه و تاریخچهٔ ساختگی در تحلیل‌ها وجود دارند؛ این‌ها سابقهٔ واقعی شما نیستند.
-          </p>
-
-        </div>
-      )}
+      {!settings.hasSampleData && <SampleDataControl />}
 
       {/* ── SHOWCASE BOARD ───────────────────────────────────────────────── */}
       <motion.div

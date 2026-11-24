@@ -191,7 +191,8 @@ describe('the manager layer', () => {
     expect(answer.intent).toBe('brief.today');
     expect(answer.lines.some((line) => line.includes('مالیات'))).toBe(true);
     expect(answer.lines.some((line) => line.includes('دلیل:'))).toBe(true);
-    expect(answer.lines.some((line) => line.includes('اطمینان:'))).toBe(true);
+    expect(answer.lines.some((line) => line.includes('قواعد محلی'))).toBe(true);
+    expect(answer.lines.some((line) => line.includes('اطمینان:'))).toBe(false);
     // Numbers are Persian, like the rest of the product.
     expect(answer.title).not.toMatch(/[0-9]/);
   });

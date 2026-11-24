@@ -272,9 +272,31 @@ tap_tab() {
 }
 
 # Dump the live view hierarchy once, into the artifacts directory.
+# Write the current view hierarchy to /sdcard/ui.xml, and keep a copy for the run.
+#
+# `uiautomator dump` waits for the window to be idle and gives up silently when it
+# is not: a playing video surface never settles, and the command then writes nothing.
+# One attempt is what the harness used to make, so a single unlucky moment looked
+# exactly like "the control is not there". The evidence for 40 and
+# 41-video-second-clip disappeared for that reason on one run and came back on the
+# next with no code change in between.
+#
+# Three attempts, and an explicit error when the tree is empty, so the next failure
+# names itself instead of turning into a silent "labels on screen: none".
 dump_ui() {
-  adb shell uiautomator dump /sdcard/ui.xml >/dev/null 2>&1
-  adb shell cat /sdcard/ui.xml > "$OUT_DIR/diag-$1.xml" 2>/dev/null
+  attempt=0
+  while [ "$attempt" -lt 3 ]; do
+    attempt=$((attempt + 1))
+    adb shell uiautomator dump /sdcard/ui.xml >/dev/null 2>&1
+    adb shell cat /sdcard/ui.xml > "$OUT_DIR/diag-$1.xml" 2>/dev/null
+    if [ -s "$OUT_DIR/diag-$1.xml" ] && grep -q 'content-desc\|bounds' "$OUT_DIR/diag-$1.xml"; then
+      [ "$attempt" -gt 1 ] && echo "::notice title=e2e::the UI tree took $attempt attempts for $1"
+      return 0
+    fi
+    sleep 2
+  done
+  echo "::error title=e2e::the UI tree was empty after $attempt attempts for $1"
+  return 1
 }
 
 # Centre of the first node whose resource-id or content-desc matches $1.

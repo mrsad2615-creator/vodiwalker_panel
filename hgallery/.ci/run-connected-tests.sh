@@ -329,23 +329,31 @@ if [ "$FRAMES" -eq 0 ]; then
   # leaves the tree and does not replay on rotation. This step is the picture to go
   # with that, and a picture that a slow camera misses is not a product defect.
   echo "::notice title=e2e::ffmpeg is absent, so the launch is captured as a still"
+  # The sequence is launched at four times its product length, because `screencap`
+  # takes about a second to start and the product sequence is 0.9 s. The extra is read
+  # by `HGalleryApp` and passed to `HgIgnition`; the product never sets it and no
+  # release build has it in its launch path.
+  #
+  # The file name carries the factor. A 3.6-second launch must not be read as the
+  # product's own timing, and a comment inside a commit message is not where someone
+  # looking at a screenshot will find that out.
   for attempt in 1 2; do
     adb shell am force-stop "$PKG"
-    adb shell am start -n "$PKG/$ACTIVITY" > /dev/null 2>&1
-    adb shell screencap -p "$DEVICE_DIR/44-launch-sequence.png" >/dev/null 2>&1
-    if adb shell test -s "$DEVICE_DIR/44-launch-sequence.png"; then
+    adb shell am start -n "$PKG/$ACTIVITY" --ef hgallery.capture.ignitionScale 4 > /dev/null 2>&1
+    adb shell screencap -p "$DEVICE_DIR/44-launch-sequence-4x.png" >/dev/null 2>&1
+    if adb shell test -s "$DEVICE_DIR/44-launch-sequence-4x.png"; then
       # A still of the finished grid is not a still of the launch. The cover is the only
       # thing on screen that is not a photograph, so its presence is checkable by file
       # size: the grid is dense and compresses to well over 100 kB, the cover to under
       # 20 kB. Below the threshold the frame is of the cover, and the loop stops.
-      SIZE=$(adb shell stat -c %s "$DEVICE_DIR/44-launch-sequence.png" 2>/dev/null | tr -dc '0-9')
+      SIZE=$(adb shell stat -c %s "$DEVICE_DIR/44-launch-sequence-4x.png" 2>/dev/null | tr -dc '0-9')
       : "${SIZE:=0}"
       if [ "$SIZE" -gt 0 ] && [ "$SIZE" -lt 60000 ]; then
-        echo "captured 44-launch-sequence.png ($SIZE bytes, the cover not the grid)"
+        echo "captured 44-launch-sequence-4x.png ($SIZE bytes, the cover at 4x time)"
         break
       fi
       echo "::notice title=e2e::attempt $attempt caught the grid ($SIZE bytes), retrying"
-      adb shell rm -f "$DEVICE_DIR/44-launch-sequence.png"
+      adb shell rm -f "$DEVICE_DIR/44-launch-sequence-4x.png"
     fi
     [ "$attempt" -eq 2 ] && echo "::warning title=e2e::the launch cover was not captured"
   done

@@ -17,8 +17,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import dev.hgallery.app.ui.brand.HG_IGNITION_SCALE_EXTRA
 import dev.hgallery.app.ui.brand.HgIgnition
 import dev.hgallery.app.data.AppContainer
 import dev.hgallery.app.data.HgSettings
@@ -81,6 +83,16 @@ fun HGalleryApp(container: AppContainer) {
     // the user has already seen: the flag survives the configuration change and the
     // cover stays gone.
     var ignitionDone by rememberSaveable { mutableStateOf(false) }
+    // The screenshot harness launches with this extra so a camera that starts in about
+    // a second can photograph a sequence that takes 0.9. The product never sets it, and
+    // the evidence file is named for the factor. Read once, at composition.
+    val context = LocalContext.current
+    val ignitionCaptureScale = remember(context) {
+        (context as? android.app.Activity)
+            ?.intent
+            ?.getFloatExtra(HG_IGNITION_SCALE_EXTRA, 1f)
+            ?: 1f
+    }
 
     val items by container.mediaStore.items.collectAsStateWithLifecycle()
     val settings by container.settings.settings.collectAsStateWithLifecycle(
@@ -267,7 +279,10 @@ fun HGalleryApp(container: AppContainer) {
         }
 
         if (!ignitionDone) {
-            HgIgnition(onFinished = { ignitionDone = true })
+            HgIgnition(
+                onFinished = { ignitionDone = true },
+                captureTimeScale = ignitionCaptureScale,
+            )
         }
     }
 }

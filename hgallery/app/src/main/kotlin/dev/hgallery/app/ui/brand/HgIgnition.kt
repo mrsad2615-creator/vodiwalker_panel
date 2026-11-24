@@ -56,6 +56,14 @@ import dev.hgallery.app.ui.theme.hgColors
  * Total 900 ms, which is the directive's figure. With reduced motion every phase is
  * an instant state change and the cover is gone in one frame.
  */
+/**
+ * The intent extra that slows the sequence for a photograph.
+ *
+ * It lives beside the composable that reads it so the name cannot drift from the
+ * harness that sets it, and it is a float so the factor is visible in the command.
+ */
+const val HG_IGNITION_SCALE_EXTRA = "hgallery.capture.ignitionScale"
+
 private object Ignition {
     const val IGNITE_MS = 220
     const val APERTURE_MS = 400
@@ -74,6 +82,19 @@ private object Ignition {
 fun HgIgnition(
     onFinished: () -> Unit,
     modifier: Modifier = Modifier,
+    /**
+     * Multiply every phase by this factor. 1 is the product; 4 is what the screenshot
+     * harness asks for so a camera slower than the animation can still photograph it.
+     *
+     * It exists because `screencap` on the CI emulator takes about a second to start,
+     * which is longer than the whole sequence. Two runs of retries caught the finished
+     * grid both times, because the cover had lifted before the camera opened.
+     *
+     * Slowing the sequence for a photograph is only honest if the photograph says so.
+     * The evidence file for a slowed run is named for the factor and the step logs it,
+     * so nobody reads a 3.6-second launch into a build that takes 0.9.
+     */
+    captureTimeScale: Float = 1f,
 ) {
     val palette = hgColors
     val reduceMotion = rememberReduceMotion()
@@ -91,9 +112,10 @@ fun HgIgnition(
             onFinished()
             return@LaunchedEffect
         }
-        ignite.animateTo(1f, tween(Ignition.IGNITE_MS, easing = FastOutSlowInEasing))
-        aperture.animateTo(1f, tween(Ignition.APERTURE_MS, easing = FastOutSlowInEasing))
-        lift.animateTo(1f, tween(Ignition.LIFT_MS, easing = FastOutSlowInEasing))
+        val scale = captureTimeScale.coerceIn(1f, 10f)
+        ignite.animateTo(1f, tween((Ignition.IGNITE_MS * scale).toInt(), easing = FastOutSlowInEasing))
+        aperture.animateTo(1f, tween((Ignition.APERTURE_MS * scale).toInt(), easing = FastOutSlowInEasing))
+        lift.animateTo(1f, tween((Ignition.LIFT_MS * scale).toInt(), easing = FastOutSlowInEasing))
         onFinished()
     }
 

@@ -100,3 +100,7 @@ Localize the section eyebrows, brand wordmark and system names in Home, Studios,
 One local rerun caught a syntax error after a visible-label replacement also changed an internal skill identifier. The identifier was restored, syntax checks were added to the supervisor and both complete browser suites passed again. This failure is retained as a process finding; the earlier green result was not used to conceal it. Do not use unchecked global replacements for localization.
 
 See `17-exercise-quality-contracts-fa.md` for distinct mechanics, level variables and acceptance contracts for every one of the 34 required exercises. Those contracts are not an implementation-completion claim.
+
+## Hosted combined verification
+
+Run `45504195689` at `4f755290a557abdee1fca62a761b006130194b95` passed the new browser gate, native build/lint and all 45 emulator cases, with no failed/skipped cases. See `build-evidence-quality-reset.json`. This includes 247 core cases and 48 static checks; it does not certify the content or design as accepted. A subsequent browser-only correction prevents direct links from rendering an incomplete summary; both browser suites were rerun locally after that correction. No Kotlin, schema or Android resource changed in that follow-up.

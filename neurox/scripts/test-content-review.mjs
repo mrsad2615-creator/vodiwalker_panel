@@ -17,6 +17,12 @@ try{
  const responses=[];page.on('request',r=>{if(new URL(r.url()).origin!==new URL(origin).origin)responses.push(r.url());});
  await page.goto(origin+'/design/content-review/');
  await page.waitForSelector('[data-text]');
+ // Direct links must not invent a session or render an incomplete summary.
+ await page.evaluate(()=>go('question'));await page.waitForURL('**/#library');await page.waitForSelector('[data-text]');
+ await page.locator('[data-text]').first().click();await page.waitForURL('**/#reader');
+ await page.evaluate(()=>go('summary'));await page.waitForURL('**/#reader');
+ assert(await page.locator('[data-action="questions"]').count()===1,'Incomplete summary returns to the text');
+ await page.evaluate(()=>go('library'));await page.waitForURL('**/#library');
  async function check(name){
   await page.evaluate(()=>document.fonts.ready);layoutChecks++;
   const metrics=await page.evaluate(()=>({overflow:document.documentElement.scrollWidth>innerWidth+1,headings:document.querySelectorAll('main h1').length,lang:document.documentElement.lang,dir:document.documentElement.dir}));

@@ -1,5 +1,9 @@
 # Test report — 2026-11-24
 
+## Quality reset after user rejection
+
+The user rejected the 0.5 design/content quality. Keep the technical evidence below, but do not interpret it as product acceptance. The new work and its limits are recorded in docs 15–17 and `build-evidence-quality-reset.json`. Hosted run `45504195689` passed 247 core cases, 48 static checks, the historical prototype and new Persian draft-content browser reviewers, Android build/lint and 45 emulator cases. The six new texts/eighteen questions remain drafts, are not part of Android session selection, and are not validated assessments. No complete replacement design or new release is claimed.
+
 ## Current verified 0.5 development milestone
 
 Native commit: `f360ad2d4b69785dde50b684c9cebfe7b42f44aa`. Version `0.5.0-dev`, code 5. Hosted run [45497991213](https://github.com/mrsad2615-creator/vodiwalker_panel/actions/runs/45497991213) **SUCCESS**. Both native-build and emulator-tests passed. This is not full flagship acceptance.

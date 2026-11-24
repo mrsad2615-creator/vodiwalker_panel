@@ -1,0 +1,69 @@
+{
+  "purpose": "Quality reset verification; not a new release or editorial approval",
+  "sourceCommit": "4f755290a557abdee1fca62a761b006130194b95",
+  "runId": 45504195689,
+  "runUrl": "https://github.com/mrsad2615-creator/vodiwalker_panel/actions/runs/45504195689",
+  "conclusion": "success",
+  "jobs": [
+    {
+      "name": "emulator-tests",
+      "conclusion": "success",
+      "started_at": "2026-11-24T22:47:36Z",
+      "completed_at": "2026-11-24T22:52:32Z"
+    },
+    {
+      "name": "native-build",
+      "conclusion": "success",
+      "started_at": "2026-11-24T22:47:36Z",
+      "completed_at": "2026-11-24T22:52:54Z"
+    }
+  ],
+  "coreCases": 247,
+  "staticChecks": 48,
+  "sqliteChecks": 5,
+  "evidenceParserCases": 6,
+  "kotlinGrammarFiles": 57,
+  "instrumentation": {
+    "cases": 45,
+    "failures": 0,
+    "skipped": 0,
+    "dataAndMigration": 27,
+    "app": 18,
+    "api": 35,
+    "architecture": "x86_64"
+  },
+  "browser": {
+    "historicalPrototypeLayouts": 320,
+    "historicalPrototypeAxeAudits": 80,
+    "draftReviewerLayouts": 46,
+    "draftReviewerAxeAudits": 46,
+    "draftQuestionsSubmitted": 18,
+    "failures": 0
+  },
+  "editorial": {
+    "texts": 6,
+    "questions": 18,
+    "stage": "DRAFT",
+    "expertReviewed": false,
+    "wiredToAndroidSessionSelection": false,
+    "validatedAssessmentAvailable": false
+  },
+  "acceptance": {
+    "newTwentyScreenRedesignComplete": false,
+    "allThirtyFourExercisesComplete": false,
+    "physicalDeviceAccepted": false,
+    "productionRelease": false
+  },
+  "annotations": [
+    {
+      "job": "emulator-tests",
+      "title": "Android test counts",
+      "message": "2 XML reports; 45 cases; 0 failures; 0 skipped"
+    },
+    {
+      "job": "native-build",
+      "title": "Browser review counts",
+      "message": "Prototype layouts=320; content layouts=46; content axe audits=46; answered draft questions=18. Browser checks only; not editorial approval or Android accessibility acceptance."
+    }
+  ]
+}

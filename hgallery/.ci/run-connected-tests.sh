@@ -723,6 +723,54 @@ else
   echo "::warning title=e2e::search button not found"
 fi
 
+# == dark theme ==
+#
+# The redesign is built from a dark palette, and until this step every screenshot in
+# the folder was light mode: the emulator boots light, and nothing ever changed it.
+# A palette that has only ever been rendered in one theme is half-tested, whatever
+# the tokens say.
+#
+# The path is a user path, not a test hook: Settings, then the Dark row, then back to
+# the library. The app was just relaunched and is on the Photos tab.
+echo "== photographing the dark theme =="
+assert_app_foreground "the dark theme section" || true
+if tap_tag_or_text "settings-open" "content-desc=\"More options\""; then
+  # The overflow rows are a pop-up window, and the dump of a pop-up is empty, so the
+  # third row is taken from the trigger's own geometry, as in the month-view step.
+  if tap_menu_row "settings-row" "content-desc=\"Settings\"" 2; then
+    sleep 2
+    if tap_tag_or_text "theme-dark" "content-desc=\"Dark\"|text=\"Dark\""; then
+      sleep 2
+      shot 42-settings-dark.png
+      adb shell input keyevent KEYCODE_BACK
+      sleep 3
+      # The home screen in dark, which is the shot the design was drawn against.
+      shot 43-photos-dark.png
+    else
+      echo "::warning title=e2e::the Dark theme row was not addressable"
+    fi
+  else
+    echo "::warning title=e2e::the Settings row was not addressable"
+  fi
+  # Put the theme back. The rest of the harness and the next run assume the light
+  # theme, and a device that stays dark makes every later screenshot look wrong.
+  adb shell am force-stop "$PKG"
+  adb shell am start -W -n "$PKG/$ACTIVITY" > /dev/null 2>&1
+  sleep 3
+  if tap_tag_or_text "settings-open-2" "content-desc=\"More options\""; then
+    if tap_menu_row "settings-row-2" "content-desc=\"Settings\"" 2; then
+      sleep 2
+      tap_tag_or_text "theme-light" "content-desc=\"Light\"|text=\"Light\"" || \
+        echo "::warning title=e2e::the theme was left on Dark"
+      sleep 2
+      adb shell input keyevent KEYCODE_BACK
+      sleep 2
+    fi
+  fi
+else
+  echo "::warning title=e2e::the overflow menu was not addressable for the dark theme"
+fi
+
 echo "== pulling screenshots =="
 adb pull "$DEVICE_DIR" "$OUT_DIR" >/dev/null 2>&1
 find "$OUT_DIR" -name '*.png' -exec ls -l {} \;

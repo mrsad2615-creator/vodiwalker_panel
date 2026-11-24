@@ -1,95 +1,53 @@
 Activity Resolver Table:
   Non-Data Actions:
       android.intent.action.MAIN:
-<<<<<<< HEAD
-        c8f5509 dev.hgallery.app.debug/dev.hgallery.app.MainActivity filter 2e6230e
-=======
-        b67b39f dev.hgallery.app.debug/dev.hgallery.app.MainActivity filter fdc1cec
->>>>>>> 96226ac (ci: shot() now fails when it captures nothing, and the evidence loss is recorded)
+        5677903 dev.hgallery.app.debug/dev.hgallery.app.MainActivity filter f3fa080
           Action: "android.intent.action.MAIN"
           Category: "android.intent.category.LAUNCHER"
 
 Receiver Resolver Table:
   Non-Data Actions:
       androidx.profileinstaller.action.SAVE_PROFILE:
-<<<<<<< HEAD
-        57f612f dev.hgallery.app.debug/androidx.profileinstaller.ProfileInstallReceiver filter 965621a
+        3fe86b9 dev.hgallery.app.debug/androidx.profileinstaller.ProfileInstallReceiver filter d3e44ac
           Action: "androidx.profileinstaller.action.SAVE_PROFILE"
       androidx.profileinstaller.action.INSTALL_PROFILE:
-        57f612f dev.hgallery.app.debug/androidx.profileinstaller.ProfileInstallReceiver filter 32e33c
+        3fe86b9 dev.hgallery.app.debug/androidx.profileinstaller.ProfileInstallReceiver filter c81eafe
           Action: "androidx.profileinstaller.action.INSTALL_PROFILE"
       androidx.profileinstaller.action.SKIP_FILE:
-        57f612f dev.hgallery.app.debug/androidx.profileinstaller.ProfileInstallReceiver filter 34f38c5
+        3fe86b9 dev.hgallery.app.debug/androidx.profileinstaller.ProfileInstallReceiver filter 75ea25f
           Action: "androidx.profileinstaller.action.SKIP_FILE"
       androidx.profileinstaller.action.BENCHMARK_OPERATION:
-        57f612f dev.hgallery.app.debug/androidx.profileinstaller.ProfileInstallReceiver filter e2ae14b
-=======
-        c1068b5 dev.hgallery.app.debug/androidx.profileinstaller.ProfileInstallReceiver filter be41bd8
-          Action: "androidx.profileinstaller.action.SAVE_PROFILE"
-      androidx.profileinstaller.action.INSTALL_PROFILE:
-        c1068b5 dev.hgallery.app.debug/androidx.profileinstaller.ProfileInstallReceiver filter 3e1eb4a
-          Action: "androidx.profileinstaller.action.INSTALL_PROFILE"
-      androidx.profileinstaller.action.SKIP_FILE:
-        c1068b5 dev.hgallery.app.debug/androidx.profileinstaller.ProfileInstallReceiver filter 21deabb
-          Action: "androidx.profileinstaller.action.SKIP_FILE"
-      androidx.profileinstaller.action.BENCHMARK_OPERATION:
-        c1068b5 dev.hgallery.app.debug/androidx.profileinstaller.ProfileInstallReceiver filter 1abdb31
->>>>>>> 96226ac (ci: shot() now fails when it captures nothing, and the evidence loss is recorded)
+        3fe86b9 dev.hgallery.app.debug/androidx.profileinstaller.ProfileInstallReceiver filter 577d575
           Action: "androidx.profileinstaller.action.BENCHMARK_OPERATION"
 
 Domain verification status:
 
 Permissions:
-<<<<<<< HEAD
-  Permission [dev.hgallery.app.debug.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION] (1a2a787):
+  Permission [dev.hgallery.app.debug.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION] (a57715c):
     sourcePackage=dev.hgallery.app.debug
     uid=10174 gids=[] type=0 prot=signature
-    perm=PermissionInfo{ab6a6b4 dev.hgallery.app.debug.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION}
+    perm=PermissionInfo{4ed7c65 dev.hgallery.app.debug.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION}
 
 Registered ContentProviders:
   dev.hgallery.app.debug/androidx.startup.InitializationProvider:
-    Provider{9c802dd dev.hgallery.app.debug/androidx.startup.InitializationProvider}
+    Provider{22ed3a dev.hgallery.app.debug/androidx.startup.InitializationProvider}
 
 ContentProvider Authorities:
   [dev.hgallery.app.debug.androidx-startup]:
-    Provider{9c802dd dev.hgallery.app.debug/androidx.startup.InitializationProvider}
-      applicationInfo=ApplicationInfo{ef6be52 dev.hgallery.app.debug}
-=======
-  Permission [dev.hgallery.app.debug.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION] (ad19ec4):
-    sourcePackage=dev.hgallery.app.debug
-    uid=10174 gids=[] type=0 prot=signature
-    perm=PermissionInfo{93881ad dev.hgallery.app.debug.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION}
-
-Registered ContentProviders:
-  dev.hgallery.app.debug/androidx.startup.InitializationProvider:
-    Provider{d601ce2 dev.hgallery.app.debug/androidx.startup.InitializationProvider}
-
-ContentProvider Authorities:
-  [dev.hgallery.app.debug.androidx-startup]:
-    Provider{d601ce2 dev.hgallery.app.debug/androidx.startup.InitializationProvider}
-      applicationInfo=ApplicationInfo{3855873 dev.hgallery.app.debug}
->>>>>>> 96226ac (ci: shot() now fails when it captures nothing, and the evidence loss is recorded)
+    Provider{22ed3a dev.hgallery.app.debug/androidx.startup.InitializationProvider}
+      applicationInfo=ApplicationInfo{802ddeb dev.hgallery.app.debug}
 
 Key Set Manager:
   [dev.hgallery.app.debug]
       Signing KeySets: 53
 
 Packages:
-<<<<<<< HEAD
-  Package [dev.hgallery.app.debug] (2783523):
+  Package [dev.hgallery.app.debug] (7984748):
     userId=10174
-    pkg=Package{9717a20 dev.hgallery.app.debug}
-    codePath=/data/app/~~qv7Z6VBqOnaHAsD1g8Y8MA==/dev.hgallery.app.debug-YuLyZh8X2auUuCjP0tqZFQ==
-    resourcePath=/data/app/~~qv7Z6VBqOnaHAsD1g8Y8MA==/dev.hgallery.app.debug-YuLyZh8X2auUuCjP0tqZFQ==
-    legacyNativeLibraryDir=/data/app/~~qv7Z6VBqOnaHAsD1g8Y8MA==/dev.hgallery.app.debug-YuLyZh8X2auUuCjP0tqZFQ==/lib
-=======
-  Package [dev.hgallery.app.debug] (167252e):
-    userId=10174
-    pkg=Package{6a4025c dev.hgallery.app.debug}
-    codePath=/data/app/~~flzFSL2H-C0iaBB4xwSEpw==/dev.hgallery.app.debug-vpQ8bxgM-92t0unmXdPtXw==
-    resourcePath=/data/app/~~flzFSL2H-C0iaBB4xwSEpw==/dev.hgallery.app.debug-vpQ8bxgM-92t0unmXdPtXw==
-    legacyNativeLibraryDir=/data/app/~~flzFSL2H-C0iaBB4xwSEpw==/dev.hgallery.app.debug-vpQ8bxgM-92t0unmXdPtXw==/lib
->>>>>>> 96226ac (ci: shot() now fails when it captures nothing, and the evidence loss is recorded)
+    pkg=Package{b3e79e1 dev.hgallery.app.debug}
+    codePath=/data/app/~~-h6zhSw6VFTYoEhGqO6BsQ==/dev.hgallery.app.debug-uAENWKVcdfgIaArIn0-NBA==
+    resourcePath=/data/app/~~-h6zhSw6VFTYoEhGqO6BsQ==/dev.hgallery.app.debug-uAENWKVcdfgIaArIn0-NBA==
+    legacyNativeLibraryDir=/data/app/~~-h6zhSw6VFTYoEhGqO6BsQ==/dev.hgallery.app.debug-uAENWKVcdfgIaArIn0-NBA==/lib
     extractNativeLibs=false
     primaryCpuAbi=x86_64
     secondaryCpuAbi=null
@@ -105,17 +63,10 @@ Packages:
     forceQueryable=false
     dataDir=/data/user/0/dev.hgallery.app.debug
     supportsScreens=[small, medium, large, xlarge, resizeable, anyDensity]
-<<<<<<< HEAD
-    timeStamp=2026-11-24 08:00:31
-    lastUpdateTime=2026-11-24 08:00:32
+    timeStamp=2026-11-24 15:53:08
+    lastUpdateTime=2026-11-24 15:53:08
     packageSource=0
-    signatures=PackageSignatures{d46efd9 version:2, signatures:[a59536a0], past signatures:[]}
-=======
-    timeStamp=2026-11-24 07:41:05
-    lastUpdateTime=2026-11-24 07:41:05
-    packageSource=0
-    signatures=PackageSignatures{bb53965 version:2, signatures:[7cff2201], past signatures:[]}
->>>>>>> 96226ac (ci: shot() now fails when it captures nothing, and the evidence loss is recorded)
+    signatures=PackageSignatures{7c2a306 version:2, signatures:[fe6e68f0], past signatures:[]}
     installPermissionsFixed=false
     pkgFlags=[ DEBUGGABLE HAS_CODE ALLOW_CLEAR_USER_DATA ]
     declared permissions:
@@ -133,25 +84,14 @@ Packages:
       android.permission.USE_FINGERPRINT: granted=true
       dev.hgallery.app.debug.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION: granted=true
       android.permission.USE_BIOMETRIC: granted=true
-<<<<<<< HEAD
-    User 0: ceDataInode=147550 installed=true hidden=false suspended=false distractionFlags=0 stopped=true notLaunched=true enabled=0 instant=false virtual=false
+    User 0: ceDataInode=140879 installed=true hidden=false suspended=false distractionFlags=0 stopped=true notLaunched=true enabled=0 instant=false virtual=false
       installReason=0
-      firstInstallTime=2026-11-24 08:00:32
+      firstInstallTime=2026-11-24 15:53:08
       uninstallReason=0
       overlay paths:
         /product/overlay/NavigationBarModeGestural/NavigationBarModeGesturalOverlay.apk
-        /data/resource-cache/com.android.systemui-neutral-EhRA.frro
-        /data/resource-cache/com.android.systemui-accent-sJkX.frro
-=======
-    User 0: ceDataInode=147776 installed=true hidden=false suspended=false distractionFlags=0 stopped=true notLaunched=true enabled=0 instant=false virtual=false
-      installReason=0
-      firstInstallTime=2026-11-24 07:41:05
-      uninstallReason=0
-      overlay paths:
-        /product/overlay/NavigationBarModeGestural/NavigationBarModeGesturalOverlay.apk
-        /data/resource-cache/com.android.systemui-neutral-ejEY.frro
-        /data/resource-cache/com.android.systemui-accent-btG0.frro
->>>>>>> 96226ac (ci: shot() now fails when it captures nothing, and the evidence loss is recorded)
+        /data/resource-cache/com.android.systemui-neutral-tviP.frro
+        /data/resource-cache/com.android.systemui-accent-Cv8J.frro
       legacy overlay paths:
         /product/overlay/NavigationBarModeGestural/NavigationBarModeGesturalOverlay.apk
       runtime permissions:
@@ -171,11 +111,7 @@ Queries:
 
 Dexopt state:
   [dev.hgallery.app.debug]
-<<<<<<< HEAD
-    path: /data/app/~~qv7Z6VBqOnaHAsD1g8Y8MA==/dev.hgallery.app.debug-YuLyZh8X2auUuCjP0tqZFQ==/base.apk
-=======
-    path: /data/app/~~flzFSL2H-C0iaBB4xwSEpw==/dev.hgallery.app.debug-vpQ8bxgM-92t0unmXdPtXw==/base.apk
->>>>>>> 96226ac (ci: shot() now fails when it captures nothing, and the evidence loss is recorded)
+    path: /data/app/~~-h6zhSw6VFTYoEhGqO6BsQ==/dev.hgallery.app.debug-uAENWKVcdfgIaArIn0-NBA==/base.apk
       x86_64: [status=run-from-apk] [reason=unknown]
   BgDexopt state:
     enabled:true
@@ -187,11 +123,7 @@ Dexopt state:
     mLastExecutionDurationIncludingSleepMs:0
     mLastExecutionStartUptimeMs:0
     mLastExecutionDurationMs:0
-<<<<<<< HEAD
-    now:369099
-=======
-    now:415611
->>>>>>> 96226ac (ci: shot() now fails when it captures nothing, and the evidence loss is recorded)
+    now:311640
     mLastCancelledPackages:
     mFailedPackageNamesPrimary:
     mFailedPackageNamesSecondary:

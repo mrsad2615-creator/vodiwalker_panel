@@ -17,8 +17,14 @@ comes from the CI emulator it is labelled as such.
 |---|---|---|
 | Cold start (`am start -W`, `TotalTime`) | **950 ms** | `evidence/am-start.txt`, run 44965964758 |
 | APK size, debug | 17.2 MB | workflow artefact `hgallery-debug-apk` |
-| APK size, release | **11.7 MB** | GitHub Release asset `hgallery.apk` |
-| Domain unit tests | 25 tests, ~10 s wall time | `:core:test` |
+| APK size, release | **17,091,805 bytes** (16.3 MiB) | Release asset `hgallery.apk`, tag `hgallery-v0.1.167`, commit `3003025` |
+| Domain unit tests | **144 tests** in 7 files | Count of `@Test` in `core/src/test` at `3003025`; the run reports success |
+
+Two numbers in an earlier version of this table were wrong. It said 11.7 MB for
+the release APK, and 25 domain tests. The measured asset is 17,091,805 bytes,
+and the source holds 144 tests. The old figures are replaced rather than kept
+in a footnote: a performance report that quotes the wrong size is a report
+nobody can use for a decision.
 
 A 950 ms cold start on an emulator with a software GPU is unremarkable and should
 not be read as the phone's figure; it is recorded because it is the only

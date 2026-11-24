@@ -320,8 +320,14 @@ fun rememberPlayerController(uri: String, startMuted: Boolean = false): PlayerCo
     // The first clip is already prepared by the constructor, so the effect must not load
     // it a second time: a second `prepare()` restarts the buffer for no reason. Only a
     // change of clip goes through `load`.
+    //
+    // `startMuted` is a key as well as `uri`, and it has to be. Its value belongs to the
+    // clip that is arriving, not to the screen: a direct open is unmuted and the swipe
+    // after it is muted. Reading it only at construction time, as the first version did,
+    // left every later clip at the volume of the first one — which is the audio rule
+    // failing in the one direction nobody notices until it plays out loud.
     var loadedUri by remember { mutableStateOf(uri) }
-    LaunchedEffect(uri) {
+    LaunchedEffect(uri, startMuted) {
         if (uri != loadedUri) {
             loadedUri = uri
             controller.load(uri, playWhenReady = true, startMuted = startMuted)

@@ -129,4 +129,4 @@ jobs:
           echo '768a1d8ead3692059dfe626cb3744057c8189607dd771e0804af3c3509d4a036  app-debug.apk' | sha256sum --check
           mv app-debug.apk neurox-0.5.0-dev.apk
           sha256sum neurox-0.5.0-dev.apk > SHA256SUMS.txt
-          gh release upload neurox-v0.5.0-dev-download neurox-0.5.0-dev.apk SHA256SUMS.txt 2> release-error.txt || { echo "::error title=Release error::$(cat release-error.txt)"; exit 1; }
+          gh release upload neurox-v0.5.0-dev-apk neurox-0.5.0-dev.apk SHA256SUMS.txt 2> release-error.txt || { echo "::error title=Release error::$(cat release-error.txt)"; exit 1; }

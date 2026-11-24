@@ -348,18 +348,26 @@ if [ "$FRAMES" -eq 0 ]; then
       | while IFS= read -r line; do echo "::notice title=e2e::$line"; done
     adb shell screencap -p "$DEVICE_DIR/44-launch-sequence-4x.png" >/dev/null 2>&1
     if adb shell test -s "$DEVICE_DIR/44-launch-sequence-4x.png"; then
-      # A still of the finished grid is not a still of the launch. The cover is the only
-      # thing on screen that is not a photograph, so its presence is checkable by file
-      # size: the grid is dense and compresses to well over 100 kB, the cover to under
-      # 20 kB. Below the threshold the frame is of the cover, and the loop stops.
-      SIZE=$(adb shell stat -c %s "$DEVICE_DIR/44-launch-sequence-4x.png" 2>/dev/null | tr -dc '0-9')
-      : "${SIZE:=0}"
-      if [ "$SIZE" -gt 0 ] && [ "$SIZE" -lt 60000 ]; then
-        echo "captured 44-launch-sequence-4x.png ($SIZE bytes, the cover at 4x time)"
+      # Decide from the pixels, not from the file size.
+      #
+      # File size was tried first and pointed the wrong way: the frame that caught the
+      # mark was 14,449 bytes and the frame that caught an empty cover was 22,165. The
+      # status bar's clock and the emulator's own noise dominate the size at this scale.
+      #
+      # `png_accent_pixels.py` decodes the PNG with the standard library -- no Pillow,
+      # no ffmpeg -- and answers one question: is this a flat plate that carries the
+      # mark? Both halves are needed. Hue alone counts 14,045 accent pixels in the photo
+      # grid, because sunsets are orange. Flatness alone accepts a blank cover. Together
+      # they separated all three measured frames correctly.
+      adb pull "$DEVICE_DIR/44-launch-sequence-4x.png" "$OUT_DIR/44-launch-sequence-4x.png" >/dev/null 2>&1
+      if VERDICT=$(python3 .ci/png_accent_pixels.py "$OUT_DIR/44-launch-sequence-4x.png" --launch); then
+        echo "::notice title=e2e::$VERDICT"
+        echo "captured 44-launch-sequence-4x.png"
         break
       fi
-      echo "::notice title=e2e::attempt $attempt caught the grid ($SIZE bytes), retrying"
+      echo "::notice title=e2e::attempt $attempt: ${VERDICT:-could not read the frame}, retrying"
       adb shell rm -f "$DEVICE_DIR/44-launch-sequence-4x.png"
+      rm -f "$OUT_DIR/44-launch-sequence-4x.png"
     fi
     [ "$attempt" -eq 2 ] && echo "::warning title=e2e::the launch cover was not captured"
   done

@@ -144,6 +144,8 @@ data class PlayerTransport(
     val scrubbing: Boolean,
     val speed: Float,
     val fillScreen: Boolean,
+    /** True while the player's volume is zero. */
+    val muted: Boolean,
 )
 
 /** The callbacks the bottom bar fires. Grouped for the same reason as the state. */
@@ -155,6 +157,7 @@ data class PlayerActions(
     val onScrubEnd: () -> Unit,
     val onSpeed: (Float) -> Unit,
     val onFillScreen: () -> Unit,
+    val onToggleMute: () -> Unit,
 )
 
 /**
@@ -321,6 +324,19 @@ fun PlayerBottomBar(
                 )
 
                 Spacer(Modifier.weight(1f))
+
+                // Sound is a first-class control, not a menu item. A clip that arrives
+                // muted by the swipe rule must show how to unmute it in the same place
+                // it would show a volume slider, or the mute reads as a broken speaker.
+                HgIconButton(
+                    icon = if (transport.muted) HgIcons.SoundOff else HgIcons.SoundOn,
+                    contentDescription = stringResource(
+                        if (transport.muted) R.string.video_unmute else R.string.video_mute,
+                    ),
+                    onClick = actions.onToggleMute,
+                    tint = if (transport.muted) hgColors.accentWarm else Color.White,
+                    modifier = Modifier.testTag(HgTestTags.VIDEO_MUTE),
+                )
 
                 SpeedControl(speed = transport.speed, onPick = actions.onSpeed)
 

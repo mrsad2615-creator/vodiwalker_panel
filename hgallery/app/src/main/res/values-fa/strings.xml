@@ -89,6 +89,8 @@
     <string name="video_replay">پخش دوباره</string>
     <string name="video_rotate">چرخش</string>
     <string name="video_fill_screen">پر کردن صفحه</string>
+    <string name="video_mute">بی‌صدا</string>
+    <string name="video_unmute">باصدا</string>
     <string name="video_cannot_play">این ویدیو پخش نمی‌شود</string>
     <string name="video_cannot_play_body">ممکن است کدک این فایل روی این دستگاه پشتیبانی نشود.</string>
     <string name="media_desc_photo">عکس، %1$s</string>

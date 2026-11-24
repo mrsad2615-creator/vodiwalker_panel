@@ -55,4 +55,23 @@ object VideoQueue {
      * screen gives each cell a spoken label from the media itself.
      */
     fun badge(item: MediaItem): String = DurationFormatter.badge(item.durationMs)
+
+    /**
+     * The videos that follow [id] in the full timeline order, starting with the next one.
+     *
+     * ## Why the timeline, not the video-only queue
+     *
+     * The viewer pages through every item, photo or video, so the clip that follows the
+     * one on screen is the next video *in that same list*. Using [build] here would skip
+     * to a clip the user has not swiped past yet, and the two screens would disagree
+     * about "next" — which is the reason the strip exists at all.
+     *
+     * The current clip is not included: a player is given the item to play, not the list
+     * up to it.
+     */
+    fun videosAfter(items: List<MediaItem>, id: Long): List<MediaItem> {
+        val index = items.indexOfFirst { it.id == id }
+        if (index < 0) return emptyList()
+        return items.drop(index + 1).filter { it.isVideo }
+    }
 }

@@ -37,8 +37,37 @@ import kotlinx.coroutines.delay
  */
 @UnstableApi
 @Stable
-class PlayerController(context: Context, private val uri: String) {
+class PlayerController(
+    context: Context,
+    startUri: String,
+    /** True when this clip must open without sound. See `PlayerPolicy.startsMuted`. */
+    startMuted: Boolean = false,
+) {
 
+    /**
+     * True after [release] has run.
+     *
+     * The surface is a platform view and can be asked to draw after the composition that
+     * owned the player is gone. It reads this before touching the player, so a last frame
+     * cannot call into a released object.
+     */
+    var released by mutableStateOf(false)
+        private set
+
+    /**
+     * One player for the whole screen session.
+     *
+     * ## Why this must not be recreated per clip
+     *
+     * `AndroidView` runs its `factory` once and then only `update` on later
+     * recompositions. A controller built per URI therefore left `PlayerView` attached to
+     * the player of the first clip while a second player, with sound, ran underneath it.
+     * The result was audio with no picture, and the platform reports no error for it.
+     *
+     * Keeping the same player and replacing the media item means the surface never has to
+     * be re-attached, so the failure cannot happen. This is why the field is a `val`: a
+     * reassignable player is the shape that caused the bug.
+     */
     val player: ExoPlayer = ExoPlayer.Builder(context).build().apply {
         // Without a declared usage the platform files this stream under "unknown":
         // the volume keys then adjust the ringtone, and unplugging headphones does
@@ -51,12 +80,40 @@ class PlayerController(context: Context, private val uri: String) {
             /* handleAudioFocus = */ true,
         )
         setHandleAudioBecomingNoisy(true)
-        setMediaItem(Media3Item.fromUri(uri))
+        // Volume is set before `prepare()` and before `playWhenReady`. Setting it after
+        // playback starts would leave a window in which a clip the policy says must be
+        // silent makes a noise: `prepare()` can reach the first audio frame quickly, and
+        // the application would be audible for that window.
+        volume = if (startMuted) SILENT else FULL_VOLUME
+        setMediaItem(Media3Item.fromUri(startUri))
         prepare()
         playWhenReady = true
     }
 
-    var state by mutableStateOf(PlayerState())
+    /** The clip this controller is showing. Read by the chrome for its title. */
+    var uri: String = startUri
+        private set
+
+    /**
+     * True while the player is muted.
+     *
+     * The policy is in `PlayerPolicy`; this is only the state it decides. Muting goes
+     * through `Player.volume` rather than `setVolume(0)` on a wrapper so the track is
+     * still decoded and a later unmute is instant.
+     */
+    var muted by mutableStateOf(startMuted)
+        private set
+
+    /**
+     * What the chrome draws.
+     *
+     * Seeded as playing because the constructor sets `playWhenReady = true`. Starting
+     * from a default that says "paused" meant the first frames of every clip drew a play
+     * button over video that was already running, and held the chrome on screen because
+     * the auto-hide rule reads `isPlaying`. A listener callback corrects this within a
+     * frame either way; the seed only removes the flicker.
+     */
+    var state by mutableStateOf(PlayerState(isPlaying = true))
         private set
 
     var positionMs by mutableLongStateOf(0L)
@@ -105,8 +162,57 @@ class PlayerController(context: Context, private val uri: String) {
         player.addListener(listener)
     }
 
+    /**
+     * Loads another clip on the same player.
+     *
+     * The listener and the player are kept, so the chrome does not blink and the surface
+     * keeps its own reference. Playback position, duration and the ended latch belong to
+     * the old clip and are cleared here rather than left to be overwritten whenever the
+     * new clip happens to report ready — a stale duration would scale the progress line
+     * for the first frames of the new clip.
+     */
+    fun load(nextUri: String, playWhenReady: Boolean = true, startMuted: Boolean = false) {
+        uri = nextUri
+        reachedEnd = false
+        positionMs = 0L
+        durationMs = 0L
+        scrub = null
+        hintMs = 0L
+        // `isPlaying` is seeded from the flag we are about to set, not from a default of
+        // false. Resetting to a plain PlayerState left a window in which the policy saw a
+        // paused player: the chrome refused to auto-hide, and a play button was drawn
+        // over a clip that was already playing.
+        state = PlayerState(isPlaying = playWhenReady)
+        applyMute(startMuted)
+        player.setMediaItem(Media3Item.fromUri(nextUri))
+        player.prepare()
+        player.playWhenReady = playWhenReady
+    }
+
+    /**
+     * Turns the sound on or off.
+     *
+     * Separate from [load] because the user can do it at any time, and because the policy
+     * decides the value at the start of a clip while this applies it.
+     */
+    fun setMuted(value: Boolean) {
+        if (muted == value) return
+        applyMute(value)
+    }
+
+    fun toggleMuted() {
+        applyMute(!muted)
+    }
+
+    private fun applyMute(value: Boolean) {
+        muted = value
+        player.volume = if (value) SILENT else FULL_VOLUME
+    }
+
     /** Called from a `DisposableEffect`, never from the composable body. */
     fun release() {
+        if (released) return
+        released = true
         player.removeListener(listener)
         player.release()
     }
@@ -182,21 +288,47 @@ class PlayerController(context: Context, private val uri: String) {
     private companion object {
         /** 5 Hz, which is what Media3's own controller polls at. */
         const val POSITION_POLL_MS = 200L
+
+        /** `Player.volume` is linear from 0 to 1; these are its two ends. */
+        private const val SILENT = 0f
+        private const val FULL_VOLUME = 1f
     }
 }
 
 /**
- * Binds a [PlayerController] to the composition: creates it, releases it, and
- * runs the position poll. Nothing else is done here on purpose.
+ * Binds a [PlayerController] to the composition: creates it once, releases it, and
+ * runs the position poll.
+ *
+ * ## The key is the point
+ *
+ * The controller is remembered with **no key**, so it lives as long as this composable
+ * does, not as long as one URI does. The first version keyed it on `uri`, which built a
+ * controller — and therefore an `ExoPlayer` — for every clip, released the previous one,
+ * and left the picture view bound to the released instance. The visible result was a
+ * clip that played sound with a black rectangle where the picture should be.
+ *
+ * Changing the clip is now a [PlayerController.load] on the same player, performed by the
+ * effect below.
  */
 @UnstableApi
 @Composable
-fun rememberPlayerController(uri: String): PlayerController {
+fun rememberPlayerController(uri: String, startMuted: Boolean = false): PlayerController {
     val context = androidx.compose.ui.platform.LocalContext.current
-    val controller = remember(uri) { PlayerController(context, uri) }
+    val controller = remember { PlayerController(context, uri, startMuted) }
 
     DisposableEffect(controller) {
         onDispose { controller.release() }
+    }
+
+    // The first clip is already prepared by the constructor, so the effect must not load
+    // it a second time: a second `prepare()` restarts the buffer for no reason. Only a
+    // change of clip goes through `load`.
+    var loadedUri by remember { mutableStateOf(uri) }
+    LaunchedEffect(uri) {
+        if (uri != loadedUri) {
+            loadedUri = uri
+            controller.load(uri, playWhenReady = true, startMuted = startMuted)
+        }
     }
 
     LaunchedEffect(controller) { controller.pollPosition() }

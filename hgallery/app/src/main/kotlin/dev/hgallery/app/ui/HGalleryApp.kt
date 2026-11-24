@@ -36,6 +36,7 @@ import dev.hgallery.app.ui.video.VideoPlayerScreen
 import dev.hgallery.app.ui.viewer.ViewerScreen
 import dev.hgallery.core.Album
 import dev.hgallery.core.AlbumBuilder
+import dev.hgallery.core.PlayerPolicy
 import dev.hgallery.core.VideoQueue
 
 /**
@@ -61,6 +62,10 @@ fun HGalleryApp(container: AppContainer) {
     var openAlbum by remember { mutableStateOf<Album?>(null) }
     var viewerId by remember { mutableStateOf<Long?>(null) }
     var playerId by remember { mutableStateOf<Long?>(null) }
+    // How the player was entered. A tile tap is a request to watch; a strip cell while
+    // already playing is a step through the list. The audio policy reads this, so it has
+    // to be decided where the path is known — here — and not inside the player.
+    var playerEntry by remember { mutableStateOf(PlayerPolicy.Entry.DIRECT) }
     var searchOpen by remember { mutableStateOf(false) }
     var settingsOpen by remember { mutableStateOf(false) }
     var trashOpen by remember { mutableStateOf(false) }
@@ -105,7 +110,10 @@ fun HGalleryApp(container: AppContainer) {
         val media = items.firstOrNull { it.id == id }
         when {
             media == null -> viewerId = id
-            media.isVideo -> playerId = id
+            media.isVideo -> {
+                playerEntry = PlayerPolicy.Entry.DIRECT
+                playerId = id
+            }
             else -> viewerId = id
         }
     }
@@ -214,9 +222,15 @@ fun HGalleryApp(container: AppContainer) {
                     queue = videoQueue,
                     filmstripEnabled = settings.filmstripVisible,
                     autoplayNext = settings.autoplayNext,
-                    // Switching from the strip replaces the item, not the screen: the
-                    // player stays mounted, so playback continues in one place.
-                    onSelectItem = { playerId = it },
+                    entry = playerEntry,
+                    // Switching clip replaces the item, not the screen: the player stays
+                    // mounted, so the surface keeps its binding and the picture follows
+                    // the sound. Either way this is a move along the list rather than a
+                    // fresh choice, so the clip starts muted.
+                    onSelectItem = {
+                        playerEntry = PlayerPolicy.Entry.SWIPE
+                        playerId = it
+                    },
                     onClose = { playerId = null },
                 )
             }

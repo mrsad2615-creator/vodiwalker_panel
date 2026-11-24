@@ -67,12 +67,22 @@ fun VideoPlayerScreen(
     queue: List<MediaItem>,
     filmstripEnabled: Boolean,
     autoplayNext: Boolean,
+    /**
+     * How the user arrived at this clip.
+     *
+     * The screen does not decide the audio policy; it reports the path so
+     * `PlayerPolicy` can. A tapped clip plays with sound and a swiped one does not.
+     */
+    entry: PlayerPolicy.Entry = PlayerPolicy.Entry.DIRECT,
     onSelectItem: (Long) -> Unit,
     onClose: () -> Unit,
 ) {
     val context = LocalContext.current
     val activity = context as? android.app.Activity
-    val controller = rememberPlayerController(item.uri)
+    // A clip reached by swiping starts muted; a clip the user tapped keeps its sound.
+    // The decision is in PlayerPolicy, so this line states it rather than deciding it.
+    val startMuted = PlayerPolicy.startsMuted(entry)
+    val controller = rememberPlayerController(item.uri, startMuted = startMuted)
     // The strip draws frames with the same bounded cache as every other screen.
     val app = LocalContext.current.applicationContext as HGalleryApplication
     val thumbnailStore = app.container.thumbnails
@@ -282,6 +292,14 @@ private fun PlayerSurface(
             }
         },
         update = { view ->
+            // Re-assert the binding rather than assume it. The player is session-stable
+            // now, so this is normally a no-op — and that is exactly why it is safe: it
+            // costs one reference comparison and removes the whole class of defect where
+            // the view and the controller end up pointing at different players. Sound
+            // from one and a black rectangle from the other was that defect.
+            if (!controller.released && view.player !== controller.player) {
+                view.player = controller.player
+            }
             view.resizeMode = if (fillScreen) {
                 AspectRatioFrameLayout.RESIZE_MODE_ZOOM
             } else {

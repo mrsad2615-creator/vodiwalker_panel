@@ -91,6 +91,49 @@ object PlayerPolicy {
      */
     private const val SPEED_ROUNDING = 100f
 
+    /**
+     * How a clip came to be on screen.
+     *
+     * The two paths are not equivalent to a user. Tapping a video tile is a request to
+     * watch it; arriving at it by swiping through the timeline is not.
+     */
+    enum class Entry {
+        /** The user chose this clip: they tapped its tile or its strip cell. */
+        DIRECT,
+
+        /** The user swiped through the timeline and this clip happened to be next. */
+        SWIPE,
+    }
+
+    /**
+     * True when the player must start with sound off.
+     *
+     * ## Why the two paths differ
+     *
+     * A direct tap is a request to watch. The user chose this clip, so it plays with
+     * sound, which is what they asked for.
+     *
+     * A swipe is not. The user is moving through a camera roll, and a clip that starts
+     * talking under a finger that only meant to reach the next photograph is the fault
+     * this rule removes. Such a clip starts muted, keeps playing, and carries a visible
+     * sound control so it is obvious how to unmute.
+     *
+     * This is deliberately independent of the "autoplay next" setting, so a user who
+     * turns automatic advance off still gets the swipe rule, and a user who turns it on
+     * does not get a loud clip they did not ask for. `HgSettings.autoplayNext` decides
+     * what happens when a clip *ends*; this decides how a clip *arrives*.
+     */
+    fun startsMuted(entry: Entry): Boolean = entry == Entry.SWIPE
+
+    /**
+     * True when the clip that follows should start on its own after paging.
+     *
+     * It should: the user moved to it. It starts muted by [startsMuted], so moving is
+     * costless, and making the user press play after every swipe would be the opposite
+     * complaint.
+     */
+    fun autoplaysWhenSwipedOnto(): Boolean = true
+
     fun shouldAutoHide(
         state: PlayerState,
         scrubbing: Boolean,

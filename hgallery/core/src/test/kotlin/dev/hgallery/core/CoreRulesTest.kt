@@ -557,6 +557,82 @@ class VideoQueueTest {
         assertEquals(null, VideoQueue.next(queue, 99L))
         assertEquals(-1, VideoQueue.indexOf(queue, 99L))
     }
+
+    @Test
+    fun `the clips after an item follow the timeline, not the video queue`() {
+        // The viewer pages the whole list, so "after this one" must mean the next video
+        // the user would reach by swiping, even though a photograph sits in between.
+        val timeline = listOf(video(1, 500), image(9, 400), video(2, 300), image(8, 200), video(3, 100))
+        assertEquals(listOf(2L, 3L), VideoQueue.videosAfter(timeline, 1L).map { it.id })
+    }
+
+    @Test
+    fun `the clips after a photo start at the next one, and the last clip has none`() {
+        val timeline = listOf(image(9, 500), video(2, 400), video(3, 300))
+        assertEquals(listOf(2L, 3L), VideoQueue.videosAfter(timeline, 9L).map { it.id })
+        assertEquals(emptyList<Long>(), VideoQueue.videosAfter(timeline, 3L).map { it.id })
+    }
+
+    @Test
+    fun `an item that is not in the timeline has no following clips`() {
+        val timeline = listOf(video(1, 100))
+        assertEquals(emptyList<Long>(), VideoQueue.videosAfter(timeline, 99L).map { it.id })
+    }
+
+    @Test
+    fun `an empty timeline and a timeline with no videos both yield nothing`() {
+        assertEquals(emptyList<Long>(), VideoQueue.videosAfter(emptyList(), 1L).map { it.id })
+        val photosOnly = listOf(image(1, 300), image(2, 200))
+        assertEquals(emptyList<Long>(), VideoQueue.videosAfter(photosOnly, 1L).map { it.id })
+    }
+
+    @Test
+    fun `a single clip has nothing after it`() {
+        assertEquals(emptyList<Long>(), VideoQueue.videosAfter(listOf(video(1, 100)), 1L).map { it.id })
+    }
+
+    @Test
+    fun `a run of clips answers the next one at each position`() {
+        val timeline = listOf(video(1, 300), video(2, 200), video(3, 100))
+        assertEquals(listOf(2L, 3L), VideoQueue.videosAfter(timeline, 1L).map { it.id })
+        assertEquals(listOf(3L), VideoQueue.videosAfter(timeline, 2L).map { it.id })
+    }
+}
+
+/**
+ * The audio policy, stated as behaviour rather than as constants.
+ *
+ * The rule that matters: a clip the user chose plays with sound, and a clip they merely
+ * swiped past does not. The version of this test that preceded it asserted that a
+ * constant function returned its own literal, which proved nothing and read as coverage
+ * of a defect that lives in the wiring between a player and a view.
+ */
+class PlayerAudioPolicyTest {
+
+    @Test
+    fun `a clip the user chose plays with sound`() {
+        assertFalse(PlayerPolicy.startsMuted(PlayerPolicy.Entry.DIRECT))
+    }
+
+    @Test
+    fun `a clip reached by swiping starts muted`() {
+        assertTrue(PlayerPolicy.startsMuted(PlayerPolicy.Entry.SWIPE))
+    }
+
+    @Test
+    fun `paging onto a clip starts it, so the picture is moving while it is muted`() {
+        assertTrue(PlayerPolicy.autoplaysWhenSwipedOnto())
+    }
+
+    @Test
+    fun `the two entry paths differ, which is the whole point of the rule`() {
+        // If these became equal, one of the two complaints would return: either a camera
+        // roll that talks, or a video that opens silent after a deliberate tap.
+        assertTrue(
+            PlayerPolicy.startsMuted(PlayerPolicy.Entry.SWIPE) !=
+                PlayerPolicy.startsMuted(PlayerPolicy.Entry.DIRECT),
+        )
+    }
 }
 
 class AlbumRulesTest {

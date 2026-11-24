@@ -470,6 +470,41 @@ object HgIcons {
         lineTo(4f, 15f)
     }
 
+    /**
+     * Sound on: a speaker cone with two arcs.
+     *
+     * The same 24 dp box and 1.8 dp stroke as everything else. A filled triangle plus
+     * arcs reads at 20 dp, which a waveform would not.
+     */
+    val SoundOn: ImageVector = icon("HG.SoundOn") {
+        moveTo(4f, 9f)
+        lineTo(8f, 9f)
+        lineTo(12.5f, 5f)
+        lineTo(12.5f, 19f)
+        lineTo(8f, 15f)
+        lineTo(4f, 15f)
+        close()
+        moveTo(16f, 9.2f)
+        arcTo(3.6f, 3.6f, 0f, isMoreThanHalf = false, isPositiveArc = true, 16f, 14.8f)
+        moveTo(18.6f, 6.6f)
+        arcTo(7f, 7f, 0f, isMoreThanHalf = false, isPositiveArc = true, 18.6f, 17.4f)
+    }
+
+    /** Sound off: the same speaker with a stroke through it. */
+    val SoundOff: ImageVector = icon("HG.SoundOff") {
+        moveTo(4f, 9f)
+        lineTo(8f, 9f)
+        lineTo(12.5f, 5f)
+        lineTo(12.5f, 19f)
+        lineTo(8f, 15f)
+        lineTo(4f, 15f)
+        close()
+        moveTo(16.4f, 9.6f)
+        lineTo(20.4f, 14.4f)
+        moveTo(20.4f, 9.6f)
+        lineTo(16.4f, 14.4f)
+    }
+
     /** Devices: a rotated screen with an arrow, for the orientation control. */
     val Orientation: ImageVector = icon("HG.Orientation") {
         moveTo(6.6f, 4.6f)

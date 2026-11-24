@@ -23,6 +23,8 @@ try {
    await page.waitForSelector(`[data-screen="${id}"]`);
    const result=await page.locator('.device').evaluate(e=>({width:e.clientWidth,scroll:e.scrollWidth,headings:e.querySelectorAll('h1').length,html:e.innerHTML}));
    checks++;
+   const links=await page.locator('#screen [data-go]').evaluateAll(list=>list.map(x=>x.dataset.go));
+   for(const target of links)if(!routes.includes(target))failures.push({id,interaction:'unknown destination',target});
    if(result.scroll>result.width+1||result.headings!==1||result.html.includes('undefined')) failures.push({id,width,lang,theme,large,widths:[result.width,result.scroll],headings:result.headings});
    if(width===430&&!large){
     await page.addScriptTag({content:axe});

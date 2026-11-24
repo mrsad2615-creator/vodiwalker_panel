@@ -257,7 +257,8 @@ What is in the code and verified:
 
 | Item | State | Evidence |
 |---|---|---|
-| Colour tokens, light and dark | Implemented, verified on device | The light values were sampled from an emulator screenshot: page `(247,245,241)`, accent `(198,96,20)`, both exact token matches. |
+| Colour tokens, light | Implemented, verified on device | Sampled from an emulator screenshot: page `(247,245,241)`, accent `(198,96,20)`, both exact token matches. |
+| Colour tokens, dark | Implemented, verified on device | `43-photos-dark.png` and `42-settings-dark.png`, sampled: page `(5,5,5)`, dock and chip `(17,17,17)`, accent `(242,138,54)`. Four exact token matches. |
 | Application icon and splash mark | Implemented, verified by raster | The aperture geometry was rendered to PNG at 216, 108, 48 and 24 px and inspected. |
 | Home header, two controls and a menu | Implemented, verified on device | `01-photos.png` and `08-month-view.png`. |
 | Filter chips with counts | Implemented, verified on device | `01-photos.png`. Four chips, the selected one filled with the accent. |
@@ -268,14 +269,29 @@ What is not done:
 
 | Item | State |
 |---|---|
-| Dark theme on device | Not verified. The CI emulator runs light mode only, so dark is built and untested on a screen. |
+| Pinch and double-tap zoom about the touch point | Implemented, not gesture-tested. The arithmetic is read, not driven. |
 | Shared-element transition from the grid to the viewer | Not implemented. |
 | Hybrid grid, the design's mixed tile sizes | Not implemented. The grid is still uniform. |
 | Player gesture set: brightness, volume, lock, long-press speed | Not implemented. |
 
-## 14. Two defects this phase found, and what let them through
+## 14. Two things the screenshots proved that the tests could not
 
-Both were in the home header, and both were introduced by the redesign.
+The dark theme had never been rendered. Every screenshot in this folder was light
+mode, because the emulator boots light and no step changed it, so a palette the
+whole redesign is drawn from was untested on a screen. The harness now walks the
+user's path through Settings, photographs both screens, and sets the theme back.
+
+The second clip. `40-video-second-clip.png` and `41-video-second-clip-no-chrome.png`
+were deleted by one run and produced by the next, with no change to the player in
+between. The cause was the harness making one `uiautomator dump` attempt on a video
+surface that never settles. The dump now retries and fails loudly, and the step that
+takes the second clip fails the job instead of warning: that file is the only
+evidence that the player can draw a picture after the item changes, which is the
+defect that once survived a green run.
+
+## 15. Three defects this phase found in the app, and what let them through
+
+The first two were in the home header, and both were introduced by the redesign.
 
 1. The title was drawn one character per line. `HgScreenTitle` added the screen
    gutter and its caller padded the row as well, which spent 40 dp of a 320 dp
@@ -300,13 +316,13 @@ then force-restarted the app, and the evidence bot deleted three screenshots tha
 never got written. The guard now accepts the app's own pop-up, and a pop-up from
 another app still fails.
 
-## 15. Summary of this phase, in the terms of the acceptance rule
+## 16. Summary of this phase, in the terms of the acceptance rule
 
 | Class | Contents |
 |---|---|
 | Implemented and tested | NOIR colour tokens (light verified on device, both themes in code); application icon and splash mark; home header with search and an overflow menu; filter chips and `GalleryFilter`; vertical swipe dismissal in the viewer; player identity across a clip change; mute state and volume per entry path; `load()` state reset; release finality. 9 player device tests, 4 dismissal device tests, 7 header device tests, 7 `GalleryFilter` domain tests, 6 `videosAfter` tests, 4 audio-policy tests. All four CI jobs green. |
-| Implemented, not fully tested | Dark theme: it builds and every token is in `HgTheme`, but the CI emulator runs light mode, so no screenshot shows it. Pinch and double-tap zoom about the touch point: the arithmetic is unit-checked by reading, not by a gesture test. |
+| Implemented, not fully tested | Pinch and double-tap zoom about the touch point: the arithmetic is read, not driven by a gesture test. The archived-trash screen has no test. |
 | Not implemented | Shared-element transition; hybrid grid; brightness, volume, lock and speed gestures in the player; MediaSession; foreground service; subtitles; audio track selection. |
-| Blocked | Sound. No audio sink exists on the CI emulator. Needs a person and a phone. Dark mode on device for the same reason: it needs a run that switches the emulator's theme. |
+| Blocked | Sound. No audio sink exists on the CI emulator. Needs a person and a phone. |
 | Failed tests | None in the final run. Earlier failures in this phase each found a real defect: an unresolved import, an unused property, a self-referencing checker, and the harness rejecting its own pop-up. |
 | Known limitations | The dismiss threshold, 0.18 of the height, is a judgement the emulator confirms for a full swipe. A partial pull in the range 0.10 to 0.18 is not photographed. A photograph pushed onto a clip in the viewer pages one step instead of handing over; `ViewerReplace` was designed and removed because nothing called it, see section 7. |

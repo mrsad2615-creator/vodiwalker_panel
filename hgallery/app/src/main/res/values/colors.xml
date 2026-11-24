@@ -4,9 +4,9 @@
       The launcher plate. Near-black, not pure black: pure black merges into the
       bezel of a phone and the icon loses its silhouette.
     -->
-    <color name="ic_launcher_background">#0E1016</color>
+    <color name="ic_launcher_background">#0A0A0A</color>
 
-    <!-- The splash window, matching the app's own light background so the hand-off
-         from the system splash to the first frame has no visible colour change. -->
-    <color name="splash_background">#F7F7F9</color>
+    <!-- The splash window. NOIR warm paper, so the hand-off from the system splash to
+         the first frame has no visible colour change in the light theme. -->
+    <color name="splash_background">#F7F5F1</color>
 </resources>

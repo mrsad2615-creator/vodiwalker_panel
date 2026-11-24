@@ -1,58 +1,78 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  HYBRID GALLERY — the mark.
+  H APERTURE SIGNATURE — the launcher foreground.
 
-  ## What the shape means
+  ## What the mark is
 
-  An H, because that is the product's initial, built from two overlapping frames
-  rather than from strokes. Two frames that share a spine is what "hybrid" means here:
-  two libraries, one view. The overlap is filled solid, so the joint reads as a single
-  bright element instead of a seam.
+  A six-blade iris with an open housing. The blades are chords that rotate inward and
+  leave a hexagonal pupil. The pupil is the only filled shape, so it is what survives at
+  the smallest size; at 24 dp the blades merge into a ring and the pupil still reads.
 
-  ## Why it is drawn this way
+  ## Why an aperture
 
-  The mark contains no circle, no burst and no flower. Those are the stock gallery
-  silhouettes, and the previous six-petal artwork read as a Huawei imitation in review.
-  A square-with-a-cross is also out: it is the "broken image" glyph, and a gallery that
-  shows it as its own logo is telling the wrong story.
+  A camera roll is a set of photographs, and a photograph is light through an opening.
+  The aperture is the one shape in photography that is also a letter: the two housing
+  arcs leave gaps at opposite corners, and with the pupil between them the mark reads as
+  an H without drawing an H. Nothing is imitated: no circle, no burst, no flower.
 
   ## Construction
 
-  A 108 x 108 viewport with the artwork inside the 72 x 72 safe circle, which is what
-  the adaptive-icon spec asks for: 18 dp of bleed on every side at mdpi.
-  - Left frame: x 22..52, y 30..78, corner radius 5.
-  - Right frame: x 56..86, y 30..78, corner radius 5.
-  - Spine: x 49..59, y 30..78 — the two frames overlap it, which produces the H.
-  - A single dot sits in the left frame: the "one photo" that any library starts with.
+  A 108 x 108 viewport. The artwork is centred on (54, 54) and stays inside the 72 x 72
+  safe circle, which is 18 dp of bleed on every side at mdpi.
 
-  Every coordinate is a whole number on a 4-unit grid, so the mark stays crisp at 24 dp.
+  - Housing: two arcs of 164 degrees at radius 26, opening at 8-172 and 188-352.
+    The two gaps sit at the right and the left, so the silhouette is not a ring.
+  - Blades: six chords. Each runs from the inner hexagon at radius 12 to the housing at
+    radius 25, offset 60 degrees from the next, which is what leaves the pupil.
+  - Pupil: a hexagon at radius 5.5, filled.
+
+  Every radius is a whole or half number on a 4-unit grid, and the stroke is 4 units at
+  108, so the mark stays crisp after a launcher mask and at 24 dp.
 -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-
-    <!-- Left frame: the gallery that was already there. -->
+    <!--
+      The housing: two 164 degree arcs at radius 26, open at the left and the right.
+      The openings are what stop the mark from reading as a plain ring.
+    -->
     <path
-        android:pathData="M27,30 L47,30 A5,5 0 0 1 52,35 L52,73 A5,5 0 0 1 47,78 L27,78 A5,5 0 0 1 22,73 L22,35 A5,5 0 0 1 27,30 Z"
-        android:fillColor="#5AA6FF"
-        android:fillAlpha="0.92" />
-
-    <!-- Right frame: the second source. Offset by four units so the two never merge. -->
+        android:pathData="M51.3,28.1 A26,26 0 0,1 63.7,78.1"
+        android:strokeColor="#F28A36"
+        android:strokeWidth="4"
+        android:strokeLineCap="round" />
     <path
-        android:pathData="M61,30 L81,30 A5,5 0 0 1 86,35 L86,73 A5,5 0 0 1 81,78 L61,78 A5,5 0 0 1 56,73 L56,35 A5,5 0 0 1 61,30 Z"
-        android:fillColor="#FF8A63"
-        android:fillAlpha="0.92" />
+        android:pathData="M56.7,79.9 A26,26 0 0,1 44.3,29.9"
+        android:strokeColor="#F28A36"
+        android:strokeWidth="4"
+        android:strokeLineCap="round" />
 
-    <!-- The spine: drawn last so it sits on top and joins the two frames into an H. -->
-    <path
-        android:pathData="M49,30 L59,30 L59,78 L49,78 Z"
-        android:fillColor="#FFFFFF" />
+    <!--
+      Six blades. Each one is an edge of the pupil hexagon pushed outward to the
+      housing, so the six edges together form the tangent polygon that a real iris
+      makes. Drawn from the centre outward they would converge instead, which is a
+      star, not an aperture.
+    -->
+    <path android:pathData="M57.2,48.5 L66,33.2" android:strokeColor="#F28A36"
+        android:strokeWidth="3.4" android:strokeLineCap="round" />
+    <path android:pathData="M60.4,54 L78,54" android:strokeColor="#F28A36"
+        android:strokeWidth="3.4" android:strokeLineCap="round" />
+    <path android:pathData="M57.2,59.5 L66,74.8" android:strokeColor="#F28A36"
+        android:strokeWidth="3.4" android:strokeLineCap="round" />
+    <path android:pathData="M50.8,59.5 L42,74.8" android:strokeColor="#F28A36"
+        android:strokeWidth="3.4" android:strokeLineCap="round" />
+    <path android:pathData="M47.6,54 L30,54" android:strokeColor="#F28A36"
+        android:strokeWidth="3.4" android:strokeLineCap="round" />
+    <path android:pathData="M50.8,48.5 L42,33.2" android:strokeColor="#F28A36"
+        android:strokeWidth="3.4" android:strokeLineCap="round" />
 
-    <!-- One photograph, already in the library. -->
+    <!--
+      The pupil: the only filled shape in the mark, so it is what survives at 24 dp.
+      A hexagon at radius 6.2, aligned with the blade edges.
+    -->
     <path
-        android:pathData="M32,58 m-4,0 a4,4 0 1,0 8,0 a4,4 0 1,0 -8,0"
-        android:fillColor="#FFFFFF"
-        android:fillAlpha="0.95" />
+        android:pathData="M54,47.8 L59.4,50.9 L59.4,57.1 L54,60.2 L48.6,57.1 L48.6,50.9 Z"
+        android:fillColor="#F2F0EB" />
 </vector>

@@ -69,9 +69,16 @@ data class HgColors(
  */
 @Immutable
 data class HgShapes(
+    /** A photograph cell in the grid. */
     val tile: Dp = 10.dp,
+    /** A filmstrip cell, one step tighter than a grid tile because it is smaller. */
+    val cell: Dp = 12.dp,
     val card: Dp = 16.dp,
+    /** A panel that floats over media, such as the viewer's info pill. */
+    val panel: Dp = 18.dp,
     val sheet: Dp = 28.dp,
+    /** A floating dock. Large enough that its ends read as round, not as a bar. */
+    val dock: Dp = 30.dp,
     val chip: Dp = 12.dp,
     val button: Dp = 20.dp,
     /** The search field and other pill shapes. */
@@ -87,55 +94,89 @@ data class HgShapes(
  */
 @Immutable
 data class HgSpacing(
+    /** The screen margin. This is the one distance measured from the reference. */
     val gutter: Dp = 20.dp,
     val gridGap: Dp = 3.dp,
     val sectionGap: Dp = 24.dp,
     val cardGap: Dp = 12.dp,
+    /** The gap between a floating control and the edge, and between two of them. */
+    val floatGap: Dp = 8.dp,
     val minTouch: Dp = 48.dp,
     val toolbarHeight: Dp = 56.dp,
     val bottomBarHeight: Dp = 64.dp,
+    /** Height of the floating dock that replaced the bottom bar. */
+    val dockHeight: Dp = 60.dp,
+    /** A 34 dp round action in the viewer's top chrome. */
+    val roundAction: Dp = 34.dp,
     val photosColumns: Int = 4,
     val monthColumns: Int = 6,
     val albumColumns: Int = 2,
 )
 
+/**
+ * NOIR on paper. The same identity, inverted, not a second look.
+ *
+ * The ground is warm paper rather than white, so a photograph still reads as the
+ * brightest object. The accent is the same hue as the dark theme, darkened until it
+ * passes 4.5:1 on this ground: a light orange cannot pass on a light surface, and an
+ * accent that fails contrast is not a brand colour, it is a defect.
+ */
 val HgColorsLight = HgColors(
-    background = Color(0xFFF7F7F9),
+    background = Color(0xFFF7F5F1),
     surface = Color(0xFFFFFFFF),
-    surfaceHigh = Color(0xFFEFEFF4),
-    surfaceSunken = Color(0xFFF0F0F5),
-    textPrimary = Color(0xFF141418),
-    textSecondary = Color(0xFF6B6B76),
-    textTertiary = Color(0xFF9C9CA6),
+    surfaceHigh = Color(0xFFEFEBE5),
+    surfaceSunken = Color(0xFFF2EFEA),
+    textPrimary = Color(0xFF141210),
+    textSecondary = Color(0xFF6B665F),
+    textTertiary = Color(0xFF9A948C),
     textOnMedia = Color(0xFFFFFFFF),
-    accent = Color(0xFF0068E8),
-    accentMuted = Color(0x1A0068E8),
+    accent = Color(0xFFC66014),
+    accentMuted = Color(0x1FC66014),
     onAccent = Color(0xFFFFFFFF),
-    accentWarm = Color(0xFFE8623C),
-    divider = Color(0xFFE4E4EA),
+    accentWarm = Color(0xFFA94E0E),
+    divider = Color(0xFFE2DED8),
     scrim = Color(0x66000000),
-    danger = Color(0xFFD93636),
-    favourite = Color(0xFFF2536B),
+    danger = Color(0xFFC22B30),
+    favourite = Color(0xFFC66014),
     isLight = true,
 )
 
+/**
+ * NOIR, the dark theme. This is the reference theme: the light theme below is an
+ * inversion of it, not a second design.
+ *
+ * ## Why the surfaces are so close to the background
+ *
+ * `background` and `surface` differ by about 12 levels of luminance. That is on
+ * purpose. A photograph must be the brightest object on the screen, so the product
+ * furniture steps back and separation comes from the 1 dp border rather than from a
+ * large lightened panel. A gallery that paints its own chrome a mid gray competes with
+ * the work it is showing.
+ *
+ * ## The one accent
+ *
+ * [accent] marks exactly four states: the current tab, an active filter chip, the
+ * current filmstrip cell, and the play head. [accentWarm] exists because the player's
+ * volume pill needs a second step of the same hue for its container; it is not a second
+ * brand colour.
+ */
 val HgColorsDark = HgColors(
-    background = Color(0xFF0B0B0F),
-    surface = Color(0xFF16161C),
-    surfaceHigh = Color(0xFF22222A),
-    surfaceSunken = Color(0xFF1B1B22),
-    textPrimary = Color(0xFFF4F4F7),
-    textSecondary = Color(0xFFA0A0AC),
-    textTertiary = Color(0xFF6E6E7A),
+    background = Color(0xFF050505),
+    surface = Color(0xFF111111),
+    surfaceHigh = Color(0xFF191919),
+    surfaceSunken = Color(0xFF0C0C0C),
+    textPrimary = Color(0xFFF2F0EB),
+    textSecondary = Color(0xFF929292),
+    textTertiary = Color(0xFF6A6A6A),
     textOnMedia = Color(0xFFFFFFFF),
-    accent = Color(0xFF5AA6FF),
-    accentMuted = Color(0x2E5AA6FF),
-    onAccent = Color(0xFF04121F),
-    accentWarm = Color(0xFFFF8A63),
-    divider = Color(0xFF26262E),
+    accent = Color(0xFFF28A36),
+    accentMuted = Color(0x2EF28A36),
+    onAccent = Color(0xFF0C0804),
+    accentWarm = Color(0xFFE07524),
+    divider = Color(0xFF383838),
     scrim = Color(0x99000000),
-    danger = Color(0xFFFF6B6B),
-    favourite = Color(0xFFFF7A8E),
+    danger = Color(0xFFE5484D),
+    favourite = Color(0xFFF28A36),
     isLight = false,
 )
 

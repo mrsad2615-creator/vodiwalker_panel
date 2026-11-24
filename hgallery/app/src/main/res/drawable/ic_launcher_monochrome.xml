@@ -16,24 +16,33 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-
-    <!-- Left frame, with its right edge cut at the spine. -->
-    <path
-        android:pathData="M27,30 L47,30 A5,5 0 0 1 52,35 L52,73 A5,5 0 0 1 47,78 L27,78 A5,5 0 0 1 22,73 L22,35 A5,5 0 0 1 27,30 Z"
-        android:fillColor="#000000" />
-
-    <!-- Right frame, with its left edge cut at the spine. -->
-    <path
-        android:pathData="M61,30 L81,30 A5,5 0 0 1 86,35 L86,73 A5,5 0 0 1 81,78 L61,78 A5,5 0 0 1 56,73 L56,35 A5,5 0 0 1 61,30 Z"
-        android:fillColor="#000000" />
-
     <!--
-      The spine, punched with the even-odd rule so the gap between the frames becomes
-      a solid bar. Drawing the bar in the same colour as the frames is what produces
-      the H once the system recolours everything.
+      H Aperture Signature, one colour.
+
+      Android tints this layer with the user's wallpaper palette, so the mark has to
+      read without the contrast between an accent ring and a pale pupil. The housing and
+      the six blades are drawn at full stroke weight and the pupil is left hollow: in a
+      single colour a filled pupil would merge into the blades and the opening would
+      disappear.
     -->
     <path
-        android:pathData="M45,26 L63,26 L63,82 L45,82 Z M49,34 L59,34 L59,74 L49,74 Z"
-        android:fillColor="#000000"
-        android:fillType="evenOdd" />
+        android:pathData="M51.3,28.1 A26,26 0 0,1 63.7,78.1"
+        android:strokeColor="#000000" android:strokeWidth="4.4"
+        android:strokeLineCap="round" />
+    <path
+        android:pathData="M56.7,79.9 A26,26 0 0,1 44.3,29.9"
+        android:strokeColor="#000000" android:strokeWidth="4.4"
+        android:strokeLineCap="round" />
+    <path android:pathData="M57.2,48.5 L66,33.2" android:strokeColor="#000000"
+        android:strokeWidth="3.8" android:strokeLineCap="round" />
+    <path android:pathData="M60.4,54 L78,54" android:strokeColor="#000000"
+        android:strokeWidth="3.8" android:strokeLineCap="round" />
+    <path android:pathData="M57.2,59.5 L66,74.8" android:strokeColor="#000000"
+        android:strokeWidth="3.8" android:strokeLineCap="round" />
+    <path android:pathData="M50.8,59.5 L42,74.8" android:strokeColor="#000000"
+        android:strokeWidth="3.8" android:strokeLineCap="round" />
+    <path android:pathData="M47.6,54 L30,54" android:strokeColor="#000000"
+        android:strokeWidth="3.8" android:strokeLineCap="round" />
+    <path android:pathData="M50.8,48.5 L42,33.2" android:strokeColor="#000000"
+        android:strokeWidth="3.8" android:strokeLineCap="round" />
 </vector>

@@ -64,6 +64,37 @@ private const val REDUCED_MOTION_THRESHOLD = 0.05f
 /** Settles faster than the display can show a frame. */
 private const val STIFFEST_SPRING = 100_000f
 
+/**
+ * Duration tokens, in milliseconds, from the NOIR motion table.
+ *
+ * ## Why durations exist beside the springs
+ *
+ * A spring is right for anything a gesture can interrupt, because it keeps its
+ * velocity when the target changes. It is wrong for a change the user only observes:
+ * an auto-hide, a fade, an ink ripple. Those need a duration the eye can predict, and
+ * a spring's settling time depends on the distance it travels, so the same token would
+ * take 90 ms for a nudge and 400 ms for a slide.
+ *
+ * Each token has one purpose. The ranges are the ones the brief sets, and the values
+ * sit inside them.
+ */
+object HgDuration {
+    /** 100-160 ms. Press feedback, a chip filling, an icon changing state. */
+    const val Micro = 120
+
+    /** 180-260 ms. Chrome showing and hiding, a panel expanding, the strip moving. */
+    const val Standard = 220
+
+    /** 280-400 ms. Grid to viewer and back; the signature movement. */
+    const val Signature = 340
+
+    /** 250-350 ms. A whole sheet arriving. */
+    const val Large = 300
+
+    /** How long the player's chrome stays after the last touch. */
+    const val ChromeAutoHide = 3000
+}
+
 object HgMotion {
 
     /** Press feedback and other quick, small movements. */

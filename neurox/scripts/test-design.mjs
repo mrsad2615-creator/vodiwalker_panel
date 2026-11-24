@@ -44,6 +44,12 @@ try {
   await page.evaluate(()=>{query='';location.hash='home';render();});
   await page.screenshot({path:path.join(output,`direction-${direction}.png`),fullPage:true});
  }
+ // Capture every major route in the selected direction for visual critique.
+ await page.selectOption('#direction','quiet');
+ for(const id of routes){
+  await page.evaluate(id=>{language='en';document.documentElement.dataset.theme='dark';document.body.classList.remove('large');location.hash=id;render();},id);
+  await page.locator('#device').screenshot({path:path.join(output,`screen-${id}-en-dark.png`)});
+ }
  await page.evaluate(()=>{language='fa';document.documentElement.dataset.theme='light';location.hash='vision';render();});
  await page.screenshot({path:path.join(output,'vision-fa-light.png'),fullPage:true});
  const report={scope:'Browser prototype only. Not Android device acceptance.',checks,failures,consoleErrors,accessibility};

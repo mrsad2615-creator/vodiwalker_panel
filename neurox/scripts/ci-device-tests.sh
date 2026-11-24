@@ -10,8 +10,10 @@ import sys
 import xml.etree.ElementTree as ET
 
 def emit(level, title, text):
-    escaped = text[-12000:].replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
-    print(f'::{level} title={title}::{escaped}')
+    text = text[-12000:]
+    for index in range(0, len(text), 2800):
+        escaped = text[index:index + 2800].replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
+        print(f'::{level} title={title}::{escaped}')
 
 tests = failures = skipped = reports = 0
 module_cases = {}
@@ -36,7 +38,7 @@ for module in ['app', 'core/data']:
 emit('notice', 'Android test counts', f'{reports} XML reports; {tests} cases; {failures} failures; {skipped} skipped')
 if sys.argv[1] != '0' and failures == 0:
     lines = Path('test-output/android-device.log').read_text(errors='replace').splitlines()
-    relevant = [line for line in lines if line.startswith(('e: ', 'FAILURE:', '* What went wrong:', '> ', 'ERROR:')) or 'failed' in line.lower() or 'error:' in line.lower()]
+    relevant = [line for line in lines if line.startswith(('e: ', 'FAILURE:', '* What went wrong:', 'ERROR:')) or (line.startswith('> ') and not line.startswith('> Task ')) or 'failed' in line.lower() or 'error:' in line.lower()]
     emit('error', 'Android device runner diagnostics', '\n'.join(relevant)[-12000:] or '\n'.join(lines[-40:]))
 if sys.argv[1] == '0' and (failures or tests == skipped or not all(module_cases.values())):
     emit('error', 'Android test evidence incomplete', f'Cannot accept this run: module cases={module_cases}, failures={failures}, skipped={skipped}. Both modules must execute real passing cases.')

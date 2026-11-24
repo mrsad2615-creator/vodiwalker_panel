@@ -24,6 +24,7 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.LayoutDirection
@@ -65,29 +66,31 @@ fun NeuroxApp(vm: AppViewModel) {
             Scaffold(
                 containerColor = MaterialTheme.colorScheme.background,
                 topBar = {
-                    if (screen != Screen.RUN) Row(Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 20.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    if (screen != Screen.RUN) BoxWithConstraints(Modifier.fillMaxWidth()) {
+                      val showOffline = maxWidth >= 480.dp && LocalDensity.current.fontScale <= 1.3f
+                      Row(Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 20.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                         if (screen !in listOf(Screen.HOME, Screen.ONBOARDING)) IconButton(onClick = vm::back) {
                             Text(if (fa) "→" else "←", modifier = Modifier.semantics { contentDescription = if (fa) "بازگشت" else "Back" })
                         }
                         NeuroxEmblem(size = 28.dp)
                         Spacer(Modifier.width(10.dp))
-                        Text("NEUROX", fontSize = 18.sp, fontWeight = FontWeight.Bold, letterSpacing = 3.sp, modifier = Modifier.weight(1f))
-                        Text(tr("کاملاً آفلاین", "OFFLINE"), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("NEUROX", fontSize = 18.sp, fontWeight = FontWeight.Bold, letterSpacing = 3.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                        if (showOffline) Text(tr("کاملاً آفلاین", "OFFLINE"), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         IconButton(onClick = { if (screen in listOf(Screen.SETTINGS, Screen.COLOR)) vm.back() else vm.openSettings() }) {
                             NeuroxIcon(Glyph.SETTINGS, label = tr("تنظیمات", "Settings"))
                         }
-                    }
+                    } }
                 },
                 bottomBar = {
                     if (screen !in listOf(Screen.RUN, Screen.RESULT, Screen.ONBOARDING)) {
-                        NavigationBar(containerColor = MaterialTheme.colorScheme.background, tonalElevation = 0.dp) {
+                        NavigationBar(modifier = Modifier.heightIn(min = if (LocalDensity.current.fontScale > 1.3f) 112.dp else 80.dp), containerColor = MaterialTheme.colorScheme.background, tonalElevation = 0.dp) {
                             listOf(
                                 Triple(Screen.HOME, Glyph.HOME, tr("خانه", "Home")), Triple(Screen.STUDIOS, Glyph.TRAINING, tr("تمرین", "Train")),
                                 Triple(Screen.ANALYTICS, Glyph.ANALYTICS, tr("تحلیل", "Stats")), Triple(Screen.LIBRARY, Glyph.LIBRARY, tr("کتابخانه", "Library")),
                                 Triple(Screen.PROFILE, Glyph.PROFILE, tr("پروفایل", "Profile")),
                             ).forEach { (destination, icon, label) ->
                                 val selectedDestination = screen == destination || (destination == Screen.STUDIOS && screen in listOf(Screen.MODULE, Screen.TRAINING))
-                                NavigationBarItem(selected = selectedDestination, onClick = { vm.navigate(destination) }, icon = { NeuroxIcon(icon, tint = if (selectedDestination) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant) }, label = { Text(label, maxLines = 1) })
+                                NavigationBarItem(selected = selectedDestination, onClick = { vm.navigate(destination) }, icon = { NeuroxIcon(icon, tint = if (selectedDestination) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant) }, label = { Text(label, maxLines = 2) })
                             }
                         }
                     }
@@ -180,7 +183,7 @@ private fun HomeScreen(state: AppState, vm: AppViewModel) {
         Text(tr("خوش آمدید، ${if (profile.guest) "مهمان" else profile.name}", "Welcome, ${profile.name}"), color = MaterialTheme.colorScheme.onSurfaceVariant)
         SectionTitle("TRAIN YOUR POTENTIAL", tr("هر روز، دقیق‌تر\nاز دیروز.", "A sharper mind.\nOne session at a time."), tr("تمرینِ متمرکز. پیشرفتِ قابل‌اندازه‌گیری.", "Focused training. Measurable progress."))
         Panel {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(NeuroxSpace.xl), verticalArrangement = Arrangement.spacedBy(NeuroxSpace.md)) {
                 Metric(tr("سطح", "LEVEL"), number(Progression.level(xp)))
                 Metric(tr("امتیاز تجربه", "TOTAL XP"), number(xp))
                 Metric(tr("روز پیوسته", "DAY STREAK"), number(streak))

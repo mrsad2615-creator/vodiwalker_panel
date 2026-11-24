@@ -57,6 +57,11 @@ fun NeuroxTheme(mode: String, accent: Long, textScale: Float = 1f, content: @Com
         outline = Color(0xFF777267), error = Color(0xFFAB2121), onError = Color.White,
     )
     val typography = Typography(
+        displayLarge = TextStyle(fontFamily = NeuroxFont, fontSize = 48.sp, lineHeight = 60.sp, fontWeight = FontWeight.Bold),
+        displayMedium = TextStyle(fontFamily = NeuroxFont, fontSize = 42.sp, lineHeight = 54.sp, fontWeight = FontWeight.Bold),
+        headlineLarge = TextStyle(fontFamily = NeuroxFont, fontSize = 32.sp, lineHeight = 44.sp, fontWeight = FontWeight.Bold),
+        headlineSmall = TextStyle(fontFamily = NeuroxFont, fontSize = 24.sp, lineHeight = 36.sp, fontWeight = FontWeight.Bold),
+        titleSmall = TextStyle(fontFamily = NeuroxFont, fontSize = 14.sp, lineHeight = 24.sp, fontWeight = FontWeight.Bold),
         displaySmall = TextStyle(fontFamily = NeuroxFont, fontSize = 36.sp, lineHeight = 46.sp, fontWeight = FontWeight.Bold),
         headlineMedium = TextStyle(fontFamily = NeuroxFont, fontSize = 30.sp, lineHeight = 42.sp, fontWeight = FontWeight.Bold),
         titleLarge = TextStyle(fontFamily = NeuroxFont, fontSize = 22.sp, lineHeight = 34.sp, fontWeight = FontWeight.Bold),

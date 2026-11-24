@@ -1,6 +1,35 @@
 # Test report — 2026-11-24
 
-## Current verified baseline
+## Current verified 0.5 development milestone
+
+Native commit: `f360ad2d4b69785dde50b684c9cebfe7b42f44aa`. Version `0.5.0-dev`, code 5. Hosted run [45497991213](https://github.com/mrsad2615-creator/vodiwalker_panel/actions/runs/45497991213) **SUCCESS**. Both native-build and emulator-tests passed. This is not full flagship acceptance.
+
+| Check | Actual result |
+|---|---|
+| Domain/security | 230 passed, 0 failed |
+| Static/XML | 44 passed |
+| SQLite migration comparison | 5 passed |
+| Evidence parser | 6 passed |
+| Kotlin grammar | 53 files, 0 parse errors |
+| Android build, Room/KSP, lint, both test APKs | Passed |
+| API 35 x86_64 instrumentation | **44 passed, 0 failures, 0 skipped**: 27 data/migration, 17 app |
+| Browser prototype | 320 layout combinations, 0 failures/page errors; 80 axe audits, 0 route failures |
+
+[Download the 0.5 debug APK artifact](https://github.com/mrsad2615-creator/vodiwalker_panel/actions/runs/45497991213/artifacts/14968932757). Extract `app-debug.apk`. APK size: **12,801,143 bytes**. APK SHA-256:
+
+```text
+203ec5fce0a6c2ddec8fcf0c9d25ad1e8c227aa22cf9d575410fee8f6c2eb144
+```
+
+New native coverage includes isolated preferences, goal bounds/ownership/deletion/reopen, welcome skip, live language/theme changes, optional baseline setup, repeated baseline intent, all four studio-to-setup/back routes and locked initial milestones. Historical engine, repository, migration and real-ticker cases still run. Twenty-one new domain cases cover actual-history insights, calendar/DST handling, baseline filtering, milestone thresholds and deterministic under-practiced-task selection.
+
+All 20 selected-direction English dark prototype screenshots received agent visual critique; Persian light VISION and the direction comparison were also reviewed. This is not a usability study. Corrections include transient contrast, icon stroke, TYPE preview destination, sample level and fixed-level comprehension copy. The browser harness checks link destinations as well as layout, script errors and accessibility rules.
+
+Failure record: `45495682366` failed. The app's 16 cases passed, but data-test assertions lacked the JUnit Assert import. Diagnostic annotations were also truncated. Split diagnostic output into bounded chunks and fixed the import. `45496635617` was canceled when superseded; it is not passing evidence. `45497039786` then passed 43 cases. The final run above adds a setup-revision regression and passes 44. No behavioral test was removed.
+
+The source package after this run includes documentation and browser-tool bootstrap changes only beyond the tested native commit. See `build-evidence-0.5.0-dev.json`. No local APK download/install, production signing, physical-device performance, TalkBack/Switch Access or comprehensive offline/fault acceptance is claimed. Twenty exercises and major expanded subsystems remain unimplemented. The older evidence below is retained as history, not the current APK.
+
+## Historical 0.4 verified baseline
 
 **Native source commit:** `4d96388cb072b027f14330a2cf2905a511bc3769`
 **Version:** `0.4.0-dev`, version code 4

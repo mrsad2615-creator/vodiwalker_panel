@@ -1,0 +1,78 @@
+{
+  "version": "0.5.0-dev",
+  "versionCode": 5,
+  "branch": "arena/421b81ea-vodiwalker-panel",
+  "sourceCommit": "f360ad2d4b69785dde50b684c9cebfe7b42f44aa",
+  "runId": 45497991213,
+  "runUrl": "https://github.com/mrsad2615-creator/vodiwalker_panel/actions/runs/45497991213",
+  "conclusion": "success",
+  "jobs": [
+    {
+      "name": "native-build",
+      "conclusion": "success",
+      "started_at": "2026-11-24T22:08:13Z",
+      "completed_at": "2026-11-24T22:13:11Z"
+    },
+    {
+      "name": "emulator-tests",
+      "conclusion": "success",
+      "started_at": "2026-11-24T22:08:13Z",
+      "completed_at": "2026-11-24T22:13:30Z"
+    }
+  ],
+  "apk": {
+    "name": "app-debug.apk",
+    "bytes": 12801143,
+    "sha256": "203ec5fce0a6c2ddec8fcf0c9d25ad1e8c227aa22cf9d575410fee8f6c2eb144",
+    "artifactUrl": "https://github.com/mrsad2615-creator/vodiwalker_panel/actions/runs/45497991213/artifacts/14968932757",
+    "signing": "debug; not a production release",
+    "downloadedToSandbox": false
+  },
+  "instrumentation": {
+    "cases": 44,
+    "failures": 0,
+    "skipped": 0,
+    "dataAndMigrationCases": 27,
+    "appCases": 17,
+    "apiLevel": 35,
+    "architecture": "x86_64"
+  },
+  "localChecks": {
+    "coreSecurityCases": 230,
+    "staticChecks": 44,
+    "sqliteChecks": 5,
+    "ciEvidenceParserCases": 6,
+    "kotlinSyntaxFiles": 53
+  },
+  "browserPrototype": {
+    "routes": 20,
+    "layoutCombinations": 320,
+    "layoutFailures": 0,
+    "pageErrors": 0,
+    "axeAudits": 80,
+    "axeRouteFailures": 0,
+    "scope": "Browser prototype, not Android accessibility acceptance"
+  },
+  "roomSchema": {
+    "version": 2,
+    "identityHash": "cfc53d208dc748bbea7b91f8748a7636"
+  },
+  "scope": {
+    "implementedExercisePaths": 14,
+    "requiredExercisePaths": 34,
+    "productionAcceptanceComplete": false,
+    "physicalDeviceVerified": false
+  },
+  "evidenceAnnotations": [
+    {
+      "job": "native-build",
+      "title": "Debug APK evidence",
+      "message": "app-debug.apk; bytes=12801143; sha256=203ec5fce0a6c2ddec8fcf0c9d25ad1e8c227aa22cf9d575410fee8f6c2eb144"
+    },
+    {
+      "job": "emulator-tests",
+      "title": "Android test counts",
+      "message": "2 XML reports; 44 cases; 0 failures; 0 skipped"
+    }
+  ]
+}

@@ -42,7 +42,7 @@ All 20 routes were rendered at 360/430 px, FA/EN, dark/light and normal/large te
 LD_LIBRARY_PATH="$PWD/.local/tools/design/sysroot/lib" node neurox/scripts/test-design.mjs
 ```
 
-The local Chromium harness and libraries are tools, not application dependencies. Generated reports/screenshots stay in ignored `test-output/design/`. Manual screenshot inspection covered all 20 routes in the selected English dark direction, plus Persian light VISION and the Home direction comparison. This is an agent visual critique, not user testing or manual review of every locale/theme/text-size combination.
+Install the pinned review tools with `neurox/scripts/bootstrap-design.sh` from repository root (Node 22.17+). Serve `neurox/` on port 4173. `DESIGN_URL` can select another static-server origin. The local Chromium harness and libraries are tools, not application dependencies. Generated reports/screenshots stay in ignored `test-output/design/`. Manual screenshot inspection covered all 20 routes in the selected English dark direction, plus Persian light VISION and the Home direction comparison. This is an agent visual critique, not user testing or manual review of every locale/theme/text-size combination.
 
 | Route | Critique and response |
 |---|---|

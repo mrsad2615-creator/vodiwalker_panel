@@ -36,7 +36,7 @@ A successful build does not satisfy this matrix. Record device model, OS, refres
 
 `ExerciseExpansionTests.kt` adds seeded board generation checks, GO/NO-GO balance and false alarms, non-skipping phrase timing, real display-time WPM, word-by-word batch completion, per-language inputs, bounded draft sizes and old input revision rejection. A cross-product driver completes all fourteen exercises in both languages and all supported levels. A second driver recreates each exercise from its completed-round checkpoint.
 
-Additional Android codec/repository tests cover legacy version-1 input, version-2 round trips, new exercise identifiers, extreme valid seeds and saved correct inhibition. `ExerciseUiTest` supplies in-memory database fixtures for Visual Search, Phrase Reading and Word Sprint. These are test sources, not executed test evidence in this environment.
+Additional Android codec/repository tests cover legacy version-1 input, version-2 round trips, new exercise identifiers, extreme valid seeds and saved correct inhibition. `ExerciseUiTest` supplies in-memory database fixtures for Visual Search, Phrase Reading and Word Sprint. These cases ran in the hosted emulator. See the version-specific test report; they are not physical-device acceptance.
 
 ## Builder, matching and migration suite
 
@@ -44,10 +44,18 @@ Additional Android codec/repository tests cover legacy version-1 input, version-
 
 `test-migration-sql.py` executes the actual production migration SQL with local SQLite. It verifies unchanged legacy rows, the new table/index, foreign-key rejection and cascading deletion. This is executed local integration coverage, not Android Room evidence.
 
-Additional Room test sources cover custom CRUD, stable creation times, duplicate identity, cross-profile access rejection, historical snapshots, practice rewards, invalid-save preservation and all three checkpoint versions. The migration test opens a hand-authored legacy fixture with Room version 2. Run these tests before declaring the native workflow accepted.
+Additional Room test sources cover custom CRUD, stable creation times, duplicate identity, cross-profile access rejection, historical snapshots, practice rewards, invalid-save preservation and all three checkpoint versions. The migration test opens a hand-authored legacy fixture with Room version 2. These cases ran in the hosted emulator. Broader fault/device acceptance remains open.
 
 ## Reflex timer and UI synchronization
 
 Use separate evidence for layout and timed execution. Isolated Compose fixtures disable automatic ticker publication, not engine scoring or input validation. Verify real named response actions, visible navigation, pause and builder persistence there. Run `LiveTickerTest` with the default production SystemClock and ticker outside Compose idling; require real waiting-to-active transitions, full response-window expiration, a durable MISSED result and no XP for unanswered sessions. Do not infer timer success from layout tests.
 
 Check append-only checkpoint prefixes and monotonic active-time persistence. Inject an older snapshot before aborting; confirm the latest durable progress becomes ABORTED and queued saves cannot reactivate it. Check profile ownership and preserve completed sessions. Compare production migration SQL against the checked-in generated Room schema locally, and also open the migrated database through Android Room.
+
+## Quiet Precision regressions
+
+Run `InsightsTests` for zero/invalid/future/duplicate/baseline records, thresholds, local dates, DST and deterministic task selection. Run `PreferencesTest` with distinct DataStore files and close the scope before reopening a file. Verify welcome persistence, bounded profile goals and deletion cleanup.
+
+Use isolated UI fixtures for ordinary journeys with welcome already completed. Use `WelcomeUiTest` separately for a fresh installation, language/theme changes, skip and optional baseline. Repeat baseline selection after a manual toggle to detect stale saveable setup. Check all four studio/setup/back routes and zero-history locked milestones. Preserve the production real-ticker tests.
+
+Run `bootstrap-design.sh` and `test-design.mjs` for 20 browser routes, 320 layout combinations, 80 axe audits, catalogue search and known navigation destinations. Capture every selected-direction screen for critique. This is browser evidence only. Android font, touch, screen-reader, performance and physical-device tests remain separate gates.

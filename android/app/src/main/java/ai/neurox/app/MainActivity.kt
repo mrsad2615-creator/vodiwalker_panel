@@ -164,10 +164,11 @@ private fun buildPalette(mode: String, accentHex: String): NeuroxPalette {
 
 @Composable private fun NeuroxIntro(onSkip: () -> Unit) {
     val reveal = remember { Animatable(0f) }
+    val glowColor = Gold.copy(alpha = .16f)
     LaunchedEffect(Unit) { reveal.animateTo(1f, tween(durationMillis = 720)) }
     Box(Modifier.fillMaxSize().background(Obsidian)) {
         Canvas(Modifier.fillMaxSize()) {
-            drawRect(Brush.radialGradient(listOf(Gold.copy(alpha = .16f), Color.Transparent), center = Offset(size.width * .5f, size.height * .42f), radius = size.minDimension * .52f))
+            drawRect(Brush.radialGradient(listOf(glowColor, Color.Transparent), center = Offset(size.width * .5f, size.height * .42f), radius = size.minDimension * .52f))
         }
         Column(Modifier.align(Alignment.Center).graphicsLayer {
             alpha = reveal.value

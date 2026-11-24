@@ -246,6 +246,28 @@ long_press_tag_or_text() {
   return 0
 }
 
+# The launch sequence. The first shot above is taken once the shell is up, so the
+# cover has already lifted by then. To photograph the cover itself the app must be
+# relaunched and captured inside its 900 ms window, which is why this is here and not
+# earlier: every tap below needs a screen that is done animating.
+#
+# No sleep between the launch and the capture. `am start -W` waits for the activity to
+# be drawn, which is when the first frame of the cover exists; a sleep of even one
+# second would miss it. The capture lands somewhere in the sequence by construction,
+# and which frame it catches is not asserted, only that the mark is on a background
+# without the grid.
+echo "== photographing the launch sequence =="
+adb shell am force-stop "$PKG"
+adb shell am start -W -n "$PKG/$ACTIVITY" > /dev/null 2>&1
+adb shell screencap -p "$DEVICE_DIR/44-launch-sequence.png" >/dev/null 2>&1
+if adb shell test -s "$DEVICE_DIR/44-launch-sequence.png"; then
+  echo "captured 44-launch-sequence.png"
+else
+  echo "::warning title=e2e::the launch cover was gone before the capture"
+fi
+# Let the sequence finish before anything taps.
+sleep 2
+
 shot 01-photos.png
 
 # The screen size, for the taps below that must land anywhere but a control.

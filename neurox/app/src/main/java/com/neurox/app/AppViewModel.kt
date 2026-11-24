@@ -12,7 +12,7 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
-enum class Screen { HOME, TRAINING, ANALYTICS, LIBRARY, PROFILE, SETTINGS, COLOR, BUILDER, RUN, RESULT }
+enum class Screen { HOME, TRAINING, ANALYTICS, LIBRARY, PROFILE, SETTINGS, COLOR, BUILDER, RUN, RESULT, STUDIOS, MODULE, ACHIEVEMENTS, ONBOARDING }
 data class AppState(
     val loading: Boolean = true,
     val profile: ProfileEntity? = null,
@@ -25,6 +25,7 @@ data class AppState(
     val interrupted: SessionEntity? = null,
     val error: String? = null,
     val busy: Boolean = false,
+    val dailyGoalMinutes: Int = 15,
 )
 
 class AppViewModel(
@@ -37,8 +38,32 @@ class AppViewModel(
     private val _state = MutableStateFlow(AppState())
     val state = _state.asStateFlow()
     val screen = saved.getStateFlow("screen", Screen.HOME.name)
+    val selectedModule = saved.getStateFlow("module", Module.VISION.name)
+    fun openModule(module: Module) { saved["module"] = module.name; navigate(Screen.MODULE) }
+    fun completeWelcome() = action { repository.completeWelcome(); navigate(Screen.HOME) }
+    fun setDailyGoal(minutes: Int) = action { repository.setDailyGoal(requireProfile().id, minutes) }
     val selectedExercise = saved.getStateFlow("exercise", Exercise.FOCUS_LOCK.name)
-    fun chooseExercise(exercise: Exercise) { saved["exercise"] = exercise.name; navigate(Screen.TRAINING) }
+    val setupBaseline = saved.getStateFlow("setupBaseline", false)
+    fun chooseExercise(exercise: Exercise) { saved["exercise"] = exercise.name; saved["module"] = exercise.module.name; saved["setupBaseline"] = false; navigate(Screen.TRAINING) }
+    fun beginWelcomeBaseline() = action {
+        repository.completeWelcome()
+        chooseExercise(Exercise.FOCUS_LOCK)
+        saved["setupBaseline"] = true
+    }
+    fun openSettings() { saved["settingsOrigin"] = screen.value; navigate(Screen.SETTINGS) }
+    fun back() {
+        when (runCatching { Screen.valueOf(screen.value) }.getOrDefault(Screen.HOME)) {
+            Screen.RUN -> { pause(); navigate(Screen.MODULE) }
+            Screen.TRAINING -> navigate(Screen.MODULE)
+            Screen.MODULE -> navigate(Screen.STUDIOS)
+            Screen.ACHIEVEMENTS -> navigate(Screen.PROFILE)
+            Screen.COLOR -> navigate(Screen.SETTINGS)
+            Screen.BUILDER -> navigate(Screen.LIBRARY)
+            Screen.ONBOARDING -> completeWelcome()
+            Screen.SETTINGS -> navigate(runCatching { Screen.valueOf(saved.get<String>("settingsOrigin") ?: "HOME") }.getOrDefault(Screen.HOME))
+            else -> navigate(Screen.HOME)
+        }
+    }
     val libraryArea = saved.getStateFlow("libraryArea", "ORIGINAL")
     fun selectLibraryArea(value: String) { require(value in listOf("ORIGINAL", "CUSTOM", "FAVORITES")); saved["libraryArea"] = value }
     val builderId = saved.getStateFlow<String?>("builderId", null)
@@ -62,8 +87,9 @@ class AppViewModel(
         observer = viewModelScope.launch {
             try {
                 repository.initialize()
-                combine(repository.profiles, repository.activeProfileId) { profiles, id -> profiles to (profiles.firstOrNull { it.id == id } ?: profiles.first { it.guest }) }
-                    .collectLatest { (profiles, selected) ->
+                combine(repository.profiles, repository.activeProfileId, repository.welcomeComplete) { profiles, id, welcomed ->
+                    Triple(profiles, profiles.firstOrNull { it.id == id } ?: profiles.first { it.guest }, welcomed)
+                }.collectLatest { (profiles, selected, welcomed) ->
                         val previousProfileId = _state.value.profile?.id
                         if (previousProfileId != selected.id) {
                             failedAction = null
@@ -71,12 +97,14 @@ class AppViewModel(
                             engine = null; session = null; _training.value = null; _result.value = null
                             if (screen.value in listOf(Screen.RUN.name, Screen.RESULT.name) || (previousProfileId != null && screen.value == Screen.BUILDER.name)) navigate(Screen.HOME)
                         }
+                        if (previousProfileId == null && !welcomed) navigate(Screen.ONBOARDING)
                         val interrupted = repository.activeSession(selected.id)
                         _state.update { it.copy(loading = false, profiles = profiles, profile = selected, interrupted = interrupted) }
                         coroutineScope {
                             launch { repository.sessions(selected.id).collect { values -> _state.update { it.copy(sessions = values, interrupted = values.firstOrNull { s -> s.status == "ACTIVE" }) } } }
                             launch { repository.favorites(selected.id).collect { values -> _state.update { it.copy(favorites = values.map { f -> f.exercise }.toSet()) } } }
                             launch { repository.customExercises(selected.id).collect { values -> _state.update { it.copy(customExercises = values, customExercisesLoaded = true) } } }
+                            launch { repository.dailyGoal(selected.id).collect { value -> _state.update { it.copy(dailyGoalMinutes = value) } } }
                             launch { repository.themes(selected.id).collect { values -> _state.update { it.copy(themes = values) } } }
                         }
                     }

@@ -1,6 +1,10 @@
 package com.neurox.data
 
 import android.content.Context
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -11,12 +15,26 @@ import java.util.UUID
 
 private val Context.neuroxPreferences by preferencesDataStore("neurox_application")
 
-class NeuroxRepository(context: Context, private val database: NeuroxDatabase = NeuroxDatabase.create(context.applicationContext)) {
-    private val applicationContext = context.applicationContext
+class NeuroxRepository(
+    context: Context,
+    private val database: NeuroxDatabase = NeuroxDatabase.create(context.applicationContext),
+    private val preferences: DataStore<Preferences> = context.applicationContext.neuroxPreferences,
+) {
     private val dao = database.dao()
     private val activeKey = stringPreferencesKey("active_profile")
-    val activeProfileId = applicationContext.neuroxPreferences.data
+    val activeProfileId = preferences.data
         .map { it[activeKey] ?: "guest" }
+    private val welcomeKey = booleanPreferencesKey("welcome_complete_v1")
+    val welcomeComplete = preferences.data.map { it[welcomeKey] ?: false }
+    suspend fun completeWelcome() { preferences.edit { it[welcomeKey] = true } }
+    fun dailyGoal(profileId: String) = preferences.data.map {
+        (it[intPreferencesKey("daily_goal_$profileId")] ?: 15).coerceIn(5, 60)
+    }
+    suspend fun setDailyGoal(profileId: String, minutes: Int) {
+        require(minutes in 5..60)
+        requireNotNull(dao.profile(profileId))
+        preferences.edit { it[intPreferencesKey("daily_goal_$profileId")] = minutes }
+    }
     val profiles = dao.profiles()
     fun sessions(profileId: String) = dao.sessions(profileId)
     fun favorites(profileId: String) = dao.favorites(profileId)
@@ -57,7 +75,7 @@ class NeuroxRepository(context: Context, private val database: NeuroxDatabase = 
     suspend fun initialize() { dao.insertProfile(ProfileEntity("guest", "Guest", guest = true)) }
     suspend fun selectProfile(id: String) {
         require(dao.profile(id) != null) { "Profile does not exist" }
-        applicationContext.neuroxPreferences.edit { it[activeKey] = id }
+        preferences.edit { it[activeKey] = id }
     }
     suspend fun createProfile(name: String): String {
         val safe = name.trim()
@@ -70,6 +88,7 @@ class NeuroxRepository(context: Context, private val database: NeuroxDatabase = 
         require(id != "guest") { "The guest profile cannot be deleted" }
         selectProfile("guest")
         dao.deleteProfile(id)
+        preferences.edit { it.remove(intPreferencesKey("daily_goal_$id")) }
     }
     suspend fun updateProfile(profile: ProfileEntity) {
         require(profile.language in listOf("FA", "EN") && profile.theme in listOf("DARK", "LIGHT", "SYSTEM"))

@@ -1,5 +1,6 @@
 package com.neurox.design
 
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -12,6 +13,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.dp
 import com.neurox.domain.ColorMath
 
 val NeuroxFont = FontFamily(Font(R.font.vazirmatn_regular), Font(R.font.vazirmatn_bold, FontWeight.Bold))
@@ -34,7 +36,7 @@ val AccentPresets = listOf(
 fun NeuroxTheme(mode: String, accent: Long, textScale: Float = 1f, content: @Composable () -> Unit) {
     val dark = when (mode) { "LIGHT" -> false; "DARK" -> true; else -> isSystemInDarkTheme() }
     val background = if (dark) 0xFF0C0E11 else 0xFFF6F2E9
-    val surface = if (dark) 0xFF181B20 else 0xFFEDE6DA
+    val surface = if (dark) 0xFF181B20 else 0xFFFFFAF2
     // Use the more demanding surface to protect text on cards and on the page.
     val safe = ColorMath.accessibleAccent(accent, surface, dark)
     val primary = Color(safe)
@@ -56,7 +58,7 @@ fun NeuroxTheme(mode: String, accent: Long, textScale: Float = 1f, content: @Com
     )
     val typography = Typography(
         displaySmall = TextStyle(fontFamily = NeuroxFont, fontSize = 36.sp, lineHeight = 46.sp, fontWeight = FontWeight.Bold),
-        headlineMedium = TextStyle(fontFamily = NeuroxFont, fontSize = 28.sp, lineHeight = 40.sp, fontWeight = FontWeight.Bold),
+        headlineMedium = TextStyle(fontFamily = NeuroxFont, fontSize = 30.sp, lineHeight = 42.sp, fontWeight = FontWeight.Bold),
         titleLarge = TextStyle(fontFamily = NeuroxFont, fontSize = 22.sp, lineHeight = 34.sp, fontWeight = FontWeight.Bold),
         titleMedium = TextStyle(fontFamily = NeuroxFont, fontSize = 16.sp, lineHeight = 26.sp, fontWeight = FontWeight.Bold),
         bodyLarge = TextStyle(fontFamily = NeuroxFont, fontSize = 16.sp, lineHeight = 29.sp),
@@ -68,6 +70,9 @@ fun NeuroxTheme(mode: String, accent: Long, textScale: Float = 1f, content: @Com
     )
     val density = LocalDensity.current
     CompositionLocalProvider(LocalDensity provides Density(density.density, density.fontScale * textScale)) {
-        MaterialTheme(colorScheme = colors, typography = typography, content = content)
+        MaterialTheme(colorScheme = colors, typography = typography,
+            shapes = Shapes(extraSmall = RoundedCornerShape(8.dp), small = RoundedCornerShape(12.dp),
+                medium = RoundedCornerShape(NeuroxRadius.control), large = RoundedCornerShape(NeuroxRadius.card),
+                extraLarge = RoundedCornerShape(NeuroxRadius.hero)), content = content)
     }
 }

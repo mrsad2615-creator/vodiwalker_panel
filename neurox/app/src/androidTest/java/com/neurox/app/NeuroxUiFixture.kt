@@ -7,6 +7,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.ViewModelStore
 import androidx.room.Room
+import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import kotlinx.coroutines.*
+import java.io.File
 import androidx.test.core.app.ApplicationProvider
 import com.neurox.data.NeuroxDatabase
 import com.neurox.data.NeuroxRepository
@@ -20,14 +23,20 @@ import org.junit.Rule
 abstract class NeuroxUiFixture {
     @get:Rule val compose = createComposeRule()
     private lateinit var db: NeuroxDatabase
+    protected open val welcomeInitiallyComplete = true
+    protected lateinit var repository: NeuroxRepository
+    private lateinit var preferenceFile: File
+    private val preferenceJob = SupervisorJob()
     protected lateinit var model: AppViewModel
     private val store = ViewModelStore()
 
     @Before fun setUp() {
         val context = ApplicationProvider.getApplicationContext<android.content.Context>()
         db = Room.inMemoryDatabaseBuilder(context, NeuroxDatabase::class.java).build()
-        val repository = NeuroxRepository(context, db)
-        runBlocking { repository.initialize(); repository.selectProfile("guest") }
+        preferenceFile = File(context.cacheDir, "ui-${java.util.UUID.randomUUID()}.preferences_pb")
+        val preferences = PreferenceDataStoreFactory.create(scope = CoroutineScope(preferenceJob + Dispatchers.IO)) { preferenceFile }
+        repository = NeuroxRepository(context, db, preferences)
+        runBlocking { repository.initialize(); repository.selectProfile("guest"); if (welcomeInitiallyComplete) repository.completeWelcome() }
         val factory = object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
             override fun <T : ViewModel> create(modelClass: Class<T>): T = AppViewModel(repository, SavedStateHandle(), automaticTicks = false) as T
@@ -39,5 +48,7 @@ abstract class NeuroxUiFixture {
     @After fun tearDown() {
         compose.runOnUiThread { store.clear() }
         db.close()
+        runBlocking { preferenceJob.cancelAndJoin() }
+        preferenceFile.delete()
     }
 }

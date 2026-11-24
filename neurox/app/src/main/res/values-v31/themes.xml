@@ -1,0 +1,12 @@
+<resources>
+    <style name="Theme.Neurox" parent="android:style/Theme.Material.NoActionBar">
+        <item name="android:fontFamily">sans</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowActionModeOverlay">true</item>
+        <item name="android:colorAccent">#D4B982</item>
+        <item name="android:windowBackground">#0C0E11</item>
+        <item name="android:windowSplashScreenBackground">#0C0E11</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/neurox_splash_animated</item>
+        <item name="android:windowSplashScreenAnimationDuration">180</item>
+    </style>
+</resources>

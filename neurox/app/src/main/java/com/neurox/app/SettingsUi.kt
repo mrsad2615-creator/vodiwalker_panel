@@ -27,6 +27,7 @@ internal fun ProfileScreen(state: AppState, vm: AppViewModel) {
     LaunchedEffect(state.profiles) { if (state.profiles.none { it.id == deleting }) deleting = null }
     Page {
         SectionTitle("NEUROX IDENTITY", tr("مسیر شخصی شما", "Your personal journey"), tr("هر پروفایل تاریخچه، تنظیمات و علاقه‌مندی‌های جداگانه دارد.", "Each profile has separate history, preferences and favorites."))
+        OutlinedButton(onClick = { vm.navigate(Screen.ACHIEVEMENTS) }, modifier = Modifier.fillMaxWidth()) { Text(tr("دستاوردهای واقعی من", "My measured milestones")) }
         state.profiles.forEach { profile -> Panel {
             Text(if (profile.guest) tr("مهمان", "Guest") else profile.name, style = MaterialTheme.typography.titleLarge)
             if (active.id == profile.id) Text(tr("پروفایل فعال", "Active profile"), color = MaterialTheme.colorScheme.primary)
@@ -74,7 +75,7 @@ internal fun SettingsScreen(state: AppState, vm: AppViewModel) {
                 Text(tr("حرکت کمتر", "Reduced motion"), modifier = Modifier.weight(1f))
                 Switch(checked = profile.reducedMotion, onCheckedChange = { vm.updateProfile(profile.copy(reducedMotion = it)) }, enabled = !state.busy)
             }
-            Text(tr("در این نسخه انیمیشن تزئینی فعال نیست.", "Decorative animation is not enabled in this milestone."), style = MaterialTheme.typography.bodySmall)
+            Text(tr("حرکت کمتر، ورود محتوای صفحه را بدون انیمیشن می‌کند. سطح اندازه‌گیری تمرین انیمیشن تزئینی ندارد.", "Reduced motion removes content entrance animation. Measurement surfaces have no decorative animation."), style = MaterialTheme.typography.bodySmall)
         }
         Panel {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -84,7 +85,16 @@ internal fun SettingsScreen(state: AppState, vm: AppViewModel) {
             Text(tr("تغییر سطح خودکار اعمال نمی‌شود. می‌توانید هر پیشنهاد را رد کنید.", "Difficulty does not change without your approval. You can reject any suggestion."), style = MaterialTheme.typography.bodySmall)
         }
         Panel {
-            Text("NEUROX · 0.4.0-dev", style = MaterialTheme.typography.titleMedium)
+            Text(tr("هدف روزانهٔ اختیاری: ${number(state.dailyGoalMinutes)} دقیقه", "Optional daily goal: ${number(state.dailyGoalMinutes)} minutes"), style = MaterialTheme.typography.titleMedium)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(NeuroxSpace.xs)) {
+                listOf(5, 10, 15, 20, 30, 60).forEach { minutes -> FilterChip(selected = state.dailyGoalMinutes == minutes,
+                    onClick = { vm.setDailyGoal(minutes) }, enabled = !state.busy, label = { Text(tr("${number(minutes)} دقیقه", "${number(minutes)} min")) }) }
+            }
+            Text(tr("این هدف فقط زمان فعال جلسات معتبر همین پروفایل را می‌شمارد. استراحت جریمه ندارد.", "The goal counts only active time in valid sessions for this profile. Rest has no penalty."), style = MaterialTheme.typography.bodySmall)
+            OutlinedButton(onClick = { vm.navigate(Screen.ONBOARDING) }, modifier = Modifier.fillMaxWidth()) { Text(tr("مرور آشنایی با NEUROX", "Review the introduction")) }
+        }
+        Panel {
+            Text("NEUROX · 0.5.0-dev", style = MaterialTheme.typography.titleMedium)
             Text(tr("نسخهٔ توسعه؛ آمادهٔ انتشار نهایی نیست. بدون مجوز اینترنت، بدون سرویس ابری و بدون آمار ساختگی.", "Development milestone. Not a production release. No internet permission, cloud service or invented statistics."))
             Text(tr("پیش از پاک‌کردن برنامه توجه کنید: رابط پشتیبان‌گیری و بازیابی هنوز آماده نیست.", "Before uninstalling: the backup and restore interface is not available yet."), color = MaterialTheme.colorScheme.error)
         }

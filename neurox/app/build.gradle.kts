@@ -10,8 +10,8 @@ android {
         applicationId = "com.neurox.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 4
-        versionName = "0.4.0-dev"
+        versionCode = 5
+        versionName = "0.5.0-dev"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     buildFeatures { compose = true }
@@ -49,5 +49,6 @@ dependencies {
     androidTestImplementation("androidx.test:runner:1.7.0")
     androidTestImplementation("androidx.test:core:1.7.0")
     androidTestImplementation("androidx.room:room-runtime:2.8.3")
+    androidTestImplementation("androidx.datastore:datastore-preferences:1.1.7")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
 }

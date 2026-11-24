@@ -27,7 +27,8 @@ internal fun TrainingSetup(state: AppState, vm: AppViewModel) {
     val exercise = Exercise.valueOf(selected)
     var rounds by rememberSaveable { mutableIntStateOf(5) }
     var difficulty by rememberSaveable(selected) { mutableIntStateOf(1) }
-    var baseline by rememberSaveable { mutableStateOf(false) }
+    val baselineSuggested by vm.setupBaseline.collectAsStateWithLifecycle()
+    var baseline by rememberSaveable(selected, baselineSuggested) { mutableStateOf(baselineSuggested) }
     val definition = Catalogue.get(exercise)
     val history = state.sessions.filter { it.exercise == selected && it.status == "COMPLETE" }.map {
         Performance(it.difficulty, it.accuracy, it.responseMs, it.responseDeviationMs, it.valid, it.baseline)

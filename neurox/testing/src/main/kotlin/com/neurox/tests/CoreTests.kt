@@ -130,6 +130,7 @@ fun main() {
     builderAndMatchingTests()
     colorAndDirectionTests()
     checkpointProgressTests()
+    insightsTests()
     println("\nRESULT: $passed passed, $failed failed")
     check(failed == 0) { "$failed test cases failed" }
 }

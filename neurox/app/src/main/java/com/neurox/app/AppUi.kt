@@ -13,8 +13,15 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
@@ -43,44 +50,50 @@ internal fun glyph(module: Module) = when (module) { Module.VISION -> Glyph.VISI
 fun NeuroxApp(vm: AppViewModel) {
     val state by vm.state.collectAsStateWithLifecycle()
     val route by vm.screen.collectAsStateWithLifecycle()
+    val activeModule by vm.selectedModule.collectAsStateWithLifecycle()
+    val screenStates = rememberSaveableStateHolder()
     val profile = state.profile
     val fa = profile?.language != "EN"
     val dark = when (profile?.theme) { "LIGHT" -> false; "SYSTEM" -> androidx.compose.foundation.isSystemInDarkTheme(); else -> true }
     NeuroxTheme(profile?.theme ?: "DARK", if (dark) profile?.accent ?: 0xFFD4B982 else profile?.lightAccent ?: 0xFF765A28, profile?.textScale ?: 1f) {
         CompositionLocalProvider(LocalPersian provides fa, LocalLayoutDirection provides if (fa) LayoutDirection.Rtl else LayoutDirection.Ltr) {
             val screen = runCatching { Screen.valueOf(route) }.getOrDefault(Screen.HOME)
-            BackHandler(enabled = screen != Screen.HOME) {
-                if (screen == Screen.RUN) vm.pause()
-                vm.navigate(when (screen) { Screen.COLOR -> Screen.SETTINGS; Screen.BUILDER -> Screen.LIBRARY; else -> Screen.HOME })
-            }
+            BackHandler(enabled = screen != Screen.HOME, onBack = vm::back)
+            val motionEnabled = profile?.reducedMotion != true && screen !in listOf(Screen.RUN, Screen.RESULT)
+            val entrance = remember(route, motionEnabled) { Animatable(if (motionEnabled) 0f else 1f) }
+            LaunchedEffect(route, motionEnabled) { if (motionEnabled) entrance.animateTo(1f, tween(NeuroxMotion.entranceMs)) }
             Scaffold(
                 containerColor = MaterialTheme.colorScheme.background,
                 topBar = {
                     if (screen != Screen.RUN) Row(Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 20.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                        NeuroxEmblem(size = 32.dp)
+                        if (screen !in listOf(Screen.HOME, Screen.ONBOARDING)) IconButton(onClick = vm::back) {
+                            Text(if (fa) "→" else "←", modifier = Modifier.semantics { contentDescription = if (fa) "بازگشت" else "Back" })
+                        }
+                        NeuroxEmblem(size = 28.dp)
                         Spacer(Modifier.width(10.dp))
                         Text("NEUROX", fontSize = 18.sp, fontWeight = FontWeight.Bold, letterSpacing = 3.sp, modifier = Modifier.weight(1f))
                         Text(tr("کاملاً آفلاین", "OFFLINE"), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        IconButton(onClick = { vm.navigate(if (screen in listOf(Screen.SETTINGS, Screen.COLOR)) Screen.HOME else Screen.SETTINGS) }) {
+                        IconButton(onClick = { if (screen in listOf(Screen.SETTINGS, Screen.COLOR)) vm.back() else vm.openSettings() }) {
                             NeuroxIcon(Glyph.SETTINGS, label = tr("تنظیمات", "Settings"))
                         }
                     }
                 },
                 bottomBar = {
-                    if (screen !in listOf(Screen.RUN, Screen.RESULT)) {
+                    if (screen !in listOf(Screen.RUN, Screen.RESULT, Screen.ONBOARDING)) {
                         NavigationBar(containerColor = MaterialTheme.colorScheme.background, tonalElevation = 0.dp) {
                             listOf(
-                                Triple(Screen.HOME, Glyph.HOME, tr("خانه", "Home")), Triple(Screen.TRAINING, Glyph.TRAINING, tr("تمرین", "Train")),
+                                Triple(Screen.HOME, Glyph.HOME, tr("خانه", "Home")), Triple(Screen.STUDIOS, Glyph.TRAINING, tr("تمرین", "Train")),
                                 Triple(Screen.ANALYTICS, Glyph.ANALYTICS, tr("تحلیل", "Stats")), Triple(Screen.LIBRARY, Glyph.LIBRARY, tr("کتابخانه", "Library")),
                                 Triple(Screen.PROFILE, Glyph.PROFILE, tr("پروفایل", "Profile")),
                             ).forEach { (destination, icon, label) ->
-                                NavigationBarItem(selected = screen == destination, onClick = { vm.navigate(destination) }, icon = { NeuroxIcon(icon, tint = if (screen == destination) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant) }, label = { Text(label, maxLines = 1) })
+                                val selectedDestination = screen == destination || (destination == Screen.STUDIOS && screen in listOf(Screen.MODULE, Screen.TRAINING))
+                                NavigationBarItem(selected = selectedDestination, onClick = { vm.navigate(destination) }, icon = { NeuroxIcon(icon, tint = if (selectedDestination) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant) }, label = { Text(label, maxLines = 1) })
                             }
                         }
                     }
                 },
             ) { padding ->
-                Box(Modifier.fillMaxSize().padding(padding)) {
+                Box(Modifier.fillMaxSize().padding(padding).graphicsLayer { alpha = entrance.value }) {
                     when {
                         state.loading -> Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
                             CircularProgressIndicator(); Spacer(Modifier.height(16.dp)); Text(tr("باز کردن داده‌های محلی…", "Opening local data…"))
@@ -89,8 +102,12 @@ fun NeuroxApp(vm: AppViewModel) {
                             Text(tr("داده‌های محلی باز نشدند.", "Local data could not be opened."))
                             Button(onClick = vm::load) { Text(tr("تلاش دوباره", "Retry")) }
                         }
-                        else -> when (screen) {
+                        else -> screenStates.SaveableStateProvider("${profile.id}:$screen:${if (screen == Screen.MODULE) activeModule else ""}") { when (screen) {
                             Screen.HOME -> HomeScreen(state, vm)
+                            Screen.STUDIOS -> StudiosScreen(vm)
+                            Screen.MODULE -> ModuleOverview(state, vm)
+                            Screen.ACHIEVEMENTS -> AchievementsScreen(state)
+                            Screen.ONBOARDING -> OnboardingScreen(state, vm)
                             Screen.TRAINING -> TrainingSetup(state, vm)
                             Screen.ANALYTICS -> AnalyticsScreen(state)
                             Screen.LIBRARY -> LibraryScreen(state, vm)
@@ -100,7 +117,7 @@ fun NeuroxApp(vm: AppViewModel) {
                             Screen.BUILDER -> ExerciseBuilderScreen(state, vm)
                             Screen.RUN -> TrainingRun(state, vm)
                             Screen.RESULT -> ResultScreen(vm)
-                        }
+                        } }
                     }
                 }
             }
@@ -117,18 +134,22 @@ fun NeuroxApp(vm: AppViewModel) {
 
 @Composable
 internal fun Page(content: @Composable ColumnScope.() -> Unit) {
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 22.dp).padding(bottom = 28.dp), verticalArrangement = Arrangement.spacedBy(20.dp), content = content)
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+        Column(Modifier.widthIn(max = NeuroxSpace.contentMax).fillMaxSize().verticalScroll(rememberScrollState())
+            .padding(horizontal = NeuroxSpace.page).padding(top = NeuroxSpace.md, bottom = NeuroxSpace.xxl),
+            verticalArrangement = Arrangement.spacedBy(NeuroxSpace.xl), content = content)
+    }
 }
 @Composable internal fun SectionTitle(eyebrow: String, title: String, description: String? = null) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(eyebrow, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary, letterSpacing = 2.sp)
-        Text(title, style = MaterialTheme.typography.headlineMedium)
+        Text(title, style = MaterialTheme.typography.headlineMedium, modifier = Modifier.semantics { heading() })
         if (description != null) Text(description, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 @Composable internal fun Panel(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
-    Surface(modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.surface, border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.18f))) {
-        Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp), content = content)
+    Surface(modifier.fillMaxWidth(), shape = RoundedCornerShape(NeuroxRadius.card), color = MaterialTheme.colorScheme.surface, border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.28f))) {
+        Column(Modifier.padding(NeuroxSpace.lg), verticalArrangement = Arrangement.spacedBy(NeuroxSpace.md), content = content)
     }
 }
 @Composable internal fun Metric(label: String, value: String, modifier: Modifier = Modifier) {
@@ -167,6 +188,16 @@ private fun HomeScreen(state: AppState, vm: AppViewModel) {
             LinearProgressIndicator(progress = { Progression.progressInLevel(xp) }, modifier = Modifier.fillMaxWidth())
             Text(tr("${number(250 - xp % 250)} امتیاز تا سطح بعدی", "${number(250 - xp % 250)} XP to the next level"), style = MaterialTheme.typography.bodySmall)
         }
+        val facts = remember(state.sessions) { state.sessions.trainingFacts() }
+        val insights = remember(facts, today, zone) { TrainingInsights.summarize(facts, System.currentTimeMillis(), zone) }
+        val todayMs = insights.days.last().activeMs
+        Panel {
+            Text(tr("امروز، با سرعت خودتان", "TODAY, AT YOUR PACE"), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+            Text(tr("${number(todayMs / 60_000.0, 1)} از ${number(state.dailyGoalMinutes)} دقیقهٔ هدف اختیاری", "${number(todayMs / 60_000.0, 1)} of ${number(state.dailyGoalMinutes)} optional goal minutes"), style = MaterialTheme.typography.titleMedium)
+            LinearProgressIndicator(progress = { (todayMs.toDouble() / (state.dailyGoalMinutes * 60_000)).coerceIn(0.0, 1.0).toFloat() }, modifier = Modifier.fillMaxWidth())
+            Text(tr("فقط زمان فعال جلسات معتبر شمرده می‌شود. استراحت جریمه ندارد.", "Only active time in valid sessions counts. Rest has no penalty."), style = MaterialTheme.typography.bodySmall)
+            OutlinedButton(onClick = { vm.navigate(Screen.STUDIOS) }, modifier = Modifier.fillMaxWidth()) { Text(tr("انتخاب جلسهٔ بعدی", "Choose your next session")) }
+        }
         if (state.interrupted != null) Panel {
             Text(tr("یک جلسهٔ ناتمام دارید", "An interrupted session is saved"), style = MaterialTheme.typography.titleMedium)
             Text(tr("دور ناتمام پس از ادامه از نو آغاز می‌شود و به‌عنوان تکمیل‌شده حساب نمی‌شود.", "The unfinished round restarts on resume. It is not counted as completed."))
@@ -179,10 +210,10 @@ private fun HomeScreen(state: AppState, vm: AppViewModel) {
         BoxWithConstraints {
             if (maxWidth >= 360.dp) Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Catalogue.primary.chunked(2).forEach { pair -> Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    pair.forEachIndexed { index, definition -> ModuleCard(definition, Catalogue.primary.indexOf(definition) + 1, Modifier.weight(1f)) { vm.chooseExercise(definition.exercise) } }
+                    pair.forEachIndexed { index, definition -> ModuleCard(definition, Catalogue.primary.indexOf(definition) + 1, Modifier.weight(1f)) { vm.openModule(definition.exercise.module) } }
                 } }
             } else Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Catalogue.primary.forEachIndexed { index, definition -> ModuleCard(definition, index + 1) { vm.chooseExercise(definition.exercise) } }
+                Catalogue.primary.forEachIndexed { index, definition -> ModuleCard(definition, index + 1) { vm.openModule(definition.exercise.module) } }
             }
         }
         if (completed.isEmpty()) EmptyState() else {
@@ -190,7 +221,8 @@ private fun HomeScreen(state: AppState, vm: AppViewModel) {
                 Text(tr("ریتم این هفته", "YOUR WEEKLY RHYTHM"), style = MaterialTheme.typography.titleMedium)
                 val weekly = completed.count { Instant.ofEpochMilli(it.startedAt).atZone(zone).toLocalDate() >= today.minusDays(6) }
                 Text(tr("${number(weekly)} جلسه در هفت روز گذشته", "${number(weekly)} sessions in the past seven days"))
-                Text(tr("${number(completed.sumOf { it.durationMs } / 60_000.0, 1)} دقیقه تمرین ثبت‌شده", "${number(completed.sumOf { it.durationMs } / 60_000.0, 1)} measured training minutes"))
+                Text(tr("${number(insights.activeMs / 60_000.0, 1)} دقیقه تمرین معتبر در این هفته", "${number(insights.activeMs / 60_000.0, 1)} valid training minutes this week"))
+                ActivityChart(insights.days)
             }
             Text(tr("آخرین فعالیت", "RECENT ACTIVITY"), style = MaterialTheme.typography.titleMedium)
             completed.take(3).forEach { SessionRow(it) }
@@ -202,15 +234,16 @@ private fun HomeScreen(state: AppState, vm: AppViewModel) {
 @Composable
 private fun ModuleCard(definition: ExerciseDefinition, index: Int, modifier: Modifier = Modifier, onClick: () -> Unit) {
     Surface(onClick = onClick, modifier = modifier.fillMaxWidth(), color = MaterialTheme.colorScheme.surface,
-        shape = RoundedCornerShape(12.dp), border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.22f))) {
+        shape = RoundedCornerShape(NeuroxRadius.card), border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.28f))) {
         Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                NeuroxIcon(glyph(definition.exercise.module), Modifier.size(30.dp), MaterialTheme.colorScheme.primary)
+                NeuroxIcon(glyph(definition.exercise.module), Modifier.size(30.dp), moduleColor(definition.exercise.module))
                 Spacer(Modifier.weight(1f))
                 Text("0$index", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             Text(definition.exercise.module.name, style = MaterialTheme.typography.titleMedium, letterSpacing = 2.sp)
-            Text(tr(definition.fa, definition.en), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(moduleTitle(definition.exercise.module), style = MaterialTheme.typography.titleMedium)
+            Text(tr("${number(Catalogue.runnable.count { it.exercise.module == definition.exercise.module })} تمرین موجود", "${number(Catalogue.runnable.count { it.exercise.module == definition.exercise.module })} available exercises"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }

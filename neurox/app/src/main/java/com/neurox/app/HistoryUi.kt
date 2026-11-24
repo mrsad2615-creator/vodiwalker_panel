@@ -42,6 +42,12 @@ internal fun AnalyticsScreen(state: AppState) {
                     Metric(tr("دقیقهٔ فعال", "Active minutes"), number(values.sumOf { it.durationMs } / 60_000.0, 1))
                 }
             }
+            val chart = remember(values) { TrainingInsights.summarize(values.trainingFacts(), System.currentTimeMillis(), ZoneId.systemDefault(), days = minOf(days, 30), includeBaselines = baseline) }
+            Panel {
+                Text(tr("ریتم روزانهٔ تمرین", "Daily training rhythm"), style = MaterialTheme.typography.titleMedium)
+                ActivityChart(chart.days)
+                if (days > 30) Text(tr("نمودار ۳۰ روز آخر را نشان می‌دهد؛ جمع و تاریخچه از بازهٔ انتخابی هستند.", "The chart shows the latest 30 days. Totals and history use the selected period."), style = MaterialTheme.typography.bodySmall)
+            }
             Module.entries.filter { m -> module == "ALL" || module == m.name }.forEach { m ->
                 val subset = values.filter { it.module == m.name }
                 if (subset.isNotEmpty()) Panel {

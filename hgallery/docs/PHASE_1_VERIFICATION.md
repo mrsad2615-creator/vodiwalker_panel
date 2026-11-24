@@ -259,7 +259,8 @@ What is in the code and verified:
 |---|---|---|
 | Colour tokens, light | Implemented, verified on device | Sampled from an emulator screenshot: page `(247,245,241)`, accent `(198,96,20)`, both exact token matches. |
 | Colour tokens, dark | Implemented, verified on device | `43-photos-dark.png` and `42-settings-dark.png`, sampled: page `(5,5,5)`, dock and chip `(17,17,17)`, accent `(242,138,54)`. Four exact token matches. |
-| Application icon and splash mark | Implemented, verified by raster | The aperture geometry was rendered to PNG at 216, 108, 48 and 24 px and inspected. |
+| Application icon and splash mark | Implemented, verified by raster and on device | The aperture geometry was rendered to PNG at 216, 108, 48 and 24 px and inspected. The launch shows it on the emulator. |
+| Name, launch sequence, animated mark | Implemented, verified by test and by recording | `app_name` is HGallery in both languages. `IgnitionTest`, 4 tests, on every run. The recording is `evidence/launch.mp4`. |
 | Home header, two controls and a menu | Implemented, verified on device | `01-photos.png` and `08-month-view.png`. |
 | Filter chips with counts | Implemented, verified on device | `01-photos.png`. Four chips, the selected one filled with the accent. |
 | Filter behaviour | Implemented, tested | 7 domain tests in `CoreRulesTest`. |
@@ -273,6 +274,7 @@ What is not done:
 | Shared-element transition from the grid to the viewer | Not implemented. |
 | Hybrid grid, the design's mixed tile sizes | Not implemented. The grid is still uniform. |
 | Player gesture set: brightness, volume, lock, long-press speed | Not implemented. |
+| A still of the launch sequence | Not captured. See section 17. |
 
 ## 14. Two things the screenshots proved that the tests could not
 
@@ -326,3 +328,35 @@ another app still fails.
 | Blocked | Sound. No audio sink exists on the CI emulator. Needs a person and a phone. |
 | Failed tests | None in the final run. Earlier failures in this phase each found a real defect: an unresolved import, an unused property, a self-referencing checker, and the harness rejecting its own pop-up. |
 | Known limitations | The dismiss threshold, 0.18 of the height, is a judgement the emulator confirms for a full swipe. A partial pull in the range 0.10 to 0.18 is not photographed. A photograph pushed onto a clip in the viewer pages one step instead of handing over; `ViewerReplace` was designed and removed because nothing called it, see section 7. |
+
+## 17. The launch sequence: what is verified, and what is not photographed
+
+Six runs tried to put a still of the launch sequence into this folder. None did.
+
+What is verified:
+
+- `IgnitionTest` runs on every build. It asserts the shell is usable inside the
+  budget, that the cover leaves the tree rather than being hidden, that the sequence
+  is shorter than a second, and that a rotation mid-launch does not replay it.
+- `evidence/launch.mp4` is a `screenrecord` of a
+  real launch at the product's real speed. It is the only direct evidence of motion
+  in this project: a screenshot is one frame and cannot show that a sequence
+  animates.
+
+What is not:
+
+- No still. The CI emulator starts with `disable-animations: true`, which is why no
+  animation ran on any build until this phase. The step now switches the animation
+  scales on, records the launch, and falls back to a still. `screencap` on that
+  emulator takes about a second to start, which is longer than the whole 900 ms
+  sequence. The fallback also rejects a frame of the finished grid by file size, so
+  the folder gets a picture of the launch or nothing. Every run so far got nothing,
+  which is the correct outcome of that check.
+
+A capture-time scale was added so the sequence could be photographed slowly, and the
+run proved the scale arrived (`captureScale=4.0` in the log). The capture still
+missed it. Further slowdown is not worth it: a still cannot prove motion, and the
+recording can.
+
+This is recorded as a limitation rather than fixed because the remaining fix is a
+faster camera on the runner, which is not in this repository.

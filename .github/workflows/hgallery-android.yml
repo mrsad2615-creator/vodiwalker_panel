@@ -243,6 +243,10 @@ jobs:
           rm -rf hgallery/evidence
           mkdir -p hgallery/evidence
           find hgallery/ui-shots -name "*.png" -exec cp {} hgallery/evidence/ ';' 2>/dev/null || true
+          # The launch recording as well. It is the only direct evidence of motion in
+          # the project: every screenshot is a single frame, and a frame cannot show
+          # that a sequence animates. It is a few hundred kB and it is worth keeping.
+          find hgallery/ui-shots -name "*.mp4" -exec cp {} hgallery/evidence/ ';' 2>/dev/null || true
           cp hgallery/ui-shots/diag/*.txt hgallery/evidence/ 2>/dev/null || true
           # The harness writes each uiautomator dump here so a failed tap can be
           # diagnosed from the run's own artifacts. They were being dropped.

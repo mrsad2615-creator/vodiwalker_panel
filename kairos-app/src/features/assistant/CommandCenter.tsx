@@ -17,6 +17,7 @@ import { buildDailySeries } from '@/lib/homeMetrics';
 import { formatJalaaliFull, getTodayKey } from '@/lib/date';
 import { createConfirmedTodayTasks, parseTaskLines, validateTaskTitles, wantsTodayTaskList } from '@/lib/assistantTaskDraft';
 import { QUICK_COMMANDS, runCommand, type CommandAnswer } from '@/lib/commands';
+import { applyConfirmedChange, interpretAssistantRequest, previewChange, revertAssistantChange, type AssistantRequest, type ChangePreview } from '@/lib/assistantActions';
 import { buildDailyBrief } from '@/lib/coach';
 import { pickInsights } from '@/lib/insights';
 import { triggerHaptic } from '@/lib/native';
@@ -31,10 +32,19 @@ import { triggerHaptic } from '@/lib/native';
  * nothing leaves the device.
  */
 
+const CHANGE_LABELS = {
+  'task.complete': 'تکمیل وظیفه', 'task.today': 'انتقال موعد به امروز', 'task.tomorrow': 'انتقال موعد به فردا',
+  'task.high': 'اولویت بالای وظیفه', 'project.pause': 'مکث پروژه', 'project.resume': 'فعال‌کردن پروژه',
+} as const;
+
 export function CommandCenter() {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
-  const [history, setHistory] = useState<CommandAnswer[]>([]);
+  const [history, setHistory] = useState<(CommandAnswer & { prompt?: string })[]>([]);
+  const [request, setRequest] = useState<Extract<AssistantRequest, { type: 'change' }> | null>(null);
+  const [changePreview, setChangePreview] = useState<ChangePreview | null>(null);
+  const [changeError, setChangeError] = useState('');
+  const [lastChange, setLastChange] = useState<string | null>(null);
   const [draftOpen, setDraftOpen] = useState(false);
   const [draftText, setDraftText] = useState('');
   const [preview, setPreview] = useState<{ titles: string[]; dateKey: string } | null>(null);
@@ -89,7 +99,20 @@ export function CommandCenter() {
 
   const ask = (text: string) => {
     const trimmed = text.trim();
-    if (!trimmed) return;
+    if (!trimmed || savingRef.current) return;
+    setRequest(null); setChangePreview(null); setChangeError(''); setDraftOpen(false);
+    const local = interpretAssistantRequest(trimmed, tasks, projects);
+    if (local.type === 'blocked') {
+      setHistory((current) => [{ intent: 'help' as const, title: 'این کار را اجرا نکردم', lines: [local.message], prompt: trimmed }, ...current].slice(0, 6));
+      setQuery(''); return;
+    }
+    if (local.type === 'navigation') {
+      setHistory((current) => [{ intent: 'help' as const, title: `بخش ${local.label} باز شد`, lines: [], prompt: trimmed }, ...current].slice(0, 6));
+      setQuery(''); setActiveTab(local.tab); setOpen(false); return;
+    }
+    if (local.type === 'change') {
+      setDraftOpen(false); setRequest(local); setQuery(''); return;
+    }
     if (wantsTodayTaskList(trimmed)) {
       setDraftOpen(true);
       setDraftText('');
@@ -110,7 +133,7 @@ export function CommandCenter() {
       sessions,
       lastSuggestionReason: topInsightReason,
     });
-    setHistory((current) => [answer, ...current].slice(0, 6));
+    setHistory((current) => [{ ...answer, prompt: trimmed }, ...current].slice(0, 6));
     setQuery('');
     void triggerHaptic('light');
     if (answer.unknown) {
@@ -138,6 +161,33 @@ export function CommandCenter() {
       setDraftError('ثبت انجام نشد. ممکن است تاریخ روز عوض شده باشد؛ دوباره پیش‌نمایش بگیر.');
       setPreview(null);
     } finally { savingRef.current = false; setSaving(false); }
+  };
+
+  const prepareChange = (id: string) => {
+    if (!request) return;
+    const row = request.kind.startsWith('task.') ? tasks.find((item) => item.id === id) : projects.find((item) => item.id === id);
+    if (!row) { setChangeError('این مورد دیگر در دسترس نیست؛ دوباره درخواست بده.'); return; }
+    try { setChangePreview(previewChange(request.kind, row)); setChangeError(''); }
+    catch (error) { setChangeError(error instanceof Error ? error.message : 'پیش‌نمایش ساخته نشد.'); }
+  };
+
+  const confirmChange = async () => {
+    if (!changePreview || savingRef.current) return;
+    savingRef.current = true; setSaving(true); setChangeError('');
+    try {
+      const id = await applyConfirmedChange(changePreview, true);
+      setLastChange(id); setRequest(null); setChangePreview(null);
+      setHistory((current) => [{ intent: 'help' as const, title: 'تغییر ثبت شد', lines: [changePreview.before.title, changePreview.description] }, ...current].slice(0, 6));
+    } catch (error) { setChangePreview(null); setChangeError(error instanceof Error ? error.message : 'تغییر ثبت نشد.'); }
+    finally { savingRef.current = false; setSaving(false); }
+  };
+
+  const revertChange = async () => {
+    if (!lastChange || savingRef.current) return;
+    savingRef.current = true; setSaving(true); setChangeError('');
+    try { await revertAssistantChange(lastChange); setLastChange(null); setHistory((current) => [{ intent: 'help' as const, title: 'تغییر بازگردانده شد', lines: ['دادهٔ قبلی بازیابی شد.'] }, ...current].slice(0, 6)); }
+    catch (error) { setChangeError(error instanceof Error ? error.message : 'بازگشت انجام نشد.'); }
+    finally { savingRef.current = false; setSaving(false); }
   };
 
   const submit = (text: string) => {
@@ -169,6 +219,7 @@ export function CommandCenter() {
           <div className="flex items-center gap-2 px-5 pb-1">
             <input
               value={query}
+              disabled={saving}
               onChange={(event) => setQuery(event.target.value)}
               onKeyDown={(event) => {
                 if (event.key === 'Enter') submit(query);
@@ -180,6 +231,7 @@ export function CommandCenter() {
             <button
               type="button"
               onClick={() => submit(query)}
+              disabled={saving}
               className="rounded-full bg-[var(--accent)] px-4 py-2 text-[11.5px] font-bold text-[var(--accent-on)] disabled:opacity-60"
             >
               بپرس
@@ -210,6 +262,27 @@ export function CommandCenter() {
               </div>
             </section>
           )}
+          {request && (
+            <section aria-label="تغییر پیشنهادی دستیار" className="space-y-3 rounded-[var(--r-rail)] border border-[var(--accent-fg)]/35 bg-[var(--surface-1)] p-4">
+              {!changePreview ? <>
+                <h3 className="text-sm font-bold text-[var(--text)]">{CHANGE_LABELS[request.kind]}</h3>
+                <p className="text-xs font-semibold text-[var(--text)]">کدام مورد را می‌خواهی تغییر دهی؟</p>
+                <p className="text-xs leading-5 text-[var(--text-2)]">یک مورد را انتخاب کن؛ قبل از ثبت، تغییر را می‌بینی.</p>
+                {request.candidates.length === 0 ? <p className="text-xs text-[var(--text-3)]">موردی در داده‌های قابل‌نمایش پیدا نشد.</p> :
+                  <div className="max-h-48 space-y-1 overflow-y-auto">{request.candidates.slice(0, 30).map((candidate) => <button key={candidate.id} type="button" onClick={() => prepareChange(candidate.id)} className="block w-full rounded-xl border border-[var(--border)] px-3 py-2 text-start text-xs text-[var(--text)]">{candidate.title}{candidate.sample ? ' · نمونه' : ''}</button>)}</div>}
+                {request.candidates.length > 30 && <p className="text-xs text-[var(--text-3)]">۳۰ مورد اول نمایش داده شد؛ برای محدودکردن فهرست نام کامل مورد را بنویس.</p>}
+              </> : <div role="region" aria-label="پیش‌نمایش تغییر" className="space-y-2 rounded-xl bg-[var(--surface-2)] p-3">
+                <h3 className="text-sm font-bold text-[var(--text)]">{changePreview.before.title}{changePreview.before.sample ? ' · نمونه' : ''}</h3>
+                <p className="text-xs leading-6 text-[var(--text-2)]">{changePreview.description}</p>
+                <p className="text-xs text-[var(--text-3)]">تا تأیید نکنی چیزی تغییر نمی‌کند.</p>
+                <button type="button" disabled={saving} onClick={() => void confirmChange()} className="btn-royal rounded-xl px-4 py-2 text-xs">{saving ? 'در حال ثبت…' : 'تأیید تغییر'}</button>
+                <button type="button" disabled={saving} onClick={() => setChangePreview(null)} className="ms-2 rounded-xl border border-[var(--border)] px-4 py-2 text-xs">انتخاب دوباره</button>
+              </div>}
+              <button type="button" disabled={saving} onClick={() => { setRequest(null); setChangePreview(null); setChangeError(''); }} className="text-xs text-[var(--text-2)] underline">انصراف</button>
+            </section>
+          )}
+          {changeError && <p role="alert" className="text-xs leading-5 text-[var(--danger)]">{changeError}</p>}
+          {lastChange && <button type="button" disabled={saving} onClick={() => void revertChange()} className="rounded-xl border border-[var(--border)] px-3 py-2 text-xs text-[var(--accent-fg)]">بازگرداندن آخرین تغییر دستیار</button>}
           {/* The manager gives a decision and its evidence. */}
           <div
             data-testid="manager-brief"
@@ -248,6 +321,9 @@ export function CommandCenter() {
           </div>
 
           <div className="flex flex-wrap gap-1.5">
+            {['وظیفه را تکمیل کن', 'وظیفه را به فردا منتقل کن', 'پروژه را متوقف کن', 'برو به تنظیمات'].map((example) => (
+              <button key={example} type="button" onClick={() => submit(example)} className="rounded-full border border-[var(--accent-fg)]/25 px-2.5 py-1 text-[10.5px] text-[var(--accent-fg)]">{example}</button>
+            ))}
             {QUICK_COMMANDS.map((command) => (
               <button
                 key={command}
@@ -282,6 +358,7 @@ export function CommandCenter() {
                     : 'border-[var(--border)] bg-[var(--surface-1)]'
                 }`}
               >
+                {answer.prompt && <p className="mb-2 text-[10.5px] text-[var(--text-3)]">تو: {answer.prompt}</p>}
                 <p className="text-[11.5px] font-semibold text-[var(--text)]">{answer.title}</p>
                 <ul className="mt-1.5 space-y-1">
                   {answer.lines.map((line) => (

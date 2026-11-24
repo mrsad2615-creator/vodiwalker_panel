@@ -160,9 +160,21 @@ shot() {
     *)
       echo "::error title=e2e::refusing to save $1: the app is not in front"
       echo "::error title=e2e::focus is: ${FOCUS_NOW:-unknown}"
+      # Return, do not fall through. The old branch printed the error and then took
+      # the screenshot anyway; with a caller that tests the exit status, silently
+      # proceeding produced a numbered slot in the evidence with no file behind it,
+      # which is how 40 and 41 were once cited and never existed.
+      return 1
       ;;
   esac
-  adb shell screencap -p "$DEVICE_DIR/$1"
+  adb shell screencap -p "$DEVICE_DIR/$1" || return 1
+  # Verify the capture landed. `screencap` can exit 0 and write nothing when the
+  # surface it is reading is mid-destruction, and a caller that believes it
+  # succeeded leaves a numbered gap in the evidence with no explanation.
+  if ! adb shell test -s "$DEVICE_DIR/$1"; then
+    echo "::error title=e2e::$1 was requested but the file is empty or absent"
+    return 1
+  fi
   echo "captured $1"
 }
 
@@ -467,12 +479,16 @@ if tap_tag_or_text "videos-album" 'content-desc="Videos|text="Videos'; then
       # must be photographed with its bars to show which clip is on screen.
       adb shell input tap $((W / 2)) $((H * 30 / 100))
       sleep 1
-      shot 40-video-second-clip.png
+      if ! shot 40-video-second-clip.png; then
+        echo "::warning title=e2e::the second clip was selected but its first shot failed"
+      fi
       # A second tap hides the bars again: this is the shot that shows the picture
       # of the NEW clip alone, which is what a released player could not draw.
       adb shell input tap $((W / 2)) $((H * 30 / 100))
       sleep 1
-      shot 41-video-second-clip-no-chrome.png
+      if ! shot 41-video-second-clip-no-chrome.png; then
+        echo "::warning title=e2e::the second clip was selected but its clean shot failed"
+      fi
     else
       echo "::warning title=e2e::the filmstrip showed no second clip; the media replacement was not exercised"
     fi

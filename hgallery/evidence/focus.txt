@@ -1,2 +1,7 @@
+<<<<<<< HEAD
   mCurrentFocus=Window{28564d0 u0 dev.hgallery.app.debug/dev.hgallery.app.MainActivity}
   mFocusedApp=ActivityRecord{170ad13 u0 dev.hgallery.app.debug/dev.hgallery.app.MainActivity} t9}
+=======
+  mCurrentFocus=Window{2758b3f u0 dev.hgallery.app.debug/dev.hgallery.app.MainActivity}
+  mFocusedApp=ActivityRecord{39aba8c u0 dev.hgallery.app.debug/dev.hgallery.app.MainActivity} t9}
+>>>>>>> 96226ac (ci: shot() now fails when it captures nothing, and the evidence loss is recorded)

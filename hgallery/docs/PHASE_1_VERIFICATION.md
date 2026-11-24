@@ -160,13 +160,29 @@ honesty rather than code:
 
 ### The corrected step ran, in run 45343129275
 
+**Retention corrected on 2026-11-24.** The two images below were produced and
+inspected when this section was written. They are not in the repository now. The
+publish step in `.github/workflows/hgallery-android.yml` runs `rm -rf
+hgallery/evidence` on every emulator run and copies in only the files that run
+created, so an image from an earlier run disappears the next time the workflow
+finishes. A later run took the second-clip path only in some executions, and the
+files were lost with no warning.
+
+That is a records defect, not a code defect, and it is fixed at the source:
+`shot()` in `.ci/run-connected-tests.sh` now propagates failure and verifies that
+the file on the device is not empty, and the refusal branch returns instead of
+falling through and capturing anyway. The old branch printed "refusing to save"
+and then saved, which is how a numbered evidence slot could be cited with no file
+behind it.
+
+
 The emulator job succeeded and produced two images. Both were inspected.
 
-`evidence/40-video-second-clip.png`: the frame of `clip-city`, the second clip,
+`40-video-second-clip.png` (inspected, not retained): the frame of `clip-city`, the second clip,
 full width and correctly letterboxed. It is a different frame from `clip-lake`,
 which is what the first clip showed.
 
-`evidence/41-video-second-clip-no-chrome.png` is the important one. It shows five
+`41-video-second-clip-no-chrome.png` is the important one. It showed five
 things at once:
 
 | Observation | What it establishes |

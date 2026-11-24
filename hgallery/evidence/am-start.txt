@@ -2,6 +2,11 @@ Starting: Intent { cmp=dev.hgallery.app.debug/dev.hgallery.app.MainActivity }
 Status: ok
 LaunchState: COLD
 Activity: dev.hgallery.app.debug/dev.hgallery.app.MainActivity
+<<<<<<< HEAD
 TotalTime: 1939
 WaitTime: 1944
+=======
+TotalTime: 2241
+WaitTime: 2255
+>>>>>>> 96226ac (ci: shot() now fails when it captures nothing, and the evidence loss is recorded)
 Complete

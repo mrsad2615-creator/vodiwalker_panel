@@ -129,8 +129,4 @@ jobs:
           echo '768a1d8ead3692059dfe626cb3744057c8189607dd771e0804af3c3509d4a036  app-debug.apk' | sha256sum --check
           mv app-debug.apk neurox-0.5.0-dev.apk
           sha256sum neurox-0.5.0-dev.apk > SHA256SUMS.txt
-          gh release create neurox-v0.5.0-dev-download neurox-0.5.0-dev.apk SHA256SUMS.txt \
-            --target 4f755290a557abdee1fca62a761b006130194b95 \
-            --prerelease --latest=false \
-            --title 'NEUROX 0.5.0-dev — test APK (not final redesign)' \
-            --notes 'Direct APK download of the existing debug build verified by run 45504195689 (45 emulator tests). Development preview only, not a production release. The new six-text content reviewer is separate and is not integrated into this APK. The full redesign and all 34 exercises are not complete. Debug signing may differ from earlier installations; preserve your data before changing installations.' 2> release-error.txt || { echo "::error title=Release error::$(cat release-error.txt)"; exit 1; }
+          gh release upload neurox-v0.5.0-dev-download neurox-0.5.0-dev.apk SHA256SUMS.txt 2> release-error.txt || { echo "::error title=Release error::$(cat release-error.txt)"; exit 1; }

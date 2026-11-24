@@ -34,9 +34,18 @@ class ExerciseUiTest : NeuroxUiFixture() {
     }
     private fun assertReactionChoices(exercise: Exercise, labels: List<String>) {
         compose.runOnUiThread { model.start(exercise, 3, 1) }
-        // A StateFlow update precedes composition. Wait for UI semantics, not just the model.
-        compose.waitUntil(10_000) { compose.onAllNodesWithText(labels.first()).fetchSemanticsNodes().isNotEmpty() }
-        labels.forEach { compose.onNodeWithText(it).assertExists() }
+        // Native buttons merge their icon description and text. Match the actual
+        // accessible action, not an assumption about a descendant Text node.
+        fun choice(label: String) = hasClickAction() and (hasText(label) or hasContentDescription(label))
+        try {
+            compose.waitUntil(10_000) { compose.onAllNodes(choice(labels.first())).fetchSemanticsNodes().isNotEmpty() }
+            labels.forEach { compose.onNode(choice(it)).assertExists() }
+        } catch (failure: Throwable) {
+            val state = model.state.value
+            val detail = "exercise=$exercise route=${model.screen.value} phase=${model.training.value?.phase} " +
+                "runningExercise=${model.training.value?.exercise} language=${state.profile?.language} error=${state.error} busy=${state.busy}"
+            throw AssertionError(detail + "\n" + compose.onRoot().printToString(maxDepth = 8).take(3000), failure)
+        }
         compose.onNodeWithText("مکث").performScrollTo().performClick()
         compose.onNodeWithText("جلسه متوقف است").assertIsDisplayed()
     }

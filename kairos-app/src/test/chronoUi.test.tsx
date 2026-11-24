@@ -38,6 +38,18 @@ describe('Chrono Core — the focus screen', () => {
     );
   });
 
+  it('puts the clock before secondary options and keeps sound controls mounted when collapsed', async () => {
+    await openFocus();
+    const stage = screen.getByRole('region', { name: 'صحنهٔ تمرکز' });
+    const plan = screen.getByRole('region', { name: 'برنامهٔ جلسه' });
+    expect(stage.compareDocumentPosition(plan) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    const sound = screen.getByText('فضای صوتی و تنفس').closest('details');
+    expect(sound).not.toHaveAttribute('open');
+    fireEvent.click(screen.getByText('فضای صوتی و تنفس'));
+    expect(sound).toHaveAttribute('open');
+    expect(screen.getByText('فضای صوتی تمرکز (آفلاین)')).toBeInTheDocument();
+  });
+
   it('offers all four modes, each with its own configuration', async () => {
     await openFocus();
 

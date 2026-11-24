@@ -326,18 +326,6 @@ export function FocusPage() {
         </div>
       </header>
 
-      <details className="rounded-2xl border border-[var(--border)] bg-[var(--surface-1)] px-4 py-3 text-[11px] leading-6 text-[var(--text-2)]">
-        <summary className="cursor-pointer font-semibold text-[var(--text)]">راهنمای استفاده از تمرکز و صدا</summary>
-        <ol className="mt-2 list-inside list-decimal space-y-1">
-          <li>یک حالت انتخاب کنید: پومودورو برای تمرکز و استراحت، بلوک‌های عمیق برای چند نوبت کار، شمارش معکوس برای یک بازه و زمان‌سنج آزاد برای زمان نامحدود.</li>
-          <li>برای تنظیم زمان، دکمهٔ تنظیمات کنار عنوان را باز کنید. در صورت نیاز، یک وظیفه را پایین صفحه به جلسه پیوند دهید.</li>
-          <li>«شروع تمرکز» را بزنید. با «توقف موقت» می‌توانید مکث کنید. «بازنشانی» شمارش جاری را از نو آماده می‌کند.</li>
-          <li>برای پایان زودتر، پس از یک دقیقه «پایان و ثبت» را انتخاب کنید. در حالت آزاد، دکمهٔ تیک نیز جلسه را ثبت می‌کند.</li>
-          <li>در فضای صوتی، یک ترکیب را انتخاب کنید و صدای کلی یا هر لایه را کم و زیاد کنید؛ برای سکوت «توقف صدا» را بزنید.</li>
-        </ol>
-        <p className="mt-2 text-[var(--text-3)]">صداها فعلاً شبیه‌سازی‌شده‌اند، نه ضبط طبیعت. تایمر خواب صوتی به صفحه وابسته است و در پس‌زمینه ممکن است دقیق متوقف نشود. با صدای پایین شروع کنید.</p>
-      </details>
-
       {/* ── MODE LINE ────────────────────────────────────────────────────────
           Four modes as editorial tabs on a rule — no segmented pill. The hint is
           the actual configuration, so switching mode never hides a number. */}
@@ -374,82 +362,6 @@ export function FocusPage() {
           );
         })}
       </div>
-
-      {/* ── THE PLAN ────────────────────────────────────────────────────────
-          What the session actually is: every segment, what is done, what runs now. */}
-      <ChronoTimeline
-        plan={plan}
-        segmentIndex={focus.segmentIndex ?? 0}
-        remainingSeconds={focus.remainingSeconds}
-        running={focus.isRunning}
-        onSeek={seekFocusSegment}
-      />
-
-      {/* ── CONTINUITY ──────────────────────────────────────────────────────
-          One switch, one meaning: does the clock walk into the next segment on its
-          own, or wait for a tap? Stored with the rest of the settings. */}
-      <div className="flex items-center justify-between border-b border-[var(--border)] pb-2.5">
-        <div className="min-w-0 pr-3">
-          <p className="text-[11px] font-medium text-[var(--text-2)]">ادامهٔ خودکار</p>
-          <p className="mt-0.5 text-[9.5px] leading-relaxed text-[var(--text-3)]">
-            {focus.autoAdvance
-              ? 'بدون توقف از تمرکز به استراحت و برعکس می‌رود.'
-              : 'در پایان هر بخش می‌ایستد تا خودتان شروع کنید.'}
-          </p>
-        </div>
-        <button
-          type="button"
-          role="switch"
-          aria-checked={focus.autoAdvance === true}
-          aria-label="ادامهٔ خودکار بخش‌ها"
-          onClick={() => setAutoAdvance(!focus.autoAdvance)}
-          className={`relative h-5 w-9 shrink-0 rounded-full border transition-colors ${
-            focus.autoAdvance
-              ? 'border-[var(--accent)] bg-[color-mix(in_srgb,var(--accent)_55%,transparent)]'
-              : 'border-[var(--border)] bg-[var(--surface-2)]'
-          }`}
-        >
-          <span
-            aria-hidden="true"
-            className="absolute top-0.5 h-3.5 w-3.5 rounded-full bg-[var(--text)] transition-all"
-            style={{ left: focus.autoAdvance ? '1.15rem' : '0.15rem' }}
-          />
-        </button>
-      </div>
-
-      {/* ── NO INTERRUPTIONS ───────────────────────────────────────────────
-          Off by default: silencing a phone is the reader's call, and the system
-          grant is theirs to give. */}
-      {isNativeAndroid() && (
-        <div className="flex items-center justify-between border-b border-[var(--border)] pb-2.5">
-          <div className="min-w-0 pr-3">
-            <p className="text-[11px] font-medium text-[var(--text-2)]">بدون مزاحمت در جلسه</p>
-            <p className="mt-0.5 text-[9.5px] leading-relaxed text-[var(--text-3)]">
-              {settings.dndInFocus
-                ? 'اعلان‌ها در طول تمرکز ساکت می‌شوند و در پایان برمی‌گردند.'
-                : 'در طول جلسه اعلان‌ها را قطع می‌کند (نیاز به اجازهٔ سیستم).'}
-            </p>
-          </div>
-          <button
-            type="button"
-            role="switch"
-            aria-checked={settings.dndInFocus === true}
-            aria-label="بدون مزاحمت در جلسه"
-            onClick={() => void setDndInFocus(!settings.dndInFocus)}
-            className={`relative h-5 w-9 shrink-0 rounded-full border transition-colors ${
-              settings.dndInFocus
-                ? 'border-[var(--accent)] bg-[color-mix(in_srgb,var(--accent)_55%,transparent)]'
-                : 'border-[var(--border)] bg-[var(--surface-2)]'
-            }`}
-          >
-            <span
-              aria-hidden="true"
-              className="absolute top-0.5 h-3.5 w-3.5 rounded-full bg-[var(--text)] transition-all"
-              style={{ left: settings.dndInFocus ? '1.15rem' : '0.15rem' }}
-            />
-          </button>
-        </div>
-      )}
 
       {/* ── CUSTOM DURATIONS — a quiet strip, never a card ───────────────────
           The fields follow the mode: a pomodoro has breaks, a deep-work plan has
@@ -635,15 +547,11 @@ export function FocusPage() {
         )}
 
         {/* Sound Studio — real synthesised layers, mixer, sleep timer, breath */}
-        <div className="relative mt-5 border-t border-[var(--border)] pt-3">
-          <SoundStudio />
-        </div>
+        <details className="relative mt-5 rounded-2xl border border-[var(--border)] bg-[var(--surface-1)] px-4 py-3">
+          <summary className="cursor-pointer text-sm font-semibold text-[var(--text)]">فضای صوتی و تنفس</summary>
+          <div className="mt-3"><SoundStudio /></div>
+        </details>
       </section>
-
-      <ComparisonChart title="تمرکز هفت روز اخیر" subtitle="دقیقه‌های جلسه‌های ثبت‌شده در هر روز؛ زمان در حال اجرا تا ثبت‌شدن محاسبه نمی‌شود." unit="دقیقه" data={Array.from({ length: 7 }, (_, index) => {
-        const date = addDays(todayKey, index - 6);
-        return { label: formatJalaaliShort(date), value: Math.round(sessions.filter((session) => session.dateKey === date).reduce((total, session) => total + session.durationMinutes, 0)) };
-      })} />
 
       {/* ── LINKED TASK — one line on the rule ─────────────────────────────── */}
       <div className="flex items-center gap-3 border-y border-[var(--border)] py-2.5">
@@ -684,6 +592,100 @@ export function FocusPage() {
           </button>
         )}
       </div>
+
+      {/* ── THE PLAN ────────────────────────────────────────────────────────
+          What the session actually is: every segment, what is done, what runs now. */}
+      <ChronoTimeline
+        plan={plan}
+        segmentIndex={focus.segmentIndex ?? 0}
+        remainingSeconds={focus.remainingSeconds}
+        running={focus.isRunning}
+        onSeek={seekFocusSegment}
+      />
+
+      {/* ── CONTINUITY ──────────────────────────────────────────────────────
+          One switch, one meaning: does the clock walk into the next segment on its
+          own, or wait for a tap? Stored with the rest of the settings. */}
+      <div className="flex items-center justify-between border-b border-[var(--border)] pb-2.5">
+        <div className="min-w-0 pr-3">
+          <p className="text-[11px] font-medium text-[var(--text-2)]">ادامهٔ خودکار</p>
+          <p className="mt-0.5 text-[9.5px] leading-relaxed text-[var(--text-3)]">
+            {focus.autoAdvance
+              ? 'بدون توقف از تمرکز به استراحت و برعکس می‌رود.'
+              : 'در پایان هر بخش می‌ایستد تا خودتان شروع کنید.'}
+          </p>
+        </div>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={focus.autoAdvance === true}
+          aria-label="ادامهٔ خودکار بخش‌ها"
+          onClick={() => setAutoAdvance(!focus.autoAdvance)}
+          className={`relative h-5 w-9 shrink-0 rounded-full border transition-colors ${
+            focus.autoAdvance
+              ? 'border-[var(--accent)] bg-[color-mix(in_srgb,var(--accent)_55%,transparent)]'
+              : 'border-[var(--border)] bg-[var(--surface-2)]'
+          }`}
+        >
+          <span
+            aria-hidden="true"
+            className="absolute top-0.5 h-3.5 w-3.5 rounded-full bg-[var(--text)] transition-all"
+            style={{ left: focus.autoAdvance ? '1.15rem' : '0.15rem' }}
+          />
+        </button>
+      </div>
+
+      {/* ── NO INTERRUPTIONS ───────────────────────────────────────────────
+          Off by default: silencing a phone is the reader's call, and the system
+          grant is theirs to give. */}
+      {isNativeAndroid() && (
+        <div className="flex items-center justify-between border-b border-[var(--border)] pb-2.5">
+          <div className="min-w-0 pr-3">
+            <p className="text-[11px] font-medium text-[var(--text-2)]">بدون مزاحمت در جلسه</p>
+            <p className="mt-0.5 text-[9.5px] leading-relaxed text-[var(--text-3)]">
+              {settings.dndInFocus
+                ? 'اعلان‌ها در طول تمرکز ساکت می‌شوند و در پایان برمی‌گردند.'
+                : 'در طول جلسه اعلان‌ها را قطع می‌کند (نیاز به اجازهٔ سیستم).'}
+            </p>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={settings.dndInFocus === true}
+            aria-label="بدون مزاحمت در جلسه"
+            onClick={() => void setDndInFocus(!settings.dndInFocus)}
+            className={`relative h-5 w-9 shrink-0 rounded-full border transition-colors ${
+              settings.dndInFocus
+                ? 'border-[var(--accent)] bg-[color-mix(in_srgb,var(--accent)_55%,transparent)]'
+                : 'border-[var(--border)] bg-[var(--surface-2)]'
+            }`}
+          >
+            <span
+              aria-hidden="true"
+              className="absolute top-0.5 h-3.5 w-3.5 rounded-full bg-[var(--text)] transition-all"
+              style={{ left: settings.dndInFocus ? '1.15rem' : '0.15rem' }}
+            />
+          </button>
+        </div>
+      )}
+
+
+      <details className="rounded-2xl border border-[var(--border)] bg-[var(--surface-1)] px-4 py-3 text-[11px] leading-6 text-[var(--text-2)]">
+        <summary className="cursor-pointer font-semibold text-[var(--text)]">راهنمای استفاده از تمرکز و صدا</summary>
+        <ol className="mt-2 list-inside list-decimal space-y-1">
+          <li>یک حالت انتخاب کنید: پومودورو برای تمرکز و استراحت، بلوک‌های عمیق برای چند نوبت کار، شمارش معکوس برای یک بازه و زمان‌سنج آزاد برای زمان نامحدود.</li>
+          <li>برای تنظیم زمان، دکمهٔ تنظیمات کنار عنوان را باز کنید. در صورت نیاز، یک وظیفه را پایین صفحه به جلسه پیوند دهید.</li>
+          <li>«شروع تمرکز» را بزنید. با «توقف موقت» می‌توانید مکث کنید. «بازنشانی» شمارش جاری را از نو آماده می‌کند.</li>
+          <li>برای پایان زودتر، پس از یک دقیقه «پایان و ثبت» را انتخاب کنید. در حالت آزاد، دکمهٔ تیک نیز جلسه را ثبت می‌کند.</li>
+          <li>در فضای صوتی، یک ترکیب را انتخاب کنید و صدای کلی یا هر لایه را کم و زیاد کنید؛ برای سکوت «توقف صدا» را بزنید.</li>
+        </ol>
+        <p className="mt-2 text-[var(--text-3)]">صداها فعلاً شبیه‌سازی‌شده‌اند، نه ضبط طبیعت. تایمر خواب صوتی به صفحه وابسته است و در پس‌زمینه ممکن است دقیق متوقف نشود. با صدای پایین شروع کنید.</p>
+      </details>
+
+      <ComparisonChart title="تمرکز هفت روز اخیر" subtitle="دقیقه‌های جلسه‌های ثبت‌شده در هر روز؛ زمان در حال اجرا تا ثبت‌شدن محاسبه نمی‌شود." unit="دقیقه" data={Array.from({ length: 7 }, (_, index) => {
+        const date = addDays(todayKey, index - 6);
+        return { label: formatJalaaliShort(date), value: Math.round(sessions.filter((session) => session.dateKey === date).reduce((total, session) => total + session.durationMinutes, 0)) };
+      })} />
 
       {/* ── SESSION LEDGER ─────────────────────────────────────────────────── */}
       <section>

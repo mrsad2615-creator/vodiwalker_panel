@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Brain, Sparkles } from '@/components/ui/icons';
 import { ModalSheet } from '@/components/ui/ModalSheet';
@@ -14,7 +14,8 @@ import {
   useTasks,
 } from '@/lib/queries';
 import { buildDailySeries } from '@/lib/homeMetrics';
-import { getTodayKey } from '@/lib/date';
+import { formatJalaaliFull, getTodayKey } from '@/lib/date';
+import { createConfirmedTodayTasks, parseTaskLines, validateTaskTitles, wantsTodayTaskList } from '@/lib/assistantTaskDraft';
 import { QUICK_COMMANDS, runCommand, type CommandAnswer } from '@/lib/commands';
 import { buildDailyBrief } from '@/lib/coach';
 import { pickInsights } from '@/lib/insights';
@@ -34,6 +35,12 @@ export function CommandCenter() {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [history, setHistory] = useState<CommandAnswer[]>([]);
+  const [draftOpen, setDraftOpen] = useState(false);
+  const [draftText, setDraftText] = useState('');
+  const [preview, setPreview] = useState<{ titles: string[]; dateKey: string } | null>(null);
+  const [draftError, setDraftError] = useState('');
+  const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
 
   const tasks = useTasks();
   const habits = useHabits();
@@ -83,6 +90,14 @@ export function CommandCenter() {
   const ask = (text: string) => {
     const trimmed = text.trim();
     if (!trimmed) return;
+    if (wantsTodayTaskList(trimmed)) {
+      setDraftOpen(true);
+      setDraftText('');
+      setPreview(null);
+      setDraftError('');
+      setQuery('');
+      return;
+    }
     const answer = runCommand(trimmed, {
       tasks,
       habits,
@@ -101,6 +116,28 @@ export function CommandCenter() {
     if (answer.unknown) {
       pushToast({ title: 'این فرمان را نمی‌شناسم', tone: 'warning' });
     }
+  };
+
+  const previewDraft = () => {
+    const titles = parseTaskLines(draftText);
+    const error = validateTaskTitles(titles);
+    if (error) { setDraftError(error); setPreview(null); return; }
+    setDraftError('');
+    setPreview({ titles, dateKey: getTodayKey() });
+  };
+
+  const saveDraft = async () => {
+    if (!preview || savingRef.current) return;
+    savingRef.current = true;
+    setSaving(true);
+    try {
+      const created = await createConfirmedTodayTasks(preview.titles, preview.dateKey, true);
+      setHistory((current) => [{ intent: 'today.tasks', title: 'وظایف ساخته شدند', lines: [`${created.length} وظیفه برای امروز ثبت شد.`, 'بدون زمان و یادآوری؛ اولویت متوسط و دستهٔ شخصی.'], action: { label: 'دیدن وظایف', tab: 'tasks' } } as CommandAnswer, ...current].slice(0, 6));
+      setDraftOpen(false); setDraftText(''); setPreview(null); setDraftError('');
+    } catch {
+      setDraftError('ثبت انجام نشد. ممکن است تاریخ روز عوض شده باشد؛ دوباره پیش‌نمایش بگیر.');
+      setPreview(null);
+    } finally { savingRef.current = false; setSaving(false); }
   };
 
   const submit = (text: string) => {
@@ -151,7 +188,29 @@ export function CommandCenter() {
         }
       >
         <div className="space-y-3 px-5 py-4">
-          {/* The manager speaks first: one decision, its reason, its confidence. */}
+          {draftOpen && (
+            <section aria-label="ساخت فهرست وظایف امروز" className="space-y-3 rounded-[var(--r-rail)] border border-[var(--accent-fg)]/35 bg-[var(--surface-1)] p-4">
+              <div><h3 className="text-sm font-bold text-[var(--text)]">چه کارهایی باید انجام شوند؟</h3>
+                <p className="mt-1 text-xs leading-6 text-[var(--text-2)]">عنوان هر کار را در یک خط بنویس؛ تا تأیید نکنی چیزی ذخیره نمی‌شود.</p></div>
+              <label htmlFor="assistant-task-lines" className="block text-xs text-[var(--text-2)]">عنوان وظایف</label>
+              <textarea id="assistant-task-lines" value={draftText} disabled={saving} rows={4} maxLength={4000}
+                placeholder={'گزارش هفتگی\nتماس با همکار'}
+                onChange={(event) => { setDraftText(event.target.value); setPreview(null); setDraftError(''); }}
+                className="luxury-input w-full text-sm leading-6" />
+              {draftError && <p role="alert" className="text-xs text-[var(--danger)]">{draftError}</p>}
+              {preview && <div role="region" aria-label="پیش‌نمایش وظایف" className="rounded-xl bg-[var(--surface-2)] p-3">
+                <p className="text-xs font-semibold text-[var(--text)]">پیش‌نمایش · {formatJalaaliFull(preview.dateKey).compact}</p>
+                <ul className="mt-2 list-inside list-disc space-y-1 text-xs leading-6 text-[var(--text-2)]">{preview.titles.map((title) => <li key={title}>{title}</li>)}</ul>
+                <p className="mt-2 text-xs leading-5 text-[var(--text-3)]">بدون ساعت و یادآوری، اولویت متوسط، دستهٔ شخصی. پیش از تأیید عنوان‌ها را تغییر بده؛ موارد مشابه قبلی حذف یا جایگزین نمی‌شوند.</p>
+              </div>}
+              <div className="flex flex-wrap gap-2">
+                {!preview ? <button type="button" disabled={saving} onClick={previewDraft} className="btn-royal rounded-xl px-4 py-2 text-xs">پیش‌نمایش</button> :
+                  <button type="button" disabled={saving} onClick={() => void saveDraft()} className="btn-royal rounded-xl px-4 py-2 text-xs">{saving ? 'در حال ثبت…' : 'تأیید و ساخت وظایف'}</button>}
+                <button type="button" disabled={saving} onClick={() => { setDraftOpen(false); setPreview(null); setDraftError(''); }} className="rounded-xl border border-[var(--border)] px-4 py-2 text-xs text-[var(--text-2)]">انصراف</button>
+              </div>
+            </section>
+          )}
+          {/* The manager gives a decision and its evidence. */}
           <div
             data-testid="manager-brief"
             className="rounded-[var(--r-rail)] border border-[var(--accent-fg)]/25 bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] p-3"

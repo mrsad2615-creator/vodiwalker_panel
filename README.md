@@ -19,3 +19,10 @@
 https://t.me/vodiwalkervpn03
 گیت هاب :
 https://github.com/Vodiwalker
+
+
+---
+
+## NEUROX — پروژهٔ مستقل Android
+
+کد بومی NEUROX در پوشهٔ [`neurox/`](neurox/README.md) قرار دارد و از پنل بالا مستقل است. این بخش در مرحلهٔ توسعه است؛ APK و تأیید اجرای Android هنوز آماده نیست. [گزارش تحویل، آزمون‌ها و محدودیت‌ها](neurox/docs/12-release-notes.md) را ببینید.

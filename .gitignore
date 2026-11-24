@@ -1,0 +1,12 @@
+# Local tools and build outputs
+.local/
+.cache/
+.venv/
+__pycache__/
+*.pyc
+neurox/.gradle/
+neurox/**/build/
+neurox/local.properties
+neurox/*.jks
+neurox/*.keystore
+neurox/test-output/

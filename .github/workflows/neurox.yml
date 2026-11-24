@@ -1,0 +1,81 @@
+name: NEUROX native checks
+on:
+  workflow_dispatch:
+  push:
+    paths: ['neurox/**', '.github/workflows/neurox.yml']
+  pull_request:
+    paths: ['neurox/**', '.github/workflows/neurox.yml']
+permissions:
+  contents: read
+jobs:
+  native-build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: neurox
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Install Android platform
+        run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
+      - name: Install standalone Kotlin compiler
+        run: npm install --prefix ../.local/tools/kotlin kotlin-compiler@2.2.21 --no-audit --no-fund
+      - name: Core tests and static invariants
+        run: scripts/test-core.sh
+      - name: Parse all Kotlin and Gradle source files
+        run: scripts/check-kotlin-syntax.sh
+      - name: Assemble and lint Android project
+        run: ./gradlew :testing:run :app:assembleDebug :app:lintDebug :core:data:assembleDebugAndroidTest :app:assembleDebugAndroidTest --stacktrace
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: neurox-debug-not-a-production-release
+          path: neurox/app/build/outputs/apk/debug/*.apk
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: neurox-check-reports
+          path: |
+            neurox/test-output/*.txt
+            neurox/app/build/reports/
+  emulator-tests:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: neurox
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Enable KVM access
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          working-directory: neurox
+          script: ./gradlew :core:data:connectedDebugAndroidTest :app:connectedDebugAndroidTest --stacktrace
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: neurox-device-test-reports
+          path: neurox/**/build/reports/androidTests/

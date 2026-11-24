@@ -1,0 +1,9 @@
+-- Hand-audited version-1 fixture. Room schema export was unavailable in the sandbox.
+CREATE TABLE profiles (id TEXT NOT NULL, name TEXT NOT NULL, guest INTEGER NOT NULL, language TEXT NOT NULL, theme TEXT NOT NULL, accent INTEGER NOT NULL, lightAccent INTEGER NOT NULL, adaptive INTEGER NOT NULL, reducedMotion INTEGER NOT NULL, textScale REAL NOT NULL, PRIMARY KEY(id));
+CREATE TABLE sessions (id TEXT NOT NULL, profileId TEXT NOT NULL, exercise TEXT NOT NULL, module TEXT NOT NULL, startedAt INTEGER NOT NULL, endedAt INTEGER, status TEXT NOT NULL, checkpoint TEXT NOT NULL, difficulty INTEGER NOT NULL, baseline INTEGER NOT NULL, valid INTEGER NOT NULL, durationMs INTEGER NOT NULL, accuracy REAL NOT NULL, responseMs REAL, responseDeviationMs REAL, wpm REAL, xp INTEGER NOT NULL, PRIMARY KEY(id), FOREIGN KEY(profileId) REFERENCES profiles(id) ON UPDATE NO ACTION ON DELETE CASCADE);
+CREATE INDEX index_sessions_profileId_startedAt ON sessions(profileId, startedAt);
+CREATE TABLE favorites (profileId TEXT NOT NULL, exercise TEXT NOT NULL, PRIMARY KEY(profileId, exercise), FOREIGN KEY(profileId) REFERENCES profiles(id) ON UPDATE NO ACTION ON DELETE CASCADE);
+CREATE TABLE saved_themes (id TEXT NOT NULL, profileId TEXT NOT NULL, name TEXT NOT NULL, darkAccent INTEGER NOT NULL, lightAccent INTEGER NOT NULL, PRIMARY KEY(id), FOREIGN KEY(profileId) REFERENCES profiles(id) ON UPDATE NO ACTION ON DELETE CASCADE);
+CREATE INDEX index_saved_themes_profileId ON saved_themes(profileId);
+CREATE TABLE adaptations (id TEXT NOT NULL, profileId TEXT NOT NULL, exercise TEXT NOT NULL, createdAt INTEGER NOT NULL, fromDifficulty INTEGER NOT NULL, toDifficulty INTEGER NOT NULL, reason TEXT NOT NULL, accepted INTEGER NOT NULL, PRIMARY KEY(id), FOREIGN KEY(profileId) REFERENCES profiles(id) ON UPDATE NO ACTION ON DELETE CASCADE);
+CREATE INDEX index_adaptations_profileId ON adaptations(profileId);

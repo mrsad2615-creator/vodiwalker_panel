@@ -1,0 +1,29 @@
+# Data model — database version 1
+
+| Table | Key | Stored values |
+|---|---|---|
+| profiles | stable string ID | name, guest flag, language, theme mode, dark/light accent, adaptive preference, reduced motion, text scale |
+| sessions | UUID | profile FK, exercise/module, start/end epoch ms, status, checkpoint JSON, difficulty, baseline flag, validity, active duration, accuracy, latency/deviation, WPM, XP |
+| favorites | profile ID + exercise | profile-scoped saved exercise |
+| saved_themes | UUID | profile FK, name, independent dark/light colors |
+| adaptations | UUID | profile FK, exercise, timestamp, prior/suggested level, reason, acceptance flag |
+
+All child tables delete on profile deletion. Guest ID is `guest`. A guest row cannot be deleted through the repository. Session lookup requires the session ID and the profile ID. Profile switching is a logical data partition, not PIN authentication.
+
+DataStore keeps only the selected profile ID. If this ID is absent or no longer exists, select the guest row. Settings that belong to a profile stay in that profile's Room row.
+
+A checkpoint has a format version, validated configuration, attempt list, elapsed active time and completion flag. Attempts contain numerical measurements and aggregate weak-key counts. They do not contain the user's typed string. Decode rejects unknown versions, invalid enum values, unsafe bounds and contradictory completion state.
+
+Use one transaction for session completion. Ignore repeated completion callbacks. Ignore checkpoints older than durable progress. Derive total XP from completed session rows. Do not create a second mutable reward total.
+
+Room schema export is configured. A real Android build must generate the initial schema JSON. The schema has not been generated or checked in this environment. Commit the generated schema after the first successful native build. Add explicit migration tests before a version-2 change. Never enable destructive migration as an upgrade strategy.
+
+Epoch timestamps use UTC instants. Calendar groups use the current device timezone. Moving between timezones can change a displayed training date. Active duration never uses calendar time.
+
+## Checkpoint format 2
+
+Version 2 adds a signed 64-bit `stimulusSeed` to configuration. Version-1 data remains readable with seed 0. No Room table change is needed; the database remains at schema version 1. The encoder always writes checkpoint version 2. Do not rewrite old completed session summaries merely to change checkpoint version.
+
+`WITHHELD` is a correct GO/NO-GO inhibition, not a measured reaction. It has a null response latency. Validation rejects this outcome for other exercises and for scheduled GO trials. Include it in accuracy; exclude it from latency mean and deviation. Do not award a completed inactive session XP without any timed response.
+
+A sprint writes only completed word batches as attempts. Intermediate word submissions can save cumulative session duration but never entered words or a partial batch score. Phrase index and typing drafts are not durable. After interruption, restart the unfinished round; retain the completed attempts and active time already saved.

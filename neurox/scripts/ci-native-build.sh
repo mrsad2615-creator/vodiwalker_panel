@@ -15,4 +15,17 @@ text = '\n'.join(important)[-12000:] or '\n'.join(lines[-45:])[-12000:]
 print('::error title=Android compiler diagnostics::' + text.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A'))
 PY
 fi
+if [[ "$status" == 0 ]]; then
+    python3 - <<'PYREPORT'
+from pathlib import Path
+import hashlib
+import json
+for path in Path('core/data/schemas').rglob('*.json'):
+    # This is a generated Room schema, not private user data.
+    text = json.dumps(json.loads(path.read_text()), separators=(',', ':'))
+    print('::notice title=Room schema export::' + str(path) + '|' + text.replace('%', '%25').replace('\n', '%0A'))
+for path in Path('app/build/outputs/apk/debug').glob('*.apk'):
+    print(f'::notice title=Debug APK evidence::{path.name}; bytes={path.stat().st_size}; sha256={hashlib.sha256(path.read_bytes()).hexdigest()}')
+PYREPORT
+fi
 exit "$status"

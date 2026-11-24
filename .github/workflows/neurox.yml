@@ -54,6 +54,7 @@ jobs:
           path: |
             neurox/test-output/*.*
             neurox/app/build/reports/
+            neurox/core/data/schemas/
   emulator-tests:
     runs-on: ubuntu-latest
     defaults:
@@ -78,9 +79,12 @@ jobs:
           api-level: 35
           arch: x86_64
           working-directory: neurox
-          script: ./gradlew :core:data:connectedDebugAndroidTest :app:connectedDebugAndroidTest --stacktrace
+          script: scripts/ci-device-tests.sh
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: neurox-device-test-reports
-          path: neurox/**/build/reports/androidTests/
+          path: |
+            neurox/**/build/reports/androidTests/
+            neurox/**/build/outputs/androidTest-results/
+            neurox/test-output/android-device.log

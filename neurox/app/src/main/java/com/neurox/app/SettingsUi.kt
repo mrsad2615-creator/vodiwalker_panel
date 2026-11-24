@@ -84,7 +84,7 @@ internal fun SettingsScreen(state: AppState, vm: AppViewModel) {
             Text(tr("تغییر سطح خودکار اعمال نمی‌شود. می‌توانید هر پیشنهاد را رد کنید.", "Difficulty does not change without your approval. You can reject any suggestion."), style = MaterialTheme.typography.bodySmall)
         }
         Panel {
-            Text("NEUROX · 0.2.0-dev", style = MaterialTheme.typography.titleMedium)
+            Text("NEUROX · 0.3.0-dev", style = MaterialTheme.typography.titleMedium)
             Text(tr("نسخهٔ توسعه؛ آمادهٔ انتشار نهایی نیست. بدون مجوز اینترنت، بدون سرویس ابری و بدون آمار ساختگی.", "Development milestone. Not a production release. No internet permission, cloud service or invented statistics."))
             Text(tr("پیش از پاک‌کردن برنامه توجه کنید: رابط پشتیبان‌گیری و بازیابی هنوز آماده نیست.", "Before uninstalling: the backup and restore interface is not available yet."), color = MaterialTheme.colorScheme.error)
         }

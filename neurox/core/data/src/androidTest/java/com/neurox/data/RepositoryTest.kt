@@ -144,4 +144,69 @@ class RepositoryTest {
         assertEquals(300.0, requireNotNull(Scoring.summarize(decoded).meanResponseMs), 0.01)
     }
 
+    @Test fun customExerciseCrudAndDuplicateKeepIndependentIdentity() = runBlocking {
+        val bp = ExerciseBlueprint("My pattern", Exercise.PATTERN_MATCH, difficulty = 3, rounds = 7, targetAccuracyPercent = 90, errorAllowance = 1)
+        val id = repository.saveCustomExercise("guest", bp)
+        val original = repository.customExercise("guest", id)
+        assertEquals(bp, original.blueprint())
+        repository.saveCustomExercise("guest", bp.copy(name = "Renamed"), id)
+        assertEquals(original.createdAt, repository.customExercise("guest", id).createdAt)
+        val duplicate = repository.duplicateCustomExercise("guest", id)
+        assertNotEquals(id, duplicate)
+        assertEquals(2, repository.customExercises("guest").first().size)
+        repository.setCustomFavorite("guest", id, true)
+        repository.deleteCustomExercise("guest", id)
+        assertEquals(1, repository.customExercises("guest").first().size)
+        assertTrue(repository.favorites("guest").first().isEmpty())
+        assertNotNull(repository.customExercise("guest", duplicate))
+    }
+    @Test fun customExerciseRejectsCrossProfileOverwriteAndRead() = runBlocking {
+        val other = repository.createProfile("Other")
+        val bp = ExerciseBlueprint("Local", Exercise.WORD_SPRINT)
+        val id = repository.saveCustomExercise("guest", bp)
+        var blocked = 0
+        try { repository.saveCustomExercise(other, bp.copy(name = "Overwrite"), id) } catch (_: IllegalArgumentException) { blocked++ }
+        try { repository.customExercise(other, id) } catch (_: IllegalArgumentException) { blocked++ }
+        try { repository.duplicateCustomExercise(other, id) } catch (_: IllegalArgumentException) { blocked++ }
+        assertEquals(3, blocked)
+        assertEquals("Local", repository.customExercise("guest", id).name)
+    }
+    @Test fun customDeletionKeepsSessionSnapshotAndRewards() = runBlocking {
+        val bp = ExerciseBlueprint("History snapshot", Exercise.FOCUS_LOCK, rounds = 1)
+        val id = repository.saveCustomExercise("guest", bp)
+        val config = bp.configuration(Language.EN, 42, id)
+        val session = repository.startSession("guest", config)
+        repository.saveSession(session.id, "guest", finished(config))
+        repository.deleteCustomExercise("guest", id)
+        val history = repository.sessions("guest").first().single()
+        assertEquals("History snapshot", CheckpointCodec.decode(history.checkpoint).config.customExerciseName)
+        assertEquals(30, history.xp)
+    }
+    @Test fun customTestRunsCannotEarnXp() = runBlocking {
+        val config = ExerciseBlueprint("Try", Exercise.FOCUS_LOCK, rounds = 1).configuration(Language.EN, 42, practice = true)
+        val session = repository.startSession("guest", config)
+        repository.saveSession(session.id, "guest", finished(config))
+        val result = repository.sessions("guest").first().single()
+        assertEquals("COMPLETE", result.status)
+        assertFalse(result.valid)
+        assertEquals(0, result.xp)
+    }
+    @Test fun invalidBlueprintDoesNotReplaceExistingData() = runBlocking {
+        val bp = ExerciseBlueprint("Safe", Exercise.FOCUS_LOCK)
+        val id = repository.saveCustomExercise("guest", bp)
+        var rejected = false
+        try { repository.saveCustomExercise("guest", bp.copy(rounds = 0), id) } catch (_: IllegalArgumentException) { rejected = true }
+        assertTrue(rejected)
+        assertEquals(bp, repository.customExercise("guest", id).blueprint())
+    }
+    @Test fun versionTwoCheckpointsReceiveSafeGoalDefaults() {
+        val versionTwo = """{"version":2,"stimulusSeed":42,"exercise":"FOCUS_LOCK","language":"EN","difficulty":1,"rounds":2,"limit":5000,"baseline":false,"elapsed":0,"completed":false,"attempts":[]}"""
+        val decoded = CheckpointCodec.decode(versionTwo)
+        assertEquals(42L, decoded.config.stimulusSeed)
+        assertEquals(80, decoded.config.targetAccuracyPercent)
+        assertEquals(30, decoded.config.errorAllowance)
+        assertFalse(decoded.config.practice)
+        assertEquals(decoded, CheckpointCodec.decode(CheckpointCodec.encode(decoded)))
+    }
+
 }

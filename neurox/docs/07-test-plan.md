@@ -2,7 +2,7 @@
 
 ## Available local suite
 
-Run `scripts/test-core.sh`. Compile production domain and cipher sources with Kotlin 2.2.21 and JVM target 17. Treat compiler warnings as failures. Use a fake monotonic clock and seeded random source for deterministic engine tests. Test valid and invalid inputs, all eight exercise paths, pause/resume, recovery, scoring, WPM, Unicode, adaptive conservatism, schedule conflicts, progression and accent contrast. Test encryption round trips and rejection of wrong passwords, tampered headers, corrupted tags, truncation, unknown versions, invalid costs and unsafe sizes.
+Run `scripts/test-core.sh`. Compile production domain and cipher sources with Kotlin 2.2.21 and JVM target 17. Treat compiler warnings as failures. Use a fake monotonic clock and seeded random source for deterministic engine tests. Test valid and invalid inputs, all twelve exercise paths, pause/resume, recovery, scoring, WPM, Unicode, adaptive conservatism, schedule conflicts, progression and accent contrast. Test encryption round trips and rejection of wrong passwords, tampered headers, corrupted tags, truncation, unknown versions, invalid costs and unsafe sizes.
 
 Run `scripts/check-kotlin-syntax.sh`. Parse Kotlin and Gradle Kotlin files. This is syntax-only verification. It does not resolve Android APIs.
 
@@ -34,6 +34,14 @@ A successful build does not satisfy this matrix. Record device model, OS, refres
 
 ## Expansion regression suite
 
-`ExerciseExpansionTests.kt` adds seeded board generation checks, GO/NO-GO balance and false alarms, non-skipping phrase timing, real display-time WPM, word-by-word batch completion, per-language inputs, bounded draft sizes and old input revision rejection. A cross-product driver completes all eight exercises in both languages and all supported levels. A second driver recreates each exercise from its completed-round checkpoint.
+`ExerciseExpansionTests.kt` adds seeded board generation checks, GO/NO-GO balance and false alarms, non-skipping phrase timing, real display-time WPM, word-by-word batch completion, per-language inputs, bounded draft sizes and old input revision rejection. A cross-product driver completes all twelve exercises in both languages and all supported levels. A second driver recreates each exercise from its completed-round checkpoint.
 
 Additional Android codec/repository tests cover legacy version-1 input, version-2 round trips, new exercise identifiers, extreme valid seeds and saved correct inhibition. `ExerciseUiTest` supplies in-memory database fixtures for Visual Search, Phrase Reading and Word Sprint. These are test sources, not executed test evidence in this environment.
+
+## Builder, matching and migration suite
+
+`BuilderAndMatchingTests` checks every template and language, builder name/parameter/schema validation, custom identifier pairing, real practice-session reward exclusion, goal math, unique pattern choices, shape selection, RSVP pacing and code text accuracy. The existing all-exercise matrix now includes all twelve identifiers.
+
+`test-migration-sql.py` executes the actual production migration SQL with local SQLite. It verifies unchanged legacy rows, the new table/index, foreign-key rejection and cascading deletion. This is executed local integration coverage, not Android Room evidence.
+
+Additional Room test sources cover custom CRUD, stable creation times, duplicate identity, cross-profile access rejection, historical snapshots, practice rewards, invalid-save preservation and all three checkpoint versions. The migration test opens a hand-authored legacy fixture with Room version 2. Run these tests before declaring the native workflow accepted.

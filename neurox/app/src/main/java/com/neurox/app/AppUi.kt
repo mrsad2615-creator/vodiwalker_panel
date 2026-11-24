@@ -218,8 +218,9 @@ private fun ModuleCard(definition: ExerciseDefinition, index: Int, modifier: Mod
 @Composable
 internal fun SessionRow(session: SessionEntity) {
     val exercise = runCatching { Exercise.valueOf(session.exercise) }.getOrNull()
+    val details = remember(session.checkpoint) { runCatching { CheckpointCodec.decode(session.checkpoint) } }
     Panel {
-        Text(exercise?.let { exerciseName(it) } ?: session.module, style = MaterialTheme.typography.titleMedium)
+        Text(details.getOrNull()?.config?.customExerciseName ?: exercise?.let { exerciseName(it) } ?: session.module, style = MaterialTheme.typography.titleMedium)
         val date = Instant.ofEpochMilli(session.startedAt).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("yyyy/MM/dd · HH:mm"))
         Text(date, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -229,12 +230,17 @@ internal fun SessionRow(session: SessionEntity) {
             Metric(tr("زمان فعال", "Active time"), "${number(session.durationMs / 1000.0, 1)} s")
         }
         if (exercise == Exercise.GO_NO_GO) {
-            val decoded = remember(session.checkpoint) { runCatching { Scoring.summarize(CheckpointCodec.decode(session.checkpoint)) } }
+            val decoded = remember(details) { details.mapCatching { Scoring.summarize(it) } }
             decoded.getOrNull()?.let { summary ->
                 Text(tr("خودداری درست: ${number(summary.withheld)} · لمس نادرست: ${number(summary.incorrect)} · زودهنگام: ${number(summary.premature)} · ازدست‌رفته: ${number(summary.missed)}",
                     "Correct inhibitions: ${number(summary.withheld)} · False alarms: ${number(summary.incorrect)} · Early: ${number(summary.premature)} · Missed: ${number(summary.missed)}"), style = MaterialTheme.typography.bodySmall)
             }
-            if (decoded.isFailure) Text(tr("جزئیات این جلسه خوانده نشد؛ اطلاعات خلاصه نمایش داده شده است.", "Round details could not be read. Only the stored summary is shown."), color = MaterialTheme.colorScheme.error)
         }
+        details.getOrNull()?.takeIf { it.config.customExerciseId != null }?.let { checkpoint ->
+            val summary = Scoring.summarize(checkpoint)
+            Text(tr("دقت هدف: ${number(checkpoint.config.targetAccuracyPercent)}٪ · حداکثر دور ناموفق: ${number(checkpoint.config.errorAllowance)}", "Target accuracy: ${number(checkpoint.config.targetAccuracyPercent)}% · Unsuccessful-round limit: ${number(checkpoint.config.errorAllowance)}"), style = MaterialTheme.typography.bodySmall)
+            Text(if (summary.goalMet) tr("معیار موفقیت برآورده شد", "Success criteria met") else tr("معیار موفقیت برآورده نشد", "Success criteria not met"), style = MaterialTheme.typography.bodySmall)
+        }
+        if (details.isFailure) Text(tr("جزئیات این جلسه خوانده نشد؛ اطلاعات خلاصه نمایش داده شده است.", "Round details could not be read. Only the stored summary is shown."), color = MaterialTheme.colorScheme.error)
     }
 }

@@ -1,4 +1,4 @@
-# Architecture — milestone 0.2
+# Architecture — milestone 0.3
 
 ## Dependency graph
 
@@ -32,7 +32,7 @@ Persist each round and each pause. A sudden process kill can lose a pending writ
 
 ## Scope boundaries
 
-This milestone shares session orchestration across eight exercise paths. It does not yet provide the complete independent engine/plugin modules for all 34 exercise types. Split those paths behind explicit engine interfaces as the next exercise families are added. Split repository responsibilities before the vault, quest and custom-builder features are integrated. Add modules only when they own implemented behavior. Do not create empty module trees to imply completion.
+This milestone shares session orchestration across twelve exercise paths. It does not yet provide the complete independent engine/plugin modules for all 34 exercise types. Split those paths behind explicit engine interfaces as the next exercise families are added. Split repository responsibilities before the vault, quest and custom-builder features are integrated. Add modules only when they own implemented behavior. Do not create empty module trees to imply completion.
 
 ## Documentation language
 
@@ -47,3 +47,13 @@ Each published interactive state has an input revision. Compose callbacks supply
 Do not start GO from the tap handler. Only an explicit engine tick can publish GO. Keep correct NO-GO withholding separate from reaction latency. A slow phrase frame advances at most one phrase. It must not skip unseen words to meet an artificial target speed.
 
 Passage and typing lists are cached in each engine instance. Do not rebuild original content on the high-frequency reaction ticker. Typing drafts use non-saveable Compose memory. Do not place them in the Activity SavedState bundle.
+
+## Safe exercise builder
+
+The domain `ExerciseBlueprint` is a finite schema, not an expression evaluator. Its module derives from its template. Validate names, schema version and all training limits before preview, execution or storage. Reject control characters and direction overrides in names. Retain normal Persian shaping characters such as ZWNJ.
+
+Store custom definitions in a profile-owned Room table. Recheck ownership inside the save transaction. A duplicate receives a new UUID. Editing a definition never edits a recorded session. The session configuration contains a snapshot of the source UUID, name, parameters and success criteria. Deleting the definition removes its favorite but does not remove history.
+
+A test run uses the real engine and persistence path with `practice=true`. It earns no XP, does not meet ordinary session validity, and does not enter performance/adaptation summaries. Do not simulate a passed test run. Preview is an explicitly unscored sample and does not create a session.
+
+Database migration 1 to 2 adds one table and one index. It does not rebuild existing tables. Checkpoint format 3 adds optional custom-source fields, success criteria and a practice flag. Decode versions 1 and 2 with their original safe defaults.

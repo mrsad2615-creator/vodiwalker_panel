@@ -24,7 +24,18 @@
 | S-019 | Do not let a waiting tap activate its own GO. Reject callbacks from old input revisions. | Core tests |
 | S-020 | Show every three-word phrase for its minimum display interval. Do not skip phrases after a delayed tick. Calculate WPM from actual display time. | Core tests; physical presentation timing pending |
 | S-021 | Complete a sprint round only after every word is submitted. Limit each word input to 64 UTF-16 code units. Aggregate correct characters, errors and weak keys. | Core tests |
-| S-022 | Read checkpoint versions 1 and 2. Write version 2 with the stimulus seed. | Android codec tests supplied, not run |
+| S-022 | Read checkpoint versions 1, 2 and 3. Write version 3 with seed, criteria, source snapshot and practice flag. | Android codec tests supplied, not run |
+
+| S-023 | Generate four unique equal-density pattern choices with one exact match. | Core tests |
+| S-024 | Hide a shape cue during WAITING. Score only the selected matching shape after publication. | Core tests |
+| S-025 | Show each RSVP word before comprehension. Use actual word display time, not requested WPM, for the report. | Core tests |
+| S-026 | Treat code targets as text only. Count indentation, newlines and punctuation. Never evaluate code. | Core tests |
+| S-027 | Validate all exercise blueprints before persistence or execution. Reject unknown schema versions. | Core tests; Room tests pending |
+| S-028 | Snapshot custom exercise names and parameters in each session. Retain history after definition deletion. | Repository test source; Android execution pending |
+| S-029 | Give no XP or ordinary validity to a practice/test session. Keep its measurements visible in its result. | Core tests; Android execution pending |
+| S-030 | Add the custom table through a non-destructive version-1-to-2 migration. | Local SQLite tests; Room runtime test pending |
+
+Success criteria use a target accuracy percentage and an allowed number of unsuccessful rounds. They do not modify accuracy, speed or XP formulas. In TYPE, a round with any incorrect character is an unsuccessful round even though character accuracy is reported separately.
 
 The response clock starts when the engine publishes a stimulus. It is not a hardware timestamp for first pixel emission. Screen refresh, scheduling, touch hardware and assistive technology affect observed values. Do not describe the results as laboratory measurements or diagnoses.
 

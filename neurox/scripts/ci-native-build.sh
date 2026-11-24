@@ -23,7 +23,10 @@ import json
 for path in Path('core/data/schemas').rglob('*.json'):
     # This is a generated Room schema, not private user data.
     text = json.dumps(json.loads(path.read_text()), separators=(',', ':'))
-    print('::notice title=Room schema export::' + str(path) + '|' + text.replace('%', '%25').replace('\n', '%0A'))
+    chunks = [text[i:i + 2800] for i in range(0, len(text), 2800)]
+    for index, chunk in enumerate(chunks, 1):
+        message = f'{path}|{index}|{len(chunks)}|' + chunk
+        print('::notice title=Room schema chunk::' + message.replace('%', '%25').replace('\n', '%0A'))
 for path in Path('app/build/outputs/apk/debug').glob('*.apk'):
     print(f'::notice title=Debug APK evidence::{path.name}; bytes={path.stat().st_size}; sha256={hashlib.sha256(path.read_bytes()).hexdigest()}')
 PYREPORT

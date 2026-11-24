@@ -63,6 +63,7 @@ import dev.hgallery.app.ui.motion.rememberPressScale
 import dev.hgallery.app.ui.theme.hgColors
 import dev.hgallery.app.ui.theme.hgPalette
 import dev.hgallery.app.ui.theme.hgShapes
+import dev.hgallery.app.ui.theme.hgSpacing
 import dev.hgallery.app.ui.theme.HgMetrics
 import dev.hgallery.core.GridDensity
 import dev.hgallery.core.MediaItem

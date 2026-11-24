@@ -246,32 +246,67 @@ long_press_tag_or_text() {
   return 0
 }
 
-# The launch sequence. The first shot above is taken once the shell is up, so the
-# cover has already lifted by then. To photograph the cover itself the app must be
-# relaunched and captured inside its 900 ms window, which is why this is here and not
-# earlier: every tap below needs a screen that is done animating.
+# The launch sequence, recorded rather than captured.
 #
-# No sleep between the launch and the capture. `am start -W` waits for the activity to
-# be drawn, which is when the first frame of the cover exists; a sleep of even one
-# second would miss it. The capture lands somewhere in the sequence by construction,
-# and which frame it catches is not asserted, only that the mark is on a background
-# without the grid.
-echo "== photographing the launch sequence =="
+# A still cannot photograph this. `screencap` takes about a second to start on this
+# emulator, which is longer than the 900 ms sequence, so two runs in a row produced
+# either the window background before Compose drew or the finished grid after the
+# cover had lifted. The animation was real in both runs; the camera was simply slower
+# than the subject.
+#
+# So: record the screen, launch the app inside the recording, pull the video and take
+# three frames out of it. The frames are the sequence, not a re-enactment of it.
+#
+# If either `screenrecord` or `ffmpeg` is unavailable the step warns and moves on. It
+# must not fail the run: the launch animation is verified by `IgnitionTest` on every
+# run, and this is the picture to go with it.
+echo "== recording the launch sequence =="
+# Motion has to be switched on for this step, and this is the reason none of the
+# recordings worked before: the workflow starts the emulator with
+# `disable-animations: true`, which sets all three animation scales to 0. The
+# application reads the platform scale, as it must, so `rememberReduceMotion()`
+# returns true and the launch sequence collapses to an instant state change. That is
+# correct behaviour on a device with animations off, and it means the CI emulator has
+# never run a single frame of animation in any run so far.
+#
+# Turned on here, for this step only, and put back afterwards: leaving them on would
+# change the timing of every test that follows and make the run flaky in a way that
+# has nothing to do with the product.
+for scale in animator_duration_scale transition_animation_scale window_animation_scale; do
+  adb shell settings put global "$scale" 1 >/dev/null 2>&1
+done
+sleep 1
+
+LAUNCH_MP4="$DEVICE_DIR/launch.mp4"
+adb shell rm -f "$LAUNCH_MP4" >/dev/null 2>&1
 adb shell am force-stop "$PKG"
-adb shell am start -W -n "$PKG/$ACTIVITY" > /dev/null 2>&1
-adb shell screencap -p "$DEVICE_DIR/44-launch-sequence.png" >/dev/null 2>&1
-# A second capture, a third of a second later. One capture is a coin flip: the first
-# run caught the ignition phase, the next caught the frame before Compose had drawn
-# anything, because `-W` returns when the activity is *drawn* and on a fast runner that
-# can be the window background alone. Two frames from one launch make it much more
-# likely that at least one shows the mark, and they cost 0.3 s.
-sleep 0.3
-adb shell screencap -p "$DEVICE_DIR/45-launch-sequence-late.png" >/dev/null 2>&1
-if adb shell test -s "$DEVICE_DIR/44-launch-sequence.png"; then
-  echo "captured 44-launch-sequence.png"
+# Background the recorder, then launch into it. `screenrecord` caps at 3 minutes and
+# stops on its own; 6 seconds is enough for the launch plus the settle.
+adb shell "screenrecord --time-limit 6 --size 320x640 --bit-rate 2000000 $LAUNCH_MP4" \
+  >/dev/null 2>&1 &
+RECORDER=$!
+sleep 1
+adb shell am start -n "$PKG/$ACTIVITY" > /dev/null 2>&1
+wait $RECORDER 2>/dev/null || true
+sleep 1
+adb pull "$LAUNCH_MP4" "$OUT_DIR/launch.mp4" >/dev/null 2>&1
+if [ -s "$OUT_DIR/launch.mp4" ] && command -v ffmpeg >/dev/null 2>&1; then
+  # Three moments: the ignition, the iris closing, and the lift. The offsets are
+  # relative to the recording, which begins about a second before the activity.
+  for pair in "0.30 44-launch-ignition" "0.55 45-launch-aperture" "0.80 46-launch-lift"; do
+    set -- $pair
+    ffmpeg -y -loglevel error -ss "$1" -i "$OUT_DIR/launch.mp4" -frames:v 1 \
+      "$OUT_DIR/$2.png" 2>/dev/null \
+      && echo "captured $2.png from the recording at $1 s" \
+      || echo "::warning title=e2e::no frame at $1 s for $2"
+  done
 else
-  echo "::warning title=e2e::the launch cover was gone before the capture"
+  echo "::warning title=e2e::could not record the launch; screenrecord or ffmpeg is absent"
 fi
+# Motion off again, before the tests and the rest of the captures.
+for scale in animator_duration_scale transition_animation_scale window_animation_scale; do
+  adb shell settings put global "$scale" 0 >/dev/null 2>&1
+done
 # Let the sequence finish before anything taps.
 sleep 2
 

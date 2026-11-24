@@ -50,6 +50,7 @@ import dev.hgallery.app.ui.components.HgToolbar
 import dev.hgallery.app.ui.components.MediaThumbnail
 import dev.hgallery.app.ui.icons.HgIcons
 import dev.hgallery.app.ui.theme.AlbumTitle
+import dev.hgallery.app.ui.theme.hgSpacing
 import dev.hgallery.app.ui.theme.CountLabel
 import dev.hgallery.app.ui.theme.HgMetrics
 import dev.hgallery.app.ui.theme.hgPalette
@@ -179,7 +180,12 @@ fun AlbumsScreen(
             onMore = onOpenSettings,
             modifier = Modifier.padding(end = 6.dp),
         )
-        HgScreenTitle(title = stringResource(R.string.tab_albums))
+        // The title is alone on its row here, so this is the one place that adds
+        // the screen gutter: HgScreenTitle does not draw its own inset.
+        HgScreenTitle(
+            title = stringResource(R.string.tab_albums),
+            modifier = Modifier.padding(start = hgSpacing.gutter, end = hgSpacing.gutter),
+        )
         Spacer(Modifier.height(18.dp))
 
         LazyVerticalGrid(

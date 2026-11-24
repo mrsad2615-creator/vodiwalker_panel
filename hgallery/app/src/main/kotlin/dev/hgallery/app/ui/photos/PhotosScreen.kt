@@ -274,64 +274,83 @@ private fun SelectionAwarePhotos(
                 onExit = { model.exit() },
             )
         } else {
-        Column(Modifier.fillMaxWidth()) {
-            // The title carries the actions on its own row, as the reference draws it,
-            // and the chip row follows. The old order was toolbar, then title, which left
-            // an empty band above the heading and pushed the grid down by 56 dp.
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = hgSpacing.gutter, end = hgSpacing.gutter - 6.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column(Modifier.weight(1f)) {
+            Column(Modifier.fillMaxWidth()) {
+                // The design draws two controls beside the title, and the chip row
+                // underneath. That split is not decoration: four 48 dp targets on a
+                // 320 dp screen leave about 88 dp for a 32 sp title, and "Photos"
+                // broke one letter per line on the emulator. Two targets leave 144 dp,
+                // which holds the word at its largest supported width.
+                //
+                // The row owns the gutter. HgScreenTitle does not draw one, so before
+                // this the inset was counted twice and the title lost another 20 dp.
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = hgSpacing.gutter, end = hgSpacing.gutter - 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
                     HgScreenTitle(
                         title = stringResource(R.string.tab_photos),
                         subtitle = if (items.isNotEmpty()) summary else null,
+                        modifier = Modifier
+                            .weight(1f)
+                            .testTag(HgTestTags.SCREEN_TITLE),
+                    )
+                    HgIconButton(
+                        icon = HgIcons.Search,
+                        contentDescription = stringResource(R.string.search),
+                        onClick = onSearch,
+                    )
+                    // The overflow slot holds Settings, and the library controls below
+                    // are the only other way to reach selection and month view. An icon
+                    // that opens nothing is worse than no icon, so every slot here has
+                    // a destination.
+                    HgIconButton(
+                        icon = HgIcons.More,
+                        contentDescription = stringResource(R.string.more_options),
+                        onClick = onOpenSettings,
+                        modifier = Modifier.testTag(HgTestTags.MORE_BUTTON),
                     )
                 }
-                // Selection is reachable without a long press, so the feature is
-                // discoverable and can be driven by a test.
-                HgIconButton(
-                    icon = HgIcons.SelectAll,
-                    contentDescription = stringResource(R.string.select),
-                    onClick = { model.selectAll(existingIds) },
-                    modifier = Modifier.testTag(HgTestTags.SELECT_BUTTON),
-                )
-                // A pinch alone is undiscoverable, and a gesture that cannot be driven
-                // from a test is a gesture nobody checks.
-                HgIconButton(
-                    icon = if (monthView) HgIcons.GridDay else HgIcons.GridMonth,
-                    contentDescription = stringResource(
-                        if (monthView) R.string.view_day else R.string.view_month,
-                    ),
-                    onClick = { monthView = !monthView },
-                    modifier = Modifier.testTag(HgTestTags.VIEW_SWITCH),
-                )
-                HgIconButton(
-                    icon = HgIcons.Search,
-                    contentDescription = stringResource(R.string.search),
-                    onClick = onSearch,
-                )
-                // The overflow slot holds Settings, as before. An icon that opens
-                // nothing is worse than no icon, so the slot keeps its destination.
-                HgIconButton(
-                    icon = HgIcons.More,
-                    contentDescription = stringResource(R.string.more_options),
-                    onClick = onOpenSettings,
-                )
-            }
 
-            // The chip row. A tap filters the grid in place, which is what the chips
-            // imply; before this the row did not exist and the toolbar's filter slot
-            // opened search, so the control and its promise disagreed.
-            GalleryFilterChips(
-                items = items,
-                selected = filter,
-                onSelect = { filter = it },
-            )
-            Spacer(Modifier.height(10.dp))
-        }
+                // One row for filters and for the two library controls.
+                //
+                // Selection moved here from the title row, where the redesign left no
+                // room for it. Putting it on this row keeps it reachable without a long
+                // press, which is what the SelectionTest asserts, and it is the same row
+                // the design uses for the chips, so the height is unchanged.
+                Row(
+                    Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Box(Modifier.weight(1f)) {
+                        GalleryFilterChips(
+                            items = items,
+                            selected = filter,
+                            onSelect = { filter = it },
+                        )
+                    }
+                    // A pinch alone is undiscoverable, and a gesture that cannot be
+                    // driven from a test is a gesture nobody checks.
+                    HgIconButton(
+                        icon = HgIcons.SelectAll,
+                        contentDescription = stringResource(R.string.select),
+                        onClick = { model.selectAll(existingIds) },
+                        modifier = Modifier.testTag(HgTestTags.SELECT_BUTTON),
+                    )
+                    HgIconButton(
+                        icon = if (monthView) HgIcons.GridDay else HgIcons.GridMonth,
+                        contentDescription = stringResource(
+                            if (monthView) R.string.view_day else R.string.view_month,
+                        ),
+                        onClick = { monthView = !monthView },
+                        modifier = Modifier
+                            .padding(end = hgSpacing.gutter - 12.dp)
+                            .testTag(HgTestTags.VIEW_SWITCH),
+                    )
+                }
+                Spacer(Modifier.height(10.dp))
+            }
         }
 
         // `weight(1f)` is what reserves room for the selection bar: with an
@@ -589,8 +608,11 @@ private fun GalleryFilterChips(
     val palette = hgColors
     val spacing = hgSpacing
 
+    // The row draws its own start gutter, because the icon buttons beside it
+    // share the row. The end inset is smaller: it matches the 6 dp the icon
+    // buttons leave, so the last chip does not stop short of the last control.
     LazyRow(
-        contentPadding = PaddingValues(horizontal = spacing.gutter),
+        contentPadding = PaddingValues(start = spacing.gutter, end = 6.dp),
         horizontalArrangement = Arrangement.spacedBy(spacing.floatGap),
         modifier = Modifier
             .fillMaxWidth()

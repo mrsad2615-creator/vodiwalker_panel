@@ -24,6 +24,9 @@ object HgTestTags {
     fun album(name: String) = "album-$name"
     const val VIEWER = "viewer"
     const val PHOTOS_GRID = "photos-grid"
+
+    /** The large page title. Its bounds are asserted, so it needs a stable name. */
+    const val SCREEN_TITLE = "screen-title"
     const val VIEW_SWITCH = "photos-view-switch"
     const val MORE_BUTTON = "toolbar-more"
 

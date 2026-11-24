@@ -35,7 +35,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import dev.hgallery.app.ui.icons.HgIcons
 import dev.hgallery.app.ui.theme.HgMetrics
 import dev.hgallery.app.ui.theme.hgPalette
@@ -47,11 +46,27 @@ val statusBarPadding: androidx.compose.foundation.layout.PaddingValues
     @Composable get() = WindowInsets.statusBars.asPaddingValues()
 
 /**
- * The large left-aligned screen title from the reference, with its optional
- * centred count line underneath ("372 photos and 19 videos").
+ * The large left-aligned screen title, with its optional count line underneath
+ * ("372 photos and 19 videos").
  *
  * It scrolls away with the content rather than sitting in a bar: in the
  * reference the title belongs to the page, not to a persistent header.
+ *
+ * ## The gutter is not drawn here
+ *
+ * This composable used to add the screen gutter itself. A caller that already
+ * padded its row therefore drew 40 dp of inset, and on a 320 dp-wide screen that
+ * left about 55 dp for the title beside four 48 dp controls. "Photos" broke one
+ * letter per line, which the emulator screenshot showed and no test caught.
+ *
+ * The callers now own the inset: a title in a row with controls is one row with
+ * one start inset, and a title alone is padded once. `hgSpacing.gutter` is the
+ * token for it.
+ *
+ * The style is `headlineLarge`, the 32 sp ramp entry. It was `displaySmall`,
+ * which `HgTypography` does not override, so the title silently rendered at
+ * Material's 36 sp in Roboto and not in Inter. Nothing failed; it just did not
+ * look like the design.
  */
 @Composable
 fun HgScreenTitle(
@@ -60,27 +75,24 @@ fun HgScreenTitle(
     subtitle: String? = null,
 ) {
     val palette = hgPalette
-    Column(modifier = modifier.fillMaxWidth()) {
+    Column(modifier = modifier) {
         Text(
             text = title,
-            style = androidx.compose.material3.MaterialTheme.typography.displaySmall,
+            style = androidx.compose.material3.MaterialTheme.typography.headlineLarge,
             color = palette.textPrimary,
-            // Negative tracking on a title this size. At display size the default
-            // spacing opens gaps that read as loose; tightening it is what makes a
-            // large title look drawn rather than typed.
-            letterSpacing = (-1).sp,
-            modifier = Modifier.padding(start = HgMetrics.Gutter, end = HgMetrics.Gutter),
+            // The ramp already sets -0.6 sp of tracking. Adding more here would
+            // double it, so this style is used as defined.
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
         )
         if (subtitle != null) {
-            Spacer(Modifier.height(4.dp))
-            // The subtitle sits with the title, not centred under it. Centring was a
-            // leftover from matching one reference frame, and it left the count
-            // floating away from the word it describes.
+            Spacer(Modifier.height(2.dp))
             Text(
                 text = subtitle,
                 style = androidx.compose.material3.MaterialTheme.typography.bodyMedium,
                 color = palette.textSecondary,
-                modifier = Modifier.padding(start = HgMetrics.Gutter, end = HgMetrics.Gutter),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
                 textAlign = TextAlign.Start,
             )
         }

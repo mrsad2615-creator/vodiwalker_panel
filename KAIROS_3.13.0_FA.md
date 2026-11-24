@@ -16,3 +16,10 @@
 ## فایل‌های اصلی
 
 `src/lib/assistantTaskDraft.ts`، `src/lib/commands.ts`، `src/features/assistant/CommandCenter.tsx`، `src/features/focus/FocusPage.tsx` و آزمون‌های `assistantTaskDraft.test.tsx` و `chronoUi.test.tsx`.
+
+## آزمون و انتشار
+
+- بررسی نوع، lint و ساخت وب موفق؛ ۵۱ فایل و ۳۲۸ آزمون خودکار محلی موفق. آزمون‌های تازه درخواست، لغو، پیش‌نمایش، ثبت، محدودیت‌ها و بازگشت تراکنش را پوشش می‌دهند. ساخت وب هشدار اندازهٔ بسته دارد؛ برخی تست‌های رابط هشدار `act` دارند.
+- [گردش ساخت اندروید موفق](https://github.com/mrsad2615-creator/vodiwalker_panel/actions/runs/45483503502) از commit `daa8fde179af587e677780249780a8b1e0123ea8`؛ versionCode ۴۳.
+- [دریافت APK نسخهٔ ۳.۱۳.۰](https://github.com/mrsad2615-creator/vodiwalker_panel/releases/download/kairos-v3.13.0-b58/KAIROS-3.13.0-b58-daa8fde.apk)، حجم ۵٬۳۵۳٬۶۳۰ بایت.
+- کلید امضای موجود برای تداوم ارتقا استفاده شده، اما عمومی‌بودن آن تضمین اصالت انتشار نمی‌دهد.

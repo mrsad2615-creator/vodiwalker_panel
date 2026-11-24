@@ -135,8 +135,13 @@ fun HgIgnition(
         ApertureMark(
             ignite = ignite.value,
             aperture = aperture.value,
+            // The mark is 52 of the 108 units the drawing is composed in, so it fills
+            // 48 per cent of whatever box it is given. The box is 220 dp to produce a
+            // mark of about 106 dp: the emulator still at 132 dp drew a mark of 63 dp,
+            // which reads as a small logo on a large empty screen rather than as a
+            // shutter opening. The number below is the box, not the mark.
             modifier = Modifier
-                .size(132.dp)
+                .size(220.dp)
                 .graphicsLayer {
                     val eased = lift.value
                     translationY = -16.dp.toPx() * eased

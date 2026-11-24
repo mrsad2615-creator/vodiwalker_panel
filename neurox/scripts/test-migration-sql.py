@@ -2,6 +2,7 @@
 """Execute the production migration SQL with local SQLite. Not a Room runtime test."""
 from pathlib import Path
 import re
+import json
 import sqlite3
 
 root = Path(__file__).resolve().parents[1]
@@ -31,8 +32,28 @@ with sqlite3.connect(":memory:") as db:
         print("PASS SQLite: missing-profile insert is rejected")
     else:
         raise AssertionError("Foreign key did not reject an invalid profile")
+    # Compare the migrated fixture with the actual Room/KSP export, not another
+    # hand-written description. This is supplementary to Android Room validation.
+    schema = json.loads((root / "core/data/schemas/com.neurox.data.NeuroxDatabase/2.json").read_text())
+    with sqlite3.connect(":memory:") as expected:
+        for entity in schema["database"]["entities"]:
+            table = entity["tableName"]
+            expected.execute(entity["createSql"].replace("${TABLE_NAME}", table))
+            for index in entity.get("indices", []):
+                expected.execute(index["createSql"].replace("${TABLE_NAME}", table))
+        def structure(connection, table):
+            indices = connection.execute(f"PRAGMA index_list({table})").fetchall()
+            return (
+                connection.execute(f"PRAGMA table_info({table})").fetchall(),
+                sorted(connection.execute(f"PRAGMA foreign_key_list({table})").fetchall()),
+                sorted((row[1], row[2], row[3], row[4], tuple(connection.execute(f"PRAGMA index_info('{row[1]}')").fetchall())) for row in indices),
+            )
+        for entity in schema["database"]["entities"]:
+            table = entity["tableName"]
+            assert structure(db, table) == structure(expected, table), f"Generated schema mismatch: {table}"
+    print("PASS SQLite: all migrated columns, keys and indices match generated Room-v2 schema")
     db.execute("DELETE FROM profiles WHERE id = 'guest'")
     for table in ("custom_exercises", "favorites", "saved_themes"):
         assert db.execute(f"SELECT count(*) FROM {table}").fetchone()[0] == 0
     print("PASS SQLite: profile deletion cascades to custom and existing child rows")
-print("SQLITE RESULT: 4 checks passed; Android Room validation still requires a device or emulator")
+print("SQLITE RESULT: 5 checks passed; supplementary to the hosted Android Room migration test")

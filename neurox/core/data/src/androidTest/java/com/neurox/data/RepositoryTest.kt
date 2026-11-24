@@ -26,7 +26,7 @@ class RepositoryTest {
     private fun finished(config: TrainingConfig) = Checkpoint(config,
         List(config.rounds) { Attempt(Outcome.CORRECT, 400) }, 2000, true)
 
-    @Test fun completionIsIdempotent() = runBlocking {
+    @Test fun completionIsIdempotent(): Unit = runBlocking {
         val config = TrainingConfig(Exercise.FOCUS_LOCK, rounds = 2)
         val session = repository.startSession("guest", config)
         repository.saveSession(session.id, "guest", finished(config))
@@ -36,14 +36,14 @@ class RepositoryTest {
         assertEquals(30, values.single().xp)
         assertEquals("COMPLETE", values.single().status)
     }
-    @Test fun historiesAreProfileScoped() = runBlocking {
+    @Test fun historiesAreProfileScoped(): Unit = runBlocking {
         val id = repository.createProfile("Local user")
         repository.startSession(id, TrainingConfig(Exercise.QUICK_TAP))
         assertTrue(repository.sessions("guest").first().isEmpty())
         assertEquals(1, repository.sessions(id).first().size)
         assertNull(repository.activeSession("guest"))
     }
-    @Test fun crossProfileSaveIsRejected() = runBlocking {
+    @Test fun crossProfileSaveIsRejected(): Unit = runBlocking {
         val id = repository.createProfile("Other user")
         val config = TrainingConfig(Exercise.FOCUS_LOCK, rounds = 1)
         val session = repository.startSession(id, config)
@@ -52,7 +52,7 @@ class RepositoryTest {
         assertTrue(rejected)
         assertEquals("ACTIVE", repository.sessions(id).first().single().status)
     }
-    @Test fun interruptedSessionDoesNotEarnRewards() = runBlocking {
+    @Test fun interruptedSessionDoesNotEarnRewards(): Unit = runBlocking {
         val config = TrainingConfig(Exercise.FOCUS_LOCK, rounds = 2)
         val session = repository.startSession("guest", config)
         repository.saveSession(session.id, "guest", Checkpoint(config, listOf(Attempt(Outcome.CORRECT, 400)), 1500, false), aborted = true)
@@ -61,13 +61,13 @@ class RepositoryTest {
         assertEquals(0, value.xp)
         assertFalse(value.valid)
     }
-    @Test fun duplicateActiveSessionIsRejected() = runBlocking {
+    @Test fun duplicateActiveSessionIsRejected(): Unit = runBlocking {
         repository.startSession("guest", TrainingConfig(Exercise.FOCUS_LOCK))
         var rejected = false
         try { repository.startSession("guest", TrainingConfig(Exercise.QUICK_TAP)) } catch (_: IllegalStateException) { rejected = true }
         assertTrue(rejected)
     }
-    @Test fun profileDeletionCascadesWithoutTouchingGuest() = runBlocking {
+    @Test fun profileDeletionCascadesWithoutTouchingGuest(): Unit = runBlocking {
         val id = repository.createProfile("Delete me")
         repository.startSession(id, TrainingConfig(Exercise.FOCUS_LOCK))
         repository.setFavorite(id, Exercise.FOCUS_LOCK, true)
@@ -78,7 +78,7 @@ class RepositoryTest {
         assertTrue(repository.themes(id).first().isEmpty())
         assertNotNull(db.dao().profile("guest"))
     }
-    @Test fun oldCheckpointCannotOverwriteNewProgress() = runBlocking {
+    @Test fun oldCheckpointCannotOverwriteNewProgress(): Unit = runBlocking {
         val config = TrainingConfig(Exercise.FOCUS_LOCK, rounds = 3)
         val session = repository.startSession("guest", config)
         val newer = Checkpoint(config, listOf(Attempt(Outcome.CORRECT, 300)), 1500, false)
@@ -94,7 +94,7 @@ class RepositoryTest {
         try { CheckpointCodec.decode("{\"version\":999}") } catch (_: IllegalArgumentException) { rejected = true }
         assertTrue(rejected)
     }
-    @Test fun themeCannotMoveBetweenProfiles() = runBlocking {
+    @Test fun themeCannotMoveBetweenProfiles(): Unit = runBlocking {
         val other = repository.createProfile("Other")
         repository.saveTheme("guest", "Guest theme", 0xFFD4B982, 0xFF765A28, "stable-theme-id")
         var rejected = false
@@ -103,7 +103,7 @@ class RepositoryTest {
         assertTrue(rejected)
         assertEquals("guest", db.dao().theme("stable-theme-id")?.profileId)
     }
-    @Test fun sessionConfigurationIsImmutable() = runBlocking {
+    @Test fun sessionConfigurationIsImmutable(): Unit = runBlocking {
         val config = TrainingConfig(Exercise.FOCUS_LOCK, rounds = 2)
         val session = repository.startSession("guest", config)
         var rejected = false
@@ -123,7 +123,7 @@ class RepositoryTest {
         assertEquals(3, org.json.JSONObject(encoded).getInt("version"))
         assertEquals(checkpoint, CheckpointCodec.decode(encoded))
     }
-    @Test fun newExerciseConfigurationsAndSeedSurviveStorage() = runBlocking {
+    @Test fun newExerciseConfigurationsAndSeedSurviveStorage(): Unit = runBlocking {
         for (exercise in listOf(Exercise.VISUAL_SEARCH, Exercise.GO_NO_GO, Exercise.PHRASE_READING, Exercise.WORD_SPRINT)) {
             val id = repository.createProfile(exercise.name)
             val config = TrainingConfig(exercise, stimulusSeed = Long.MAX_VALUE, rounds = 3)
@@ -144,7 +144,7 @@ class RepositoryTest {
         assertEquals(300.0, requireNotNull(Scoring.summarize(decoded).meanResponseMs), 0.01)
     }
 
-    @Test fun customExerciseCrudAndDuplicateKeepIndependentIdentity() = runBlocking {
+    @Test fun customExerciseCrudAndDuplicateKeepIndependentIdentity(): Unit = runBlocking {
         val bp = ExerciseBlueprint("My pattern", Exercise.PATTERN_MATCH, difficulty = 3, rounds = 7, targetAccuracyPercent = 90, errorAllowance = 1)
         val id = repository.saveCustomExercise("guest", bp)
         val original = repository.customExercise("guest", id)
@@ -160,7 +160,7 @@ class RepositoryTest {
         assertTrue(repository.favorites("guest").first().isEmpty())
         assertNotNull(repository.customExercise("guest", duplicate))
     }
-    @Test fun customExerciseRejectsCrossProfileOverwriteAndRead() = runBlocking {
+    @Test fun customExerciseRejectsCrossProfileOverwriteAndRead(): Unit = runBlocking {
         val other = repository.createProfile("Other")
         val bp = ExerciseBlueprint("Local", Exercise.WORD_SPRINT)
         val id = repository.saveCustomExercise("guest", bp)
@@ -171,7 +171,7 @@ class RepositoryTest {
         assertEquals(3, blocked)
         assertEquals("Local", repository.customExercise("guest", id).name)
     }
-    @Test fun customDeletionKeepsSessionSnapshotAndRewards() = runBlocking {
+    @Test fun customDeletionKeepsSessionSnapshotAndRewards(): Unit = runBlocking {
         val bp = ExerciseBlueprint("History snapshot", Exercise.FOCUS_LOCK, rounds = 1)
         val id = repository.saveCustomExercise("guest", bp)
         val config = bp.configuration(Language.EN, 42, id)
@@ -182,7 +182,7 @@ class RepositoryTest {
         assertEquals("History snapshot", CheckpointCodec.decode(history.checkpoint).config.customExerciseName)
         assertEquals(30, history.xp)
     }
-    @Test fun customTestRunsCannotEarnXp() = runBlocking {
+    @Test fun customTestRunsCannotEarnXp(): Unit = runBlocking {
         val config = ExerciseBlueprint("Try", Exercise.FOCUS_LOCK, rounds = 1).configuration(Language.EN, 42, practice = true)
         val session = repository.startSession("guest", config)
         repository.saveSession(session.id, "guest", finished(config))
@@ -191,7 +191,7 @@ class RepositoryTest {
         assertFalse(result.valid)
         assertEquals(0, result.xp)
     }
-    @Test fun invalidBlueprintDoesNotReplaceExistingData() = runBlocking {
+    @Test fun invalidBlueprintDoesNotReplaceExistingData(): Unit = runBlocking {
         val bp = ExerciseBlueprint("Safe", Exercise.FOCUS_LOCK)
         val id = repository.saveCustomExercise("guest", bp)
         var rejected = false
@@ -209,7 +209,7 @@ class RepositoryTest {
         assertEquals(decoded, CheckpointCodec.decode(CheckpointCodec.encode(decoded)))
     }
 
-    @Test fun appendCannotRewriteAlreadyRecordedAttempts() = runBlocking {
+    @Test fun appendCannotRewriteAlreadyRecordedAttempts(): Unit = runBlocking {
         val config = TrainingConfig(Exercise.FOCUS_LOCK, rounds = 3)
         val session = repository.startSession("guest", config)
         val previous = Checkpoint(config, listOf(Attempt(Outcome.INCORRECT, 300)), 1000, false)
@@ -220,7 +220,7 @@ class RepositoryTest {
         assertTrue(rejected)
         assertEquals(previous, CheckpointCodec.decode(repository.sessions("guest").first().single().checkpoint))
     }
-    @Test fun abortUsesLatestDurableProgressAndCannotBeReactivated() = runBlocking {
+    @Test fun abortUsesLatestDurableProgressAndCannotBeReactivated(): Unit = runBlocking {
         val config = TrainingConfig(Exercise.FOCUS_LOCK, rounds = 3)
         val session = repository.startSession("guest", config)
         // Simulates a queued write committing after a caller read the active row.
@@ -237,7 +237,7 @@ class RepositoryTest {
         assertNull(repository.activeSession("guest"))
         repository.startSession("guest", TrainingConfig(Exercise.QUICK_TAP))
     }
-    @Test fun abortCannotChangeAnotherProfileOrCompletedSession() = runBlocking {
+    @Test fun abortCannotChangeAnotherProfileOrCompletedSession(): Unit = runBlocking {
         val owner = repository.createProfile("Owner")
         val config = TrainingConfig(Exercise.FOCUS_LOCK, rounds = 1)
         val session = repository.startSession(owner, config)

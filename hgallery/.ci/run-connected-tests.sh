@@ -733,6 +733,14 @@ fi
 # The path is a user path, not a test hook: Settings, then the Dark row, then back to
 # the library. The app was just relaunched and is on the Photos tab.
 echo "== photographing the dark theme =="
+# Relaunch before this step. The search section ends with BACK, which closes search
+# but can leave the shell where it was, and the first attempt at this step found
+# itself on the search screen: "More options" was not there because the header was
+# the search field. A force-stop is the only way to be sure which screen the app is
+# on, and the step needs the home header.
+adb shell am force-stop "$PKG"
+adb shell am start -W -n "$PKG/$ACTIVITY" > /dev/null 2>&1
+sleep 4
 assert_app_foreground "the dark theme section" || true
 if tap_tag_or_text "settings-open" "content-desc=\"More options\""; then
   # The overflow rows are a pop-up window, and the dump of a pop-up is empty, so the

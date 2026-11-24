@@ -47,7 +47,21 @@ jobs:
 
       - name: Run unit tests and build debug APK
         working-directory: android
-        run: gradle --no-daemon testDebugUnitTest assembleDebug
+        shell: bash
+        run: |
+          set +e
+          gradle --no-daemon testDebugUnitTest assembleDebug > "$RUNNER_TEMP/neurox-gradle.log" 2>&1
+          result=$?
+          cat "$RUNNER_TEMP/neurox-gradle.log"
+          if [ "$result" -ne 0 ]; then
+            python3 - "$RUNNER_TEMP/neurox-gradle.log" <<'PY'
+          import pathlib, sys
+          text = "\n".join(pathlib.Path(sys.argv[1]).read_text(errors="replace").splitlines()[-35:])
+          text = text.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
+          print(f"::error title=Gradle build diagnostics::{text}")
+          PY
+          fi
+          exit "$result"
 
       - name: Publish debug APK artifact
         uses: actions/upload-artifact@v4

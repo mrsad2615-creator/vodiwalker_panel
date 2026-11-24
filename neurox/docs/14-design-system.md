@@ -42,7 +42,7 @@ All 20 routes were rendered at 360/430 px, FA/EN, dark/light and normal/large te
 LD_LIBRARY_PATH="$PWD/.local/tools/design/sysroot/lib" node neurox/scripts/test-design.mjs
 ```
 
-The local Chromium harness and libraries are tools, not application dependencies. Generated reports/screenshots stay in ignored `test-output/design/`. Manual image inspection covered Home English dark and VISION Persian light. Automated route coverage is not a claim that every screen received manual visual or usability review.
+The local Chromium harness and libraries are tools, not application dependencies. Generated reports/screenshots stay in ignored `test-output/design/`. Manual screenshot inspection covered all 20 routes in the selected English dark direction, plus Persian light VISION and the Home direction comparison. This is an agent visual critique, not user testing or manual review of every locale/theme/text-size combination.
 
 | Route | Critique and response |
 |---|---|
@@ -67,4 +67,4 @@ The local Chromium harness and libraries are tools, not application dependencies
 | Backup/restore | Mark prototype vault disabled; never represent a mock dialog as authenticated restore. Native integration remains a gate. |
 | Error/empty | Supply recovery navigation and calm factual messages, not invented progress. |
 
-Refinements applied across routes: 48 px icon/chip/toggle controls, gold section labels with higher contrast, immediate theme switching and wrapping narrow-screen layouts. Native migration is partial. These decisions do not certify engine completeness, device accessibility, performance, signing or release readiness.
+Refinements applied across routes: 48 px icon/chip/toggle controls, gold section labels with higher contrast, immediate theme switching and wrapping narrow-screen layouts. Subsequent screenshot critique found black-filled catalogue glyphs, an unknown TYPE preview destination, an inconsistent sample level and an overstated comprehension level range. The glyph stroke, route mapping, sample level and fixed-level label were corrected. The harness now checks every screen link against the 20-route index. All checks pass after these corrections. Native migration is partial. These decisions do not certify engine completeness, device accessibility, performance, signing or release readiness.

@@ -8,6 +8,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -109,8 +111,9 @@ internal fun ModuleOverview(state: AppState, vm: AppViewModel) {
 
 @Composable
 internal fun ActivityChart(days: List<DailyActivity>, module: Module? = null) {
-    val labels = days.map { it.date.format(DateTimeFormatter.ofPattern("MM/dd")) }
-    val summary = tr("دقایق فعال روزانه: ", "Daily active minutes: ") + days.mapIndexed { index, day -> "${labels[index]}: ${number(day.activeMs / 60_000.0, 1)}" }.joinToString("؛ ")
+    val labels = days.map { "${number(it.date.monthValue)}/${number(it.date.dayOfMonth)}" }
+    val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+    val summary = tr("دقایق فعال روزانه: ", "Daily active minutes: ") + days.mapIndexed { index, day -> "${labels[index]}: ${number(day.activeMs / 60_000.0, 1)}" }.joinToString(tr("؛ ", "; "))
     val tint = module?.let { moduleColor(it) } ?: MaterialTheme.colorScheme.primary
     val empty = MaterialTheme.colorScheme.surfaceVariant
     val maximum = days.maxOfOrNull { it.activeMs }?.coerceAtLeast(1L) ?: 1L
@@ -120,7 +123,7 @@ internal fun ActivityChart(days: List<DailyActivity>, module: Module? = null) {
                 val slot = size.width / days.size
                 days.forEachIndexed { index, day ->
                     val h = (size.height * day.activeMs.toFloat() / maximum).coerceAtLeast(2.dp.toPx())
-                    drawRoundRect(if (day.activeMs > 0) tint else empty, Offset(slot * index + slot * .2f, size.height - h), Size(slot * .6f, h), CornerRadius(3.dp.toPx()))
+                    drawRoundRect(if (day.activeMs > 0) tint else empty, Offset(slot * (if (rtl) days.lastIndex - index else index) + slot * .2f, size.height - h), Size(slot * .6f, h), CornerRadius(3.dp.toPx()))
                 }
             }
         }

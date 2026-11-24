@@ -1,4 +1,4 @@
-# Architecture — milestone 0.4
+# Architecture — development 0.5
 
 ## Dependency graph
 
@@ -57,3 +57,11 @@ Store custom definitions in a profile-owned Room table. Recheck ownership inside
 A test run uses the real engine and persistence path with `practice=true`. It earns no XP, does not meet ordinary session validity, and does not enter performance/adaptation summaries. Do not simulate a passed test run. Preview is an explicitly unscored sample and does not create a session.
 
 Database migration 1 to 2 adds one table and one index. It does not rebuild existing tables. Checkpoint format 3 adds optional custom-source fields, success criteria and a practice flag. Decode versions 1 and 2 with their original safe defaults.
+
+## Presentation and insights in 0.5
+
+Keep `TrainingInsights` Android-free. Its input consists of profile-owned stored aggregates, not mock measurements. Filter invalid, incomplete, baseline and future records by default. Deduplicate identifiers. Group by local calendar days, not 24-hour offsets. Mean accuracy is explicitly a session mean. Baselines can be selected for analytics without contributing to milestone unlocks. Milestones are derived views and do not create XP writes.
+
+Use `Tokens.kt` and shared screen primitives for all four studios. Keep navigation state in SavedStateHandle, form state in saveable Compose state and draft typing text only in non-saveable memory. A setup revision distinguishes a new deliberate exercise choice from a return to the current setup. Do not cache a new saved screen for every revision.
+
+DataStore stores device-wide introduction completion and profile-specific daily goals. The Room schema remains version 2. Repository construction supports an injected Preferences DataStore so instrumentation has isolated files and a cancellable store scope. Production uses the application-context singleton delegate. Do not create two active stores for the same path.

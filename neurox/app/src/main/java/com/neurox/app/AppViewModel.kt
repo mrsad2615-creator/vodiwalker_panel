@@ -44,7 +44,8 @@ class AppViewModel(
     fun setDailyGoal(minutes: Int) = action { repository.setDailyGoal(requireProfile().id, minutes) }
     val selectedExercise = saved.getStateFlow("exercise", Exercise.FOCUS_LOCK.name)
     val setupBaseline = saved.getStateFlow("setupBaseline", false)
-    fun chooseExercise(exercise: Exercise) { saved["exercise"] = exercise.name; saved["module"] = exercise.module.name; saved["setupBaseline"] = false; navigate(Screen.TRAINING) }
+    val setupRevision = saved.getStateFlow("setupRevision", 0L)
+    fun chooseExercise(exercise: Exercise) { saved["setupRevision"] = setupRevision.value + 1; saved["exercise"] = exercise.name; saved["module"] = exercise.module.name; saved["setupBaseline"] = false; navigate(Screen.TRAINING) }
     fun beginWelcomeBaseline() = action {
         repository.completeWelcome()
         chooseExercise(Exercise.FOCUS_LOCK)

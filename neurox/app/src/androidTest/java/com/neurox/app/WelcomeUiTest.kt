@@ -43,4 +43,14 @@ class WelcomeUiTest : NeuroxUiFixture() {
         assertTrue(model.state.value.sessions.isEmpty())
         runBlocking { assertTrue(repository.welcomeComplete.first()) }
     }
+    @Test fun requestingANewWelcomeBaselineResetsAnEarlierManualToggle() {
+        compose.runOnUiThread { model.beginWelcomeBaseline() }
+        compose.waitUntil(5_000) { model.screen.value == Screen.TRAINING.name && !model.state.value.busy }
+        compose.onNode(isToggleable()).performScrollTo().assertIsOn().performClick().assertIsOff()
+        compose.runOnUiThread { model.beginWelcomeBaseline() }
+        compose.waitUntil(5_000) { model.setupRevision.value == 2L && !model.state.value.busy }
+        compose.onNode(isToggleable()).performScrollTo().assertIsOn()
+        assertTrue(model.state.value.sessions.isEmpty())
+    }
+
 }

@@ -52,6 +52,7 @@ fun NeuroxApp(vm: AppViewModel) {
     val state by vm.state.collectAsStateWithLifecycle()
     val route by vm.screen.collectAsStateWithLifecycle()
     val activeModule by vm.selectedModule.collectAsStateWithLifecycle()
+    val setupRevision by vm.setupRevision.collectAsStateWithLifecycle()
     val screenStates = rememberSaveableStateHolder()
     val profile = state.profile
     val fa = profile?.language != "EN"
@@ -111,7 +112,7 @@ fun NeuroxApp(vm: AppViewModel) {
                             Screen.MODULE -> ModuleOverview(state, vm)
                             Screen.ACHIEVEMENTS -> AchievementsScreen(state)
                             Screen.ONBOARDING -> OnboardingScreen(state, vm)
-                            Screen.TRAINING -> TrainingSetup(state, vm)
+                            Screen.TRAINING -> key(setupRevision) { TrainingSetup(state, vm) }
                             Screen.ANALYTICS -> AnalyticsScreen(state)
                             Screen.LIBRARY -> LibraryScreen(state, vm)
                             Screen.PROFILE -> ProfileScreen(state, vm)

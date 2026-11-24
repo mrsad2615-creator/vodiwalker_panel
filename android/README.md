@@ -1,38 +1,30 @@
-# NEUROX Android — foundation increment
+# NEUROX Android — current foundation build
 
-This is a new native Android application isolated from the existing VodiWalker Python service in the repository root. It uses Kotlin, Jetpack Compose, Room, and offline local storage. It has no internet permission and does not call a remote service.
+The native Android application is isolated under `android/`; it does not connect to the existing VodiWalker Python service. The app has no internet permission and stores session/preference data locally.
 
-## Current implementation status
+## Implemented
 
-Implemented in this increment:
+- Kotlin, Jetpack Compose, Material 3 foundations, Room, and DataStore.
+- Persisted English/Persian language switch and RTL/LTR layout direction. Bundled prompt words are available in both languages.
+- Functional appearance studio: distinct dark/light palettes, 11 accent presets, custom six-digit HEX accent, persisted selection, and restore-default action.
+- Home dashboard and real local session history with explicit empty states; no fabricated level or performance values.
+- Four distinct ten-round practice flows: visual shape search, color-word interference with monotonic response timing, word recognition, and exact-text typing.
+- Unit-tested domain scoring, WPM formula, difficulty bounds, response counting, and session completion.
+- Room persistence, a versioned migration for response-time metrics, and save progress/error/retry UI.
+- CI workflow builds and tests the Android app on a GitHub-hosted Android environment, then publishes a debug APK artifact.
 
-- Native Android/Compose project configuration (single `app` module, layered packages).
-- Persisted English/Persian language switch, matched app string resources, and RTL/LTR layout direction.
-- Persian and English offline prompt word sets for READ and TYPE.
-- Functional appearance studio with distinct dark/light palettes, eleven accent presets, custom HEX accent input, and restore-default action; choices persist locally.
-- Theme tokens keep accent selection separate from screen layout and exercise scoring.
-- Home, training-module selection, analytics, and clearly marked early Profile/Library/Settings sections.
-- Four small functioning ten-round practice flows (shape choice, color-word choice, word recognition, exact text entry).
-- Local Room persistence for completed session summaries, with analytics based on those records.
-- Pure-domain scoring, exercise prompt generation, and a bounded ten-round training state machine with unit tests.
-- Monotonic elapsed and per-response timing; the REFLEX slice is a color-word interference task, and conservative difficulty adjustment requires a five-response window.
-- Session response-time summaries persisted with an explicit Room migration path.
-- Explicit save-in-progress and save-failure/retry states; results are not labeled saved before the database insert succeeds.
-- No fabricated progress; empty analytics and no-history states are explicit.
+## Not complete
 
-Not implemented yet: Persian translations and RTL switching, light theme/Color Studio, proper exercise-specific engines and settings, baseline assessment, full analytics filters/charts, adaptive history and plan management, reading library/import, keyboard statistics and WPM sessions, profiles, gamification, audio/haptics, encrypted backup/restore, full interruption/process-death recovery, icon/brand asset suite, and release/test-device validation. The visible sections with incomplete capabilities state this rather than pretending they work.
+This foundation is not the full NEUROX specification. Remaining major work includes the complete exercise catalog and configurable engines, baseline assessment, saved/interruption-safe sessions, full analytics filters/charts, adaptive multi-session planning, reading library/import, typing WPM and weak-key analysis, profiles and isolation, gamification, audio/haptics, encrypted backup/restore, local font/icon suite, accessibility/device testing, and a signed release APK.
 
-This is a first foundation slice, not the completed product and not a release APK.
+Do not treat a successful debug build as proof that all features are complete or that the app is production-ready.
 
-## Build
+## Build locally
 
-Requirements: JDK 17, Android SDK Platform 35, Android Build Tools compatible with Android Gradle Plugin 8.7.3, and Gradle 8.9 or a compatible 8.x version.
-
-From this directory:
+Requirements: JDK 17, Android SDK Platform 35, Android Build Tools 35.0.0, and Gradle 8.9.
 
 ```sh
-gradle testDebugUnitTest
-gradle assembleDebug
+gradle --no-daemon testDebugUnitTest assembleDebug
 ```
 
-The current execution environment does not have Java, Gradle, Android SDK, or `adb`, so Android compilation, JUnit execution, and device tests could not run here. As an alternative static check, I installed a Kotlin Tree-sitter grammar into a temporary environment and parsed every Kotlin source and test file; all parsed without syntax errors. This is only a syntax check. It does not type-check Android/Compose APIs or execute tests. The manifest XML also parses successfully. Do not treat the source as a verified release until Gradle tests and an Android build run in an Android-capable environment.
+The debug APK is produced at `app/build/outputs/apk/debug/app-debug.apk`. The GitHub Actions run publishes `neurox-debug-apk` as a downloadable artifact for 90 days. The artifact is debug-signed and is for installation/testing, not production distribution.

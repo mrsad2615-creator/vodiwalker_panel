@@ -1,8 +1,15 @@
 # DESIGN_SYSTEM.md
 
-Derived from **measured pixels** of official Huawei reference captures, not from
-memory. The measurement script is `tools/measure_reference.py`; its output is in
-`docs/REFERENCE_ANALYSIS.md`.
+The design system of HGallery.
+
+The colour and motion tokens are in `HgTheme.kt` and `HgMotion.kt`. That code is
+the source of truth. This page describes the intent and the reasons.
+
+`NOIR_DESIGN_DIRECTION.md` holds the current design direction.
+
+The reference corpus below is historical. It started from measured pixels of
+Huawei reference captures. The measurement script is
+`tools/measure_reference.py`. Its output is in `docs/REFERENCE_ANALYSIS.md`.
 
 ## Reference corpus
 
@@ -14,86 +21,130 @@ memory. The measurement script is `tools/measure_reference.py`; its output is in
 | R4 | Full-screen viewer | — | **not yet secured** — behaviour documented as uncertain |
 | R5 | Photo editor | — | **not yet secured** — see KNOWN_LIMITATIONS |
 
-## Colour tokens (light)
+## Colour tokens
 
-| Token | Value | How it was obtained |
-|---|---|---|
-| `page` | `#FFFFFF` | dominant page pixel |
-| `pageAlt` | `#FCFCFC` | second dominant pixel of R2 content area |
-| `textPrimary` | `#1A1A1A` | darkest stable glyph cluster in R2 (measured `#242020` at anti-aliased edges) |
-| `textSecondary` | `#8C8C8C` | album count labels in R2 |
-| `accent` | `#0080FF` | solid interior of the `ADD ALBUM` link in R2, measured `#0080FC` |
-| `divider` | `#EDEDED` | 1 px separators |
-| `selectionCheck` | `#0080FF` | checked badge fill in R3 |
-| `scrim` | `#000000` @ 40 % | viewer chrome behind controls |
+> **Status: superseded.** `NOIR_DESIGN_DIRECTION.md` replaces the colour and type
+> tables below. The code uses the NOIR tokens. The tables in this section show the
+> measured values of the reference captures only. Do not use them for new work.
 
-## Colour tokens (dark)
+The NOIR tokens are the implemented values. `HgTheme.kt` holds them.
+
+### Light
 
 | Token | Value |
 |---|---|
-| `page` | `#000000` |
-| `pageAlt` | `#1C1C1E` |
-| `textPrimary` | `#FFFFFF` |
-| `textSecondary` | `#8C8C8C` |
-| `accent` | `#0A84FF` |
-| `divider` | `#2C2C2E` |
+| `background` | `#F7F5F1` |
+| `surface` | `#FFFFFF` |
+| `surfaceHigh` | `#EFEBE5` |
+| `textPrimary` | `#141210` |
+| `textSecondary` | `#6B665F` |
+| `accent` | `#C66014` |
+| `divider` | `#E2DED8` |
 
-The dark palette follows the same structure; it is *not* yet pixel-verified
-against a Huawei dark-mode capture, and `KNOWN_LIMITATIONS.md` says so.
+### Dark
+
+| Token | Value |
+|---|---|
+| `background` | `#050505` |
+| `surface` | `#111111` |
+| `surfaceHigh` | `#191919` |
+| `surfaceSunken` | `#0C0C0C` |
+| `textPrimary` | `#F2F0EB` |
+| `textSecondary` | `#929292` |
+| `accent` | `#F28A36` |
+| `divider` | `#383838` |
+| `danger` | `#E5484D` |
+
+To verify a token, read the value from `HgTheme.kt`. Do not copy a value from
+this page.
+
+## Measured values of the reference captures
+
+The capture measurement script is `tools/measure_reference.py`. Its output is in
+`docs/REFERENCE_ANALYSIS.md`. These values are historical data.
+
+| Token | Light | Dark |
+|---|---|---|
+| `page` | `#FFFFFF` | `#000000` |
+| `pageAlt` | `#FCFCFC` | `#1C1C1E` |
+| `textPrimary` | `#1A1A1A` | `#FFFFFF` |
+| `textSecondary` | `#8C8C8C` | `#8C8C8C` |
+| `accent` | `#0080FF` | `#0A84FF` |
+| `divider` | `#EDEDED` | `#2C2C2E` |
+
+R2 gave the light accent from the solid interior of the `ADD ALBUM` link. The
+measured value was `#0080FC`. R3 gave the selection check fill.
+
+The dark values are not pixel-verified against a dark-mode capture.
+`KNOWN_LIMITATIONS.md` records this limit.
 
 ## Type scale
 
-| Role | Size | Weight | Evidence |
-|---|---|---|---|
-| Large screen title ("Photos", "Albums") | 30 sp | 600 | R1/R2 title block is roughly 2.4× the body line height |
-| Section date header | 15 sp | 500 | R1 "Today" / "29 August 2020" |
-| Section header (MORE ALBUMS) | 12 sp | 500, 0.06 em tracking | R2 upper-case header |
-| Album name | 14 sp | 400 | R2 |
-| Album count | 12 sp | 400, secondary | R2 ("22", "1", "3") |
-| Selection title ("3 items selected") | 17 sp | 500 | R3 |
-| Bottom-bar label | 10 sp | 400 | R2 Gallery tab labels |
-| Body / dialog | 14 sp | 400 | R3 explanatory paragraph |
+Read the sizes from `HgTypography.kt`. The scale is 34 / 28 / 22 / 17 / 15 / 13 /
+11 sp. Line heights are fixed values for each style, not a multiplier. Large
+titles use negative tracking.
 
-Persian uses Vazirmatn at the same sizes; digits follow the locale.
+Inter is the Latin face. Vazirmatn is the Persian face. Both are in one family,
+so a mixed string keeps one line height.
+
+Timecodes use tabular figures (`TimecodeLabel`). Player indicators use
+`PlayerIndicatorLabel`.
+
+The table below is the historical reference measurement.
+
+| Role | Size | Weight |
+|---|---|---|
+| Large screen title ("Photos", "Albums") | 30 sp | 600 |
+| Section date header | 15 sp | 500 |
+| Section header (MORE ALBUMS) | 12 sp | 500, 0.06 em tracking |
+| Album name | 14 sp | 400 |
+| Album count | 12 sp | 400, secondary |
+| Selection title ("3 items selected") | 17 sp | 500 |
+| Bottom-bar label | 10 sp | 400 |
+| Body / dialog | 14 sp | 400 |
+
+Persian uses Vazirmatn at the same sizes. Digits follow the locale.
 
 ## Spacing scale
 
-`4 8 12 16 20 24 32` dp. Screen gutter is **20 dp**, and this figure is an
-**estimate, not a measurement**. R1 puts the title's left edge at 24 of 341 px,
-i.e. ≈7 % of the width, which is ≈29 dp on a 412 dp-wide screen; the value was
-rounded down after comparing the rendered result against the reference by eye.
-The reference corpus contains no clean full-screen capture, so the true gutter
-cannot be recovered — see `MEASURED_COMPARISON.txt`.
-
-Grid gutter is **2 dp**, which matches the near-seamless appearance of the
-reference grid at the resolution available.
+`4 8 12 16 20 24 32` dp. Screen gutter is **20 dp**. Grid gap is **3 dp**
+(`HgMetrics.GridGap`). Read the values from `HgSpacing` and `HgMetrics`.
 
 ## Grid
 
 | Screen | Columns | Cell | Gutter |
 |---|---|---|---|
-| Photos timeline | 4 | square, `(width − 2×20 − 3×2) / 4` | 2 dp |
+| Photos timeline | 4 | square, `(width − 2×20 − 3×3) / 4` | 3 dp |
 | Albums | 3 | 4:3 crop, rounded 6 dp | 12 dp |
-| Viewer thumbnails (selection) | 4 | square | 2 dp |
 
 ## Shape, elevation, motion
 
+Read the shape and motion values from `HgShapes` and `HgMotion`. The motion
+durations are in `HgDuration`:
+
 | Token | Value |
 |---|---|
-| Album thumbnail radius | 6 dp |
-| Bottom sheet radius | 20 dp |
-| Dialog radius | 16 dp |
-| Elevation | none on page content; 8 dp on floating bars only |
-| `motionFast` | 150 ms, `FastOutLinearInEasing` |
-| `motionBase` | 250 ms, `FastOutSlowInEasing` |
-| `motionEmphasised` | 400 ms, `FastOutSlowInEasing` |
-| Hero (viewer open/close) | 300 ms, container transform |
+| `Micro` | 120 ms |
+| `Standard` | 220 ms |
+| `Signature` | 340 ms |
+| `Large` | 300 ms |
+| `ChromeAutoHide` | 3000 ms |
+
+Elevation is none on page content. Floating bars use 8 dp.
 
 ## Iconography
 
-Original vector geometry in `HgIcons.kt`, drawn to Huawei's optical weight:
-24 dp box, 1.8 dp stroke, round caps and joins. No Huawei asset file is copied.
+Original vector geometry in `HgIcons.kt`. Box is 24 dp. Stroke is 1.8 dp with
+round caps and joins. No Huawei asset file is copied.
+
+The application icon is one aperture mark. `ic_launcher_foreground.xml`,
+`ic_launcher_monochrome.xml` and `ic_splash_logo.xml` use the same geometry.
 
 ## Touch targets
 
 Every control reserves **48 dp** minimum, even when the drawn glyph is 24 dp.
+
+## Persian
+
+Persian uses Vazirmatn at the type-scale sizes. Digits follow the locale. The
+UI strings are in `values` and `values-fa`.

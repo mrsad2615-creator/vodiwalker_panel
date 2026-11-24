@@ -193,11 +193,17 @@ private fun ApertureMark(
             p(47.6f, 54f) to p(30f, 54f),
             p(50.8f, 48.5f) to p(42f, 33.2f),
         )
+        // The blades fade in with the housing rather than being present from the first
+        // frame. The emulator capture of phase 1 showed why: six lines at full opacity
+        // with no arcs behind them read as scattered spokes, not as an iris. Arriving
+        // after the housing means the first thing the eye sees is the opening, and the
+        // blades are the second beat of the same movement.
+        val bladeAlpha = ignite.coerceIn(0f, 1f) * (0.55f + 0.45f * aperture.coerceIn(0f, 1f))
         blades.forEach { (start, end) ->
             // Grow away from the pupil along the blade's own direction.
             val far = start + (end - start) * bladeScale
             drawLine(
-                color = housing.copy(alpha = 0.55f + 0.45f * aperture.coerceIn(0f, 1f)),
+                color = housing.copy(alpha = bladeAlpha),
                 start = start,
                 end = far,
                 strokeWidth = bladeStroke,

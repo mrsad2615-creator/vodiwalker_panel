@@ -7,6 +7,7 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -38,6 +39,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -51,6 +54,7 @@ import dev.hgallery.core.MediaItem
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.ui.draw.clip
+import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.clickable
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -58,8 +62,11 @@ import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import dev.hgallery.app.ui.components.MediaThumbnail
 import dev.hgallery.app.ui.components.mediaDescription
+import dev.hgallery.app.ui.motion.HgMotion
+import dev.hgallery.app.ui.motion.rememberReduceMotion
 import dev.hgallery.app.ui.theme.hgColors
 import dev.hgallery.core.PlayerPolicy
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.launch
 import androidx.compose.ui.res.stringResource
 import dev.hgallery.app.R
@@ -80,8 +87,11 @@ private const val TAG = "HGalleryViewer"
  * Behaviour taken from the reference and from what a Huawei user expects:
  *  - the photo sits on black, with the status bar hidden while chrome is hidden;
  *  - a single tap toggles the bars, it never closes the viewer;
- *  - horizontal swipes move between items, vertical drags would dismiss;
- *  - pinch and double-tap zoom, with panning only once zoomed in;
+ *  - horizontal swipes move between items, and a vertical drag downwards dismisses
+ *    (the previous wording was "vertical drags would dismiss", which described an
+ *    intention and shipped no gesture for three releases);
+ *  - pinch and double-tap zoom, with panning only once zoomed in, and a zoomed
+ *    image pans vertically instead of dismissing;
  *  - the action row is Share / Favourite / Edit / Delete / More, at the bottom.
  *
  * Reference uncertainty: an exact viewer capture was not secured, so the icon
@@ -156,16 +166,103 @@ fun ViewerScreen(
     var showDetails by remember { mutableStateOf(false) }
     var rotateOpen by remember { mutableStateOf(false) }
 
+    // Vertical dismiss. `drag` is how far the finger has pulled, as a fraction of
+    // the screen height.
+    var drag by remember { mutableFloatStateOf(0f) }
+    // True once the pull has passed the threshold, so the haptic fires once per
+    // gesture instead of once per frame.
+    var armed by remember { mutableStateOf(false) }
+    val haptics = LocalHapticFeedback.current
+    val reduceMotion = rememberReduceMotion()
+    // 0.18 of the height is enough. Below that the page settles back.
+    // This is the same threshold the design document records in its gesture table.
+    val dismissThreshold = 0.18f
+
     val current = items.getOrNull(pagerState.currentPage)
+
+    // Escape backs out. The dismiss drag is the same destination, so both go
+    // through one closure: an exit that means two different things depending on
+    // how it was reached is the kind of detail that reads as a bug.
+    val dismiss: () -> Unit = { onClose() }
+
+    // The settled position of the page. During a drag the finger sets `drag`
+    // directly, so the image tracks the finger with no lag; the animation only
+    // supplies the snap back.
+    // Starts at zero: at rest the page is exactly where it belongs. A non-zero
+    // start would push the image off screen before the first gesture.
+    val settled = remember { Animatable(0f) }
+
+    /** A page reports how far the finger moved, as a fraction of the height. */
+    fun onDismissDrag(fraction: Float) {
+        // Only a downward pull dismisses. Upward is not a second way out; it would
+        // fight the chrome slide, which already uses that direction.
+        if (fraction > 0f || drag > 0f) {
+            drag = (drag + fraction).coerceIn(0f, 1f)
+            // One tick when the pull becomes enough to dismiss, and no more. A buzz per
+            // frame is worse than no feedback.
+            if (drag > dismissThreshold && !armed) {
+                armed = true
+                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+            } else if (drag <= dismissThreshold) {
+                armed = false
+            }
+        }
+    }
+
+    /** The finger lifted: dismiss, or snap the page back. */
+    fun onDismissEnd() {
+        if (drag > dismissThreshold) {
+            dismiss()
+            drag = 0f
+        } else if (drag > 0f) {
+            // Snap back, rather than jump. A page that vanishes to 0 in one frame
+            // reads as a glitch even though nothing was lost. The value is tracked in
+            // a coroutine because a drag cannot be resumed mid-animation anyway.
+            val from = drag
+            drag = 0f
+            // UNDISPATCHED so the value is handed over before the next frame is
+            // drawn. A plain launch starts on the following frame, and that one frame
+            // at zero is a visible flick of the whole page back to the top.
+            coroutine.launch(start = CoroutineStart.UNDISPATCHED) {
+                settled.snapTo(from)
+                settled.animateTo(0f, HgMotion.defaultSpatial(reduceMotion))
+            }
+        }
+        armed = false
+    }
 
     Box(
         modifier = Modifier
             .testTag(HgTestTags.VIEWER)
             .fillMaxSize()
             .background(Color.Black)
+            // The page follows the finger and fades as it moves, which is what
+            // makes the gesture feel attached to the image rather than to a
+            // transition. It reads `drag`, so it recomposes on every frame of the
+            // gesture and never touches layout or the decoder.
+            .graphicsLayer {
+                // `settled` carries the snap-back. `drag` is zero during that animation,
+                // so the two are added rather than mixed: the live drag wins while the
+                // finger is down, and the animation owns the value once it lifts.
+                val offsetFraction = drag + settled.value
+                translationY = offsetFraction * size.height
+                val shrink = 1f - (offsetFraction * 0.25f)
+                scaleX = shrink
+                scaleY = shrink
+                alpha = 1f - (offsetFraction * 1.2f).coerceIn(0f, 0.6f)
+            }
             // The viewer is fully opaque, so its own taps must not fall through
             // to the grid underneath.
             .pointerInput(Unit) { detectTapGestures(onTap = { chromeVisible = !chromeVisible }) },
+            // The gesture itself is handled by each page, not here.
+            //
+            // A gesture modifier on an ancestor runs after the page's own handlers,
+            // so a `pointerInput` here would see the drag only after the image had
+            // already consumed it. The page knows whether it is zoomed, and it knows
+            // whether the drag is horizontal (a page turn, which belongs to the pager)
+            // or vertical (a dismissal, which belongs here). Only the decision lives
+            // in the page; the state and the animation stay here.
+
     ) {
         HorizontalPager(
             state = pagerState,
@@ -180,9 +277,14 @@ fun ViewerScreen(
                 // clip opened in the viewer decoded as an image, failed, and drew a black
                 // rectangle on a page that claimed to be paging through the album.
                 if (item.isVideo) {
-                    VideoPage(item, container, onOpenVideo)
+                    VideoPage(item, container, onOpenVideo, ::onDismissDrag, ::onDismissEnd)
                 } else {
-                    ZoomableImage(item, container)
+                    ZoomableImage(
+                        item = item,
+                        container = container,
+                        onDismissDrag = ::onDismissDrag,
+                        onDismissEnd = ::onDismissEnd,
+                    )
                 }
             }
         }
@@ -387,28 +489,65 @@ fun ViewerScreen(
  * difference between a smooth pinch and a janky one.
  */
 @Composable
-private fun ZoomableImage(item: MediaItem, container: AppContainer) {
+private fun ZoomableImage(
+    item: MediaItem,
+    container: AppContainer,
+    onDismissDrag: (Float) -> Unit,
+    onDismissEnd: () -> Unit,
+) {
     var scale by remember(item.id) { mutableFloatStateOf(1f) }
     var offset by remember(item.id) { mutableStateOf(Offset.Zero) }
 
     val maxScale = 5f
     val doubleTapScale = 2.5f
+    val zoomed = scale > 1.01f
 
     Box(
         modifier = Modifier
             .fillMaxSize()
             .clipToBounds()
+            // Vertical drag: dismissal when the image is at 1x, panning when it is not.
+            //
+            // The pager is an ancestor, and an ancestor receives a pointer event first,
+            // so a horizontal drag is claimed by the pager before this handler is
+            // consulted. A sideways swipe still turns the page. Only a vertical drag
+            // reaches here, which is why this needs no axis check of its own.
+            //
+            // The detector is keyed on the zoom state: when the image is enlarged the
+            // detector is not installed at all, so a vertical drag falls through to the
+            // transform below and pans. A zoomed photo must never be dismissed by the
+            // same gesture that looks at its bottom edge.
+            .pointerInput(item.id, zoomed) {
+                if (zoomed) return@pointerInput
+                detectVerticalDragGestures(
+                    onDragEnd = { onDismissEnd() },
+                    onDragCancel = { onDismissEnd() },
+                    onVerticalDrag = { change, dy ->
+                        onDismissDrag(dy / size.height.toFloat())
+                        change.consume()
+                    },
+                )
+            }
+            // Pinch and pan. `detectTransformGestures` already does the pinch arithmetic;
+            // re-implementing it by hand is how focal-point zoom drifts off the fingers.
             .pointerInput(item.id) {
-                detectTransformGestures { _, pan, zoom, _ ->
+                detectTransformGestures { centroid, pan, zoom, _ ->
                     val next = (scale * zoom).coerceIn(1f, maxScale)
+                    // Zoom about the pinch centre: the point under the fingers stays
+                    // under the fingers. A zoom anchored to the screen centre pushes the
+                    // detail the user is looking at off the edge.
+                    if (zoom != 1f) {
+                        val focus = centroid - Offset(size.width / 2f, size.height / 2f) - offset
+                        offset += focus * (1f - zoom)
+                    }
                     scale = next
                     offset = if (next <= 1.01f) {
                         Offset.Zero
                     } else {
-                        // Pan is bounded by how far the enlarged image overhangs
-                        // the viewport, so the photo can never be dragged offscreen.
-                        val maxX = (size.width * (next - 1f)) / 2f
-                        val maxY = (size.height * (next - 1f)) / 2f
+                        // Pan is bounded by how far the enlarged image overhangs the
+                        // viewport, so the photo can never be dragged offscreen.
+                        val maxX = ((size.width * (next - 1f)) / 2f).coerceAtLeast(0f)
+                        val maxY = ((size.height * (next - 1f)) / 2f).coerceAtLeast(0f)
                         Offset(
                             x = (offset.x + pan.x).coerceIn(-maxX, maxX),
                             y = (offset.y + pan.y).coerceIn(-maxY, maxY),
@@ -418,12 +557,20 @@ private fun ZoomableImage(item: MediaItem, container: AppContainer) {
             }
             .pointerInput(item.id) {
                 detectTapGestures(
-                    onDoubleTap = {
+                    onDoubleTap = { at ->
                         if (scale > 1.05f) {
                             scale = 1f
                             offset = Offset.Zero
                         } else {
+                            // Zoom where it was tapped, so the detail that was tapped is
+                            // the detail that fills the screen.
                             scale = doubleTapScale
+                            val maxX = ((size.width * (doubleTapScale - 1f)) / 2f).coerceAtLeast(0f)
+                            val maxY = ((size.height * (doubleTapScale - 1f)) / 2f).coerceAtLeast(0f)
+                            offset = Offset(
+                                x = (size.width / 2f - at.x).coerceIn(-maxX, maxX),
+                                y = (size.height / 2f - at.y).coerceIn(-maxY, maxY),
+                            )
                         }
                     },
                 )
@@ -461,7 +608,13 @@ private fun ZoomableImage(item: MediaItem, container: AppContainer) {
  * This is not a disabled control: it opens the clip.
  */
 @Composable
-private fun VideoPage(item: MediaItem, container: AppContainer, onOpenVideo: (Long) -> Unit) {
+private fun VideoPage(
+    item: MediaItem,
+    container: AppContainer,
+    onOpenVideo: (Long) -> Unit,
+    onDismissDrag: (Float) -> Unit,
+    onDismissEnd: () -> Unit,
+) {
     val play = stringResource(R.string.video_play)
     val duration = PlayerPolicy.timecode(item.durationMs)
     val label = mediaDescription(item)
@@ -469,6 +622,18 @@ private fun VideoPage(item: MediaItem, container: AppContainer, onOpenVideo: (Lo
     Box(
         modifier = Modifier
             .fillMaxSize()
+            // A clip page dismisses by the same pull as a photo. The page holds no
+            // zoom, so the vertical axis is always the dismissal's.
+            .pointerInput(item.id) {
+                detectVerticalDragGestures(
+                    onDragEnd = { onDismissEnd() },
+                    onDragCancel = { onDismissEnd() },
+                    onVerticalDrag = { change, dy ->
+                        onDismissDrag(dy / size.height.toFloat())
+                        change.consume()
+                    },
+                )
+            }
             .testTag(HgTestTags.viewerVideoPage(item.id)),
         contentAlignment = Alignment.Center,
     ) {

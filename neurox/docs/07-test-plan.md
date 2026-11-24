@@ -45,3 +45,9 @@ Additional Android codec/repository tests cover legacy version-1 input, version-
 `test-migration-sql.py` executes the actual production migration SQL with local SQLite. It verifies unchanged legacy rows, the new table/index, foreign-key rejection and cascading deletion. This is executed local integration coverage, not Android Room evidence.
 
 Additional Room test sources cover custom CRUD, stable creation times, duplicate identity, cross-profile access rejection, historical snapshots, practice rewards, invalid-save preservation and all three checkpoint versions. The migration test opens a hand-authored legacy fixture with Room version 2. Run these tests before declaring the native workflow accepted.
+
+## Reflex timer and UI synchronization
+
+Use separate evidence for layout and timed execution. Isolated Compose fixtures disable automatic ticker publication, not engine scoring or input validation. Verify real named response actions, visible navigation, pause and builder persistence there. Run `LiveTickerTest` with the default production SystemClock and ticker outside Compose idling; require real waiting-to-active transitions, full response-window expiration, a durable MISSED result and no XP for unanswered sessions. Do not infer timer success from layout tests.
+
+Check append-only checkpoint prefixes and monotonic active-time persistence. Inject an older snapshot before aborting; confirm the latest durable progress becomes ABORTED and queued saves cannot reactivate it. Check profile ownership and preserve completed sessions. Compare production migration SQL against the checked-in generated Room schema locally, and also open the migrated database through Android Room.

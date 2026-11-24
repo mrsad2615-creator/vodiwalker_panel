@@ -7,7 +7,7 @@ The supplied NEUROX master specification remains the product scope. This ledger 
 | Native offline Android | Kotlin, Compose, Room, DataStore source; no network permission | Airplane-mode/physical-device acceptance; debug APK built in hosted CI |
 | Visual identity | Geometric emblem, vector app/notification assets, SVG light/dark/mono/splash variants | Adaptive launcher integration, cinematic skip-once introduction, visual device review |
 | Design system | Semantic tokens, distinct light/dark palettes, local Persian/Latin font, consistent glyphs | Full adaptive/tablet layouts, contrast audit of every state |
-| Color Studio | 11 presets plus custom hex, two variants, preview, apply, save, edit/rename, delete, defaults | Android persistence and accessibility verification |
+| Color Studio | 11 presets plus custom hex, two variants, preview, apply, save, edit/rename, delete, defaults | Additional device persistence/fault scenarios and full accessibility verification |
 | Navigation/home | Six main destinations, native bottom navigation, real aggregates, empty state, interrupted session actions | Deep links, contextual motion, missions, recommendations on home, full restoration matrix |
 | VISION | Focus Lock, seeded Visual Search and Pattern Match core/UI source | Five remaining exercises and full parameter controls |
 | REFLEX | Quick Tap, balanced Go / No-Go, Shape Reaction, Color Reaction and physical Direction Match; inhibition separated from response timing | Four remaining exercises; frame/input latency instrumentation |
@@ -25,11 +25,11 @@ The supplied NEUROX master specification remains the product scope. This ledger 
 | Performance/motion | No continuous idle ticker; no decorative animation; text scale setting | Three performance modes, interruptible motion, frame/memory/battery/device measurements |
 | Error/recovery | Explicit errors, save retry, incomplete session restore, no fake completion | Fault injection and full interruption/device matrix |
 | Accessibility | RTL/LTR, bundled font, labels, native controls, text scaling | TalkBack/Switch Access, large fonts, keyboard and contrast tests on device |
-| QA and release | Core/static/SQLite cases, native build/lint and instrumented emulator execution | Resolve remaining navigation case, verify new exercises on emulator, physical-device suites, signed release, screenshots |
+| QA and release | Core/static/SQLite cases, native build/lint and instrumented emulator execution | Expand UI/device coverage, physical-device and accessibility/performance suites, signed release, screenshots |
 
 ## Exercise completion ledger
 
-Implemented source paths (native compilation verified for first twelve; latest additions await native/device verification): VISION / Focus Lock, Visual Search and Pattern Match; REFLEX / Quick Tap, Go / No-Go, Shape Reaction, Color Reaction and Direction Match; READ / Reading Comprehension, Phrase Reading and RSVP Reader; TYPE / Key Precision, Word Sprint and Code Typing.
+Implemented source paths (native build/lint and the scoped 34-case emulator suite passed; full device acceptance remains open): VISION / Focus Lock, Visual Search and Pattern Match; REFLEX / Quick Tap, Go / No-Go, Shape Reaction, Color Reaction and Direction Match; READ / Reading Comprehension, Phrase Reading and RSVP Reader; TYPE / Key Precision, Word Sprint and Code Typing.
 
 Required next:
 

@@ -27,7 +27,13 @@ data class AppState(
     val busy: Boolean = false,
 )
 
-class AppViewModel(private val repository: NeuroxRepository, private val saved: SavedStateHandle) : ViewModel() {
+class AppViewModel(
+    private val repository: NeuroxRepository,
+    private val saved: SavedStateHandle,
+    // Layout tests must not wait for the 8 ms production timer to become idle.
+    // Activity factories keep the default; separate integration tests exercise it.
+    private val automaticTicks: Boolean = true,
+) : ViewModel() {
     private val _state = MutableStateFlow(AppState())
     val state = _state.asStateFlow()
     val screen = saved.getStateFlow("screen", Screen.HOME.name)
@@ -100,6 +106,7 @@ class AppViewModel(private val repository: NeuroxRepository, private val saved: 
     }
     private fun startTicker() {
         ticker?.cancel()
+        if (!automaticTicks) return
         val expected = engine ?: return
         ticker = viewModelScope.launch {
             while (isActive && engine === expected) {

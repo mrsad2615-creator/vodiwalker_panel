@@ -15,7 +15,8 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 
-/** Isolated database and ViewModel; no dependency on another test's app history. */
+/** Isolated database and ViewModel. Timed publication is tested separately without
+ * Compose/Espresso's idle synchronization, which can drain the fast reflex timer. */
 abstract class NeuroxUiFixture {
     @get:Rule val compose = createComposeRule()
     private lateinit var db: NeuroxDatabase
@@ -29,7 +30,7 @@ abstract class NeuroxUiFixture {
         runBlocking { repository.initialize(); repository.selectProfile("guest") }
         val factory = object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
-            override fun <T : ViewModel> create(modelClass: Class<T>): T = AppViewModel(repository, SavedStateHandle()) as T
+            override fun <T : ViewModel> create(modelClass: Class<T>): T = AppViewModel(repository, SavedStateHandle(), automaticTicks = false) as T
         }
         compose.runOnUiThread { model = ViewModelProvider(store, factory)[AppViewModel::class.java] }
         compose.setContent { NeuroxApp(model) }

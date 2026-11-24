@@ -192,14 +192,11 @@ class PlayerController(
     /**
      * Turns the sound on or off.
      *
-     * Separate from [load] because the user can do it at any time, and because the policy
-     * decides the value at the start of a clip while this applies it.
+     * Named `toggleMuted` and not `setMuted` for the reason the file already records for
+     * `changeSpeed`: `var muted` generates a `setMuted(Z)V` accessor on the JVM, and a
+     * function with the same signature is a platform clash that the compiler rejects. A
+     * second `setMuted` that took the value was removed once CI proved the clash.
      */
-    fun setMuted(value: Boolean) {
-        if (muted == value) return
-        applyMute(value)
-    }
-
     fun toggleMuted() {
         applyMute(!muted)
     }

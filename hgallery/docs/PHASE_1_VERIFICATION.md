@@ -105,7 +105,9 @@ All results below come from CI run 45336125604 at commit `3003025`.
 | Signed release APK | success |
 | Emulator run, UI tests and screenshots | success |
 
-A second run, 45338294450 at commit `6f99e08`, has all four jobs successful with
+Run 45343129275 at commit `9acbf1e` has all four jobs successful and produced the
+second-clip screenshots described in section 9. Run 45338294450 at commit
+`6f99e08` has all four jobs successful with
 `PlayerSessionTest` included in the instrumented suite. That job reports success
 and produces its screenshots; it does not print a per-test count into the run
 summary, so this document does not claim a count for the instrumented tests. The
@@ -156,7 +158,29 @@ honesty rather than code:
    prints the labels it did see. That line is what made the mistake findable
    without a device.
 
-The corrected step has not yet run. It runs with the next emulator job.
+### The corrected step ran, in run 45343129275
+
+The emulator job succeeded and produced two images. Both were inspected.
+
+`evidence/40-video-second-clip.png`: the frame of `clip-city`, the second clip,
+full width and correctly letterboxed. It is a different frame from `clip-lake`,
+which is what the first clip showed.
+
+`evidence/41-video-second-clip-no-chrome.png` is the important one. It shows five
+things at once:
+
+| Observation | What it establishes |
+|---|---|
+| The header reads `clip-city.mp4` | The media item changed on the same screen. |
+| The picture is drawn, not black | The surface is bound to the player that is playing. This is the exact condition that failed before. |
+| The timecode reads `0:05 / 0:05` | The duration is the new clip's, so no stale value survived the change. |
+| The selection outline is on the second filmstrip cell | The strip followed the same state change the player did. |
+| The sound control shows the crossed speaker in the accent color | The clip arrived by selecting another clip, so `PlayerPolicy` muted it, and the chrome reports that state. |
+
+This is the first visual evidence for defect A's actual path. It is a large
+step, and it is not the same as a listening test: the emulator has no audio
+sink, so this proves the picture, the state and the control, not the sound. The
+listening test is still on a person with a phone.
 
 ## 10. What is not verified
 

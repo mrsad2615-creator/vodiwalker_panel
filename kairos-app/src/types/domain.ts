@@ -4,6 +4,7 @@ export type HomeMode = 'cinematic' | 'compact' | 'detailed';
 
 export type NavTab =
   | 'dashboard'
+  | 'assistant'
   | 'tasks'
   | 'habits'
   | 'projects'

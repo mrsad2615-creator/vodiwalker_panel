@@ -21,6 +21,7 @@ export interface SectionIdentity {
 
 export const SECTION_IDENTITIES: Record<NavTab, SectionIdentity> = {
   dashboard: { id: 'dashboard', eyebrow: 'TODAY' },
+  assistant: { id: 'assistant', eyebrow: 'ASSISTANT' },
   focus: { id: 'focus', eyebrow: 'FOCUS' },
   tasks: { id: 'tasks', eyebrow: 'PLANNER' },
   habits: { id: 'habits', eyebrow: 'RITUALS' },

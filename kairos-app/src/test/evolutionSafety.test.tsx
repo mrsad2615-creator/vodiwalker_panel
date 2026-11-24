@@ -166,7 +166,7 @@ describe('offline local workflow', () => {
       await screen.findByTestId('home-ready');
       fireEvent.click(screen.getByRole('button', { name: 'وظایف' }));
       await screen.findByText('مدیریت وظایف');
-      fireEvent.click(screen.getByRole('button', { name: 'مرکز فرمان' }));
+      fireEvent.click(within(screen.getByRole('navigation', { name: 'ناوبری اصلی' })).getByRole('button', { name: 'دستیار' }));
       const input = await screen.findByLabelText('فرمان');
       fireEvent.change(input, { target: { value: 'وظایف امروز من چیست؟' } });
       fireEvent.keyDown(input, { key: 'Enter' });

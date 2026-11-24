@@ -202,7 +202,7 @@ describe('the manager', () => {
     });
 
     await boot();
-    fireEvent.click(screen.getByRole('button', { name: 'مرکز فرمان' }));
+    fireEvent.click(within(screen.getByRole('navigation', { name: 'ناوبری اصلی' })).getByRole('button', { name: 'دستیار' }));
 
     const brief = await screen.findByTestId('manager-brief');
     await waitFor(() => expect(brief.textContent).toContain('قرارداد'));
@@ -216,7 +216,7 @@ describe('the manager', () => {
 describe('brain switch', () => {
   it('appears only when the cloud manager is configured', async () => {
     await boot();
-    fireEvent.click(screen.getByRole('button', { name: 'مرکز فرمان' }));
+    fireEvent.click(within(screen.getByRole('navigation', { name: 'ناوبری اصلی' })).getByRole('button', { name: 'دستیار' }));
     await screen.findByTestId('manager-brief');
     expect(screen.queryByTestId('brain-switch')).toBeNull();
   });
@@ -230,7 +230,7 @@ describe('brain switch', () => {
       aiBaseUrl: 'https://example.test/v1',
     });
     await boot();
-    fireEvent.click(screen.getByRole('button', { name: 'مرکز فرمان' }));
+    fireEvent.click(within(screen.getByRole('navigation', { name: 'ناوبری اصلی' })).getByRole('button', { name: 'دستیار' }));
     await screen.findByTestId('manager-brief');
     expect(screen.queryByTestId('brain-switch')).toBeNull();
     expect(screen.queryByTestId('cloud-chat')).toBeNull();
@@ -264,29 +264,41 @@ describe('command centre', () => {
     });
 
     await boot();
-    fireEvent.click(screen.getByRole('button', { name: 'مرکز فرمان' }));
+    fireEvent.click(within(screen.getByRole('navigation', { name: 'ناوبری اصلی' })).getByRole('button', { name: 'دستیار' }));
 
     await waitFor(() => expect(screen.getByTestId('manager-brief')).toHaveTextContent('مالیات'));
     const input = await screen.findByLabelText('فرمان');
     fireEvent.change(input, { target: { value: 'کدام کارها عقب افتاده؟' } });
     fireEvent.click(screen.getByRole('button', { name: 'بپرس' }));
 
-    const sheet = screen.getByRole('dialog');
+    const sheet = screen.getByRole('region', { name: 'مرکز فرمان' });
     await waitFor(() => {
       expect(within(sheet).getByText(/کار عقب‌افتاده/)).toBeInTheDocument();
     });
     expect(within(sheet).getAllByText(/مالیات/).length).toBeGreaterThan(0);
   });
 
+  it('does not present unsupported task creation as a successful answer', async () => {
+    await boot();
+    fireEvent.click(within(screen.getByRole('navigation', { name: 'ناوبری اصلی' })).getByRole('button', { name: 'دستیار' }));
+    const page = await screen.findByRole('region', { name: 'مرکز فرمان' });
+    fireEvent.change(within(page).getByLabelText('فرمان'), { target: { value: 'برای فردا وظیفه بساز' } });
+    fireEvent.click(within(page).getByRole('button', { name: 'بپرس' }));
+    expect(within(page).getByText('این تغییر هنوز پشتیبانی نمی‌شود')).toBeInTheDocument();
+    fireEvent.change(within(page).getByLabelText('فرمان'), { target: { value: 'برای امروز برنامه بساز' } });
+    fireEvent.click(within(page).getByRole('button', { name: 'بپرس' }));
+    expect(within(page).getByText('برنامهٔ امروز')).toBeInTheDocument();
+  });
+
   it('admits when it does not understand, and offers what it does', async () => {
     await boot();
-    fireEvent.click(screen.getByRole('button', { name: 'مرکز فرمان' }));
+    fireEvent.click(within(screen.getByRole('navigation', { name: 'ناوبری اصلی' })).getByRole('button', { name: 'دستیار' }));
 
     const input = await screen.findByLabelText('فرمان');
     fireEvent.change(input, { target: { value: 'قیمت دلار چند است' } });
     fireEvent.click(screen.getByRole('button', { name: 'بپرس' }));
 
-    const sheet = screen.getByRole('dialog');
+    const sheet = screen.getByRole('region', { name: 'مرکز فرمان' });
     await waitFor(() => {
       expect(within(sheet).getByText('این فرمان را نمی‌شناسم')).toBeInTheDocument();
     });

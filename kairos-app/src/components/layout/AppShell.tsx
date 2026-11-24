@@ -11,6 +11,7 @@ import {
   Timer,
   Lightning,
   Sliders,
+  Sparkles,
 } from '@/components/ui/icons';
 import type { NavTab } from '@/types/domain';
 import { applySectionAppearance } from '@/lib/sections';
@@ -31,6 +32,7 @@ import { updateSettings } from '@/lib/db';
 
 const DESTINATIONS: { id: NavTab; label: string; hint: string; icon: typeof Home }[] = [
   { id: 'dashboard', label: 'خانه', hint: 'نمای کلی روز', icon: Home },
+  { id: 'assistant', label: 'دستیار', hint: 'پرسش و فرمان‌های کایروس', icon: Sparkles },
   { id: 'tasks', label: 'وظایف', hint: 'کارها و اولویت‌ها', icon: CheckSquare },
   { id: 'habits', label: 'عادت‌ها', hint: 'عادت‌ها و پیگیری', icon: Flame },
   { id: 'focus', label: 'تمرکز', hint: 'زمان‌سنج و فضای صوتی', icon: Timer },
@@ -131,10 +133,12 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   const shortcuts = normalizeShortcuts(settings.navShortcuts);
   const primaryTabs = DESTINATIONS.filter((item) => item.id === 'dashboard');
-  for (const id of shortcuts) {
+  for (const id of shortcuts.slice(0, 3)) {
     const item = DESTINATIONS.find((destination) => destination.id === id);
     if (item) primaryTabs.push(item);
   }
+  const assistant = DESTINATIONS.find((item) => item.id === 'assistant')!;
+  primaryTabs.push(assistant);
   const isSecondaryActive = !primaryTabs.some((item) => item.id === activeTab);
 
   // The shell scrolls its <main>, not the document, so a tab change has to reset
@@ -174,9 +178,6 @@ export function AppShell({ children }: { children: ReactNode }) {
     <div className="kairos-ambient-bg h-full w-full">
       <ToastHost toasts={toasts} onDismiss={dismissToast} />
       <SearchSheet open={searchOpen} onClose={() => setSearchOpen(false)} />
-      {/* One command surface, on every screen: a question box that answers from
-          local rows and says "I don't know" instead of guessing. */}
-      <CommandCenter />
 
       {/* Shell owns the viewport; only `.app-scroll` moves. */}
       <div className="app-shell app-safe-frame relative mx-auto w-full max-w-[480px]">
@@ -264,7 +265,10 @@ export function AppShell({ children }: { children: ReactNode }) {
             داده‌های نمونه فعال‌اند؛ آمار و تحلیل‌ها می‌توانند ترکیبی از اطلاعات واقعی و ساختگی باشند.
           </div>
         )}
-        <div className="app-safe-content px-4 pt-4">{children}</div>
+        <div className="app-safe-content px-4 pt-4">
+          <div hidden={activeTab === 'assistant'}>{children}</div>
+          <div hidden={activeTab !== 'assistant'}><CommandCenter /></div>
+        </div>
         </main>
 
         <nav
@@ -334,8 +338,8 @@ export function AppShell({ children }: { children: ReactNode }) {
                 </div>
                 {editingNav && (
                   <div className="space-y-2 rounded-xl border border-[var(--border)] bg-[var(--surface-1)] p-3">
-                    <p className="text-[10px] leading-5 text-[var(--text-2)]">خانه و فهرست ثابت‌اند؛ چهار جایگاه دیگر را انتخاب کن. انتخاب تکراری، جای دو مورد را عوض می‌کند.</p>
-                    {draftShortcuts.map((id, index) => (
+                    <p className="text-[10px] leading-5 text-[var(--text-2)]">خانه، دستیار و فهرست ثابت‌اند؛ سه میان‌بر نمایان را انتخاب کن. میان‌بر چهارم قبلی محفوظ است و از فهرست قابل دسترسی است. انتخاب تکراری جای دو مورد را عوض می‌کند.</p>
+                    {draftShortcuts.slice(0, 3).map((id, index) => (
                       <label key={index} className="flex items-center justify-between gap-3 text-[11px] text-[var(--text-2)]">
                         <span>میان‌بر {index + 1}</span>
                         <select aria-label={`میان‌بر ${index + 1}`} value={id} onChange={(event) => setDraftShortcuts((current) => changeShortcut(current, index, event.target.value as ShortcutTab))} className="luxury-input max-w-[65%] py-1 text-xs">

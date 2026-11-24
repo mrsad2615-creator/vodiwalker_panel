@@ -32,6 +32,9 @@ export function interpretAssistantRequest(raw: string, tasks: Task[], projects: 
   if (/(حذف|پاک|دیلیت|delete|clear|نکن|نشه|نشود|نیست)/.test(q)) {
     return { type: 'blocked', message: 'حذف داده یا دستور منفی را اجرا نمی‌کنم. تغییر موردنظر را مثبت و روشن بگو.' };
   }
+  if (/(برو|باز کن|ببر)/.test(q) && /(تکمیل کن|تمام کن|متوقف کن|مکث کن|فعال کن|منتقل کن|حذف کن|بساز|اضافه کن)/.test(q)) {
+    return { type: 'blocked', message: 'بازکردن بخش و تغییر داده را جداگانه درخواست کن.' };
+  }
   if (/(برو|باز کن|ببر)/.test(q)) {
     const matches = destinations.filter((item) => item.match.test(q));
     if (matches.length === 1) return { type: 'navigation', tab: matches[0].tab, label: matches[0].label };
@@ -39,8 +42,11 @@ export function interpretAssistantRequest(raw: string, tasks: Task[], projects: 
   }
   let kind: ChangeKind | null = null;
   if (/پروژه/.test(q)) {
-    if (/(مکث|متوقف|توقف)/.test(q)) kind = 'project.pause';
-    else if (/(از سر بگیر|دوباره فعال|فعال کن)/.test(q)) kind = 'project.resume';
+    const pause = /(مکث|متوقف|توقف)/.test(q);
+    const resume = /(از سر بگیر|دوباره فعال|فعال کن)/.test(q);
+    if (pause && resume) return { type: 'blocked', message: 'دو تغییر متفاوت گفتی؛ هر تغییر را جداگانه درخواست کن.' };
+    if (pause) kind = 'project.pause';
+    else if (resume) kind = 'project.resume';
   } else if (/(وظیفه|وظایف|کار)/.test(q)) {
     const actions: ChangeKind[] = [];
     if (/(تکمیل کن|انجام شد|تمام کن|انجام دادم)/.test(q)) actions.push('task.complete');

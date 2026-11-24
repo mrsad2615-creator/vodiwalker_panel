@@ -34,19 +34,26 @@ describe('shortcut model', () => {
   });
 
   it('offers six destinations, saves custom shortcuts, and keeps every section in the directory', async () => {
+    await db.settings.update('default', { navShortcuts: ['tasks', 'habits', 'focus', 'motivation'] });
     await boot();
     const nav = screen.getByRole('navigation', { name: 'ناوبری اصلی' });
     expect(within(nav).getAllByRole('button')).toHaveLength(6);
     expect(within(nav).getByRole('button', { name: 'خانه' })).toHaveAttribute('aria-current', 'page');
+    fireEvent.click(within(nav).getByRole('button', { name: 'دستیار' }));
+    expect(within(nav).getByRole('button', { name: 'دستیار' })).toHaveAttribute('aria-current', 'page');
+    expect(await screen.findByRole('region', { name: 'مرکز فرمان' })).toBeVisible();
+    expect(within(nav).getByRole('button', { name: 'بیشتر' })).not.toHaveAttribute('aria-current');
+    expect(normalizeShortcuts((await db.settings.get('default'))?.navShortcuts)).toEqual(DEFAULT_SHORTCUTS);
     fireEvent.click(within(nav).getByRole('button', { name: 'بیشتر' }));
     const directory = await screen.findByRole('dialog', { name: 'بخش‌های دیگر' });
-    for (const label of ['خانه', 'وظایف', 'عادت‌ها', 'تمرکز', 'انگیزه', 'پروژه‌ها', 'تقویم', 'تحلیل عملکرد', 'تنظیمات']) {
+    for (const label of ['خانه', 'دستیار', 'وظایف', 'عادت‌ها', 'تمرکز', 'انگیزه', 'پروژه‌ها', 'تقویم', 'تحلیل عملکرد', 'تنظیمات']) {
       expect(within(directory).getByRole('button', { name: `بخش ${label}` })).toBeInTheDocument();
     }
     fireEvent.click(within(directory).getByRole('button', { name: 'شخصی‌سازی' }));
     fireEvent.change(within(directory).getByLabelText('میان‌بر 1'), { target: { value: 'projects' } });
     fireEvent.click(within(directory).getByRole('button', { name: 'ذخیرهٔ میان‌برها' }));
     await waitFor(async () => expect((await db.settings.get('default'))?.navShortcuts?.[0]).toBe('projects'));
+    expect((await db.settings.get('default'))?.navShortcuts?.[3]).toBe('motivation');
     fireEvent.click(screen.getByRole('button', { name: 'بستن فهرست' }));
     await waitFor(() => expect(within(nav).getByRole('button', { name: 'پروژه‌ها' })).toBeInTheDocument());
     fireEvent.click(within(nav).getByRole('button', { name: 'پروژه‌ها' }));
@@ -65,7 +72,8 @@ describe('motivation', () => {
 
   it('filters, advances and persists favorites in the local database', async () => {
     await boot();
-    fireEvent.click(within(screen.getByRole('navigation', { name: 'ناوبری اصلی' })).getByRole('button', { name: 'انگیزه' }));
+    fireEvent.click(within(screen.getByRole('navigation', { name: 'ناوبری اصلی' })).getByRole('button', { name: 'بیشتر' }));
+    fireEvent.click(within(screen.getByRole('dialog', { name: 'بخش‌های دیگر' })).getByRole('button', { name: 'بخش انگیزه' }));
     const page = await screen.findByTestId('motivation-page');
     fireEvent.click(within(page).getByRole('button', { name: 'قدرت' }));
     const first = within(page).getByRole('blockquote').textContent;

@@ -44,8 +44,8 @@ describe('assistant task creation', () => {
     fireEvent.click(screen.getByRole('status', { name: /kairos/i }));
     await completeFirstRun();
     await screen.findByTestId('home-ready');
-    fireEvent.click(screen.getByRole('button', { name: 'مرکز فرمان' }));
-    const dialog = await screen.findByRole('dialog', { name: 'مرکز فرمان' });
+    fireEvent.click(within(screen.getByRole('navigation', { name: 'ناوبری اصلی' })).getByRole('button', { name: 'دستیار' }));
+    const dialog = await screen.findByRole('region', { name: 'مرکز فرمان' });
     fireEvent.change(within(dialog).getByLabelText('فرمان'), { target: { value: 'برای امروز لیست وظایف بساز' } });
     fireEvent.click(within(dialog).getByRole('button', { name: 'بپرس' }));
     const draft = within(dialog).getByRole('region', { name: 'ساخت فهرست وظایف امروز' });

@@ -53,7 +53,7 @@ export interface CommandAnswer {
   /** Body lines, already Persian and already carrying their numbers. */
   lines: string[];
   /** Where the person can go next. */
-  action?: { label: string; tab: 'tasks' | 'projects' | 'focus' | 'analytics' | 'habits' };
+  action?: { label: string; tab: 'dashboard' | 'tasks' | 'projects' | 'focus' | 'analytics' | 'habits' };
   /** True when the request was not understood at all. */
   unknown?: boolean;
 }
@@ -468,7 +468,7 @@ export function runCommand(raw: string, context: CommandContext): CommandAnswer 
           'برنامهٔ پیشنهادی را در کارت «برنامهٔ امروز» روی خانه ببین.',
           'ظرفیت روز از میانگین روزهای واقعی تمرکزت حساب می‌شود، نه از ۲۴ ساعت.',
         ],
-        action: { label: 'دیدن خانه', tab: 'tasks' },
+        action: { label: 'دیدن خانه', tab: 'dashboard' },
       };
 
     case 'habits.status': {
@@ -504,7 +504,7 @@ export function runCommand(raw: string, context: CommandContext): CommandAnswer 
           intent,
           title: 'هدفی ثبت نشده',
           lines: ['یک هدف بساز تا پیشرفتش را از کارهای پیوندشده حساب کنم.'],
-          action: { label: 'دیدن خانه', tab: 'tasks' },
+          action: { label: 'دیدن خانه', tab: 'dashboard' },
         };
       }
       const open = context.goals.filter((goal) => !goal.completed);
@@ -526,7 +526,7 @@ export function runCommand(raw: string, context: CommandContext): CommandAnswer 
         intent,
         title: open.length === 0 ? 'همهٔ هدف‌ها بسته شده‌اند' : `${fa(open.length)} هدف باز`,
         lines: lines.length > 0 ? lines : ['هیچ هدف بازی نیست.'],
-        action: { label: 'دیدن خانه', tab: 'tasks' },
+        action: { label: 'دیدن خانه', tab: 'dashboard' },
       };
     }
 
@@ -584,7 +584,7 @@ export function runCommand(raw: string, context: CommandContext): CommandAnswer 
         title: `امروز ${today.weekday} است`,
         lines: [
           `${today.weekday} ${fa(today.day)} ${today.month} ${fa(today.year)}`,
-          `به تاریخ میلادی: ${fa(new Date().toISOString().slice(0, 10))}`,
+          `به تاریخ میلادی: ${fa(context.todayKey)}`,
         ],
       };
     }

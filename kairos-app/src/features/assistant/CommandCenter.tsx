@@ -1,7 +1,6 @@
 import { useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Brain, Sparkles } from '@/components/ui/icons';
-import { ModalSheet } from '@/components/ui/ModalSheet';
 import { useApp } from '@/context/AppContext';
 import {
   useGoals,
@@ -21,15 +20,13 @@ import { applyConfirmedChange, interpretAssistantRequest, previewChange, revertA
 import { buildDailyBrief } from '@/lib/coach';
 import { pickInsights } from '@/lib/insights';
 import { triggerHaptic } from '@/lib/native';
+import type { NavTab } from '@/types/domain';
 
 /**
  * The command centre: a Persian question box with no model behind it.
  *
- * Why this is better than a chat window with an LLM: every answer here is
- * produced by `lib/commands.ts` from the user's own rows, so it can always be
- * checked, and a question outside its vocabulary returns «این فرمان را
- * نمیشناسم» with the list of what it does understand. Nothing is invented, and
- * nothing leaves the device.
+ * The current implementation uses local rules, not a language model. It reads
+ * local rows and reports when a request is outside the supported vocabulary.
  */
 
 const CHANGE_LABELS = {
@@ -38,7 +35,6 @@ const CHANGE_LABELS = {
 } as const;
 
 export function CommandCenter() {
-  const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [history, setHistory] = useState<(CommandAnswer & { prompt?: string })[]>([]);
   const [request, setRequest] = useState<Extract<AssistantRequest, { type: 'change' }> | null>(null);
@@ -108,7 +104,7 @@ export function CommandCenter() {
     }
     if (local.type === 'navigation') {
       setHistory((current) => [{ intent: 'help' as const, title: `بخش ${local.label} باز شد`, lines: [], prompt: trimmed }, ...current].slice(0, 6));
-      setQuery(''); setActiveTab(local.tab); setOpen(false); return;
+      setQuery(''); setActiveTab(local.tab); return;
     }
     if (local.type === 'change') {
       setDraftOpen(false); setRequest(local); setQuery(''); return;
@@ -120,6 +116,11 @@ export function CommandCenter() {
       setDraftError('');
       setQuery('');
       return;
+    }
+    // Do not turn an unsupported write request into a misleading read-only answer.
+    if (/(وظیفه|وظایف|کارها|عادت|پروژه|هدف|تنظیمات|یادداشت)/.test(trimmed) && /(بساز|ایجاد کن|اضافه کن|ثبت کن|ویرایش کن|تغییر بده|تنظیم کن)/.test(trimmed)) {
+      setHistory((current) => [{ intent: 'help' as const, title: 'این تغییر هنوز پشتیبانی نمی‌شود', lines: ['فعلاً این کار را از بخش مربوط انجام بده. هیچ داده‌ای تغییر نکرد.'], prompt: trimmed }, ...current].slice(0, 6));
+      setQuery(''); return;
     }
     const answer = runCommand(trimmed, {
       tasks,
@@ -195,51 +196,18 @@ export function CommandCenter() {
   };
 
   return (
-    <>
-      <motion.button
-        type="button"
-        onClick={() => {
-          setOpen(true);
-          void triggerHaptic('light');
-        }}
-        aria-label="مرکز فرمان"
-        whileTap={{ scale: 0.94 }}
-        className="fixed bottom-[calc(env(safe-area-inset-bottom,0px)+86px)] end-4 z-30 flex items-center gap-1.5 rounded-full border border-[var(--accent-fg)]/35 bg-[color-mix(in_srgb,var(--surface-2)_86%,transparent)] px-3.5 py-2.5 text-[11px] font-semibold text-[var(--accent-fg)] shadow-[0_10px_30px_-14px_rgba(0,0,0,0.9)] backdrop-blur-xl"
-      >
-        <Sparkles className="h-3.5 w-3.5" />
-        بپرس
-      </motion.button>
-
-      <ModalSheet
-        open={open}
-        onClose={() => setOpen(false)}
-        title="مرکز فرمان"
-        subtitle="بدون اینترنت · بدون مدل زبانی · از دادهٔ خودت"
-        footer={
-          <div className="flex items-center gap-2 px-5 pb-1">
-            <input
-              value={query}
-              disabled={saving}
-              onChange={(event) => setQuery(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter') submit(query);
-              }}
-              placeholder="مثلاً: وظایف امروز من چیست؟"
-              aria-label="فرمان"
-              className="luxury-input flex-1 py-2 text-[11.5px]"
-            />
-            <button
-              type="button"
-              onClick={() => submit(query)}
-              disabled={saving}
-              className="rounded-full bg-[var(--accent)] px-4 py-2 text-[11.5px] font-bold text-[var(--accent-on)] disabled:opacity-60"
-            >
-              بپرس
-            </button>
-          </div>
-        }
-      >
-        <div className="space-y-3 px-5 py-4">
+    <section role="region" aria-label="مرکز فرمان" data-testid="assistant-page" className="pb-5">
+      <div className="mb-4 flex items-start gap-3 rounded-[var(--r-rail)] border border-[var(--border)] bg-[var(--surface-1)] p-4">
+        <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[color-mix(in_srgb,var(--accent)_18%,transparent)] text-[var(--accent-fg)]"><Sparkles size={22} aria-hidden="true" /></span>
+        <div><p className="eyebrow">KAIROS ASSISTANT</p><h1 className="mt-1 text-lg font-bold text-[var(--text)]">دستیار کایروس</h1>
+          <p className="mt-1 text-xs leading-6 text-[var(--text-2)]">آفلاین و مبتنی بر فرمان‌های مشخص؛ مدل زبانی هنوز نصب یا فعال نشده است. تغییرات پشتیبانی‌شده پیش از اجرا تأیید می‌خواهند.</p></div>
+      </div>
+      <form onSubmit={(event) => { event.preventDefault(); submit(query); }} className="flex items-center gap-2 rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-2">
+        <input value={query} disabled={saving} onChange={(event) => setQuery(event.target.value)}
+          placeholder="مثلاً: وظایف امروز من چیست؟" aria-label="فرمان" className="luxury-input min-w-0 flex-1 py-3 text-sm" />
+        <button type="submit" disabled={saving} className="rounded-xl bg-[var(--accent)] px-4 py-3 text-xs font-bold text-[var(--accent-on)] disabled:opacity-60">بپرس</button>
+      </form>
+        <div className="space-y-3 py-4">
           {draftOpen && (
             <section aria-label="ساخت فهرست وظایف امروز" className="space-y-3 rounded-[var(--r-rail)] border border-[var(--accent-fg)]/35 bg-[var(--surface-1)] p-4">
               <div><h3 className="text-sm font-bold text-[var(--text)]">چه کارهایی باید انجام شوند؟</h3>
@@ -283,6 +251,16 @@ export function CommandCenter() {
           )}
           {changeError && <p role="alert" className="text-xs leading-5 text-[var(--danger)]">{changeError}</p>}
           {lastChange && <button type="button" disabled={saving} onClick={() => void revertChange()} className="rounded-xl border border-[var(--border)] px-3 py-2 text-xs text-[var(--accent-fg)]">بازگرداندن آخرین تغییر دستیار</button>}
+          <details className="rounded-2xl border border-[var(--border)] bg-[var(--surface-1)] p-3">
+            <summary className="cursor-pointer text-xs font-semibold text-[var(--text)]">دسترسی به بخش‌های کایروس</summary>
+            <p className="mt-2 text-xs leading-6 text-[var(--text-2)]">برای کارهایی که دستیار هنوز مستقیماً انجام نمی‌دهد، بخش مربوط را باز کن.</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {([
+                ['خانه', 'dashboard'], ['وظایف', 'tasks'], ['عادت‌ها', 'habits'], ['پروژه‌ها', 'projects'],
+                ['تقویم', 'calendar'], ['تمرکز', 'focus'], ['تحلیل عملکرد', 'analytics'], ['انگیزه', 'motivation'], ['تنظیمات', 'settings'],
+              ] as [string, NavTab][]).map(([label, tab]) => <button key={tab} type="button" onClick={() => setActiveTab(tab)} className="rounded-xl border border-[var(--border)] px-3 py-2 text-xs text-[var(--accent-fg)]">{label}</button>)}
+            </div>
+          </details>
           {/* The manager gives a decision and its evidence. */}
           <div
             data-testid="manager-brief"
@@ -310,7 +288,6 @@ export function CommandCenter() {
                   type="button"
                   onClick={() => {
                     setActiveTab(brief.recommendation!.tab);
-                    setOpen(false);
                   }}
                   className="mt-1 text-[10px] font-medium text-[var(--accent-fg)]"
                 >
@@ -372,8 +349,7 @@ export function CommandCenter() {
                     type="button"
                     onClick={() => {
                       setActiveTab(answer.action!.tab);
-                      setOpen(false);
-                    }}
+                      }}
                     className="mt-2 text-[10.5px] font-medium text-[var(--accent-fg)]"
                   >
                     {answer.action.label} ←
@@ -383,7 +359,6 @@ export function CommandCenter() {
             ))
           )}
         </div>
-      </ModalSheet>
-    </>
+    </section>
   );
 }

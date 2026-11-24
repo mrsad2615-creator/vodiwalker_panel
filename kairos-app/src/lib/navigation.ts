@@ -1,7 +1,7 @@
 import type { NavTab } from '@/types/domain';
 
-/** Home and the directory are fixed; these are the other four dock slots. */
-export type ShortcutTab = Exclude<NavTab, 'dashboard'>;
+/** The fourth shortcut is kept in settings as a reserve for safe upgrades. */
+export type ShortcutTab = Exclude<NavTab, 'dashboard' | 'assistant'>;
 export const SHORTCUTS: readonly ShortcutTab[] = ['tasks', 'habits', 'focus', 'motivation', 'projects', 'calendar', 'analytics', 'settings'];
 export const DEFAULT_SHORTCUTS: ShortcutTab[] = ['tasks', 'habits', 'focus', 'motivation'];
 

@@ -19,6 +19,8 @@ describe('local assistant actions', () => {
     expect(interpretAssistantRequest('برو به تنظیمات', [], [])).toMatchObject({ type: 'navigation', tab: 'settings' });
     expect(interpretAssistantRequest('وظایف امروز را نشان بده', [], [])).toEqual({ type: 'none' });
     expect(interpretAssistantRequest('برو به عادت و وظایف', [], [])).toMatchObject({ type: 'blocked' });
+    expect(interpretAssistantRequest('برو به وظایف و وظیفه گزارش را تکمیل کن', [], [])).toMatchObject({ type: 'blocked' });
+    expect(interpretAssistantRequest('پروژه کتاب را متوقف کن و فعال کن', [], [])).toMatchObject({ type: 'blocked' });
   });
   it('blocks destructive and negative commands, and does not guess when names collide', async () => {
     const one = await task(); const two = await task();
@@ -91,8 +93,8 @@ describe('local assistant actions', () => {
     fireEvent.click(screen.getByRole('status', { name: /kairos/i }));
     await completeFirstRun();
     await screen.findByTestId('home-ready');
-    fireEvent.click(screen.getByRole('button', { name: 'مرکز فرمان' }));
-    const dialog = await screen.findByRole('dialog', { name: 'مرکز فرمان' });
+    fireEvent.click(within(screen.getByRole('navigation', { name: 'ناوبری اصلی' })).getByRole('button', { name: 'دستیار' }));
+    const dialog = await screen.findByRole('region', { name: 'مرکز فرمان' });
     await waitFor(() => expect(within(dialog).getByTestId('manager-brief')).toHaveTextContent('گزارش'));
     fireEvent.change(within(dialog).getByLabelText('فرمان'), { target: { value: 'وظیفه گزارش را تکمیل کن' } });
     fireEvent.click(within(dialog).getByRole('button', { name: 'بپرس' }));

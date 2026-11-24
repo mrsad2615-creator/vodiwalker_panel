@@ -19,6 +19,7 @@ describe('section identity', () => {
   it('covers every nav tab with a unique Latin eyebrow', () => {
     const tabs: NavTab[] = [
       'dashboard',
+      'assistant',
       'focus',
       'tasks',
       'habits',

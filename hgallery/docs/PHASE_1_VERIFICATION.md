@@ -136,11 +136,27 @@ no screenshot in that run could have failed for the old reason. An earlier
 version of this document would have called the run evidence of the fix. It is
 not, and this section says so.
 
-To close that gap, `.ci/run-connected-tests.sh` now selects the second clip by
-its own label, `clip-city`, and photographs it twice: with the bars, then without
-them. Those images are `40-video-second-clip.png` and
-`41-video-second-clip-no-chrome.png`. They are produced by the next emulator run,
-not by run 45338294450.
+To close that gap, `.ci/run-connected-tests.sh` selects the second clip by its own
+label and photographs it twice: with the bars, then without them. Those images
+are `40-video-second-clip.png` and `41-video-second-clip-no-chrome.png`.
+
+Run 45340753380 attempted this and produced no such image. The harness warned:
+
+> the filmstrip showed no second clip; the media replacement was not exercised
+
+The cause was a wrong label. `FilmstripCell` builds its label as
+`"<name>, <seconds>s"`, for example `clip-city.mp4, 5s`. The step matched the
+grid form, `Video, 5 seconds, clip-city.mp4`, which is a different composable.
+The pattern is corrected. Two lessons are recorded because both are about
+honesty rather than code:
+
+1. A step that cannot find its target raises a warning and does not fail the
+   run, so a green emulator job does not prove that the step ran.
+2. The warning was readable in the run's annotations only because the harness
+   prints the labels it did see. That line is what made the mistake findable
+   without a device.
+
+The corrected step has not yet run. It runs with the next emulator job.
 
 ## 10. What is not verified
 

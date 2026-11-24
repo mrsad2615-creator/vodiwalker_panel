@@ -453,12 +453,15 @@ if tap_tag_or_text "videos-album" 'content-desc="Videos|text="Videos'; then
     # The filmstrip under the clip carries both cells with their own labels, so
     # the second one is reachable by name rather than by a guessed coordinate.
     echo "::notice title=e2e::selecting the second clip to exercise the media replacement"
-    # The label comes from the fixture: the filmstrip cells read
-    # "Video, 5 seconds, clip-city.mp4" and "Video, 6 seconds, clip-lake.mp4".
-    # Matching the file name is deliberate: a bare `content-desc="Video, ` would
-    # find the clip already on screen and photograph the same one twice, which is
-    # the failure this step exists to avoid.
-    if tap_tag_or_text "second-video" 'content-desc="Video, .*clip-city'; then
+    # The label comes from FilmstripCell, which builds it as "<name>, <seconds>s":
+    # "clip-city.mp4, 5s" and "clip-lake.mp4, 6s". It is NOT the grid label, which
+    # is "Video, 5 seconds, clip-city.mp4"; the first version of this step copied
+    # the grid form, matched nothing, and the run warned honestly instead of
+    # silently photographing the clip it already had.
+    #
+    # Matching the file name is deliberate. The clip on screen is clip-lake, so a
+    # pattern that matched any cell would tap the cell already playing.
+    if tap_tag_or_text "second-video" 'content-desc="clip-city'; then
       sleep 3
       # Past the auto-hide, then one tap to pin the chrome, because the surface
       # must be photographed with its bars to show which clip is on screen.

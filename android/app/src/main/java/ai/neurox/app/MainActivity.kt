@@ -151,7 +151,7 @@ private suspend fun savePreference(host: SnackbarHostState, context: android.con
         }
         Spacer(Modifier.height(20.dp)); Text(stringResource(R.string.choose_training), color = Ivory.copy(alpha = .7f), fontSize = 11.sp, letterSpacing = 1.6.sp)
         Module.entries.forEach { module ->
-            Card(Modifier.fillMaxWidth().padding(vertical = 5.dp), colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(18.dp), onClick = { onStart(module) }) {
+            Card(onClick = { onStart(module) }, modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp), colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(18.dp)) {
                 Row(Modifier.padding(16.dp).fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Box(Modifier.size(42.dp).background(Gold.copy(alpha = .12f), RoundedCornerShape(14.dp)), contentAlignment = Alignment.Center) { Text(module.title.take(1), color = Gold, fontWeight = FontWeight.Bold) }
                     Column(Modifier.weight(1f).padding(start = 12.dp)) {

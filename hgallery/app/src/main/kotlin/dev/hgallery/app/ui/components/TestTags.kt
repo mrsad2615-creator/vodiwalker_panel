@@ -49,6 +49,10 @@ object HgTestTags {
     const val VIDEO_FILL = "video-fill"
     const val VIDEO_MUTE = "video-mute"
 
+    /** The one-tap filter row under the gallery title, and one chip inside it. */
+    const val FILTER_CHIPS = "filter-chips"
+    fun filterChip(kind: String) = "filter-chip-$kind"
+
     /** The page a clip occupies inside the viewer, and the target that opens it. */
     fun viewerVideoPage(id: Long) = "viewer-video-$id"
     fun viewerVideoPlay(id: Long) = "viewer-video-play-$id"

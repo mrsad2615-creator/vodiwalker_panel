@@ -52,7 +52,6 @@ import dev.hgallery.app.ui.albums.AddToAlbumSheet
 import dev.hgallery.app.ui.components.HgSelectionActions
 import dev.hgallery.app.ui.components.HgSelectionHeader
 import dev.hgallery.app.ui.components.HgTestTags
-import dev.hgallery.app.ui.components.HgToolbar
 import dev.hgallery.app.ui.components.MediaThumbnail
 import dev.hgallery.app.ui.components.FavouriteBadge
 import dev.hgallery.app.ui.components.SelectionBadge
@@ -67,6 +66,14 @@ import dev.hgallery.app.ui.theme.hgShapes
 import dev.hgallery.app.ui.theme.HgMetrics
 import dev.hgallery.core.GridDensity
 import dev.hgallery.core.MediaItem
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import dev.hgallery.core.GalleryFilter
+import androidx.compose.runtime.saveable.rememberSaveable
 import dev.hgallery.core.Selection
 import java.util.Locale
 import kotlinx.coroutines.launch
@@ -169,8 +176,14 @@ private fun SelectionAwarePhotos(
     val error by container.mediaStore.error.collectAsStateWithLifecycle()
 
     val locale = remember { Locale.getDefault() }
-    val daySections = remember(items, locale) { container.sections(items, locale) }
-    val monthSections = remember(items, locale) { container.months(items, locale) }
+
+    // The chip row filters the same list the grid draws. `GalleryFilter` owns the rule so
+    // the behaviour is testable without a device; the screen only holds the choice.
+    var filter by rememberSaveable { mutableStateOf(GalleryFilter.Kind.ALL) }
+    val visible = remember(items, filter) { GalleryFilter.apply(items, filter) }
+
+    val daySections = remember(visible, locale) { container.sections(visible, locale) }
+    val monthSections = remember(visible, locale) { container.months(visible, locale) }
 
     val photos = remember(items) { items.count { !it.isVideo } }
     val videos = remember(items) { items.count { it.isVideo } }
@@ -261,40 +274,63 @@ private fun SelectionAwarePhotos(
             )
         } else {
         Column(Modifier.fillMaxWidth()) {
-            HgToolbar(
-                onSearch = onSearch,
-                // The overflow slot holds Settings. While it had no destination the
-                // slot was left empty; an icon that opens nothing is worse than none.
-                onMore = onOpenSettings,
-                viewAction = {
-                    // Selection is reachable without a long press, so the feature
-                    // is discoverable and can be driven by a test.
-                    HgIconButton(
-                        icon = HgIcons.SelectAll,
-                        contentDescription = stringResource(R.string.select),
-                        onClick = { model.selectAll(existingIds) },
-                        modifier = Modifier.testTag(HgTestTags.SELECT_BUTTON),
+            // The title carries the actions on its own row, as the reference draws it,
+            // and the chip row follows. The old order was toolbar, then title, which left
+            // an empty band above the heading and pushed the grid down by 56 dp.
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = hgSpacing.gutter, end = hgSpacing.gutter - 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(Modifier.weight(1f)) {
+                    HgScreenTitle(
+                        title = stringResource(R.string.tab_photos),
+                        subtitle = if (items.isNotEmpty()) summary else null,
                     )
-                    // A pinch alone is undiscoverable, and a gesture that cannot
-                    // be driven from a test is a gesture nobody checks. The
-                    // switch is the primary control; pinching remains available.
-                    HgIconButton(
-                        icon = if (monthView) HgIcons.GridDay else HgIcons.GridMonth,
-                        contentDescription = stringResource(
-                            if (monthView) R.string.view_day else R.string.view_month,
-                        ),
-                        onClick = { monthView = !monthView },
-                        modifier = Modifier.testTag(HgTestTags.VIEW_SWITCH),
-                    )
-                },
-                modifier = Modifier.padding(end = 6.dp),
-            )
-            HgScreenTitle(
-                title = stringResource(R.string.tab_photos),
-                subtitle = if (items.isNotEmpty()) summary else null,
-            )
-            Spacer(Modifier.height(14.dp))
+                }
+                // Selection is reachable without a long press, so the feature is
+                // discoverable and can be driven by a test.
+                HgIconButton(
+                    icon = HgIcons.SelectAll,
+                    contentDescription = stringResource(R.string.select),
+                    onClick = { model.selectAll(existingIds) },
+                    modifier = Modifier.testTag(HgTestTags.SELECT_BUTTON),
+                )
+                // A pinch alone is undiscoverable, and a gesture that cannot be driven
+                // from a test is a gesture nobody checks.
+                HgIconButton(
+                    icon = if (monthView) HgIcons.GridDay else HgIcons.GridMonth,
+                    contentDescription = stringResource(
+                        if (monthView) R.string.view_day else R.string.view_month,
+                    ),
+                    onClick = { monthView = !monthView },
+                    modifier = Modifier.testTag(HgTestTags.VIEW_SWITCH),
+                )
+                HgIconButton(
+                    icon = HgIcons.Search,
+                    contentDescription = stringResource(R.string.search),
+                    onClick = onSearch,
+                )
+                // The overflow slot holds Settings, as before. An icon that opens
+                // nothing is worse than no icon, so the slot keeps its destination.
+                HgIconButton(
+                    icon = HgIcons.More,
+                    contentDescription = stringResource(R.string.more_options),
+                    onClick = onOpenSettings,
+                )
             }
+
+            // The chip row. A tap filters the grid in place, which is what the chips
+            // imply; before this the row did not exist and the toolbar's filter slot
+            // opened search, so the control and its promise disagreed.
+            GalleryFilterChips(
+                items = items,
+                selected = filter,
+                onSelect = { filter = it },
+            )
+            Spacer(Modifier.height(10.dp))
+        }
         }
 
         // `weight(1f)` is what reserves room for the selection bar: with an
@@ -308,9 +344,16 @@ private fun SelectionAwarePhotos(
                 stringResource(R.string.error_media_title),
                 error ?: "",
             )
+            // A filter that matches nothing is not an empty library. Saying "no photos"
+            // here while the library holds twelve would be a false statement about the
+            // user's own data, so the two states are separate.
             items.isEmpty() -> MessageState(
                 stringResource(R.string.empty_photos_title),
                 stringResource(R.string.empty_photos_body),
+            )
+            visible.isEmpty() -> MessageState(
+                stringResource(R.string.filter_empty_title),
+                stringResource(R.string.filter_empty_body),
             )
             else -> Box(
                 Modifier
@@ -516,4 +559,84 @@ private fun MessageState(title: String, detail: String) {
             )
         }
     }
+}
+
+/**
+ * The chip row under the title.
+ *
+ * ## Why the chips carry counts
+ *
+ * A chip that says `Videos 2` answers a question before it is tapped. A chip that says
+ * `Videos` makes the user tap to find out, and a chip that filters to nothing looks
+ * broken until they learn otherwise.
+ *
+ * ## Why only some chips show a count
+ *
+ * `All` never shows one. Its count is the library size, which the subtitle already
+ * says, and repeating it puts a number on screen that can only ever match.
+ *
+ * The selected chip is filled with the accent and its label is drawn in `onAccent`.
+ * Selection is also announced through `semantics.selected`, so the state does not depend
+ * on colour alone.
+ */
+@Composable
+private fun GalleryFilterChips(
+    items: List<MediaItem>,
+    selected: GalleryFilter.Kind,
+    onSelect: (GalleryFilter.Kind) -> Unit,
+) {
+    val palette = hgColors
+    val shapes = hgShapes
+    val spacing = hgSpacing
+
+    LazyRow(
+        contentPadding = PaddingValues(horizontal = spacing.gutter),
+        horizontalArrangement = Arrangement.spacedBy(spacing.floatGap),
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag(HgTestTags.FILTER_CHIPS),
+    ) {
+        items(GalleryFilter.Kind.ordered, key = { it.name }) { kind ->
+            val isSelected = kind == selected
+            val label = stringResource(filterLabel(kind))
+            val count = remember(items, kind) { GalleryFilter.count(items, kind) }
+            val spoken = if (count != null) "$label, $count" else label
+
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(percent = 50))
+                    .background(if (isSelected) palette.accent else palette.surface)
+                    .then(
+                        if (isSelected) {
+                            Modifier
+                        } else {
+                            Modifier.border(1.dp, palette.divider, RoundedCornerShape(percent = 50))
+                        },
+                    )
+                    .clickable { onSelect(kind) }
+                    .semantics(mergeDescendants = true) {
+                        contentDescription = spoken
+                        this.selected = isSelected
+                        role = Role.Tab
+                    }
+                    .padding(horizontal = 14.dp, vertical = 8.dp)
+                    .testTag(HgTestTags.filterChip(kind.name)),
+            ) {
+                Text(
+                    text = if (count != null) "$label · $count" else label,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = if (isSelected) palette.onAccent else palette.textSecondary,
+                    maxLines = 1,
+                )
+            }
+        }
+    }
+}
+
+/** The string for each chip. Kept as one mapping so a new kind cannot be forgotten. */
+private fun filterLabel(kind: GalleryFilter.Kind): Int = when (kind) {
+    GalleryFilter.Kind.ALL -> R.string.filter_all
+    GalleryFilter.Kind.FAVOURITES -> R.string.filter_favourites
+    GalleryFilter.Kind.PHOTOS -> R.string.filter_photos
+    GalleryFilter.Kind.VIDEOS -> R.string.filter_videos
 }

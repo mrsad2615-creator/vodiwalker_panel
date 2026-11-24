@@ -117,6 +117,9 @@
     <string name="search_clear_filters">پاک کردن فیلترها</string>
     <string name="favourite_badge">موردعلاقه</string>
     <string name="favourite_failed">تغییر موردعلاقه انجام نشد. کتابخانه اجازه نداد.</string>
+    <string name="filter_empty_title">چیزی در این فیلتر نیست</string>
+    <string name="filter_empty_body">فیلتر دیگری را انتخاب کنید، یا «همه» را بزنید تا همه را ببینید.</string>
+    <string name="filter_all">همه</string>
     <string name="filter_photos">عکس‌ها</string>
     <string name="filter_videos">ویدیوها</string>
     <string name="filter_favourites">موردعلاقه‌ها</string>

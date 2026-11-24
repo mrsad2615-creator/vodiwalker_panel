@@ -638,6 +638,103 @@ class PlayerAudioPolicyTest {
     }
 }
 
+/**
+ * The gallery chips, as a table of cases.
+ *
+ * The defect these tests exist for: the chips were drawn in the toolbar with no filtering
+ * behind them, so a tap changed the chip and nothing else. A user read that as the
+ * application ignoring the tap.
+ */
+class GalleryFilterTest {
+
+    // Local helpers, built the same way the other suites build fixtures, so a new
+    // field on MediaItem cannot break this test for an unrelated reason.
+    private fun photoItem(id: Long, favourite: Boolean = false) = MediaItem(
+        id = id,
+        uri = "content://media/external/images/media/$id",
+        displayName = "IMG_$id.jpg",
+        mimeType = "image/jpeg",
+        sizeBytes = 1_000L,
+        dateTakenMs = 500,
+        width = 100,
+        height = 100,
+        isFavorite = favourite,
+    )
+
+    private fun clipItem(id: Long) = MediaItem(
+        id = id,
+        uri = "content://media/external/video/media/$id",
+        displayName = "VID_$id.mp4",
+        mimeType = "video/mp4",
+        sizeBytes = 1_000_000L,
+        dateTakenMs = 400,
+        width = 1920,
+        height = 1080,
+        durationMs = 60_000L,
+    )
+
+    private val photo = photoItem(1)
+    private val clip = clipItem(2)
+    private val favouritePhoto = photoItem(3, favourite = true)
+
+    private val all = listOf(photo, clip, favouritePhoto)
+
+    @Test
+    fun `all keeps everything and keeps the order`() {
+        assertEquals(listOf(1L, 2L, 3L), GalleryFilter.apply(all, GalleryFilter.Kind.ALL).map { it.id })
+    }
+
+    @Test
+    fun `favourites keeps only what is marked`() {
+        assertEquals(listOf(3L), GalleryFilter.apply(all, GalleryFilter.Kind.FAVOURITES).map { it.id })
+    }
+
+    @Test
+    fun `photos removes clips and videos keeps only clips`() {
+        assertEquals(listOf(1L, 3L), GalleryFilter.apply(all, GalleryFilter.Kind.PHOTOS).map { it.id })
+        assertEquals(listOf(2L), GalleryFilter.apply(all, GalleryFilter.Kind.VIDEOS).map { it.id })
+    }
+
+    @Test
+    fun `a filter that matches nothing returns nothing rather than everything`() {
+        // The dangerous failure is a filter that silently falls back to the full list,
+        // because an empty state is a clear answer and a full grid is a lie.
+        val noClips = listOf(photo)
+        assertEquals(emptyList<Long>(), GalleryFilter.apply(noClips, GalleryFilter.Kind.VIDEOS).map { it.id })
+    }
+
+    @Test
+    fun `the chips that can be empty show a count and all does not`() {
+        assertEquals(null, GalleryFilter.count(all, GalleryFilter.Kind.ALL))
+        assertEquals(1, GalleryFilter.count(all, GalleryFilter.Kind.VIDEOS))
+        assertEquals(2, GalleryFilter.count(all, GalleryFilter.Kind.PHOTOS))
+        assertEquals(1, GalleryFilter.count(all, GalleryFilter.Kind.FAVOURITES))
+        assertFalse(GalleryFilter.showsCount(GalleryFilter.Kind.ALL))
+    }
+
+    @Test
+    fun `the chip order is stable`() {
+        // A test pins the order because the accessibility and screenshot tests both
+        // address the chips by position.
+        assertEquals(
+            listOf(
+                GalleryFilter.Kind.ALL,
+                GalleryFilter.Kind.FAVOURITES,
+                GalleryFilter.Kind.PHOTOS,
+                GalleryFilter.Kind.VIDEOS,
+            ),
+            GalleryFilter.Kind.ordered,
+        )
+    }
+
+    @Test
+    fun `an empty library yields empty for every chip`() {
+        GalleryFilter.Kind.ordered.forEach { kind ->
+            assertEquals(emptyList<Long>(), GalleryFilter.apply(emptyList(), kind).map { it.id })
+        }
+    }
+}
+
 class AlbumRulesTest {
 
     private fun album(id: Long, name: String, ids: List<Long> = emptyList()) =

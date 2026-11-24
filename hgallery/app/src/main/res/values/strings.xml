@@ -112,6 +112,9 @@
     <string name="search_clear_filters">Clear filters</string>
     <string name="favourite_badge">Favourite</string>
     <string name="favourite_failed">Could not change the favourite. Your library did not allow the change.</string>
+    <string name="filter_empty_title">Nothing in this filter</string>
+    <string name="filter_empty_body">Choose another filter, or select All to see everything.</string>
+    <string name="filter_all">All</string>
     <string name="filter_photos">Photos</string>
     <string name="filter_videos">Videos</string>
     <string name="filter_favourites">Favourites</string>

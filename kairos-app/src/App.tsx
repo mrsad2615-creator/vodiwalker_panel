@@ -15,6 +15,7 @@ import { AnalyticsPage } from '@/features/analytics/AnalyticsPage';
 import { SettingsPage } from '@/features/settings/SettingsPage';
 import { ProjectsPage } from '@/features/projects/ProjectsPage';
 import { MotivationPage } from '@/features/motivation/MotivationPage';
+import { SampleSetup } from '@/components/settings/SampleSetup';
 
 type SplashPhase = 'playing' | 'exiting' | 'done';
 
@@ -49,7 +50,7 @@ function BootRecovery() {
 }
 
 function KairosRouter() {
-  const { ready, activeTab } = useApp();
+  const { ready, activeTab, settings } = useApp();
   const [phase, setPhase] = useState<SplashPhase>('playing');
   const [bootStalled, setBootStalled] = useState(false);
   const [fontsReady, setFontsReady] = useState(false);
@@ -123,7 +124,8 @@ function KairosRouter() {
         <LaunchScreen exiting={phase === 'exiting'} progress={progress} onSkip={handleSkipIntro} />
       )}
 
-      {shouldRenderApp && (
+      {shouldRenderApp && settings.sampleSetupComplete !== true && <SampleSetup />}
+      {shouldRenderApp && settings.sampleSetupComplete === true && (
         <AppShell>
           <AnimatePresence mode="wait" initial={false}>
             <motion.div

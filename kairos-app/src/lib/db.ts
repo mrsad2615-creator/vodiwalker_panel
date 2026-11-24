@@ -48,6 +48,8 @@ export const DEFAULT_SETTINGS: UserSettings = {
   hapticsEnabled: true,
   hasSampleData: false,
   sampleBannerDismissed: false,
+  sampleSetupComplete: false,
+  sampleVisible: true,
   aiEnabled: false,
   aiBaseUrl: '',
   aiModel: '',

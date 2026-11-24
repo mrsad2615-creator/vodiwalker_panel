@@ -39,6 +39,7 @@ import { Rail, RailRow } from '@/components/ui/Rail';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { sectionEyebrow } from '@/lib/sections';
 import { Numeric } from '@/components/ui/Numeric';
+import { ComparisonChart } from '@/components/charts/ComparisonChart';
 import { EmptyState } from '@/components/ui/EmptyState';
 
 type TaskViewMode = 'list' | 'kanban' | 'eisenhower' | 'archive';
@@ -388,6 +389,12 @@ export function TasksPage() {
           </button>
         }
       />
+
+      <ComparisonChart title="نمای وضعیت وظایف" subtitle="وظایف فعال؛ بایگانی در این نمودار شمرده نمی‌شود." unit="کار" data={[
+        { label: 'انجام‌نشده', value: counts.total - counts.done - counts.inProgress },
+        { label: 'در جریان', value: counts.inProgress },
+        { label: 'تکمیل‌شده', value: counts.done },
+      ]} />
 
       {/* View modes — editorial tabs on a rule, not a segmented pill */}
       <div className="grid grid-cols-4 border-b border-[var(--border)]">

@@ -1,3 +1,4 @@
+import { completeFirstRun } from '@/test/helpers/firstRun';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import App from '@/App';
@@ -11,6 +12,7 @@ import { db } from '@/lib/db';
 async function boot() {
   render(<App />);
   fireEvent.click(screen.getByRole('status', { name: /kairos/i }));
+    await completeFirstRun();
   await waitFor(() => expect(screen.getByText('پیشرفت امروز')).toBeInTheDocument());
 }
 

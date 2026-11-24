@@ -1,3 +1,4 @@
+import { completeFirstRun } from '@/test/helpers/firstRun';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import App from '@/App';
@@ -35,6 +36,7 @@ describe('sample project', () => {
     await db.settings.update('default', { hasSampleData: true });
     render(<App />);
     fireEvent.click(screen.getByRole('status', { name: /kairos/i }));
+    await completeFirstRun(true);
     await screen.findByTestId('home-ready');
     fireEvent.click(screen.getByRole('button', { name: 'بیشتر' }));
     fireEvent.click(await screen.findByRole('button', { name: 'بخش پروژه‌ها' }));

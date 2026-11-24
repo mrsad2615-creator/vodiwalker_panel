@@ -1,3 +1,4 @@
+import { completeFirstRun } from '@/test/helpers/firstRun';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import App from '@/App';
@@ -17,6 +18,7 @@ const today = getTodayKey();
 async function boot() {
   render(<App />);
   fireEvent.click(screen.getByRole('status', { name: /kairos/i }));
+    await completeFirstRun();
   await waitFor(() => expect(screen.getByTestId('home-ready')).toBeInTheDocument(), {
     timeout: 8000,
   });

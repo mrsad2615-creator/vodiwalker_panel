@@ -15,10 +15,11 @@ import {
 } from '@/components/ui/icons';
 import { deleteFocusSession, setTaskStatus, updateSettings } from '@/lib/db';
 import { useFocusSessions, useTasks } from '@/lib/queries';
-import { formatJalaaliShort, getTodayKey } from '@/lib/date';
+import { addDays, formatJalaaliShort, getTodayKey } from '@/lib/date';
 import { formatDurationShort } from '@/lib/format';
 import { useApp } from '@/context/AppContext';
 import { Numeric } from '@/components/ui/Numeric';
+import { ComparisonChart } from '@/components/charts/ComparisonChart';
 import { NumericInput } from '@/components/ui/NumericInput';
 import { CinematicFocusTimer } from '@/components/focus/CinematicFocusTimer';
 import { ChronoTimeline } from '@/components/focus/ChronoTimeline';
@@ -638,6 +639,11 @@ export function FocusPage() {
           <SoundStudio />
         </div>
       </section>
+
+      <ComparisonChart title="تمرکز هفت روز اخیر" subtitle="دقیقه‌های جلسه‌های ثبت‌شده در هر روز؛ زمان در حال اجرا تا ثبت‌شدن محاسبه نمی‌شود." unit="دقیقه" data={Array.from({ length: 7 }, (_, index) => {
+        const date = addDays(todayKey, index - 6);
+        return { label: formatJalaaliShort(date), value: Math.round(sessions.filter((session) => session.dateKey === date).reduce((total, session) => total + session.durationMinutes, 0)) };
+      })} />
 
       {/* ── LINKED TASK — one line on the rule ─────────────────────────────── */}
       <div className="flex items-center gap-3 border-y border-[var(--border)] py-2.5">

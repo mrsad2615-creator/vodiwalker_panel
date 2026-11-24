@@ -1,3 +1,4 @@
+import { ComparisonChart } from '@/components/charts/ComparisonChart';
 import { useMemo, useState } from 'react';
 import {
   Archive,
@@ -380,6 +381,15 @@ export function HabitsPage() {
           </button>
         }
       />
+
+      <ComparisonChart title="وضعیت عادت‌ها در روز انتخاب‌شده" subtitle="فقط عادت‌های برنامه‌ریزی‌شده برای این روز شمرده می‌شوند." unit="عادت" data={(() => {
+        const scheduled = activeHabits.filter((habit) => isHabitScheduledOnDate(habit, selectedDateKey));
+        const count = (status: HabitLog['status'] | undefined) => scheduled.filter((habit) => logLookup.get(`${habit.id}::${selectedDateKey}`)?.status === status).length;
+        return [
+          { label: 'انجام‌شده', value: count('completed') }, { label: 'ناقص', value: count('partial') },
+          { label: 'انجام‌نشده', value: count('missed') }, { label: 'ثبت‌نشده', value: count(undefined) },
+        ];
+      })()} />
 
       {/* EXECUTIVE DAILY COMMAND BAR (Date Stepper + Live Daily Mastery) */}
       <LuxuryCard variant="hero" className="space-y-3.5 p-4">

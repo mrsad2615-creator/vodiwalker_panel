@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Check, Plus, Trash2 } from '@/components/ui/icons';
 import { Numeric } from '@/components/ui/Numeric';
+import { ComparisonChart } from '@/components/charts/ComparisonChart';
 import { Rail, RailRow } from '@/components/ui/Rail';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { ModalSheet } from '@/components/ui/ModalSheet';
@@ -47,7 +48,7 @@ export function ProjectsPage() {
   const [creating, setCreating] = useState(false);
   const [confirmSample, setConfirmSample] = useState(false);
   const [sampleBusy, setSampleBusy] = useState(false);
-  const { pushToast } = useApp();
+  const { pushToast, settings } = useApp();
   const hasSampleProject = projects.some((project) => project.id === SAMPLE_PROJECT_ID && project.sample === true);
 
   const createSample = async () => {
@@ -96,7 +97,14 @@ export function ProjectsPage() {
       />
 
 
-      {!hasSampleProject && (confirmSample ? (
+      <ComparisonChart title="وضعیت پروژه‌ها" subtitle="تعداد پروژه‌ها بر اساس وضعیت؛ پروژه‌های بایگانی جداگانه شمرده می‌شوند." unit="پروژه" data={[
+        { label: 'فعال', value: projects.filter((project) => project.status === 'active').length },
+        { label: 'متوقف', value: projects.filter((project) => project.status === 'paused').length },
+        { label: 'تمام‌شده', value: projects.filter((project) => project.status === 'done').length },
+        { label: 'بایگانی', value: archived.length },
+      ]} />
+
+      {!hasSampleProject && settings.sampleVisible !== false && (confirmSample ? (
         <div role="region" aria-label="تأیید پروژهٔ نمونه" className="space-y-2 rounded-xl border border-[var(--border)] bg-[var(--surface-1)] p-3 text-[11px] leading-6">
           <p>یک پروژهٔ ساختگی با سه مرحله و دو کار نمونه اضافه می‌شود. داده‌های فعلی تغییر نمی‌کنند؛ آمار می‌تواند ترکیبی شود.</p>
           <div className="flex gap-2">

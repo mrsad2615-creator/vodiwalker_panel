@@ -230,6 +230,10 @@ export interface UserSettings {
   /** Tracks whether starter sample dataset is currently active */
   hasSampleData: boolean;
   sampleBannerDismissed: boolean;
+  /** A one-time first-run/upgrade choice, separate from whether rows exist. */
+  sampleSetupComplete?: boolean;
+  /** Hide marked samples from normal views and analytics without deleting them. */
+  sampleVisible?: boolean;
   /** Four customizable shortcuts; home and the directory are fixed. */
   navShortcuts?: NavTab[];
   motivationFavorites?: string[];

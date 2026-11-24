@@ -259,7 +259,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
         )}
 
-        {settings.hasSampleData && (
+        {settings.hasSampleData && settings.sampleVisible !== false && (
           <div role="status" className="mx-4 mt-3 rounded-xl border border-[var(--accent-fg)]/25 bg-[var(--surface-1)] px-3 py-2 text-[10px] leading-5 text-[var(--text-2)]">
             داده‌های نمونه فعال‌اند؛ آمار و تحلیل‌ها می‌توانند ترکیبی از اطلاعات واقعی و ساختگی باشند.
           </div>

@@ -1,3 +1,4 @@
+import { completeFirstRun } from '@/test/helpers/firstRun';
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 vi.mock('@capacitor/filesystem', () => ({ Filesystem: { writeFile: vi.fn() }, Directory: { Cache: 'CACHE' } }));
@@ -117,6 +118,7 @@ describe('restore confirmation', () => {
     backup.tasks.push({ ...current, id: 'incoming', title: 'از فایل' });
     render(<App />);
     fireEvent.click(screen.getByRole('status', { name: /kairos/i }));
+    await completeFirstRun();
     await screen.findByTestId('home-ready');
     fireEvent.click(screen.getByRole('button', { name: 'بیشتر' }));
     fireEvent.click(await screen.findByRole('button', { name: /^بخش تنظیمات$/ }));
@@ -142,6 +144,7 @@ describe('offline local workflow', () => {
     await db.settings.clear();
     render(<App />);
     fireEvent.click(screen.getByRole('status', { name: /kairos/i }));
+    await completeFirstRun();
     await screen.findByTestId('home-ready');
     expect(await db.tasks.count()).toBe(0);
     expect(await db.habits.count()).toBe(0);
@@ -159,6 +162,7 @@ describe('offline local workflow', () => {
       await db.settings.update('default', { aiEnabled: true, aiKey: 'old-key', aiModel: 'old' });
       render(<App />);
       fireEvent.click(screen.getByRole('status', { name: /kairos/i }));
+    await completeFirstRun();
       await screen.findByTestId('home-ready');
       fireEvent.click(screen.getByRole('button', { name: 'وظایف' }));
       await screen.findByText('مدیریت وظایف');

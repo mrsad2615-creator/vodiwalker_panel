@@ -1,3 +1,4 @@
+import { completeFirstRun } from '@/test/helpers/firstRun';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import App from '@/App';
@@ -17,6 +18,7 @@ beforeEach(async () => {
 async function boot() {
   render(<App />);
   fireEvent.click(screen.getByRole('status', { name: /kairos/i }));
+    await completeFirstRun();
   await screen.findByTestId('home-ready');
 }
 

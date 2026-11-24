@@ -11,6 +11,13 @@ import type {
   UserSettings,
 } from '@/types/domain';
 import { db, DEFAULT_SETTINGS } from './db';
+import type { Table } from 'dexie';
+
+/** Shared by every normal view, search, recommendations and reminder scheduling. */
+async function visibleRows<T extends { sample?: boolean }>(table: Table<T, string>): Promise<T[]> {
+  const [rows, settings] = await Promise.all([table.toArray(), db.settings.get('default')]);
+  return settings?.sampleVisible === false ? rows.filter((row) => row.sample !== true) : rows;
+}
 
 const EMPTY_TASKS: Task[] = [];
 const EMPTY_HABITS: Habit[] = [];
@@ -21,23 +28,23 @@ const EMPTY_PROJECTS: Project[] = [];
 const EMPTY_STAGES: ProjectStage[] = [];
 
 export function useTasks(): Task[] {
-  return useLiveQuery(() => db.tasks.toArray(), [], EMPTY_TASKS);
+  return useLiveQuery(() => visibleRows(db.tasks), [], EMPTY_TASKS);
 }
 
 export function useHabits(): Habit[] {
-  return useLiveQuery(() => db.habits.toArray(), [], EMPTY_HABITS);
+  return useLiveQuery(() => visibleRows(db.habits), [], EMPTY_HABITS);
 }
 
 export function useHabitLogs(): HabitLog[] {
-  return useLiveQuery(() => db.habitLogs.toArray(), [], EMPTY_HABIT_LOGS);
+  return useLiveQuery(() => visibleRows(db.habitLogs), [], EMPTY_HABIT_LOGS);
 }
 
 export function useFocusSessions(): FocusSession[] {
-  return useLiveQuery(() => db.focusSessions.toArray(), [], EMPTY_FOCUS_SESSIONS);
+  return useLiveQuery(() => visibleRows(db.focusSessions), [], EMPTY_FOCUS_SESSIONS);
 }
 
 export function useGoals(): Goal[] {
-  return useLiveQuery(() => db.goals.toArray(), [], EMPTY_GOALS);
+  return useLiveQuery(() => visibleRows(db.goals), [], EMPTY_GOALS);
 }
 
 export function useSettings(): UserSettings {
@@ -57,11 +64,11 @@ export function useSettings(): UserSettings {
 const EMPTY_JOURNAL: JournalEntry[] = [];
 
 export function useProjects(): Project[] {
-  return useLiveQuery(() => db.projects.toArray(), [], EMPTY_PROJECTS);
+  return useLiveQuery(() => visibleRows(db.projects), [], EMPTY_PROJECTS);
 }
 
 export function useProjectStages(): ProjectStage[] {
-  return useLiveQuery(() => db.projectStages.toArray(), [], EMPTY_STAGES);
+  return useLiveQuery(() => visibleRows(db.projectStages), [], EMPTY_STAGES);
 }
 
 export function useJournal(): JournalEntry[] {

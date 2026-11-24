@@ -1,3 +1,4 @@
+import { completeFirstRun } from '@/test/helpers/firstRun';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
@@ -34,6 +35,7 @@ describe('Top bar behaves like a product, not a fixed slab', () => {
   it('tucks itself away on scroll down and returns on scroll up', async () => {
     render(<App />);
     fireEvent.click(screen.getByRole('status', { name: /kairos/i }));
+    await completeFirstRun();
     await waitFor(() => expect(screen.getByText('پیشرفت امروز')).toBeInTheDocument());
 
     expect(document.querySelector('main.app-scroll')).not.toBeNull();

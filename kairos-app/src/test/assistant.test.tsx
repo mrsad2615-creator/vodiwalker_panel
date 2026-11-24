@@ -1,3 +1,4 @@
+import { completeFirstRun } from '@/test/helpers/firstRun';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import App from '@/App';
@@ -13,6 +14,7 @@ import { addDays, getTodayKey } from '@/lib/date';
 async function boot() {
   render(<App />);
   fireEvent.click(screen.getByRole('status', { name: /kairos/i }));
+    await completeFirstRun();
   await waitFor(() => expect(screen.getByTestId('home-ready')).toBeInTheDocument(), {
     timeout: 8000,
   });
@@ -85,7 +87,7 @@ describe('projects room', () => {
     expect(stage.projectId).toBe((await db.projects.toArray())[0].id);
 
     // Completing the only stage must move the bar to 100.
-    fireEvent.click(screen.getByRole('button', { name: 'فصل اول باز' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'فصل اول باز' }));
     await waitFor(async () => {
       const updated = await db.projectStages.get(stage.id);
       expect(updated?.done).toBe(true);
@@ -264,6 +266,7 @@ describe('command centre', () => {
     await boot();
     fireEvent.click(screen.getByRole('button', { name: 'مرکز فرمان' }));
 
+    await waitFor(() => expect(screen.getByTestId('manager-brief')).toHaveTextContent('مالیات'));
     const input = await screen.findByLabelText('فرمان');
     fireEvent.change(input, { target: { value: 'کدام کارها عقب افتاده؟' } });
     fireEvent.click(screen.getByRole('button', { name: 'بپرس' }));

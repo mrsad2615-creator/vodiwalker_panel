@@ -12,7 +12,7 @@ function seededUnit(seed: number): number {
   return x - Math.floor(x);
 }
 
-export async function populateStarterWorkspace(todayKey: string = getTodayKey()): Promise<void> {
+export async function populateStarterWorkspace(todayKey: string = getTodayKey(), completeSetup = false): Promise<void> {
   const nowIso = new Date().toISOString();
   const startHistoryDate = addDays(todayKey, -95);
 
@@ -561,7 +561,8 @@ export async function populateStarterWorkspace(todayKey: string = getTodayKey())
       await insertSampleProject(todayKey);
       await db.settings.put({
         ...DEFAULT_SETTINGS, ...(existingSettings ?? {}), id: 'default',
-        hasSampleData: true, sampleBannerDismissed: false, updatedAt: nowIso,
+        hasSampleData: true, sampleBannerDismissed: false, sampleVisible: true,
+        ...(completeSetup ? { sampleSetupComplete: true } : {}), updatedAt: nowIso,
       });
     }
   );

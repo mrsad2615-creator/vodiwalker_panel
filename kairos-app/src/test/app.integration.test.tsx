@@ -1,3 +1,4 @@
+import { completeFirstRun } from '@/test/helpers/firstRun';
 import { useState } from 'react';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
@@ -43,6 +44,7 @@ describe('KAIROS Full Application End-to-End Flow', () => {
 
     // Tap splash to skip directly into Dashboard
     fireEvent.click(splash);
+    await completeFirstRun();
     await waitFor(() => {
       expect(screen.getByText('پیشرفت امروز')).toBeInTheDocument();
     });

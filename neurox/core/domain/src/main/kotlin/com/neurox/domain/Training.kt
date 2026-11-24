@@ -12,7 +12,8 @@ enum class Exercise(val module: Module) {
     VISUAL_SEARCH(Module.VISION), GO_NO_GO(Module.REFLEX),
     PHRASE_READING(Module.READ), WORD_SPRINT(Module.TYPE),
     PATTERN_MATCH(Module.VISION), SHAPE_REACTION(Module.REFLEX),
-    RSVP_READER(Module.READ), CODE_TYPING(Module.TYPE)
+    RSVP_READER(Module.READ), CODE_TYPING(Module.TYPE),
+    COLOR_REACTION(Module.REFLEX), DIRECTION_MATCH(Module.REFLEX)
 }
 enum class Language { FA, EN }
 enum class Phase { WAITING, ACTIVE, QUESTION, PAUSED, COMPLETE, ABORTED }
@@ -105,6 +106,8 @@ data class SessionView(
     val sprintWordCount: Int,
     val pattern: PatternTrial?,
     val reactionShape: ReactionShape?,
+    val reactionColor: ReactionColor?,
+    val directionTrial: DirectionTrial?,
     val customName: String?,
     val practice: Boolean,
 )
@@ -137,6 +140,8 @@ class TrainingEngine(
     private var wordAnchor = anchor
     private var patternTrial: PatternTrial? = null
     private var reactionShape: ReactionShape? = null
+    private var reactionColor: ReactionColor? = null
+    private var directionTrial: DirectionTrial? = null
 
     init {
         require(config.validate().isEmpty()) { config.validate().joinToString() }
@@ -154,7 +159,10 @@ class TrainingEngine(
         searchBoard = if (config.exercise == Exercise.VISUAL_SEARCH) Stimuli.search(config, attempts.size) else null
         patternTrial = if (config.exercise == Exercise.PATTERN_MATCH) AdditionalStimuli.pattern(config, attempts.size) else null
         reactionShape = if (config.exercise == Exercise.SHAPE_REACTION) AdditionalStimuli.shape(config, attempts.size) else null
-        targetCell = searchBoard?.targetCell ?: patternTrial?.correctOption ?: reactionShape?.ordinal ?: random.nextInt(16)
+        reactionColor = if (config.exercise == Exercise.COLOR_REACTION) AdditionalStimuli.color(config, attempts.size) else null
+        directionTrial = if (config.exercise == Exercise.DIRECTION_MATCH) AdditionalStimuli.direction(config, attempts.size) else null
+        targetCell = searchBoard?.targetCell ?: patternTrial?.correctOption ?: reactionShape?.ordinal ?:
+            reactionColor?.ordinal ?: directionTrial?.direction?.ordinal ?: random.nextInt(16)
         phraseIndex = 0
         phraseAnchor = now
         phraseChunks = when (config.exercise) {
@@ -236,7 +244,7 @@ class TrainingEngine(
             record(Attempt(Outcome.PREMATURE, null), now)
         } else if (phase == Phase.ACTIVE) {
             val allowed = when (config.exercise) {
-                Exercise.PATTERN_MATCH -> 0..3
+                Exercise.PATTERN_MATCH, Exercise.COLOR_REACTION, Exercise.DIRECTION_MATCH -> 0..3
                 Exercise.SHAPE_REACTION -> 0..2
                 else -> 0..15
             }
@@ -309,7 +317,9 @@ class TrainingEngine(
                 phraseChunks[phraseIndex], phraseIndex + 1, phraseChunks.size,
                 phraseDisplayMs(phraseChunks[phraseIndex])) else null,
             (sprintMeasurements.size + 1).coerceAtMost(sprintWords.size), sprintWords.size, patternTrial,
-            if (phase == Phase.ACTIVE) reactionShape else null, config.customExerciseName, config.practice)
+            if (phase == Phase.ACTIVE) reactionShape else null,
+            if (phase == Phase.ACTIVE) reactionColor else null,
+            if (phase == Phase.ACTIVE) directionTrial else null, config.customExerciseName, config.practice)
     }
     fun checkpoint() = Checkpoint(config, attempts, total(now()), phase == Phase.COMPLETE)
 }

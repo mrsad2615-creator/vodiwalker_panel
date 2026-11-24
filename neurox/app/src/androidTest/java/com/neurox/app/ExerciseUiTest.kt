@@ -32,4 +32,18 @@ class ExerciseUiTest : NeuroxUiFixture() {
         compose.onNodeWithText("خواندم؛ نمایش پرسش").assertDoesNotExist()
         compose.onNodeWithText(requireNotNull(model.training.value?.phrase).text).assertIsDisplayed()
     }
+    @Test fun directionalAndColorExercisesExposeRealChoicesAndPause() {
+        for (exercise in listOf(Exercise.COLOR_REACTION, Exercise.DIRECTION_MATCH)) {
+            compose.runOnUiThread { model.start(exercise, 3, 1) }
+            compose.waitUntil(10_000) { model.training.value?.exercise == exercise }
+            val labels = if (exercise == Exercise.COLOR_REACTION) listOf("قرمز", "آبی", "سبز", "زرد") else listOf("بالا", "راست", "پایین", "چپ")
+            labels.forEach { compose.onNodeWithText(it).assertExists() }
+            compose.onNodeWithText("مکث").performScrollTo().performClick()
+            compose.onNodeWithText("جلسه متوقف است").assertIsDisplayed()
+            // End before the next iteration; a second start must not bypass an interrupted session.
+            compose.runOnUiThread { model.discard() }
+            compose.waitUntil(10_000) { !model.state.value.busy && model.training.value == null }
+        }
+    }
+
 }

@@ -24,7 +24,7 @@
 | S-019 | Do not let a waiting tap activate its own GO. Reject callbacks from old input revisions. | Core tests |
 | S-020 | Show every three-word phrase for its minimum display interval. Do not skip phrases after a delayed tick. Calculate WPM from actual display time. | Core tests; physical presentation timing pending |
 | S-021 | Complete a sprint round only after every word is submitted. Limit each word input to 64 UTF-16 code units. Aggregate correct characters, errors and weak keys. | Core tests |
-| S-022 | Read checkpoint versions 1, 2 and 3. Write version 3 with seed, criteria, source snapshot and practice flag. | Android codec tests supplied, not run |
+| S-022 | Read checkpoint versions 1, 2 and 3. Write version 3 with seed, criteria, source snapshot and practice flag. | Android codec cases executed in CI run 45481036708 |
 
 | S-023 | Generate four unique equal-density pattern choices with one exact match. | Core tests |
 | S-024 | Hide a shape cue during WAITING. Score only the selected matching shape after publication. | Core tests |

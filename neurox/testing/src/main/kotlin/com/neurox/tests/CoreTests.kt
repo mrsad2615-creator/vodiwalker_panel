@@ -106,7 +106,7 @@ fun main() {
     case("dark accent corrected to readable contrast") { check(ColorMath.contrast(ColorMath.accessibleAccent(0xFF171717, 0xFF181B20, true), 0xFF181B20) >= 4.5) }
     case("light accent corrected to readable contrast") { check(ColorMath.contrast(ColorMath.accessibleAccent(0xFFFFFFEE, 0xFFEDE6DA, false), 0xFFEDE6DA) >= 4.5) }
     case("valid accent not changed") { eq(0xFFD4B982, ColorMath.accessibleAccent(0xFFD4B982, 0xFF181B20, true)) }
-    case("all catalogue exercises have instructions and both languages") { eq(Exercise.entries.toSet(), Catalogue.runnable.map { it.exercise }.toSet()); eq(12, Catalogue.runnable.size); Catalogue.runnable.forEach { check(it.fa.isNotBlank() && it.en.isNotBlank() && it.instructionFa.isNotBlank() && it.instructionEn.isNotBlank()) } }
+    case("all catalogue exercises have instructions and both languages") { eq(Exercise.entries.toSet(), Catalogue.runnable.map { it.exercise }.toSet()); eq(14, Catalogue.runnable.size); Catalogue.runnable.forEach { check(it.fa.isNotBlank() && it.en.isNotBlank() && it.instructionFa.isNotBlank() && it.instructionEn.isNotBlank()) } }
     case("reading material has valid answer schemas") { Language.entries.flatMap { Content.passages(it) }.forEach { check(it.options.size == 3 && it.correctOption in it.options.indices && wordCount(it.text) > 10) } }
     case("word count handles Unicode whitespace") { eq(3, wordCount("  one\ttwo\nthree ")); eq(0, wordCount("   ")) }
     val password = "a long offline password".toCharArray()
@@ -128,6 +128,7 @@ fun main() {
     case("vault does not mutate caller password") { eq("a long offline password", String(password)) }
     exerciseExpansionTests()
     builderAndMatchingTests()
+    colorAndDirectionTests()
     println("\nRESULT: $passed passed, $failed failed")
     check(failed == 0) { "$failed test cases failed" }
 }

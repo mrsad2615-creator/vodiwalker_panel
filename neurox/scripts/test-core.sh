@@ -15,3 +15,5 @@ mapfile -t SOURCES < <(find "$PROJECT/core/domain/src/main" "$PROJECT/backup/cry
 python "$PROJECT/scripts/check-project.py"
 
 python "$PROJECT/scripts/test-migration-sql.py"
+
+python -m unittest discover -s "$PROJECT/testing" -p 'test_*.py'

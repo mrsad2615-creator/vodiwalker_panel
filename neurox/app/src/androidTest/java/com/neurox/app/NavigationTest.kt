@@ -10,7 +10,7 @@ import org.junit.runner.RunWith
 class NavigationTest : NeuroxUiFixture() {
     @Test fun homeOpensAnActualExercise() {
         compose.waitUntil(10_000) { compose.onAllNodesWithText("VISION").fetchSemanticsNodes().isNotEmpty() }
-        compose.onNodeWithText("VISION").performClick()
+        compose.onNodeWithText("VISION").performScrollTo().assertIsDisplayed().performClick()
         compose.waitUntil(10_000) { compose.onAllNodesWithText("آغاز جلسه").fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithText("آغاز جلسه").performScrollTo().assertIsEnabled()
         compose.onNodeWithText("آغاز جلسه").performClick()

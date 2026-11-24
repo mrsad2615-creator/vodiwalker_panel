@@ -1,4 +1,4 @@
-# Architecture — milestone 0.3
+# Architecture — milestone 0.4
 
 ## Dependency graph
 
@@ -32,7 +32,7 @@ Persist each round and each pause. A sudden process kill can lose a pending writ
 
 ## Scope boundaries
 
-This milestone shares session orchestration across twelve exercise paths. It does not yet provide the complete independent engine/plugin modules for all 34 exercise types. Split those paths behind explicit engine interfaces as the next exercise families are added. Split repository responsibilities before the vault, quest and custom-builder features are integrated. Add modules only when they own implemented behavior. Do not create empty module trees to imply completion.
+This milestone shares session orchestration across fourteen exercise paths. It does not yet provide the complete independent engine/plugin modules for all 34 exercise types. Split those paths behind explicit engine interfaces as the next exercise families are added. Split repository responsibilities before the vault, quest and custom-builder features are integrated. Add modules only when they own implemented behavior. Do not create empty module trees to imply completion.
 
 ## Documentation language
 

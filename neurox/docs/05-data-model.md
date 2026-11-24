@@ -16,13 +16,13 @@ A checkpoint has a format version, validated configuration, attempt list, elapse
 
 Use one transaction for session completion. Ignore repeated completion callbacks. Ignore checkpoints older than durable progress. Derive total XP from completed session rows. Do not create a second mutable reward total.
 
-Room schema export is configured. A successful Android build must generate the version-2 schema JSON. Exported schemas have not yet been checked into this branch. Commit the generated schema after the first successful native build. Add explicit migration tests before a version-2 change. Never enable destructive migration as an upgrade strategy.
+Room schema export is configured. Successful native CI generated the version-2 schema JSON. The first API export was truncated and was rejected. The complete chunked export from successful native run 45482317590 is now checked in at `core/data/schemas/com.neurox.data.NeuroxDatabase/2.json` (identity hash `cfc53d208dc748bbea7b91f8748a7636`). The local evidence reader validated the export before saving it. The instrumented 1-to-2 migration case passed in run 45481036708. Add explicit migrations and tests for future database versions. Never enable destructive migration as an upgrade strategy.
 
 Epoch timestamps use UTC instants. Calendar groups use the current device timezone. Moving between timezones can change a displayed training date. Active duration never uses calendar time.
 
 ## Checkpoint format 2
 
-Version 2 adds a signed 64-bit `stimulusSeed` to configuration. Version-1 data remains readable with seed 0. No Room table change is needed; the database remains at schema version 1. The encoder always writes checkpoint version 2. Do not rewrite old completed session summaries merely to change checkpoint version.
+Version 2 adds a signed 64-bit `stimulusSeed` to configuration. Version-1 data remains readable with seed 0. That historical checkpoint change required no Room table change. The current database is version 2 and the current encoder writes checkpoint version 3. Do not rewrite old completed session summaries merely to change checkpoint version.
 
 `WITHHELD` is a correct GO/NO-GO inhibition, not a measured reaction. It has a null response latency. Validation rejects this outcome for other exercises and for scheduled GO trials. Include it in accuracy; exclude it from latency mean and deviation. Do not award a completed inactive session XP without any timed response.
 

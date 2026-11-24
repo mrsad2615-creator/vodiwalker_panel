@@ -7,8 +7,8 @@ internal fun exerciseExpansionTests() {
         eq(4, Catalogue.primary.size)
         eq(Module.entries.toSet(), Catalogue.primary.map { it.exercise.module }.toSet())
     }
-    case("each module exposes three distinct executable exercises") {
-        Module.entries.forEach { module -> eq(3, Catalogue.runnable.count { it.exercise.module == module }) }
+    case("catalogue exposes implemented per-module exercise counts") {
+        Module.entries.forEach { module -> eq(if (module == Module.REFLEX) 5 else 3, Catalogue.runnable.count { it.exercise.module == module }) }
     }
     case("unpublished GO cannot be triggered by its own tap") {
         val clock = Clock()
@@ -323,7 +323,7 @@ internal fun exerciseExpansionTests() {
         rejects { Checkpoint(config, listOf(Attempt(Outcome.WITHHELD, null)), 5000, true) }
     }
 
-    case("all twelve exercises complete across languages and supported levels") {
+    case("all fourteen exercises complete across languages and supported levels") {
         for (exercise in Exercise.entries) for (language in Language.entries) for (difficulty in 1..5) {
             if (exercise == Exercise.COMPREHENSION && difficulty != 1) continue
             val clock = Clock()
@@ -338,7 +338,7 @@ internal fun exerciseExpansionTests() {
                     Phase.QUESTION -> { clock.advance(1000); e.answer(frame.passage.correctOption, frame.inputRevision) }
                     Phase.ACTIVE -> when (exercise.module) {
                         Module.VISION -> { clock.advance(1000); e.tap(frame.targetCell, frame.inputRevision) }
-                        Module.REFLEX -> if (frame.goSignal) { clock.advance(300); e.tap(if (exercise == Exercise.SHAPE_REACTION) frame.reactionShape!!.ordinal else null, frame.inputRevision) }
+                        Module.REFLEX -> if (frame.goSignal) { clock.advance(300); e.tap(if (exercise in listOf(Exercise.QUICK_TAP, Exercise.GO_NO_GO)) null else frame.targetCell, frame.inputRevision) }
                             else { clock.advance(5000); e.tick() }
                         Module.READ -> if (exercise in listOf(Exercise.PHRASE_READING, Exercise.RSVP_READER)) {
                             clock.advance(frame.phrase!!.minimumDisplayMs); e.tick()
@@ -366,7 +366,7 @@ internal fun exerciseExpansionTests() {
                     Phase.QUESTION -> e.answer(frame.passage.correctOption)
                     Phase.ACTIVE -> when (exercise.module) {
                         Module.VISION -> { clock.advance(1000); e.tap(frame.targetCell) }
-                        Module.REFLEX -> if (frame.goSignal) { clock.advance(200); e.tap(if (exercise == Exercise.SHAPE_REACTION) frame.reactionShape!!.ordinal else null) } else { clock.advance(5000); e.tick() }
+                        Module.REFLEX -> if (frame.goSignal) { clock.advance(200); e.tap(if (exercise in listOf(Exercise.QUICK_TAP, Exercise.GO_NO_GO)) null else frame.targetCell) } else { clock.advance(5000); e.tick() }
                         Module.READ -> if (exercise in listOf(Exercise.PHRASE_READING, Exercise.RSVP_READER)) { clock.advance(2000); e.tick() }
                             else { clock.advance(1000); e.showQuestion() }
                         Module.TYPE -> { clock.advance(1000); e.submitTyping(frame.typingTarget) }

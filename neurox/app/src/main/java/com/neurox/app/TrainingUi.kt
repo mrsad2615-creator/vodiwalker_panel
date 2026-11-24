@@ -176,6 +176,39 @@ internal fun TrainingRun(state: AppState, vm: AppViewModel) {
                     }
                 }
             }
+            Exercise.COLOR_REACTION -> {
+                Panel {
+                    Box(Modifier.fillMaxWidth().heightIn(min = 150.dp), contentAlignment = Alignment.Center) {
+                        val signal = current.reactionColor
+                        if (signal == null) Text(tr("منتظر رنگ بمانید", "Wait for the color")) else ColorSignal(signal, Modifier.size(100.dp))
+                    }
+                    ReactionColor.entries.forEach { color ->
+                        OutlinedButton(onClick = { vm.tap(color.ordinal, current.inputRevision) }, modifier = Modifier.fillMaxWidth()) {
+                            ColorSignal(color, Modifier.size(24.dp))
+                            Spacer(Modifier.width(12.dp))
+                            Text(colorName(color))
+                        }
+                    }
+                    Text(tr("نام رنگ نشانه برای صفحه‌خوان فراهم است؛ نتایج با و بدون ابزار کمکی مستقیماً قابل مقایسه نیستند.", "The signal exposes its color name to screen readers. Assisted and unassisted results are not directly comparable."), style = MaterialTheme.typography.bodySmall)
+                }
+            }
+            Exercise.DIRECTION_MATCH -> {
+                Panel {
+                    DirectionSignal(current.directionTrial, Modifier.fillMaxWidth().height(190.dp))
+                    // Physical left/right must not follow the locale's layout mirroring.
+                    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+                            DirectionAnswer(PhysicalDirection.UP, current, vm)
+                            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                                DirectionAnswer(PhysicalDirection.LEFT, current, vm)
+                                DirectionAnswer(PhysicalDirection.DOWN, current, vm)
+                                DirectionAnswer(PhysicalDirection.RIGHT, current, vm)
+                            }
+                        }
+                    }
+                    Text(tr("جهت نوک پیکان مهم است، نه جای آن.", "Match the arrow's direction, not its position."))
+                }
+            }
             Exercise.QUICK_TAP, Exercise.GO_NO_GO -> {
                 val active = current.phase == Phase.ACTIVE
                 val go = active && (exercise == Exercise.QUICK_TAP || current.goSignal)

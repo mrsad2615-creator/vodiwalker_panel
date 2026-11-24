@@ -340,6 +340,12 @@ if [ "$FRAMES" -eq 0 ]; then
   for attempt in 1 2; do
     adb shell am force-stop "$PKG"
     adb shell am start -n "$PKG/$ACTIVITY" --ef hgallery.capture.ignitionScale 4 > /dev/null 2>&1
+    sleep 1
+    # The scale the application actually read, before judging the picture. Without this
+    # line a failed capture is ambiguous between "the extra did not arrive" and "the
+    # camera is too slow", and the two have different fixes.
+    adb logcat -d -t 200 2>/dev/null | grep "HGalleryIgnition" | tail -1 \
+      | while IFS= read -r line; do echo "::notice title=e2e::$line"; done
     adb shell screencap -p "$DEVICE_DIR/44-launch-sequence-4x.png" >/dev/null 2>&1
     if adb shell test -s "$DEVICE_DIR/44-launch-sequence-4x.png"; then
       # A still of the finished grid is not a still of the launch. The cover is the only

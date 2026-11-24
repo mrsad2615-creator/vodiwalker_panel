@@ -88,10 +88,16 @@ fun HGalleryApp(container: AppContainer) {
     // the evidence file is named for the factor. Read once, at composition.
     val context = LocalContext.current
     val ignitionCaptureScale = remember(context) {
-        (context as? android.app.Activity)
-            ?.intent
-            ?.getFloatExtra(HG_IGNITION_SCALE_EXTRA, 1f)
-            ?: 1f
+        val activity = context as? android.app.Activity
+        val read = activity?.intent?.getFloatExtra(HG_IGNITION_SCALE_EXTRA, 1f) ?: 1f
+        // Logged because it was silent once and cost three runs. A capture-time scale
+        // that does not arrive looks exactly like a capture that is too slow, and the
+        // two have different fixes.
+        android.util.Log.i(
+            "HGalleryIgnition",
+            "captureScale=$read extras=${activity?.intent?.extras?.keySet()?.joinToString()}",
+        )
+        read
     }
 
     val items by container.mediaStore.items.collectAsStateWithLifecycle()

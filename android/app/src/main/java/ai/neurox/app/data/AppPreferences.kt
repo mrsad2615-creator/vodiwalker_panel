@@ -3,6 +3,7 @@ package ai.neurox.app.data
 import android.content.Context
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -15,6 +16,13 @@ class AppPreferences(private val context: Context) {
     private val languageKey = stringPreferencesKey("language")
     private val themeModeKey = stringPreferencesKey("theme_mode")
     private val accentKey = stringPreferencesKey("accent_hex")
+    private val introSeenKey = booleanPreferencesKey("intro_seen")
+
+    val introSeen: Flow<Boolean> = context.neuroxPreferences.data.map { it[introSeenKey] ?: false }
+
+    suspend fun markIntroSeen() {
+        context.neuroxPreferences.edit { it[introSeenKey] = true }
+    }
 
     val language: Flow<String> = context.neuroxPreferences.data.map { values ->
         values[languageKey]?.takeIf { it == "fa" || it == "en" } ?: "en"

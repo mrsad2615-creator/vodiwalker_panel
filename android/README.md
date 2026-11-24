@@ -7,6 +7,8 @@ The native Android application is isolated under `android/`; it does not connect
 - Kotlin, Jetpack Compose, Material 3 foundations, Room, and DataStore.
 - Persisted English/Persian language switch and RTL/LTR layout direction. Bundled prompt words are available in both languages.
 - Functional appearance studio: distinct dark/light palettes, 11 accent presets, custom six-digit HEX accent, persisted selection, and restore-default action.
+- Original geometric emblem, adaptive/round launcher icons, monochrome icon, light-theme logo, notification glyph, splash theme, and skip-enabled first-run motion reveal.
+- Purpose-drawn vectors for the four training modules and six navigation destinations.
 - Home dashboard and real local session history with explicit empty states; no fabricated level or performance values.
 - Four distinct ten-round practice flows: visual shape search, color-word interference with monotonic response timing, word recognition, and exact-text typing.
 - Unit-tested domain scoring, WPM formula, difficulty bounds, response counting, and session completion.

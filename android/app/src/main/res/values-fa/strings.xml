@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">نوروکس</string>
+    <string name="app_name">نوروکس</string><string name="logo_description">نشان هندسی نوروکس</string><string name="skip_intro">رد کردن معرفی</string>
     <string name="tagline">توانایی‌هایت را پرورش بده</string>
     <string name="offline_local">محلی • آفلاین</string>
     <string name="home">خانه</string><string name="training">تمرین</string><string name="analytics">تحلیل</string><string name="library">کتابخانه</string><string name="profile">پروفایل</string><string name="settings">تنظیمات</string>

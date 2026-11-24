@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">NEUROX</string>
+    <string name="app_name">NEUROX</string><string name="logo_description">NEUROX geometric emblem</string><string name="skip_intro">Skip intro</string>
     <string name="tagline">TRAIN YOUR POTENTIAL</string>
     <string name="offline_local">LOCAL • OFFLINE</string>
     <string name="home">Home</string><string name="training">Training</string><string name="analytics">Analytics</string><string name="library">Library</string><string name="profile">Profile</string><string name="settings">Settings</string>

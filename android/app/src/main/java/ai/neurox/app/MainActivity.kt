@@ -6,14 +6,19 @@ import java.util.Locale
 import java.time.LocalDate
 import java.time.ZoneId
 import androidx.activity.ComponentActivity
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.activity.compose.setContent
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.Canvas
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalContext
@@ -21,9 +26,14 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -43,6 +53,7 @@ private val Ivory: Color @Composable get() = LocalPalette.current.text
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
+        installSplashScreen()
         super.onCreate(savedInstanceState)
         setContent { NeuroxRoot(TrainingDatabase.get(this).sessions(), AppPreferences(this)) }
     }
@@ -74,6 +85,8 @@ private fun buildPalette(mode: String, accentHex: String): NeuroxPalette {
     val sessions by dao.observeRecent().collectAsStateWithLifecycle(initialValue = emptyList())
     val language by preferences.language.collectAsStateWithLifecycle(initialValue = "en")
     val theme by preferences.theme.collectAsStateWithLifecycle(initialValue = ThemeSettings())
+    val introSeen by preferences.introSeen.collectAsStateWithLifecycle(initialValue = null as Boolean?)
+    var introDismissed by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val snackbarHost = remember { SnackbarHostState() }
     val baseContext = LocalContext.current
@@ -88,12 +101,27 @@ private fun buildPalette(mode: String, accentHex: String): NeuroxPalette {
         LocalConfiguration provides localizedContext.resources.configuration,
         LocalLayoutDirection provides if (language == "fa") LayoutDirection.Rtl else LayoutDirection.Ltr
     ) {
-        Surface(Modifier.fillMaxSize(), color = Obsidian) {
+        if (introSeen == false && !introDismissed) {
+            LaunchedEffect(introSeen, introDismissed) {
+                kotlinx.coroutines.delay(900)
+                runCatching { preferences.markIntroSeen() }
+                introDismissed = true
+            }
+            NeuroxIntro(onSkip = {
+                scope.launch {
+                    runCatching { preferences.markIntroSeen() }
+                    introDismissed = true
+                }
+            })
+        } else Surface(Modifier.fillMaxSize(), color = Obsidian) {
             Column(Modifier.fillMaxSize()) {
                 Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 12.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Column {
-                        Text(stringResource(R.string.app_name), color = Gold, fontSize = 22.sp, fontWeight = FontWeight.Black, letterSpacing = 3.sp)
-                        Text(stringResource(R.string.tagline), color = Ivory.copy(alpha = .55f), fontSize = 9.sp, letterSpacing = 2.sp)
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Image(painter = painterResource(if (theme.mode == "light") R.drawable.neurox_emblem_light else R.drawable.neurox_emblem), contentDescription = stringResource(R.string.logo_description), modifier = Modifier.size(42.dp))
+                        Column {
+                            Text(stringResource(R.string.app_name), color = Gold, fontSize = 22.sp, fontWeight = FontWeight.Black, letterSpacing = 3.sp)
+                            Text(stringResource(R.string.tagline), color = Ivory.copy(alpha = .55f), fontSize = 9.sp, letterSpacing = 2.sp)
+                        }
                     }
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(stringResource(R.string.offline_local), color = Gold.copy(alpha = .8f), fontSize = 10.sp)
@@ -123,11 +151,36 @@ private fun buildPalette(mode: String, accentHex: String): NeuroxPalette {
                 }
                 NavigationBar(containerColor = Panel) {
                     listOf("Home" to R.string.home, "Training" to R.string.training, "Analytics" to R.string.analytics, "Library" to R.string.library, "Profile" to R.string.profile, "Settings" to R.string.settings).forEach { (route, label) ->
-                        NavigationBarItem(selected = page == route && selectedModule == null, onClick = { page = route; selectedModule = null }, icon = { Text(stringResource(label).take(1), color = Gold) }, label = { Text(stringResource(label), fontSize = 9.sp) })
+                        NavigationBarItem(selected = page == route && selectedModule == null, onClick = { page = route; selectedModule = null },
+                            icon = { Image(painterResource(navIconId(route)), contentDescription = null, colorFilter = ColorFilter.tint(Gold), modifier = Modifier.size(22.dp)) },
+                            label = { Text(stringResource(label), fontSize = 9.sp) })
                     }
                 }
                 SnackbarHost(hostState = snackbarHost, modifier = Modifier.align(Alignment.CenterHorizontally))
             }
+        }
+    }
+}
+
+@Composable private fun NeuroxIntro(onSkip: () -> Unit) {
+    val reveal = remember { Animatable(0f) }
+    LaunchedEffect(Unit) { reveal.animateTo(1f, tween(durationMillis = 720)) }
+    Box(Modifier.fillMaxSize().background(Obsidian)) {
+        Canvas(Modifier.fillMaxSize()) {
+            drawRect(Brush.radialGradient(listOf(Gold.copy(alpha = .16f), Color.Transparent), center = Offset(size.width * .5f, size.height * .42f), radius = size.minDimension * .52f))
+        }
+        Column(Modifier.align(Alignment.Center).graphicsLayer {
+            alpha = reveal.value
+            val scale = .92f + .08f * reveal.value
+            scaleX = scale; scaleY = scale
+        }, horizontalAlignment = Alignment.CenterHorizontally) {
+            Image(painterResource(R.drawable.neurox_emblem), contentDescription = stringResource(R.string.logo_description), modifier = Modifier.size(112.dp))
+            Spacer(Modifier.height(14.dp))
+            Text("NEUROX", color = Gold, fontSize = 32.sp, fontWeight = FontWeight.Black, letterSpacing = 6.sp)
+            Text(stringResource(R.string.tagline), color = Ivory.copy(alpha = .66f), fontSize = 10.sp, letterSpacing = 2.2.sp, modifier = Modifier.padding(top = 7.dp))
+        }
+        TextButton(onClick = onSkip, modifier = Modifier.align(Alignment.BottomEnd).padding(20.dp)) {
+            Text(stringResource(R.string.skip_intro), color = Ivory.copy(alpha = .7f))
         }
     }
 }
@@ -153,7 +206,9 @@ private suspend fun savePreference(host: SnackbarHostState, context: android.con
         Module.entries.forEach { module ->
             Card(onClick = { onStart(module) }, modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp), colors = CardDefaults.cardColors(containerColor = Panel), shape = RoundedCornerShape(18.dp)) {
                 Row(Modifier.padding(16.dp).fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.size(42.dp).background(Gold.copy(alpha = .12f), RoundedCornerShape(14.dp)), contentAlignment = Alignment.Center) { Text(module.title.take(1), color = Gold, fontWeight = FontWeight.Bold) }
+                    Box(Modifier.size(48.dp).background(Gold.copy(alpha = .12f), RoundedCornerShape(15.dp)), contentAlignment = Alignment.Center) {
+                        Image(painter = painterResource(moduleIconId(module)), contentDescription = stringResource(moduleSubtitleId(module)), colorFilter = ColorFilter.tint(Gold), modifier = Modifier.size(30.dp))
+                    }
                     Column(Modifier.weight(1f).padding(start = 12.dp)) {
                         Text(module.title, color = Ivory, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
                         Text(stringResource(moduleSubtitleId(module)), color = Ivory.copy(alpha = .55f), fontSize = 12.sp)
@@ -217,6 +272,22 @@ private suspend fun savePreference(host: SnackbarHostState, context: android.con
         }
         TextButton(onClick = onRestore, modifier = Modifier.padding(top = 6.dp)) { Text(stringResource(R.string.restore_theme)) }
     }
+}
+
+private fun navIconId(route: String): Int = when (route) {
+    "Home" -> R.drawable.ic_nav_home
+    "Training" -> R.drawable.ic_nav_training
+    "Analytics" -> R.drawable.ic_nav_analytics
+    "Library" -> R.drawable.ic_nav_library
+    "Profile" -> R.drawable.ic_nav_profile
+    else -> R.drawable.ic_nav_settings
+}
+
+private fun moduleIconId(module: Module): Int = when (module) {
+    Module.VISION -> R.drawable.ic_vision
+    Module.REFLEX -> R.drawable.ic_reflex
+    Module.READ -> R.drawable.ic_read
+    Module.TYPE -> R.drawable.ic_type
 }
 
 private fun moduleSubtitleId(module: Module): Int = when (module) {

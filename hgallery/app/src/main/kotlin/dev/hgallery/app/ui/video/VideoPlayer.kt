@@ -242,6 +242,7 @@ fun VideoPlayerScreen(
                         scrubbing = chrome.scrubbing,
                         speed = controller.speed,
                         fillScreen = fillScreen,
+                        muted = controller.muted,
                     ),
                     actions = PlayerActions(
                         onTogglePlay = {
@@ -253,6 +254,7 @@ fun VideoPlayerScreen(
                         onScrubEnd = { controller.endScrub() },
                         onSpeed = { controller.changeSpeed(it) },
                         onFillScreen = { fillScreen = !fillScreen },
+                        onToggleMute = { controller.toggleMuted() },
                     ),
                 )
             }

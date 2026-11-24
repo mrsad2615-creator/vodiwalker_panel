@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The launch window on Android 8 to 11.
+
+  A colour behind the mark, with the mark centred at 128 dp. The mark is the launcher
+  drawable, which is 108 dp with the artwork inside it, so 128 dp leaves the same
+  optical margin the adaptive icon gets from its safe zone.
+
+  The colour is `splash_background`, which `values-night/colors.xml` already switches
+  between warm paper and near-black, so the launch window follows the system theme on
+  these releases too.
+-->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@color/splash_background" />
+    <item
+        android:width="128dp"
+        android:height="128dp"
+        android:gravity="center"
+        android:drawable="@drawable/ic_launcher_foreground" />
+</layer-list>

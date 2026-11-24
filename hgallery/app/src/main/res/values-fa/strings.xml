@@ -5,7 +5,7 @@
   whole activity, because `supportsRtl` is declared in the manifest.
 -->
 <resources>
-    <string name="app_name">گالری هیبرید</string>
+    <string name="app_name">اچ‌گالری</string>
 
     <string name="tab_photos">تصاویر</string>
     <string name="tab_albums">آلبوم‌ها</string>

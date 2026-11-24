@@ -1,8 +1,11 @@
 # NOIR — Design Direction and Interaction Specification
 
 Document: the approved visual direction, the gesture rules, and the motion rules.
-Status: design. Implementation has not started. Every preview in
-`docs/design/` is a design reference, not a screenshot of the application.
+Status: design, with the first sections implemented. The colour tokens, the
+application icon, the home header, the filter chips, the viewer's swipe dismissal
+and the three-phase launch are in the code and verified on an emulator capture.
+Every preview in `docs/design/` is still a design reference, not a screenshot of
+the application.
 Read section 11 before you compare a preview with the build.
 
 This document follows the sentence rules of ASD-STE100 Issue 9 (2025-01-15):
@@ -18,11 +21,11 @@ against commit `e1500b1`:
 |---|---|
 | NOIR `#050505`, `#111111`, `#F28A36` | `#F7F7F9` and `#0068E8` — a light gray page with a blue accent |
 | Orange for important actions only | blue in 12 UI sites |
-| HGallery Ignition, three phases | `setKeepOnScreenCondition { false }` — no animation |
+| HGallery Ignition, three phases | implemented in `ui/brand/HgIgnition.kt`: 220 ms draw, 400 ms iris, 280 ms lift |
 | A shared-element transition from grid to viewer | none |
 | A staggered entrance for grid tiles | `staggerFraction` written, never called |
-| Automatic filtering from the chips | typing into a search field |
-| Swipe down to close a photograph | promised in the KDOC, absent from the code |
+| Automatic filtering from the chips | implemented: `GalleryFilter` plus the chip row |
+| Swipe down to close a photograph | implemented, with the zoom rule: a zoomed image pans |
 | Brightness, volume and lock gestures in the player | absent |
 
 The cause is not a bad design. The cause is that the design stopped at the

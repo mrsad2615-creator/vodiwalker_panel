@@ -23,6 +23,9 @@ object HgTestTags {
     fun thumbnail(id: Long) = "$thumbPrefix$id"
     fun album(name: String) = "album-$name"
     const val VIEWER = "viewer"
+
+    /** The launch cover. It must not exist once the sequence has finished. */
+    const val IGNITION = "ignition"
     const val PHOTOS_GRID = "photos-grid"
 
     /** The large page title. Its bounds are asserted, so it needs a stable name. */

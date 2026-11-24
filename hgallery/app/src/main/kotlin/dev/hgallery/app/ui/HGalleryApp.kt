@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -18,6 +19,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import dev.hgallery.app.ui.brand.HgIgnition
 import dev.hgallery.app.data.AppContainer
 import dev.hgallery.app.data.HgSettings
 import dev.hgallery.app.ui.albums.AlbumDetailScreen
@@ -73,6 +75,12 @@ fun HGalleryApp(container: AppContainer) {
     // screen is up, and a captured copy would show the membership from the moment the
     // tile was tapped.
     var customAlbumId by remember { mutableStateOf<Long?>(null) }
+
+    // HGallery Ignition. The cover is drawn over the shell and lifts off it. It is
+    // `rememberSaveable` so a rotation during the sequence does not replay a launch
+    // the user has already seen: the flag survives the configuration change and the
+    // cover stays gone.
+    var ignitionDone by rememberSaveable { mutableStateOf(false) }
 
     val items by container.mediaStore.items.collectAsStateWithLifecycle()
     val settings by container.settings.settings.collectAsStateWithLifecycle(
@@ -149,6 +157,10 @@ fun HGalleryApp(container: AppContainer) {
     val openSettings: () -> Unit = { settingsOpen = true }
 
     Box(Modifier.fillMaxSize().background(palette.page)) {
+        // The shell is composed first and the cover is drawn over it, so the library
+        // scan, the first thumbnails and the skeleton all start at t=0. The sequence
+        // adds no delay to anything: it hides work that is already running, and it
+        // lifts early if the work finishes first, because nothing waits on it.
         Column(Modifier.fillMaxSize()) {
             Box(Modifier.weight(1f)) {
                 val album = openAlbum
@@ -252,6 +264,10 @@ fun HGalleryApp(container: AppContainer) {
                 },
                 onClose = { viewerId = null },
             )
+        }
+
+        if (!ignitionDone) {
+            HgIgnition(onFinished = { ignitionDone = true })
         }
     }
 }

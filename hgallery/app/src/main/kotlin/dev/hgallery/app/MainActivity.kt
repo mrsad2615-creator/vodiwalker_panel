@@ -70,9 +70,14 @@ class MainActivity : androidx.fragment.app.FragmentActivity() {
         // must know its exit animation before the window is created, or it is replaced
         // abruptly and the hand-off to the first Compose frame flashes.
         //
-        // The exit is a small forward scale with a fade, not a slide or a zoom-out. The
-        // mark is being replaced by the grid, so it should recede into the surface rather
-        // than travel across it.
+        // It is held for zero frames on purpose. `installSplashScreen` can only extend
+        // the system splash by keeping the window up, and keeping the window up is a
+        // delay before the first Compose frame: the library scan would not start until
+        // the animation finished. The three-phase sequence is drawn by
+        // `HgIgnition` inside the content instead, over a shell that is already
+        // building, so the launch shows the mark and the work starts at the same
+        // moment. The system splash hands straight over to it; both are the same
+        // aperture on the same background, so the seam is a colour match.
         val splash = installSplashScreen()
         splash.setKeepOnScreenCondition { false }
 

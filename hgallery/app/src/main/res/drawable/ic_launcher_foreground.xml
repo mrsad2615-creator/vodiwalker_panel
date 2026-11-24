@@ -40,12 +40,12 @@
     -->
     <path
         android:pathData="M51.3,28.1 A26,26 0 0,1 63.7,78.1"
-        android:strokeColor="#F28A36"
+        android:strokeColor="@color/ic_mark_stroke"
         android:strokeWidth="4"
         android:strokeLineCap="round" />
     <path
         android:pathData="M56.7,79.9 A26,26 0 0,1 44.3,29.9"
-        android:strokeColor="#F28A36"
+        android:strokeColor="@color/ic_mark_stroke"
         android:strokeWidth="4"
         android:strokeLineCap="round" />
 
@@ -55,17 +55,17 @@
       makes. Drawn from the centre outward they would converge instead, which is a
       star, not an aperture.
     -->
-    <path android:pathData="M57.2,48.5 L66,33.2" android:strokeColor="#F28A36"
+    <path android:pathData="M57.2,48.5 L66,33.2" android:strokeColor="@color/ic_mark_stroke"
         android:strokeWidth="3.4" android:strokeLineCap="round" />
-    <path android:pathData="M60.4,54 L78,54" android:strokeColor="#F28A36"
+    <path android:pathData="M60.4,54 L78,54" android:strokeColor="@color/ic_mark_stroke"
         android:strokeWidth="3.4" android:strokeLineCap="round" />
-    <path android:pathData="M57.2,59.5 L66,74.8" android:strokeColor="#F28A36"
+    <path android:pathData="M57.2,59.5 L66,74.8" android:strokeColor="@color/ic_mark_stroke"
         android:strokeWidth="3.4" android:strokeLineCap="round" />
-    <path android:pathData="M50.8,59.5 L42,74.8" android:strokeColor="#F28A36"
+    <path android:pathData="M50.8,59.5 L42,74.8" android:strokeColor="@color/ic_mark_stroke"
         android:strokeWidth="3.4" android:strokeLineCap="round" />
-    <path android:pathData="M47.6,54 L30,54" android:strokeColor="#F28A36"
+    <path android:pathData="M47.6,54 L30,54" android:strokeColor="@color/ic_mark_stroke"
         android:strokeWidth="3.4" android:strokeLineCap="round" />
-    <path android:pathData="M50.8,48.5 L42,33.2" android:strokeColor="#F28A36"
+    <path android:pathData="M50.8,48.5 L42,33.2" android:strokeColor="@color/ic_mark_stroke"
         android:strokeWidth="3.4" android:strokeLineCap="round" />
 
     <!--
@@ -74,5 +74,5 @@
     -->
     <path
         android:pathData="M54,47.8 L59.4,50.9 L59.4,57.1 L54,60.2 L48.6,57.1 L48.6,50.9 Z"
-        android:fillColor="#F2F0EB" />
+        android:fillColor="@color/ic_mark_pupil" />
 </vector>

@@ -6,13 +6,36 @@
       enabled from the activity itself.
 
       The splash theme lives in values-v31 because its attributes exist only on API 31
-      and later; on older releases the platform splash is the launcher icon on the
-      window background, which is the closest compliant behaviour.
+      and later. On Android 8 to 11 the platform draws the launcher icon on
+      `windowBackground`, so this theme points that attribute at the mark as well: the
+      launch shows the same aperture in both cases, which is the only way the hand-off
+      can look like one continuous moment.
     -->
     <style name="Theme.HGallery" parent="android:Theme.Material.Light.NoActionBar">
         <item name="android:windowBackground">@color/splash_background</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
         <item name="android:windowLightStatusBar">true</item>
+    </style>
+
+    <!--
+      The pre-31 launch window.
+
+      `Theme.SplashScreen` (values-v31) sets a background colour and an animated icon.
+      Before API 31 there is no such attribute, so the only lever is a layer-list on
+      `windowBackground`: the plate colour, then the mark, centred. The mark is drawn by
+      the same `ic_launcher_foreground.xml` the launcher uses, so no second artwork
+      exists to drift out of date.
+
+      This style has the SAME NAME as the one in `values-v31`. That matters: the
+      manifest names `@style/Theme.HGallery.Splash`, and if the name existed only in
+      `values-v31` then on Android 8 to 11 it would resolve to nothing. The build does
+      not catch that, because AAPT checks the default configuration and the v31 folder
+      is a configuration. It would have been a launch failure on every device the
+      application claims to support — only the emulator, which is API 34, would have
+      hidden it.
+    -->
+    <style name="Theme.HGallery.Splash" parent="Theme.HGallery">
+        <item name="android:windowBackground">@drawable/launch_window</item>
     </style>
 </resources>

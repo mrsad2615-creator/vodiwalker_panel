@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      The two colours of the launcher mark, as resources rather than literals.
+
+      `ic_launcher_foreground.xml` used the hex values directly, so the mark could
+      only ever be one colour. A drawable that names its colours can be reused: the
+      launcher uses the accent treatment, and `Theme.HGallery` swaps in the mono
+      treatment for the launch window on Android 8 to 11, which draws the launcher
+      icon on the window background and has no `windowSplashScreen*` attributes to
+      choose a splash drawable with.
+
+      The values are the NOIR accent and the warm paper the design specifies. Do not
+      edit them here only: `HgTheme.kt` is the source of truth, and these two must
+      match `accent` in dark.
+    -->
+    <color name="ic_mark_stroke">#F28A36</color>
+    <color name="ic_mark_pupil">#F2F0EB</color>
+</resources>

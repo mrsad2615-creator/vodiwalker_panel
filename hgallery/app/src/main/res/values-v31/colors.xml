@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      Android 12 and later choose the splash mark with `windowSplashScreenAnimatedIcon`
+      in `values-v31/themes.xml`, so the launcher mark does not need to change for the
+      launch window. Nothing to override.
+
+      This file exists so the override is explicit rather than a comment someone has to
+      find later: a resource that is deliberately not overridden is easy to mistake for
+      one that was forgotten.
+    -->
+</resources>

@@ -1,5 +1,42 @@
 # CHANGELOG
 
+## 2026-11-24 — camera data, rotation, and a real Persian calendar
+
+### Added
+* A camera block in the details sheet: make and model, lens, aperture, shutter,
+  ISO and focal length, read from the file itself with `androidx.exifinterface`
+  when the sheet opens. A missing tag omits its row rather than printing a
+  placeholder, and a file with no EXIF says so.
+* Rotation in the viewer, a quarter turn per press. It writes the EXIF
+  orientation tag and invalidates the thumbnail, so the original pixels are
+  never re-encoded and no second copy of a 12-megapixel photo is made. It is
+  enabled only when the app can write to the file.
+* A Solar Hijri calendar, converted by the app. Day headers read `1 مهر` and
+  month headers `مهر 1405` on a Persian device instead of Gregorian dates with
+  Persian month names.
+
+### Fixed
+* `java.time` on Android accepts a `-u-ca-persian` locale extension and then
+  formats ISO without an error, so the previous attempt looked right on screen
+  and was wrong in every number. The conversion now happens in
+  `core/PersianCalendar.kt`; the platform is asked only for month names.
+* Every release was tagged `0.1.<run number>` while the APK inside reported
+  `versionName 0.1.0` and `versionCode 1`. The version in Settings identified no
+  build, and Android never saw a later release as an upgrade. The workflow now
+  passes its run number to the build and fails the job if the APK's badging does
+  not match the tag being published.
+* A mirrored EXIF orientation (2, 4, 5, 7) was reported as no rotation; the four
+  rotations are now applied, and only the flip is dropped.
+
+### Verified
+* The Persian conversion agrees with an independent implementation on 47,848
+  consecutive days, 1960 to 2090, with no mismatch. Unit tests cover the year
+  boundary, a January date, a leap year and every day of a full year.
+* `gradle :core:test` green, detekt clean, debug APK, emulator UI tests and the
+  signed release APK all green in one run (CI run 45290743520).
+* Published as `hgallery-v0.1.159`. Its `versionCode` is now the run number, so
+  this build installs over `0.1.0` as an upgrade.
+
 ## 2026-11-22 — multi-selection, real trash, working share
 
 ### Added

@@ -43,7 +43,7 @@ which is implemented and photographed.
 | Feature | Score | Reason |
 |---|---|---|
 | Photo editor | **0** | absent; its control is disabled rather than faked |
-| File details | **7** | a real sheet from the row already loaded: name, size, dimensions, megapixels, duration for video, folder, album and type. Unit-tested, including the rule that omits a row rather than print a placeholder. Shows no EXIF — camera, aperture, ISO — which needs the file stream and a parser. |
+| File details | **8** | a real sheet: name, size, dimensions, megapixels, duration for video, folder, album and type, plus a camera block read from the file itself — camera, lens, aperture, shutter, ISO, focal length. Unit-tested, including the rule that omits a row rather than print a placeholder. Not shown: location and a map, because no location permission is requested. |
 | Video playback | **7** | a real Media3 player, screenshotted in four states. The chrome now uses gradient scrims, directional entrances and a draggable progress line with a permanent thumb. Gestures beyond tap and rotation are still not driven by the harness, and no clip longer than six seconds or other codec was tried. |
 | Discover / Highlights | **0** | absent; the tabs say so |
 | Search screen | **7** | a real screen: field, kind/size/recency/album chips behind labelled section headers, results grid reusing the photos cell, distinct empty states, unit-tested filtering, all reachable through accessibility labels. Photographed: empty, mid-typing, kind axis narrowing 2 results to 0, size axis narrowing to 0 and being swapped from Large to Small. Not driven: the recency chips and the album chips. |
@@ -51,7 +51,7 @@ which is implemented and photographed.
 | Recently deleted | **0** | absent, and deletion is therefore permanent |
 | Multi-selection / share | **8** | selection, batch share and recoverable delete are implemented, tested and photographed on API 33. |
 | Custom albums | **0** | absent; the action is visible and inert |
-| Persian calendar | **0** | dates are Gregorian in both languages |
+| Persian calendar | **8** | a real Solar Hijri conversion in `core/PersianCalendar.kt`, not a locale extension: `java.time` on this platform accepts `-u-ca-persian` and then formats ISO. Checked against 47,848 consecutive days of an independent implementation, plus year-boundary, leap-year and full-year day-walk tests. Day and month headers follow the app language; the month grid itself still starts on Monday. |
 
 Averaging these zeros into a single project score would hide exactly what this file
 exists to show, so no overall figure is given.
@@ -61,7 +61,7 @@ exists to show, so no overall figure is given.
 | Score | Needs |
 |---|---|
 | Fidelity above 8 | a clean native-resolution capture from a real Huawei device, then pixel comparison of margins and cell boundaries |
-| Function above 8 | EXIF (camera and exposure data, not just file facts), a photo editor, and search across the recency and album axes that the harness has not driven |
+| Function above 8 | a photo editor, worker-backed duplicate removal, and search across the recency and album axes that the harness has not driven |
 | Performance above 7 | Macrobenchmark and `FrameMetrics` on the POCO X3 Pro |
 | Compatibility above 8 | a run on API 29 and API 34, not only 33 |
 
@@ -117,3 +117,28 @@ Weighted: **7.62/10** (0.30×8.0 + 0.25×8.0 + 0.15×8.5 + 0.15×5.0 + 0.10×8.5
 
 Performance is the one number holding this below 8, and it is unmeasured rather than
 bad. The honest next step is a macrobenchmark, not more motion.
+
+## Revision — 2026-11-23 (camera data, rotation, Persian calendar)
+
+| Category | Weight | Score | Evidence |
+|---|---|---|---|
+| Visual design | 30% | 8.0/10 | Unchanged. The details sheet gained a camera block, laid out from the existing typography scale. |
+| Functional completeness | 25% | 8.5/10 | Three gaps closed: the camera block, rotation, and a real Persian calendar. Defaults were inert before this: a Persian device showed Gregorian dates and the file facts stopped at what the index knew. Still absent: editor, Discover content, macrobenchmark. |
+| Code quality | 15% | 8.5/10 | The calendar is part of the platform-free core and unit-tested, with the numeric algorithm in one file and the locale restricted to names. One rule was suppressed file-locally with its reason rather than loosened globally. |
+| Performance | 15% | 5/10 | Unchanged and still unmeasured — the one number holding this below 8. |
+| Interactions and animations | 10% | 8.0/10 | Rotation animates through the existing spring vocabulary, and the thumbnail cache is invalidated so the rotated image is what is drawn. Down 0.5 because rotation was verified by tests and screenshots, not by hand on the target phone. |
+| Compatibility | 5% | 7/10 | Rotation writes through the EXIF orientation tag, so no re-encode and no file copy; it needs write access and is disabled without it. Still an API 33 emulator only. |
+
+Weighted: **7.70/10** (0.30×8.0 + 0.25×8.5 + 0.15×8.5 + 0.15×5.0 + 0.10×8.0 +
+0.05×7.0 = 7.70 exactly).
+
+Two findings from this pass belong here rather than in a changelog. The first is
+that `java.time` ignoring `-u-ca-persian` produced a screen that looked right and
+was wrong; the arithmetic is now in the app and the platform is only asked for
+names. The second is that every release was tagged `0.1.<run>` while the APK
+inside said `0.1.0` with `versionCode 1`, so no bug report could name a build and
+Android never saw an upgrade. Both are fixed, and the version is now asserted
+against the tag before a release is published.
+
+Still unmeasured: nothing has been profiled on hardware, and no test covers the
+custom-album, private-gate, trash or rotate screens beyond the emulator runs.

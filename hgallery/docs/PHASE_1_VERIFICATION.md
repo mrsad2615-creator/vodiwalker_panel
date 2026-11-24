@@ -211,17 +211,19 @@ one found a real defect:
 
 ## 12. Release
 
-- Tag: `hgallery-v0.1.171`
-- Commit: `41b8109`
-- CI run: https://github.com/mrsad2615-creator/vodiwalker_panel/actions/runs/45345582226
+- Tag: `hgallery-v0.1.172`
+- Commit: `24a7a1c`
+- CI run: https://github.com/mrsad2615-creator/vodiwalker_panel/actions/runs/45347838649
 - APK size: 17,091,805 bytes
-- Download: https://github.com/mrsad2615-creator/vodiwalker_panel/releases/download/hgallery-v0.1.171/hgallery.apk
+- Download: https://github.com/mrsad2615-creator/vodiwalker_panel/releases/download/hgallery-v0.1.172/hgallery.apk
 
-All four jobs of run 45345582226 succeeded: domain tests, debug APK, signed
-release APK, and the emulator run with its UI tests and screenshots.
+All four jobs of run 45347838649 succeeded: domain tests, debug APK, signed
+release APK, and the emulator run with its UI tests and screenshots. The APK is
+17,091,805 bytes and is the same size as the previous tag, which is expected:
+this tag adds documents only and no application code.
 
 The release also carries `SHA256SUMS.txt`:
-https://github.com/mrsad2615-creator/vodiwalker_panel/releases/download/hgallery-v0.1.171/SHA256SUMS.txt
+https://github.com/mrsad2615-creator/vodiwalker_panel/releases/download/hgallery-v0.1.172/SHA256SUMS.txt
 
 This document does not quote the digest. The sandbox that wrote this file cannot
 download a release asset: the TLS connection closes on the redirect to the asset

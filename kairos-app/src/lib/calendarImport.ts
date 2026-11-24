@@ -1,4 +1,4 @@
-import { createTask } from '@/lib/db';
+import { createTask, db } from '@/lib/db';
 import { getTodayKey } from '@/lib/date';
 import type { IcsEvent } from '@/lib/ics';
 import type { Task } from '@/types/domain';
@@ -82,28 +82,33 @@ export async function importCalendarEvents(
   existingTasks: Task[],
   todayKey: string = getTodayKey()
 ) {
-  const plan = planCalendarImport(events, existingTasks, todayKey);
+  // Read inside the same write transaction as the inserts. The caller's UI
+  // snapshot can lag behind IndexedDB, and another import may be in flight.
+  return db.transaction('rw', [db.tasks, db.eventHistory], async () => {
+    const storedTasks = await db.tasks.toArray();
+    const plan = planCalendarImport(events, [...existingTasks, ...storedTasks], todayKey);
 
-  for (const { event } of plan.toCreate) {
-    await createTask({
-      title: event.title,
-      description: [event.location, event.description].filter(Boolean).join('\n'),
-      dueDate: event.dateKey,
-      dueTime: event.startTime,
-      priority: 'medium',
-      quadrant: 'q2',
-      category: 'personal',
-      tags: ['تقویم'],
-      status: 'todo',
-      subtasks: [],
-      recurrence: 'none',
-      reminderEnabled: false,
-      reminderOffsetMin: 0,
-      postponeCount: 0,
-      completedDate: null,
-      completedAt: null,
-    } as never);
-  }
+    for (const { event } of plan.toCreate) {
+      await createTask({
+        title: event.title,
+        description: [event.location, event.description].filter(Boolean).join('\n'),
+        dueDate: event.dateKey,
+        dueTime: event.startTime,
+        priority: 'medium',
+        quadrant: 'q2',
+        category: 'personal',
+        tags: ['تقویم'],
+        status: 'todo',
+        subtasks: [],
+        recurrence: 'none',
+        reminderEnabled: false,
+        reminderOffsetMin: 0,
+        postponeCount: 0,
+        completedDate: null,
+        completedAt: null,
+      } as never);
+    }
 
-  return plan;
+    return plan;
+  });
 }

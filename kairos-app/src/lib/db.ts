@@ -316,11 +316,15 @@ async function pushUndo(entry: {
   after: unknown | null;
 }): Promise<void> {
   try {
-    await db.undoHistory.put({
-      id: createId('und'),
-      at: new Date().toISOString(),
-      undoneAt: null,
-      ...entry,
+    // Serialise ordering with the write. Two edits can share the same clock
+    // millisecond; random IDs otherwise make "latest" nondeterministic.
+    await db.transaction('rw', db.undoHistory, async () => {
+      const latest = await db.undoHistory.orderBy('at').last();
+      const previous = latest ? Date.parse(latest.at) : NaN;
+      const timestamp = Math.max(Date.now(), Number.isFinite(previous) ? previous + 1 : 0);
+      await db.undoHistory.put({
+        id: createId('und'), at: new Date(timestamp).toISOString(), undoneAt: null, ...entry,
+      });
     });
     if ((writeCounter += 1) % 64 === 0) {
       const { pruneUndo } = await import('./undo');

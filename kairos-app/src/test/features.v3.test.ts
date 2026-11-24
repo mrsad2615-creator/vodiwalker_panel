@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { db, exportBackup, importBackup, upsertJournalEntry, deleteJournalEntry } from '@/lib/db';
 import { computeJournalStats } from '@/lib/journal';
-import { planCalendarImport } from '@/lib/calendarImport';
+import { importCalendarEvents, planCalendarImport } from '@/lib/calendarImport';
 import { tasksToCsv, habitLogsToCsv } from '@/lib/csv';
 import { addDays, getTodayKey } from '@/lib/date';
 import type { JournalEntry, Task } from '@/types/domain';
@@ -108,6 +108,15 @@ describe('calendar import — از فایل ics تا وظیفه', () => {
     { uid: 'b', title: 'سفر', dateKey: addDays(today, 3), startTime: null, endTime: null, allDay: true, location: '', description: '' },
     { uid: 'c', title: 'گذشته', dateKey: addDays(today, -10), startTime: null, endTime: null, allDay: true, location: '', description: '' },
   ];
+
+  it('deduplicates simultaneous imports even with stale UI snapshots', async () => {
+    const [first, second] = await Promise.all([
+      importCalendarEvents(events, [], today),
+      importCalendarEvents(events, [], today),
+    ]);
+    expect(first.toCreate.length + second.toCreate.length).toBe(2);
+    expect(await db.tasks.count()).toBe(2);
+  });
 
   it('skips the past, mirrors times, and never imports twice', () => {
     const first = planCalendarImport(events, [], today);

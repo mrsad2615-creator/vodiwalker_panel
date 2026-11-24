@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { db } from '@/lib/db';
 import {
   createGoal,
@@ -178,6 +178,18 @@ describe('undo manager', () => {
     const again = await undoEntry(pending!.id);
     expect(again.ok).toBe(false);
     expect(again.reason).toBe('empty');
+  });
+
+  it('orders consecutive edits even when the clock stays in the same millisecond', async () => {
+    const clock = vi.spyOn(Date, 'now').mockReturnValue(Date.now());
+    try {
+      const entry = await upsertJournalEntry('2025-06-20', { mood: 3 });
+      await upsertJournalEntry('2025-06-20', { mood: 5 });
+      expect((await undoLast()).ok).toBe(true);
+      expect((await db.journal.get(entry.id))?.mood).toBe(3);
+    } finally {
+      clock.mockRestore();
+    }
   });
 
   it('records the undo itself in the event ledger', async () => {

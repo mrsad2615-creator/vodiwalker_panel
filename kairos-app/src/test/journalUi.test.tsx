@@ -139,7 +139,7 @@ describe('KAIROS 3.2 — ژورنال و ورود تقویم', () => {
     fireEvent.change(input, {
       target: { files: [new File([ics], 'calendar.ics', { type: 'text/calendar' })] },
     });
-    await waitFor(() => expect(screen.getByText('ورود تقویم انجام شد')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(/۱ تکراری رد شد|1 تکراری رد شد/)).toBeInTheDocument());
     expect(await db.tasks.count()).toBe(before);
   });
 });

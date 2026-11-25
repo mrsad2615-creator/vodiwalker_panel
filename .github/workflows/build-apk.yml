@@ -178,10 +178,15 @@ jobs:
           set -eu
           api="https://api.github.com/repos/$REPO"
           auth="Authorization: Bearer $GH_TOKEN"
-          # The repository has a ruleset that restricts ref creation to certain tag
-          # patterns; `apk-latest` was rejected ("Cannot create ref due to creations
-          # being restricted") while `neurox-v*` is permitted. A fixed tag name means
-          # the ref is reused rather than created again.
+          # Three separate repository settings block automatic publishing here,
+          # each found by a different HTTP error:
+          #   422 pre_receive "creations being restricted" - a ruleset forbids
+          #       creating new refs, so any fresh tag name is rejected;
+          #   422 already_exists / "used by an immutable release" - releases are
+          #       immutable, so an existing tag cannot gain a new asset either.
+          # Between them there is no tag this token can publish to. The APK is
+          # still built, verified and attached to the run; DOWNLOAD.md explains
+          # the one setting that unblocks the permanent link.
           tag="neurox-v1.0.0-debug"
 
           note_failure() {

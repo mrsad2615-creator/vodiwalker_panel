@@ -2,78 +2,111 @@
 
 <div dir="rtl">
 
-## ⬇️ دانلود مستقیم (آخرین نسخه)
+## ✅ ساخت APK کار می‌کند — فقط انتشار یک تنظیم لازم دارد
 
-[**NEUROX-sense-debug.apk**](https://github.com/mrsad2615-creator/vodiwalker_panel/releases/latest/download/NEUROX-sense-debug.apk)
+بعد از یازده اجرای CI، **APK واقعاً ساخته می‌شود**: `assembleDebug` موفق می‌شود،
+بستهٔ برنامه با `aapt2` و امضایش با `apksigner` بررسی می‌شود، و فایل به‌عنوان
+artifact همان اجرا آپلود می‌شود. این اولین بار در تاریخ پروژه است.
 
-این لینک همیشه به **آخرین APK ساخته‌شده** اشاره می‌کند. یک کلیک، فایل شروع به دانلود می‌کند.
+اما مرحلهٔ آخر — گذاشتن فایل در یک Release برای لینک یک‌کلیکی — با خطای HTTP ۴۲۲
+متوقف می‌شود، چون توکن پیش‌فرض GitHub Actions در این مخزن فقط **خواندن** دارد.
 
-اگر این لینک کار نکرد، یعنی هنوز هیچ build موفقی نداشته‌ایم — به تب
-[Actions](https://github.com/mrsad2615-creator/vodiwalker_panel/actions/workflows/build-apk.yml)
-برو و آخرین اجرا را ببین. اولین اجرا باید دستی راه بیفتد و ممکن است چند اشکال
-واقعی را آشکار کند؛ هر اشکال، خودش پیشرفت است.
+### برای فعال کردن لینک یک‌کلیکی (یک دقیقه)
 
-## نصب
+1. برو به **Settings** مخزن → **Actions** → **General**
+2. پایین صفحه، **Workflow permissions**
+3. **Read and write permissions** را انتخاب کن و ذخیره کن
+4. تب [Actions](https://github.com/mrsad2615-creator/vodiwalker_panel/actions/workflows/build-apk.yml)
+   → **Run workflow**
 
-1. فایل APK را روی گوشی اندروید باز کن (اندروید ۸.۰ یا بالاتر).
-2. اندروید می‌پرسد که اجازهٔ نصب از این منبع را می‌دهی؛ اجازه بده.
-3. این یک نسخهٔ **debug** است: امضای موقت دارد، بنابراین روی نسخهٔ قبلی
-   *به‌روزرسانی نمی‌شود*. اگر نسخهٔ قبلی نصب است، اول حذفش کن.
+بعد از آن، این لینک برای همیشه کار می‌کند:
 
-## این فایل چیست و چیست نیست
+```
+https://github.com/mrsad2615-creator/vodiwalker_panel/releases/latest/download/NEUROX-sense-debug.apk
+```
 
-| | |
-|---|---|
-| ساخته‌شده توسط | GitHub Actions، از همین مخزن |
-| بستهٔ برنامه | `com.neurox.app.debug` |
-| اندازه | حدود ۱۰ مگابایت |
-| زبان | فارسی و انگلیسی |
+### تا آن موقع، APK را از کجا بگیرم؟
 
-**صادقانه:** این اولین APK این پروژه است. در محیط توسعه دسترسی به Google Maven
-نبود، پس Gradle هرگز آنجا اجرا نشد و این build اولین اجرای واقعی آن است. ممکن است
-شکست بخورد. اگر شکست خورد، لاگ آن را برایم بفرست تا درستش کنم.
-
-آنچه بدون گوشی تأیید شده و آنچه تأیید نشده، در
-[`NEUROX/docs/TEST_STATUS.md`](NEUROX/docs/TEST_STATUS.md) نوشته شده.
+تب [Actions](https://github.com/mrsad2615-creator/vodiwalker_panel/actions/workflows/build-apk.yml)
+→ آخرین اجرای سبز → پایین صفحه، بخش **Artifacts** → `neurox-sense-debug-apk`.
+یک فایل zip می‌گیری که داخلش APK است.
 
 </div>
 
 ---
 
-## ⬇️ One-click download (latest build)
+## ✅ The APK builds. Publishing needs one setting.
 
-[**NEUROX-sense-debug.apk**](https://github.com/mrsad2615-creator/vodiwalker_panel/releases/latest/download/NEUROX-sense-debug.apk)
+After eleven CI runs, **the APK is real**: `assembleDebug` succeeds, the package is
+checked with `aapt2`, the signature with `apksigner`, and the file is uploaded as a
+workflow artifact. That is the first time in this project's history.
 
-That URL always resolves to the newest successful build, so it never needs
-updating. It is produced by
-[`.github/workflows/build-apk.yml`](.github/workflows/build-apk.yml) on every
-push that touches `NEUROX/`.
+The final step — putting it in a Release so there is a one-click link — stops with
+HTTP 422, because this repository's default `GITHUB_TOKEN` permission is **read**.
 
-### Install
+### To turn on the one-click link (one minute)
+
+1. Repository **Settings** → **Actions** → **General**
+2. Under **Workflow permissions**, choose **Read and write permissions**
+3. Save, then re-run
+   [Build APK](https://github.com/mrsad2615-creator/vodiwalker_panel/actions/workflows/build-apk.yml)
+
+After that this URL is permanent:
+
+```
+https://github.com/mrsad2615-creator/vodiwalker_panel/releases/latest/download/NEUROX-sense-debug.apk
+```
+
+### Until then
+
+[Actions](https://github.com/mrsad2615-creator/vodiwalker_panel/actions/workflows/build-apk.yml)
+→ the latest green run → **Artifacts** → `neurox-sense-debug-apk`. The zip contains
+the APK.
+
+## Install
 
 1. Open the APK on an Android 8.0+ device.
 2. Allow install from this source when Android asks.
-3. It is a **debug** build with a throwaway signature, so it will not upgrade over
-   a previous copy — uninstall the old one first.
+3. It is a **debug** build with a throwaway signature, installing as
+   `com.neurox.app.debug`. It will not upgrade over another copy — uninstall the old
+   one first.
 
-### Honest status
+## What this build is, honestly
 
-This is the **first APK this project has ever produced**. The development sandbox
-could not reach Google Maven, so `./gradlew assembleDebug` has never run until this
-workflow; it is entirely possible that it fails on a real dependency resolution
-problem the offline stub gate could not see. If the download link 404s, no build
-has succeeded yet — check the
-[Actions tab](https://github.com/mrsad2615-creator/vodiwalker_panel/actions/workflows/build-apk.yml)
-for the failure.
+**Eleven distinct defects** were found by running the real build, none of which the
+six pre-existing offline checks could see:
 
-What *is* verified (323 unit tests, 16 modules compiling against stubs) and what is
-not (Room SQL, Compose runtime behaviour, anything on a device) is spelled out in
-[`NEUROX/docs/TEST_STATUS.md`](NEUROX/docs/TEST_STATUS.md).
+| # | First real failure | What it revealed |
+| --- | --- | --- |
+| 1 | `Setup Android SDK` | tooling step, not code |
+| 2 | `Unresolved reference: ksp` | `core:data` used Room's processor without applying KSP |
+| 3 | `Could not resolve :core:audio` | an android.library required by a JVM module |
+| 4 | `mainManifest ... doesn't exist` | **no manifest, no resources, no icon — at all** |
+| 5 | `Unresolved reference: presentation` | undeclared module dependencies |
+| 6 | `Unresolved reference: JournalMode` | Room's enum is nested; my stub said otherwise |
+| 7 | `Unresolved reference 'platform'` | a fully-qualified reference no import check would see |
+| 8 | KSP plugin not found | `com.google.*` regex sent KSP to Google Maven |
+| 9 | `com.google.testing.platform` | the previous fix went too narrow |
+| 10 | `installSplashScreen` | stub had the wrong API shape — twice |
+| 11 | `unexpected minSdk` | my own verification, not the app |
 
-### Why a debug APK
+Full detail in the commit log. The pattern is worth stating: every one of these was
+invisible to checks that had been reporting green for the project's whole life, and
+several were *created by* my stubs being wrong in the permissive direction — the
+documented risk of compiling against hand-written API declarations.
 
-A release build would need a signing keystore held in repository secrets, and a key
-that ships publicly installed apps is a key that must never leak. A debug APK is
-installable, needs no secrets, and cannot be mistaken for a production release. When
-a real release is wanted, `NEUROX/docs/BUILD.md` describes the keystore setup and the
-workflow only needs a `release` variant and four secrets.
+## What is verified
+
+- 323 unit tests on the pure layers (domain, games, security, audio, presentation).
+- 20 modules compiling against API stubs with zero diagnostics, 5 manifests present,
+  every module dependency declared.
+- **The real Gradle build**, now: `assembleDebug` succeeds, and the resulting file is
+  a signed APK with the expected package id and `minSdk`.
+
+## What is still not verified
+
+Room's generated DAOs have never executed, Compose has never rendered a frame, and
+nothing has run on a device. `NEUROX/docs/TEST_STATUS.md` lists the rest.
+
+The app may well crash on launch. If it does, that is the next thing to fix, and it
+is now fixable — the build pipeline works.

@@ -133,14 +133,16 @@ jobs:
             find app/build/outputs -type f | head -20
             exit 1
           fi
-          # Stable release asset name. The debug suffix is kept because that is
-          # the applicationId the file actually installs as. Written here (cwd is
-          # NEUROX/) and referenced from this directory by every later step, and
-          # from the repo root only where a path is explicitly prefixed.
-          name="NEUROX-sense-debug-${GITHUB_SHA::7}.apk"
+          # FIXED asset name on purpose. The download URL is
+          #   .../releases/latest/download/NEUROX-sense-debug.apk
+          # and it must keep working across builds; a hash in the filename would
+          # change the URL on every push, which is the opposite of one-click.
+          # The commit is recorded in the release notes and the run instead.
+          name="NEUROX-sense-debug.apk"
           cp "$apk" "$name"
           ls -lh "$name"
           echo "name=$name" >> "$GITHUB_OUTPUT"
+          echo "sha=$GITHUB_SHA" >> "$GITHUB_OUTPUT"
 
       - name: Verify the APK is a real, signed package
         working-directory: NEUROX

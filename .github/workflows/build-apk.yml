@@ -153,11 +153,14 @@ jobs:
           # aapt2 prints the package name; a truncated or empty APK fails here
           # rather than on someone's phone.
           badging=$("$BT/aapt2" dump badging "$apk")
-          echo "$badging" | head -3
+          echo "$badging" | head -6
           echo "$badging" | grep -q "package: name='com.neurox.app.debug'" \
             || { echo "::error::unexpected package id"; exit 1; }
-          echo "$badging" | grep -q "sdkVersion:'26'" \
-            || { echo "::error::unexpected minSdk"; exit 1; }
+          # build-tools 35 prefixes this line differently from older versions
+          # (minSdkVersion:'26' vs sdkVersion:'26'), and the exact spelling is not
+          # the point - the point is that minSdk is 26. Accept either.
+          echo "$badging" | grep -qE "(minSdkVersion|sdkVersion):'26'" \
+            || { echo "::error::unexpected minSdk"; echo "$badging" | head -6; exit 1; }
           # Signature must verify, otherwise it cannot be installed at all.
           "$BT/apksigner" verify --verbose "$apk" | head -5
           echo "APK verified: package, minSdk and signature all as expected."

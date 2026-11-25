@@ -108,10 +108,15 @@ annotation class Database(
 @Retention(AnnotationRetention.BINARY)
 annotation class Transaction
 
-/** JournalMode is an enum in the real library. */
-enum class JournalMode { AUTOMATIC, TRUNCATE, WRITE_AHEAD_LOGGING }
-
 abstract class RoomDatabase {
+
+    /**
+     * A NESTED enum in the real library: androidx.room.RoomDatabase.JournalMode.
+     * Declaring it at package level made `import androidx.room.JournalMode` resolve
+     * here and fail under Gradle - a stub that was wrong in the permissive direction,
+     * which is the documented risk of the whole offline approach (DEC-0009).
+     */
+    enum class JournalMode { AUTOMATIC, TRUNCATE, WRITE_AHEAD_LOGGING }
 
     abstract fun <T : Any> dao(daoClass: Class<T>): T
     abstract fun clearAllTables()

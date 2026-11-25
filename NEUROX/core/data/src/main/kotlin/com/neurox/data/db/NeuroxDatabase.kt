@@ -1,7 +1,7 @@
 package com.neurox.data.db
 
 import androidx.room.Database
-import androidx.room.JournalMode
+import androidx.room.RoomDatabase.JournalMode
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.migration.Migration

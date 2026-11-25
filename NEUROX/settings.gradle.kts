@@ -3,8 +3,15 @@ pluginManagement {
         google {
             content {
                 includeGroupByRegex("com\\.android.*")
-                includeGroupByRegex("com\\.google.*")
                 includeGroupByRegex("androidx.*")
+                // NOT "com\\.google.*": that sends every com.google artifact here,
+                // and KSP (com.google.devtools.ksp) is not published to Google Maven.
+                // Restricting it there made the KSP plugin unresolvable with
+                // "not found in any of the following sources", which reads like a
+                // missing version but is a repository-scoping mistake.
+                includeGroupByRegex("com\\.google\\.android.*")
+                includeGroupByRegex("com\\.google\\.gms.*")
+                includeGroupByRegex("com\\.google\\.firebase.*")
             }
         }
         mavenCentral()

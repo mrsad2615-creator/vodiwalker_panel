@@ -1,17 +1,15 @@
 // NEUROX offline compile stubs - activity-component.
 package androidx.activity
 
+import android.app.Application
 import android.os.Bundle
 import androidx.compose.runtime.Composable
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.savedstate.SavedStateRegistryOwner
 
-open class ComponentActivity : android.content.Context(), LifecycleOwner, SavedStateRegistryOwner {
+open class ComponentActivity : android.app.Activity(), LifecycleOwner, SavedStateRegistryOwner {
     override val lifecycle: Lifecycle = Lifecycle()
-    open fun onCreate(savedInstanceState: Bundle?) {}
-    fun enableEdgeToEdge() {}
+    override fun onCreate(savedInstanceState: Bundle?) {}
 }
 
-@Composable
-fun ComponentActivity.setContent(content: @Composable () -> Unit) {}

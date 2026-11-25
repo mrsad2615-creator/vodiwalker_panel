@@ -47,7 +47,8 @@ class AppContainer(context: Context) : AppServices {
     private val database: NeuroxDatabase = NeuroxDatabase.open(appContext)
 
     override val profileRepository: ProfileRepository = ProfileRepositoryImpl(database.profileDao())
-    override val sessionRepository: SessionRepository = SessionRepositoryImpl(database.sessionDao())
+    override val sessionRepository: SessionRepository =
+        SessionRepositoryImpl(database.sessionDao(), database.checkpointDao())
     /**
      * One implementation serves both settings surfaces.
      *

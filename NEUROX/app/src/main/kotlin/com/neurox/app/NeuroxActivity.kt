@@ -15,12 +15,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.core.splashscreen.SplashScreen
 import androidx.navigation.NavType
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.neurox.app.di.AppContainer
 import com.neurox.app.nav.NeuroxNavHost
+import com.neurox.app.nav.goTo
 import com.neurox.common.MotionModeName
 import com.neurox.data.prefs.NxPreferences
 import com.neurox.designsystem.components.NxChip
@@ -59,7 +60,7 @@ import kotlinx.coroutines.withContext
 class NeuroxActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        val splash = installSplashScreen()
+        val splash = SplashScreen.installSplashScreen(this)
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         val container = (application as NeuroxApplication).container

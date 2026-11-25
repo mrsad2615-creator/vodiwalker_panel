@@ -1,7 +1,14 @@
 // NEUROX offline compile stubs - android.os: Bundle, Build, vibration.
 package android.os
 
-abstract class Bundle
+abstract class Bundle {
+    open fun getString(key: String): String? = null
+    open fun getString(key: String, defaultValue: String?): String? = defaultValue
+    open fun getInt(key: String, defaultValue: Int): Int = defaultValue
+    open fun getLong(key: String, defaultValue: Long): Long = defaultValue
+    open fun getBoolean(key: String, defaultValue: Boolean): Boolean = defaultValue
+    open fun containsKey(key: String): Boolean = false
+}
 
 object Build {
     object VERSION {

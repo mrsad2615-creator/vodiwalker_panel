@@ -154,12 +154,22 @@ cat "$OUT_DIR/diag/permission-before.txt"
 # Installing first is safe: `connectedDebugAndroidTest` installs its own build over this
 # one, and a runtime permission is attached to the package name, so it survives the
 # replacement. The APK is the same one the previous job built and uploaded.
-EARLY_APK=$(find apk -name '*.apk' 2>/dev/null | head -1)
-if [ -n "$EARLY_APK" ]; then
-  adb install -r -g "$EARLY_APK" > "$OUT_DIR/diag/preinstall.txt" 2>&1 || true
-  echo "pre-installed $(basename "$EARLY_APK") for the permission grant"
+# Build and install the androidTest APK pair with AGP, so the signatures match what the
+# test task will install over them.
+#
+# The previous attempt installed the workflow's debug APK here, and the suite then failed
+# with `INSTALL_FAILED_UPDATE_INCOMPATIBLE: Existing package dev.hgallery.app.debug
+# signatures do not match newer version` and "Finished 0 tests". The APK from the build job
+# is signed differently from the one `connectedDebugAndroidTest` produces, so installing it
+# first made every test unable to run -- a worse outcome than the permission screen, because
+# nothing ran at all.
+#
+# `:app:installDebug` uses the same signing configuration as the test task, so the suite can
+# replace it. Zero tests, and why, is now recorded too: "Finished 0 tests" is not a pass.
+if ./gradlew --console=plain --no-daemon :app:installDebug > "$OUT_DIR/diag/preinstall.txt" 2>&1; then
+  echo "installed the debug build for the permission grant"
 else
-  echo "::warning title=e2e::no APK in apk/, so the suite will start behind the permission screen"
+  echo "::warning title=e2e::the debug build could not be installed, so the suite may run behind the permission screen"
 fi
 
 for PERM in android.permission.READ_MEDIA_IMAGES android.permission.READ_MEDIA_VIDEO \
@@ -224,6 +234,9 @@ SUMMARY="$OUT_DIR/diag/instrumented-summary.txt"
   echo "failure reasons (leading whitespace allowed, because AGP indents them):"
   grep -E "^[[:space:]]*(java|org|android|kotlin|androidx)\.[A-Za-z.$]*(Error|Exception)" ui-test.log \
     | sed 's/^[[:space:]]*//' | sort | uniq -c | sort -rn || true
+  echo
+  STARTED=$(grep -oE "Starting [0-9]+ tests" ui-test.log | head -1 || true)
+  echo "suite start line: ${STARTED:-<none>; the test task did not reach any test}"
   echo
   echo "classes on the device with no line in the log (did not run, or ran nothing):"
   for F in app/src/androidTest/kotlin/dev/hgallery/app/*Test.kt; do

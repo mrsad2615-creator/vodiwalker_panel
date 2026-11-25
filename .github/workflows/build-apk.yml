@@ -177,29 +177,91 @@ jobs:
 
       # The one-click link. `latest` is a moving tag pointing at the newest build,
       # so the URL never changes; each build also gets a dated tag for history.
+      # Publishing uses the REST API rather than the gh CLI. Inside a workflow the
+      # CLI failed here with no diagnostic at all (exit 1, empty annotation); curl
+      # always reports the HTTP status, which is the only thing worth having when
+      # a publishing step fails at 3am.
       - name: Publish release
         if: github.event_name != 'pull_request'
         working-directory: NEUROX
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           APK_NAME: ${{ steps.find.outputs.name }}
+          COMMIT: ${{ github.sha }}
+          REPO: ${{ github.repository }}
         run: |
           set -eu
+          api="https://api.github.com/repos/$REPO"
+          auth="Authorization: Bearer $GH_TOKEN"
           tag="apk-latest"
-          # Recreate the tag on every successful build so /releases/latest always
-          # serves the newest APK.
-          gh release delete "$tag" --yes --cleanup-tag 2>/dev/null || true
-          gh release create "$tag" "$APK_NAME" \
-            --title "NEUROX SENSE - latest APK" \
-            --target "$GITHUB_SHA" \
-            --notes "Automatic build of \`${GITHUB_SHA::7}\`.
 
-          **Install:** download \`$APK_NAME\` below and open it on an Android 8.0+ device. You will be asked to allow installs from this source.
+          echo "--- token permissions ---"
+          curl -s -H "$auth" "$api" \
+            | python3 -c "import json,sys; d=json.load(sys.stdin); print('repo:', d.get('full_name'), '| perms:', d.get('permissions'))" \
+            || echo "could not read repo metadata"
 
-          - package \`com.neurox.app.debug\`, version \`1.0.0-debug\`
+          # Remove the previous release and its tag so /releases/latest always
+          # points at the newest APK. A 404 here is the normal first run.
+          old_id=$(curl -s -H "$auth" "$api/releases/tags/$tag" \
+            | python3 -c "import json,sys; print(json.load(sys.stdin).get('id',''))" 2>/dev/null || true)
+          if [ -n "${old_id:-}" ]; then
+            echo "deleting previous release $old_id"
+            curl -s -o /dev/null -w "  delete release: %{http_code}\n" \
+              -X DELETE -H "$auth" "$api/releases/$old_id"
+          fi
+          if curl -s -H "$auth" "$api/git/ref/tags/$tag" | grep -q '"ref"'; then
+            curl -s -o /dev/null -w "  delete tag ref: %{http_code}\n" \
+              -X DELETE -H "$auth" "$api/git/refs/tags/$tag"
+          fi
+
+          # Build the request body with a file, not a shell string: the notes
+          # contain backticks and newlines and a heredoc is the honest way to
+          # keep them.
+          cat > notes.md <<NOTES
+          Automatic build of \`$COMMIT\`.
+
+          **Install:** download \`$APK_NAME\` and open it on an Android 8.0+ device. Android will ask you to allow installs from this source.
+
+          - package \`com.neurox.app.debug\` if you also have a release build installed, both can coexist
           - debug build: not minified, signed with a per-run throwaway key
-          - it cannot update over another copy: uninstall the old one first
-          - built from this commit by GitHub Actions, not by hand
+          - it cannot upgrade over another copy: uninstall the old one first
+          - built by GitHub Actions from $COMMIT, verified with aapt2 and apksigner before upload
+          - what is and is not tested is in NEUROX/docs/TEST_STATUS.md
+          NOTES
+          TAG="$tag" python3 - > release.json <<'JSONEOF'
+          import json, os
+          print(json.dumps({
+              "tag_name": os.environ["TAG"],
+              "target_commitish": os.environ["COMMIT"],
+              "name": "NEUROX SENSE - latest APK",
+              "body": open("notes.md").read(),
+              "draft": False,
+              "prerelease": True,
+          }))
+          JSONEOF
 
-          What is and is not verified in this build is in \`NEUROX/docs/TEST_STATUS.md\`. No APK had ever been built before this workflow existed, so treat this as a first run rather than a release."
-          echo "::notice::Download: https://github.com/${{ github.repository }}/releases/latest"
+          echo "--- create release ---"
+          code=$(curl -s -o resp.json -w "%{http_code}" -X POST -H "$auth" \
+                 -H "Accept: application/vnd.github+json" \
+                 --data-binary @release.json "$api/releases")
+          if [ "$code" != "201" ]; then
+            echo "::error::release creation failed with HTTP $code"
+            head -c 600 resp.json; echo
+            exit 1
+          fi
+
+          upload_url=$(python3 -c "import json; print(json.load(open('resp.json'))['upload_url'].split('{')[0])")
+          echo "release created; uploading $APK_NAME"
+
+          ucode=$(curl -s -o up.json -w "%{http_code}" -X POST -H "$auth" \
+                  -H "Content-Type: application/vnd.android.package-archive" \
+                  --data-binary "@$APK_NAME" "$upload_url?name=$APK_NAME&label=Debug%20APK")
+          if [ "$ucode" != "201" ]; then
+            echo "::error::asset upload failed with HTTP $ucode"
+            head -c 600 up.json; echo
+            exit 1
+          fi
+
+          size=$(python3 -c "import json; print(json.load(open('up.json'))['size'])")
+          echo "uploaded $size bytes"
+          echo "::notice::One-click download: https://github.com/$REPO/releases/latest/download/$APK_NAME"

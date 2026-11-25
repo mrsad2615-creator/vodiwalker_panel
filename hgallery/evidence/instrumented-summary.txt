@@ -71,6 +71,10 @@ dev.hgallery.app.ViewerDismissTest > aShortPullDoesNotDismiss[emulator-5554 - 13
 dev.hgallery.app.ViewerDismissTest > anUpwardSwipeDoesNotDismiss[emulator-5554 - 13] [31mFAILED [0m
 dev.hgallery.app.ViewerDismissTest > theViewerOpensOnAPhoto[emulator-5554 - 13] [31mFAILED [0m
 
-failure reasons:
+failure reasons (leading whitespace allowed, because AGP indents them):
+     34 java.lang.AssertionError: Failed to inject touch input.
+      5 java.lang.IllegalStateException: Player is accessed on the wrong thread.
+      3 java.lang.AssertionError: Assert failed: The component is not displayed!
+      3 androidx.compose.ui.test.ComposeTimeoutException: Condition still not satisfied after 4900 ms
 
 classes on the device with no line in the log (did not run, or ran nothing):

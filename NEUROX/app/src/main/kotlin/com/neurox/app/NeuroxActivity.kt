@@ -16,6 +16,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.core.splashscreen.SplashScreen
+import androidx.core.splashscreen.installSplashScreen
 import androidx.navigation.NavType
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
@@ -60,7 +61,9 @@ import kotlinx.coroutines.withContext
 class NeuroxActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        val splash = SplashScreen.installSplashScreen(this)
+        // installSplashScreen() is an extension on ComponentActivity in
+        // androidx.core.splashscreen, not a SplashScreen companion member.
+        val splash: SplashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         val container = (application as NeuroxApplication).container

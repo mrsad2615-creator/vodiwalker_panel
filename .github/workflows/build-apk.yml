@@ -1,0 +1,151 @@
+name: Build APK
+
+# Produces an installable APK and attaches it to a GitHub Release, so there is a
+# permanent one-click download link:
+#
+#   https://github.com/mrsad2615-creator/vodiwalker_panel/releases/latest
+#
+# Why this exists: the development sandbox cannot reach Google Maven, so a Gradle
+# build - and therefore an APK - has never been produced there. This workflow runs
+# on GitHub's machines, which can reach everything, and is the only place an APK
+# is built. It is also the first time ./gradlew assembleDebug actually runs.
+#
+# The APK is a DEBUG build: it carries the debug suffix, is not minified, and is
+# signed with a throwaway key generated per run. That is deliberate:
+#   - a debug build needs no signing secrets in the repository;
+#   - a per-run key means the file cannot be used to ship an update to anyone;
+#   - it is installable by sideloading, which is what "try it" means here.
+# A release build (minified, own key, upgradeable) needs a keystore in secrets;
+# see docs/BUILD.md.
+
+on:
+  push:
+    branches: [arena/d829ad28-vodiwalker-panel, main]
+    paths:
+      - 'NEUROX/**'
+      - '.github/workflows/build-apk.yml'
+  pull_request:
+    paths:
+      - 'NEUROX/**'
+  workflow_dispatch: # lets the user rebuild on demand from the Actions tab
+
+permissions:
+  contents: write # required to create the Release and upload the APK
+
+# A newer push supersedes an in-flight build, except for releases triggered by
+# hand, which are never cancelled.
+concurrency:
+  group: build-apk-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'workflow_dispatch' }}
+
+jobs:
+  apk:
+    name: Assemble debug APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      # The build needs API 35 because every module sets compileSdk = 35.
+      - name: Install platform 35
+        run: |
+          yes | sdkmanager --licenses > /dev/null || true
+          sdkmanager "platforms;android-35" "build-tools;35.0.0" "platform-tools"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      # `exec` makes the step's exit code the Gradle exit code. Without it a
+      # pipeline would report the last command's status and a failed build would
+      # look green - the exact mistake the old offline audit made.
+      - name: Assemble
+        working-directory: NEUROX
+        run: ./gradlew --no-daemon --stacktrace assembleDebug
+
+      - name: Locate APK
+        id: find
+        working-directory: NEUROX
+        run: |
+          set -eu
+          apk=$(find app/build/outputs/apk/debug -name '*.apk' -type f | head -1)
+          if [ -z "$apk" ]; then
+            echo "::error::assembleDebug succeeded but produced no APK"
+            find app/build/outputs -type f | head -20
+            exit 1
+          fi
+          # Stable release asset name. The debug suffix is kept because that is
+          # the applicationId the file actually installs as. Written here (cwd is
+          # NEUROX/) and referenced from this directory by every later step, and
+          # from the repo root only where a path is explicitly prefixed.
+          name="NEUROX-sense-debug-${GITHUB_SHA::7}.apk"
+          cp "$apk" "$name"
+          ls -lh "$name"
+          echo "name=$name" >> "$GITHUB_OUTPUT"
+
+      - name: Verify the APK is a real, signed package
+        working-directory: NEUROX
+        run: |
+          set -eu
+          apk="${{ steps.find.outputs.name }}"
+          # setup-android puts cmdline-tools on PATH, not build-tools, so the
+          # binaries are addressed explicitly.
+          BT="${ANDROID_HOME}/build-tools/35.0.0"
+          # aapt2 prints the package name; a truncated or empty APK fails here
+          # rather than on someone's phone.
+          badging=$("$BT/aapt2" dump badging "$apk")
+          echo "$badging" | head -3
+          echo "$badging" | grep -q "package: name='com.neurox.app.debug'" \
+            || { echo "::error::unexpected package id"; exit 1; }
+          echo "$badging" | grep -q "sdkVersion:'26'" \
+            || { echo "::error::unexpected minSdk"; exit 1; }
+          # Signature must verify, otherwise it cannot be installed at all.
+          "$BT/apksigner" verify --verbose "$apk" | head -5
+          echo "APK verified: package, minSdk and signature all as expected."
+
+      - name: Upload as workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: neurox-sense-debug-apk
+          path: NEUROX/${{ steps.find.outputs.name }}
+          if-no-files-found: error
+          retention-days: 30
+
+      # The one-click link. `latest` is a moving tag pointing at the newest build,
+      # so the URL never changes; each build also gets a dated tag for history.
+      - name: Publish release
+        if: github.event_name != 'pull_request'
+        working-directory: NEUROX
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          APK_NAME: ${{ steps.find.outputs.name }}
+        run: |
+          set -eu
+          tag="apk-latest"
+          # Recreate the tag on every successful build so /releases/latest always
+          # serves the newest APK.
+          gh release delete "$tag" --yes --cleanup-tag 2>/dev/null || true
+          gh release create "$tag" "$APK_NAME" \
+            --title "NEUROX SENSE - latest APK" \
+            --target "$GITHUB_SHA" \
+            --notes "Automatic build of \`${GITHUB_SHA::7}\`.
+
+          **Install:** download \`$APK_NAME\` below and open it on an Android 8.0+ device. You will be asked to allow installs from this source.
+
+          - package \`com.neurox.app.debug\`, version \`1.0.0-debug\`
+          - debug build: not minified, signed with a per-run throwaway key
+          - it cannot update over another copy: uninstall the old one first
+          - built from this commit by GitHub Actions, not by hand
+
+          What is and is not verified in this build is in \`NEUROX/docs/TEST_STATUS.md\`. No APK had ever been built before this workflow existed, so treat this as a first run rather than a release."
+          echo "::notice::Download: https://github.com/${{ github.repository }}/releases/latest"

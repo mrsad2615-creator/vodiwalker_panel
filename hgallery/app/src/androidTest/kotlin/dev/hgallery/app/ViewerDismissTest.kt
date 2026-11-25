@@ -23,8 +23,14 @@ import org.junit.runner.RunWith
  * a real swipe through the touch input, on the real screen.
  *
  * A fixture with no photos cannot open a viewer, so each test returns early on an
- * empty library rather than failing for a reason unrelated to the gesture. The CI
- * emulator seeds its library, so they run.
+ * empty library rather than failing for a reason unrelated to the gesture.
+ *
+ * That early return was hiding more than it protected. `run-connected-tests.sh` pushed
+ * its fixture media *after* this suite ran, so the library was always empty on CI, the
+ * early return was always taken, and these tests had never once driven the gesture they
+ * exist for -- while reporting success. The seeding now happens before the tests, so the
+ * skip is for a device that genuinely has no photographs, not for the one this project
+ * tests on.
  */
 @RunWith(AndroidJUnit4::class)
 class ViewerDismissTest {

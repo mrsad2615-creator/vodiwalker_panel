@@ -36,6 +36,85 @@ mkdir -p "$OUT_DIR/diag"
 # PNGs can end up. Creating it explicitly means they land at a known path.
 mkdir -p "$OUT_DIR/$ALBUM_NAME"
 
+# Fixture media, as a function, because its position in the file matters.
+#
+# This block used to sit after the instrumented test run, so the tests ran against an
+# empty MediaStore: every test that needed a photograph returned early and reported
+# success, and the player tests could not reach a video. The seeding and the `.nomedia`
+# marker are therefore two functions called in an explicit order below -- media first,
+# tests second, screenshots third -- rather than a long script whose order is implied by
+# where the lines happen to be.
+seed_fixture_media() {
+  # Fixtures are split across two device folders so the Albums tab has more than
+  # one bucket to draw, and their EXIF dates differ so the timeline must group
+  # them into separate day sections rather than collapsing everything into Today.
+  echo "== pushing fixture media so the timeline has real content =="
+  # Remove the folder earlier revisions of this script left in Pictures. On a reused
+  # emulator those captures stay in MediaStore and would keep appearing as library
+  # items, which is the artefact this change exists to remove.
+  adb shell rm -rf "/sdcard/Pictures/hgallery-shots" >/dev/null 2>&1
+  adb shell rm -rf "$DEVICE_DIR" >/dev/null 2>&1
+  adb shell rm -rf "$FIXTURE_DIR" >/dev/null 2>&1
+  # Created here, after the purge above and before the first screencap: an earlier
+  # revision created it before this same rm -rf and the marker was deleted a few lines
+  # later, which is why a run with the fix in place still photographed itself.
+  adb shell mkdir -p "$DEVICE_DIR" >/dev/null 2>&1
+  adb shell touch "$DEVICE_DIR/.nomedia" >/dev/null 2>&1
+  if adb shell ls -a "$DEVICE_DIR" 2>/dev/null | grep -q nomedia; then
+    echo "::notice title=e2e::.nomedia is in place, so captures stay out of the library"
+  else
+    echo "::error title=e2e::.nomedia could not be created; every screenshot will be indexed"
+  fi
+  adb shell mkdir -p "$FIXTURE_DIR/Camera" >/dev/null 2>&1
+  adb shell mkdir -p "$FIXTURE_DIR/Screenshots" >/dev/null 2>&1
+  # Real photographs, not flat test cards. The earlier fixtures were solid colour
+  # blocks with a white circle, which made every screenshot of the app look like a
+  # prototype regardless of how the layout underneath was built.
+  n=0
+  for f in .ci/fixtures/real/*.jpg; do
+    n=$((n + 1))
+    if [ $((n % 4)) -eq 0 ]; then
+      adb push "$f" "$FIXTURE_DIR/Screenshots/" >/dev/null 2>&1
+    else
+      adb push "$f" "$FIXTURE_DIR/Camera/" >/dev/null 2>&1
+    fi
+  done
+  # Two real H.264/AAC clips so the Albums tab has a Videos bucket and the player
+  # has something to actually decode.
+  for f in .ci/fixtures/real/*.mp4; do
+    [ -f "$f" ] || continue
+    adb push "$f" "$FIXTURE_DIR/Camera/" >/dev/null 2>&1
+  done
+  # MediaStore only notices new files once someone asks it to index them.
+  adb shell content call --uri content://media/external --method scan_volume --arg external_primary >/dev/null 2>&1
+  sleep 6
+  adb shell content query --uri content://media/external/images/media --projection _id 2>/dev/null | wc -l | tee "$OUT_DIR/diag/mediastore-count.txt"
+
+  echo "== spreading date_taken across three days so grouping is exercised =="
+  # `date +%s` through `adb shell` runs in the *device's* toybox, which cannot do
+  # 64-bit shell arithmetic: the multiplication wrapped and every fixture landed on
+  # 1970-01-01, which then rendered as the wrong year in date headers. Compute the
+  # millisecond clock in the host shell and pass the number through.
+  NOW_MS=$(( $(date +%s) * 1000 ))
+  adb shell content query --uri content://media/external/images/media --projection _id 2>/dev/null \
+    | sed -n 's/.*_id=\([0-9]*\).*/\1/p' > "$OUT_DIR/diag/media-ids.txt"
+  IDX=0
+  TOTAL=$(wc -l < "$OUT_DIR/diag/media-ids.txt")
+  GROUP=$(( (TOTAL + 2) / 3 ))
+  [ "$GROUP" -lt 1 ] && GROUP=1
+  while IFS= read -r MID; do
+    [ -z "$MID" ] && continue
+    DAY=$((IDX / GROUP))
+    NEWMS=$((NOW_MS - DAY * 86400000))
+    adb shell content update --uri "content://media/external/images/media/$MID" \
+      --bind date_taken:l:"$NEWMS" --bind date_added:s:$((NEWMS / 1000)) >/dev/null 2>&1
+    IDX=$((IDX + 1))
+  done < "$OUT_DIR/diag/media-ids.txt"
+  echo "retimed $IDX rows into $(( (IDX + GROUP - 1) / GROUP )) day groups" | tee "$OUT_DIR/diag/retime.txt"
+}
+
+seed_fixture_media
+
 echo "== instrumented UI tests =="
 # The exit status must be Gradle's, not tee's.
 #
@@ -87,73 +166,6 @@ if [ "$INSTALL_STATUS" -ne 0 ]; then
   adb shell pm list packages | grep -i gallery > "$OUT_DIR/diag/packages.txt"
   exit 1
 fi
-
-# Fixtures are split across two device folders so the Albums tab has more than
-# one bucket to draw, and their EXIF dates differ so the timeline must group
-# them into separate day sections rather than collapsing everything into Today.
-echo "== pushing fixture media so the timeline has real content =="
-# Remove the folder earlier revisions of this script left in Pictures. On a reused
-# emulator those captures stay in MediaStore and would keep appearing as library
-# items, which is the artefact this change exists to remove.
-adb shell rm -rf "/sdcard/Pictures/hgallery-shots" >/dev/null 2>&1
-adb shell rm -rf "$DEVICE_DIR" >/dev/null 2>&1
-adb shell rm -rf "$FIXTURE_DIR" >/dev/null 2>&1
-# Created here, after the purge above and before the first screencap: an earlier
-# revision created it before this same rm -rf and the marker was deleted a few lines
-# later, which is why a run with the fix in place still photographed itself.
-adb shell mkdir -p "$DEVICE_DIR" >/dev/null 2>&1
-adb shell touch "$DEVICE_DIR/.nomedia" >/dev/null 2>&1
-if adb shell ls -a "$DEVICE_DIR" 2>/dev/null | grep -q nomedia; then
-  echo "::notice title=e2e::.nomedia is in place, so captures stay out of the library"
-else
-  echo "::error title=e2e::.nomedia could not be created; every screenshot will be indexed"
-fi
-adb shell mkdir -p "$FIXTURE_DIR/Camera" >/dev/null 2>&1
-adb shell mkdir -p "$FIXTURE_DIR/Screenshots" >/dev/null 2>&1
-# Real photographs, not flat test cards. The earlier fixtures were solid colour
-# blocks with a white circle, which made every screenshot of the app look like a
-# prototype regardless of how the layout underneath was built.
-n=0
-for f in .ci/fixtures/real/*.jpg; do
-  n=$((n + 1))
-  if [ $((n % 4)) -eq 0 ]; then
-    adb push "$f" "$FIXTURE_DIR/Screenshots/" >/dev/null 2>&1
-  else
-    adb push "$f" "$FIXTURE_DIR/Camera/" >/dev/null 2>&1
-  fi
-done
-# Two real H.264/AAC clips so the Albums tab has a Videos bucket and the player
-# has something to actually decode.
-for f in .ci/fixtures/real/*.mp4; do
-  [ -f "$f" ] || continue
-  adb push "$f" "$FIXTURE_DIR/Camera/" >/dev/null 2>&1
-done
-# MediaStore only notices new files once someone asks it to index them.
-adb shell content call --uri content://media/external --method scan_volume --arg external_primary >/dev/null 2>&1
-sleep 6
-adb shell content query --uri content://media/external/images/media --projection _id 2>/dev/null | wc -l | tee "$OUT_DIR/diag/mediastore-count.txt"
-
-echo "== spreading date_taken across three days so grouping is exercised =="
-# `date +%s` through `adb shell` runs in the *device's* toybox, which cannot do
-# 64-bit shell arithmetic: the multiplication wrapped and every fixture landed on
-# 1970-01-01, which then rendered as the wrong year in date headers. Compute the
-# millisecond clock in the host shell and pass the number through.
-NOW_MS=$(( $(date +%s) * 1000 ))
-adb shell content query --uri content://media/external/images/media --projection _id 2>/dev/null \
-  | sed -n 's/.*_id=\([0-9]*\).*/\1/p' > "$OUT_DIR/diag/media-ids.txt"
-IDX=0
-TOTAL=$(wc -l < "$OUT_DIR/diag/media-ids.txt")
-GROUP=$(( (TOTAL + 2) / 3 ))
-[ "$GROUP" -lt 1 ] && GROUP=1
-while IFS= read -r MID; do
-  [ -z "$MID" ] && continue
-  DAY=$((IDX / GROUP))
-  NEWMS=$((NOW_MS - DAY * 86400000))
-  adb shell content update --uri "content://media/external/images/media/$MID" \
-    --bind date_taken:l:"$NEWMS" --bind date_added:s:$((NEWMS / 1000)) >/dev/null 2>&1
-  IDX=$((IDX + 1))
-done < "$OUT_DIR/diag/media-ids.txt"
-echo "retimed $IDX rows into $(( (IDX + GROUP - 1) / GROUP )) day groups" | tee "$OUT_DIR/diag/retime.txt"
 
 echo "== granting media permissions =="
 for p in READ_MEDIA_IMAGES READ_MEDIA_VIDEO READ_MEDIA_VISUAL_USER_SELECTED; do

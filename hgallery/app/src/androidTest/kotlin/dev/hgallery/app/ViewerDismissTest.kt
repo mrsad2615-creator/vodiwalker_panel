@@ -1,10 +1,7 @@
 package dev.hgallery.app
 
-import androidx.compose.ui.test.assertExists
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.hasTestTagStartingWith
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
-import androidx.compose.ui.test.onAllNodes
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
@@ -46,12 +43,10 @@ class ViewerDismissTest {
     private fun openViewer(): Boolean {
         rule.onNodeWithTag(HgTestTags.tab("Photos")).performClick()
         rule.waitForIdle()
-        val tiles = rule.onAllNodes(
-            hasTestTagStartingWith(HgTestTags.thumbPrefix),
-            useUnmergedTree = true,
-        )
-        if (tiles.fetchSemanticsNodes().isEmpty()) return false
-        tiles[0].performClick()
+        // `firstTile()` is in TestTiles.kt: it owns the one matcher for "a tile, whatever
+        // its id", because three files needed it and each solved it differently.
+        val tile = rule.firstTile() ?: return false
+        tile.performClick()
         rule.waitForIdle()
         return rule.onAllNodesWithTag(HgTestTags.VIEWER).fetchSemanticsNodes().isNotEmpty()
     }
@@ -89,7 +84,7 @@ class ViewerDismissTest {
             swipeDown(startY = height * 0.4f, endY = height * 0.5f, durationMillis = 200)
         }
         rule.waitForIdle()
-        rule.onNodeWithTag(HgTestTags.VIEWER).assertExists()
+        rule.onNodeWithTag(HgTestTags.VIEWER).assertIsDisplayed()
     }
 
     /**
@@ -103,6 +98,6 @@ class ViewerDismissTest {
         if (!openViewer()) return
         rule.onNodeWithTag(HgTestTags.VIEWER).performTouchInput { swipeUp() }
         rule.waitForIdle()
-        rule.onNodeWithTag(HgTestTags.VIEWER).assertExists()
+        rule.onNodeWithTag(HgTestTags.VIEWER).assertIsDisplayed()
     }
 }

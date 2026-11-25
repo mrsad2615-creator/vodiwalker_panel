@@ -32,12 +32,15 @@ class SelectionTest {
         rule.waitForIdle()
     }
 
-    /** The first tile the timeline actually drew, whatever its id happens to be. */
-    private fun firstTileTag(): String? =
-        rule.onAllNodes(TileMatcher).fetchSemanticsNodes()
-            .firstOrNull()
-            ?.config
-            ?.getOrNull(androidx.compose.ui.semantics.SemanticsProperties.TestTag)
+    /**
+     * The first tile the timeline actually drew, whatever its id happens to be.
+     *
+     * `firstTile()` in TestTiles.kt does the matching, and returns the node rather than
+     * its tag. An earlier version read the tag back out of the node's configuration and
+     * looked the node up a second time by it, which needed a semantics accessor this
+     * Compose version does not have.
+     */
+    private fun firstTile() = rule.firstTile()
 
     /**
      * Select-all lives in the overflow menu now.
@@ -69,8 +72,8 @@ class SelectionTest {
     @Test
     fun longPressingATileOpensTheSelectionToolbar() {
         openPhotos()
-        val tag = firstTileTag() ?: return // empty emulator library: nothing to select
-        rule.onNodeWithTag(tag).performTouchInput { longClick() }
+        val tile = firstTile() ?: return // empty emulator library: nothing to select
+        tile.performTouchInput { longClick() }
         rule.waitForIdle()
         rule.onNodeWithTag(HgTestTags.SELECTION_BAR).assertIsDisplayed()
         rule.onNodeWithTag(HgTestTags.SELECTION_COUNT).assertIsDisplayed()
@@ -79,8 +82,8 @@ class SelectionTest {
     @Test
     fun exitingSelectionRestoresThePhotosTitle() {
         openPhotos()
-        val tag = firstTileTag() ?: return
-        rule.onNodeWithTag(tag).performTouchInput { longClick() }
+        val tile = firstTile() ?: return
+        tile.performTouchInput { longClick() }
         rule.waitForIdle()
         rule.onNodeWithTag(HgTestTags.EXIT_SELECTION).performClick()
         rule.waitForIdle()
@@ -91,15 +94,15 @@ class SelectionTest {
     @Test
     fun selectAllThenDeselectAllLeavesTheGridUsable() {
         openPhotos()
-        val tag = firstTileTag() ?: return
-        rule.onNodeWithTag(tag).performTouchInput { longClick() }
+        val tile = firstTile() ?: return
+        tile.performTouchInput { longClick() }
         rule.waitForIdle()
         rule.onNodeWithTag(HgTestTags.SELECTION_SELECT_ALL).performClick()
         rule.waitForIdle()
         rule.onNodeWithTag(HgTestTags.SELECTION_COUNT).assertIsDisplayed()
         rule.onNodeWithTag(HgTestTags.SELECTION_SELECT_ALL).performClick()
         rule.waitForIdle()
-        rule.onNodeWithTag(HgTestTags.PHOTOS_GRID).assertExists()
+        rule.onNodeWithTag(HgTestTags.PHOTOS_GRID).assertIsDisplayed()
     }
 
     /**
@@ -114,39 +117,32 @@ class SelectionTest {
     @Test
     fun theActionBarIsLaidOutWithRealHeight() {
         openPhotos()
-        val tag = firstTileTag() ?: return
-        rule.onNodeWithTag(tag).performTouchInput { longClick() }
+        val tile = firstTile() ?: return
+        tile.performTouchInput { longClick() }
         rule.waitForIdle()
         rule.onNodeWithTag(HgTestTags.SELECTION_BAR).assertIsDisplayed()
         val height = rule.onNodeWithTag(HgTestTags.SELECTION_BAR)
             .fetchSemanticsNode().size.height
+        // JUnit's argument order is (message, condition). The arguments were the other
+        // way round, which is a compile error rather than a wrong assertion, and it is
+        // how a test that never compiled went unnoticed for as long as the harness was
+        // reporting every instrumented run as green.
         assertTrue(
-            height > 40 * rule.density.density,
             "the selection action bar was $height px tall, so it is not really on screen",
+            height > 40 * rule.density.density,
         )
     }
 
     @Test
     fun openingTheDeleteConfirmationIsNotItselfADeletion() {
         openPhotos()
-        val tag = firstTileTag() ?: return
-        rule.onNodeWithTag(tag).performTouchInput { longClick() }
+        val tile = firstTile() ?: return
+        tile.performTouchInput { longClick() }
         rule.waitForIdle()
         rule.onNodeWithTag(HgTestTags.SELECTION_DELETE).performClick()
         rule.waitForIdle()
         // The dialog is up; the grid must still hold the item, because the user
         // has not confirmed. Cancelling is the next assertion a human would make.
-        rule.onNodeWithTag(HgTestTags.PHOTOS_GRID).assertExists()
+        rule.onNodeWithTag(HgTestTags.PHOTOS_GRID).assertIsDisplayed()
     }
-}
-
-/**
- * Matches any tile tag, so the test does not have to know a MediaStore row id.
- * `hasTestTag` only matches exactly, which is why this exists.
- */
-private val TileMatcher = androidx.compose.ui.test.SemanticsMatcher(
-    "test tag starts with ${HgTestTags.thumbPrefix}",
-) { node ->
-    node.config.getOrNull(androidx.compose.ui.semantics.SemanticsProperties.TestTag)
-        ?.startsWith(HgTestTags.thumbPrefix) == true
 }

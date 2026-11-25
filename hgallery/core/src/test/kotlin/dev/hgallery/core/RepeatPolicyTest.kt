@@ -35,20 +35,20 @@ class RepeatPolicyTest {
 
     @Test
     fun offStopsAtTheEndAndShowsReplay() {
-        assertEquals(EndOfClip.DoNothing, RepeatPolicy.onEnd(RepeatMode.OFF, 2, nextInQueue = 3))
+        assertEquals(EndOfClip.DoNothing, RepeatPolicy.onEnd(RepeatMode.OFF, nextInQueue = 3))
     }
 
     @Test
     fun oneRepeatsTheSameClipEvenWhenAnotherExists() {
         // The next clip is available and must be ignored: that is what "one" means.
-        assertEquals(EndOfClip.ReplayThis, RepeatPolicy.onEnd(RepeatMode.ONE, 2, nextInQueue = 3))
+        assertEquals(EndOfClip.ReplayThis, RepeatPolicy.onEnd(RepeatMode.ONE, nextInQueue = 3))
     }
 
     @Test
     fun allAdvancesToTheNextClip() {
         assertEquals(
             EndOfClip.PlayNext(3),
-            RepeatPolicy.onEnd(RepeatMode.ALL, 2, nextInQueue = 3),
+            RepeatPolicy.onEnd(RepeatMode.ALL, nextInQueue = 3),
         )
     }
 
@@ -57,7 +57,7 @@ class RepeatPolicyTest {
         // The clip after 3 in the queue is 1, and the caller passes that in.
         assertEquals(
             EndOfClip.PlayNext(1),
-            RepeatPolicy.onEnd(RepeatMode.ALL, 3, nextInQueue = 1),
+            RepeatPolicy.onEnd(RepeatMode.ALL, nextInQueue = 1),
         )
     }
 
@@ -66,7 +66,7 @@ class RepeatPolicyTest {
         // The user asked to keep playing. Explicitly doing nothing would ignore them, and
         // "next" for a one-clip queue is that same clip, which is a repeat in everything
         // but name.
-        assertEquals(EndOfClip.ReplayThis, RepeatPolicy.onEnd(RepeatMode.ALL, 7, nextInQueue = null))
+        assertEquals(EndOfClip.ReplayThis, RepeatPolicy.onEnd(RepeatMode.ALL, nextInQueue = null))
     }
 
     // ------------------------------------------------------------------ the wrap

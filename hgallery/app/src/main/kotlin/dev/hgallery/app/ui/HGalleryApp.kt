@@ -38,6 +38,7 @@ import dev.hgallery.app.ui.search.SearchScreen
 import dev.hgallery.app.ui.shell.HgBottomBar
 import dev.hgallery.app.ui.shell.HgTab
 import dev.hgallery.app.ui.theme.hgPalette
+import dev.hgallery.app.ui.video.VideoNavigation
 import dev.hgallery.app.ui.video.VideoPlayerScreen
 import dev.hgallery.app.ui.viewer.ViewerScreen
 import dev.hgallery.core.Album
@@ -265,15 +266,23 @@ fun HGalleryApp(container: AppContainer) {
                         scope.launch { container.settings.setRepeatMode(mode) }
                     },
                     entry = playerEntry,
-                    // Switching clip replaces the item, not the screen: the player stays
-                    // mounted, so the surface keeps its binding and the picture follows
-                    // the sound. Either way this is a move along the list rather than a
-                    // fresh choice, so the clip starts muted.
-                    onSelectItem = {
-                        playerEntry = PlayerPolicy.Entry.SWIPE
-                        playerId = it
-                    },
-                    onClose = { playerId = null },
+                    navigation = VideoNavigation(
+                        // Switching clip replaces the item, not the screen: the player
+                        // stays mounted, so the surface keeps its binding and the picture
+                        // follows the sound. Either way this is a move along the list
+                        // rather than a fresh choice, so the clip starts muted.
+                        onSelectItem = {
+                            playerEntry = PlayerPolicy.Entry.SWIPE
+                            playerId = it
+                        },
+                        // Reached by the repeat mode, not by the user touching the strip.
+                        // The volume is deliberately not affected: nothing about the
+                        // arrival changed, so the policy that mutes a swiped clip does not
+                        // apply. Marking it as a swipe here would mute a queue that the
+                        // user asked to play continuously.
+                        onAdvance = { playerId = it },
+                        onClose = { playerId = null },
+                    ),
                 )
             }
         }

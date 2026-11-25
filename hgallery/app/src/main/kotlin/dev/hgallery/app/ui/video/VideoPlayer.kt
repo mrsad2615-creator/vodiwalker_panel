@@ -62,6 +62,25 @@ import kotlinx.coroutines.delay
  *  - horizontal drag anywhere on the surface: seek, committed on release;
  *  - the progress line: a real scrub, with the timecode following the finger.
  */
+/**
+ * Every way a player leaves the clip it is showing.
+ *
+ * `VideoPlayerScreen` took seven parameters before this existed, which detekt's
+ * `LongParameterList` flagged at the threshold: the call site had become a list of
+ * lambdas with nothing on screen to say which was which. Grouping the three callbacks
+ * also puts the two that move to another clip next to each other, which is where the
+ * distinction between them matters -- `onSelectItem` is the strip and `onAdvance` is the
+ * repeat mode, and they were once the same lambda doing both jobs.
+ */
+@androidx.compose.runtime.Immutable
+data class VideoNavigation(
+    /** The user picked a clip from the strip. Starts muted. */
+    val onSelectItem: (Long) -> Unit,
+    /** The repeat mode moved to another clip at the end of this one. Keeps the volume. */
+    val onAdvance: (Long) -> Unit,
+    val onClose: () -> Unit,
+)
+
 @UnstableApi
 @Composable
 fun VideoPlayerScreen(
@@ -82,8 +101,7 @@ fun VideoPlayerScreen(
      * `PlayerPolicy` can. A tapped clip plays with sound and a swiped one does not.
      */
     entry: PlayerPolicy.Entry = PlayerPolicy.Entry.DIRECT,
-    onSelectItem: (Long) -> Unit,
-    onClose: () -> Unit,
+    navigation: VideoNavigation,
 ) {
     val context = LocalContext.current
     val activity = context as? android.app.Activity
@@ -159,8 +177,8 @@ fun VideoPlayerScreen(
     LaunchedEffect(controller.reachedEnd, item.id, repeatMode) {
         if (!controller.reachedEnd) return@LaunchedEffect
         val wrapped = RepeatPolicy.nextWithWrap(queue, item.id)
-        when (val outcome = RepeatPolicy.onEnd(repeatMode, item.id, wrapped?.id)) {
-            is EndOfClip.PlayNext -> onSelectItem(outcome.id)
+        when (val outcome = RepeatPolicy.onEnd(repeatMode, wrapped?.id)) {
+            is EndOfClip.PlayNext -> navigation.onAdvance(outcome.id)
             EndOfClip.ReplayThis -> controller.replay()
             // The chrome is already revealed by the effect below, which shows replay.
             EndOfClip.DoNothing -> Unit
@@ -230,7 +248,7 @@ fun VideoPlayerScreen(
                     onRepeatModeChange(repeatMode.next)
                     chromeVisible = true
                 },
-                onClose = onClose,
+                onClose = navigation.onClose,
                 onRotate = {
                     activity?.requestedOrientation = nextOrientation(activity.requestedOrientation)
                 },
@@ -249,7 +267,7 @@ fun VideoPlayerScreen(
                         store = thumbnailStore,
                         expanded = filmstripExpanded,
                         onToggleExpanded = { filmstripExpanded = !filmstripExpanded },
-                        onSelect = onSelectItem,
+                        onSelect = navigation.onSelectItem,
                     )
                 }
                 PlayerBottomBar(

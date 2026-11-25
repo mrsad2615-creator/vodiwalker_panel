@@ -104,13 +104,17 @@ object RepeatPolicy {
 
     /**
      * @param mode the user's choice.
-     * @param currentId the clip that just reached its end.
-     * @param nextInQueue the clip that follows [currentId] in queue order, or the first
-     *   clip when [currentId] is the last one, or null when the queue holds a single
-     *   clip. The wrap is the caller's job because only the caller knows the whole
-     *   queue; see the fold below for why the decision itself is here.
+     * @param nextInQueue the clip to advance to, in queue order, or the first clip when
+     *   the current one is last, or null when there is nowhere to go. The wrap is the
+     *   caller's job because only the caller holds the whole queue; see
+     *   [nextWithWrap], which is where that rule is written.
+     *
+     * There is no `currentId` parameter. An earlier version took one and never read it:
+     * the mode decides what happens before the identity of the clip can matter, and
+     * detekt was right that a parameter carrying no information is one a reader will
+     * assume is doing something.
      */
-    fun onEnd(mode: RepeatMode, currentId: Long, nextInQueue: Long?): EndOfClip =
+    fun onEnd(mode: RepeatMode, nextInQueue: Long?): EndOfClip =
         when (mode) {
             RepeatMode.OFF -> EndOfClip.DoNothing
             RepeatMode.ONE -> EndOfClip.ReplayThis

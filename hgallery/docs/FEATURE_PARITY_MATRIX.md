@@ -64,6 +64,31 @@ change pixels is the clearest possible example of fake functionality.
 | Feature | Status |
 |---|---|
 | Playback, seeking, speed, full screen | partial — Media3 player, scrubber, 10 s skip, 0.25×–2× menu, landscape full screen and pause-at-end are implemented and photographed; double-tap seek and drag-to-seek were never driven by the harness |
+| Repeat: off / this clip / the queue | implemented — one enum, three modes, the wrap rule and its boundaries unit-tested; the mode is stored and has a control in the player and a row set in Settings |
+| Gesture brightness (vertical drag, left half) | **no** |
+| Gesture volume (vertical drag, right half) | **no** — only a mute toggle |
+| Gesture lock | **no** — described in section 9.1 of the design direction, not built |
+| Long-press to play at 2× | **no** |
+| Subtitles, including external files | **no** |
+| Audio track selection | **no** |
+| Background playback and picture-in-picture | **no** |
+
+### On the player reference
+
+The nine rows above, and the repeat modes, were modelled on MX Player **from memory**.
+This environment cannot reach Play, its APK, or its source, so none of it is evidence
+about that application. Where a choice was a guess, the code says so at the point of the
+guess: `RepeatPolicy` opens with the `UNCONFIRMED` marker.
+
+That distinction is the point of keeping this table. A feature marked `implemented`
+above means this project has it and a test fails if it breaks. It does not mean the
+behaviour matches MX Player, because that was never measured. Confirming it needs either
+the APK or a device, and neither is reachable from here.
+
+The four gesture rows are the same gap the design direction already records: section
+9.1 lists them as the arbitration contract, and the code has rules 5, 8 and 12 only
+(horizontal seek, double-tap skip, single tap for the chrome). Rules 6, 7, 9 and 10 --
+brightness, volume, double-tap thirds, long-press speed -- are specified and absent.
 
 ## Discover / Highlights / Search / Advanced
 

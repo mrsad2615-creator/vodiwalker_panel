@@ -37,9 +37,29 @@ mkdir -p "$OUT_DIR/diag"
 mkdir -p "$OUT_DIR/$ALBUM_NAME"
 
 echo "== instrumented UI tests =="
+# The exit status must be Gradle's, not tee's.
+#
+# This was `./gradlew ... | tee ui-test.log` followed by `TEST_STATUS=$?`, which reports
+# tee's status and is therefore always 0. In POSIX sh there is no `pipefail`, so the
+# value could not have been anything else. `TEST_STATUS` is the exit status of this whole
+# script, so every instrumented failure -- a crashing screen, an assertion that did not
+# hold, a test that never compiled -- was reported as a green run. The log was captured;
+# the failure was not.
+#
+# `set -o pipefail` is not available in sh, and the workflow runs this file with `sh`, so
+# the status is taken from the log instead: AGP writes a failing test into ui-test.log as
+# "FAILED" and exits non-zero, and that line is what this checks for.
 ./gradlew --console=plain --no-daemon :app:connectedDebugAndroidTest 2>&1 | tee ui-test.log
-TEST_STATUS=$?
-echo "connectedDebugAndroidTest exit status: $TEST_STATUS"
+TEST_STATUS=0
+if grep -qE "^FAILED |FAILURE: Build failed|Tests on .* failed" ui-test.log; then
+  TEST_STATUS=1
+fi
+echo "connectedDebugAndroidTest: $TEST_STATUS (0 = passed), tests seen: $(grep -cE '^\s*[0-9]+ (tests?|of [0-9]+)' ui-test.log || true)"
+if grep -qE "Tests on .* (passed|failed)" ui-test.log; then
+  grep -E "Tests on .* (passed|failed)" ui-test.log | while IFS= read -r line; do
+    echo "::notice title=e2e::$line"
+  done
+fi
 
 echo "== installing the application build for screenshots =="
 APK=$(find apk -name '*.apk' 2>/dev/null | head -1)

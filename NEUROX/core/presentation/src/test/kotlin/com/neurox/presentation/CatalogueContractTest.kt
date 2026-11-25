@@ -90,6 +90,31 @@ class CatalogueContractTest {
     }
 
     @Test
+    fun everySkillHasALabel() {
+        // Skill ids are the catalogue suffixes; the enum is the source of truth.
+        val keys = com.neurox.domain.exercise.Skill.entries.map { "skill.${it.id}" }
+        assertInBothCatalogues(keys)
+    }
+
+    @Test
+    fun everyDomainErrorHasAMessage() {
+        // DomainError codes are stable strings the UI translates. A new error without
+        // a catalogue entry would render as the raw code, e.g. "error.storage_failure".
+        val codes = listOf(
+            "profile_not_found", "profile_inactive", "profile_name_blank",
+            "profile_name_too_long", "profile_limit_reached", "pin_required",
+            "pin_invalid", "session_not_running", "session_already_finished",
+            "exercise_not_found", "invalid_configuration", "configuration_field_invalid",
+            "backup_format_unsupported", "backup_version_unsupported", "backup_corrupted",
+            "backup_password_wrong", "backup_content_invalid", "restore_verify_failed",
+            "plan_conflict", "plan_invalid", "storage_failure", "unknown",
+        )
+        assertInBothCatalogues(codes.map { "error.$it" })
+        // Pin the count so adding a DomainError without a catalogue entry fails here.
+        assertEquals("DomainError grew; add the new error.* keys above", 22, codes.size)
+    }
+
+    @Test
     fun theTwoCataloguesStayInParity() {
         val enOnly = Strings.englishKeys() - Strings.persianKeys()
         val faOnly = Strings.persianKeys() - Strings.englishKeys()

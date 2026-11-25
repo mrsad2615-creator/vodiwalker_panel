@@ -39,7 +39,7 @@ PASS VaultServiceTest.tamperedEnvelopeMetadataIsRejectedNotSilentlyAccepted
 PASS VaultServiceTest.truncatedOrCorruptFilesAreRejected
 PASS VaultServiceTest.wrongPasswordIsRejectedAndNeverYieldsData
 
-Total: 321   Passed: 321   Failed: 0   Skipped: 0
+Total: 323   Passed: 323   Failed: 0   Skipped: 0
 Classpath entries: 7
 
 Full output: /home/user/vodiwalker_panel/NEUROX/.verify/test-output.txt

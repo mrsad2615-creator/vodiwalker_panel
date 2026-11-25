@@ -81,7 +81,7 @@ fun SessionRoute(
         val created = SessionController(
             engineSession = engine,
             audio = audio,
-            clock = SystemClock,
+            clock = clock,
         )
         controller = created
         uiState = created.state()

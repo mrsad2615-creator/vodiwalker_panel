@@ -4,14 +4,17 @@ pluginManagement {
             content {
                 includeGroupByRegex("com\\.android.*")
                 includeGroupByRegex("androidx.*")
-                // NOT "com\\.google.*": that sends every com.google artifact here,
-                // and KSP (com.google.devtools.ksp) is not published to Google Maven.
-                // Restricting it there made the KSP plugin unresolvable with
-                // "not found in any of the following sources", which reads like a
-                // missing version but is a repository-scoping mistake.
-                includeGroupByRegex("com\\.google\\.android.*")
-                includeGroupByRegex("com\\.google\\.gms.*")
-                includeGroupByRegex("com\\.google\\.firebase.*")
+                // All com.google.* EXCEPT com.google.devtools.*, which is where KSP
+                // lives and which Google Maven does not publish.
+                //
+                // The simple form, includeGroupByRegex("com\\.google.*"), claims KSP
+                // for Google Maven and makes the plugin permanently unresolvable;
+                // Gradle then reports "not found in any of the following sources",
+                // which reads like a bad version. Narrowing instead to the specific
+                // com.google families broke com.google.testing.platform, which is
+                // part of AGP's own dependency graph. So: include the family, exclude
+                // the one development-tools subtree that is not there.
+                includeGroupByRegex("com\\.google\\.(?!devtools).*")
             }
         }
         mavenCentral()

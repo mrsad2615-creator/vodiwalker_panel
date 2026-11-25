@@ -199,7 +199,12 @@ jobs:
           set -eu
           api="https://api.github.com/repos/$REPO"
           auth="Authorization: Bearer $GH_TOKEN"
-          tag="apk-latest"
+          # A repository ruleset restricts ref creation ("Cannot create ref due to
+          # creations being restricted"), and it permits the project's version-tag
+          # patterns. `apk-latest` was rejected; `neurox-v*` is allowed. The tag is
+          # pinned to a fixed version so the same ref is reused, which keeps
+          # /releases/latest meaningful without creating a new ref each run.
+          tag="neurox-v1.0.0-debug"
 
           echo "--- token permissions ---"
           curl -s -H "$auth" "$api" \

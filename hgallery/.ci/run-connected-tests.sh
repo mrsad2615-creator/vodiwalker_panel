@@ -54,12 +54,21 @@ TEST_STATUS=0
 if grep -qE "^FAILED |FAILURE: Build failed|Tests on .* failed" ui-test.log; then
   TEST_STATUS=1
 fi
-echo "connectedDebugAndroidTest: $TEST_STATUS (0 = passed), tests seen: $(grep -cE '^\s*[0-9]+ (tests?|of [0-9]+)' ui-test.log || true)"
-if grep -qE "Tests on .* (passed|failed)" ui-test.log; then
-  grep -E "Tests on .* (passed|failed)" ui-test.log | while IFS= read -r line; do
-    echo "::notice title=e2e::$line"
-  done
-fi
+# Report the outcome per class, not only the aggregate. An aggregate line says "5 tests
+# failed" without saying which, and an absent line is ambiguous between "this class
+# passed" and "this class never ran" -- both of which happened in the run that first made
+# this visible. `--tests` results appear as one line per executed test.
+echo "connectedDebugAndroidTest: $TEST_STATUS (0 = passed)"
+grep -E "^[A-Za-z0-9_.]+ > [A-Za-z0-9_]+.*(FAILED|PASSED)" ui-test.log | while IFS= read -r line; do
+  echo "::notice title=e2e::$line"
+done
+# One line per class stating how many of its tests were seen, so a class that ran zero
+# tests is visibly different from a class whose tests passed.
+for CLASS in $(grep -oE "dev\.hgallery\.app\.[A-Za-z]+Test" ui-test.log | sort -u); do
+  RAN=$(grep -cE "^${CLASS} > " ui-test.log || true)
+  FAILED=$(grep -E "^${CLASS} > " ui-test.log | grep -c "FAILED" || true)
+  echo "::notice title=e2e::$CLASS: $RAN reported, $FAILED failed"
+done
 
 echo "== installing the application build for screenshots =="
 APK=$(find apk -name '*.apk' 2>/dev/null | head -1)

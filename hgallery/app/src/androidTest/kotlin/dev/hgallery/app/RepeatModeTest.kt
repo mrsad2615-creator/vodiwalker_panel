@@ -1,15 +1,15 @@
 package dev.hgallery.app
 
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotSelected
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
-import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import dev.hgallery.app.ui.components.HgTestTags
 import dev.hgallery.core.RepeatMode
-import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -58,14 +58,23 @@ class RepeatModeTest {
         rule.waitForIdle()
     }
 
-    /** True when the row for [mode] is the selected one, read from its semantics. */
-    private fun isSelected(mode: RepeatMode): Boolean =
-        rule.onAllNodesWithTag(HgTestTags.repeatOption(mode.name), useUnmergedTree = true)
-            .fetchSemanticsNodes()
-            .firstOrNull()
-            ?.config
-            ?.getOrNull(androidx.compose.ui.semantics.SemanticsProperties.Selected)
-            ?: false
+    /**
+     * Asserts which row is selected.
+     *
+     * `assertIsSelected` reads the `Selected` semantics that `selectable(...)` in
+     * `ChoiceRow` sets, which is the same property a screen reader uses. Reading it by
+     * hand is what this first tried, and `SemanticsConfiguration.getOrNull` does not
+     * exist on this version -- so the assertion is left to the test library rather than
+     * reimplemented against an API that is not there.
+     */
+    private fun assertSelection(mode: RepeatMode, selected: Boolean) {
+        repeatModeRows(mode).let { node ->
+            if (selected) node.assertIsSelected() else node.assertIsNotSelected()
+        }
+    }
+
+    private fun repeatModeRows(mode: RepeatMode) =
+        rule.onNodeWithTag(HgTestTags.repeatOption(mode.name), useUnmergedTree = true)
 
     @Test
     fun everyModeIsOfferedAsARow() {
@@ -83,15 +92,15 @@ class RepeatModeTest {
         openSettings()
 
         selectMode(RepeatMode.ONE)
-        assertEquals(true, isSelected(RepeatMode.ONE))
+        assertSelection(RepeatMode.ONE, selected = true)
         // Mutually exclusive. Two selected rows would mean the mode is stored twice and
         // the player could read either one.
-        assertEquals(false, isSelected(RepeatMode.ALL))
-        assertEquals(false, isSelected(RepeatMode.OFF))
+        assertSelection(RepeatMode.ALL, selected = false)
+        assertSelection(RepeatMode.OFF, selected = false)
 
         selectMode(RepeatMode.ALL)
-        assertEquals(true, isSelected(RepeatMode.ALL))
-        assertEquals(false, isSelected(RepeatMode.ONE))
+        assertSelection(RepeatMode.ALL, selected = true)
+        assertSelection(RepeatMode.ONE, selected = false)
     }
 
     @Test
@@ -105,7 +114,7 @@ class RepeatModeTest {
         rule.waitForIdle()
         openSettings()
 
-        assertEquals(true, isSelected(RepeatMode.ONE))
+        assertSelection(RepeatMode.ONE, selected = true)
     }
 
     @Test
@@ -114,7 +123,7 @@ class RepeatModeTest {
         selectMode(RepeatMode.ALL)
         selectMode(RepeatMode.OFF)
 
-        assertEquals(true, isSelected(RepeatMode.OFF))
-        assertEquals(false, isSelected(RepeatMode.ALL))
+        assertSelection(RepeatMode.OFF, selected = true)
+        assertSelection(RepeatMode.ALL, selected = false)
     }
 }

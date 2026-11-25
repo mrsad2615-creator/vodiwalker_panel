@@ -1,0 +1,58 @@
+# NEUROX — offline verification output
+
+Generated: 2026-11-24T23:12:32Z
+Kotlin compiler: info: kotlinc-jvm 2.4.21 (JRE 25.0.5.1+2-LTS)
+JDK: openjdk version "25.0.5.1" 2026-11-17 LTS
+
+```
+== [1/5] compile core:common ==
+core/common/src/main/kotlin/org/junit/Assert.kt:146:41: warning: unchecked cast of 'Throwable' to 'T (of fun <T> assertThrows)'.
+            if (clazz == null) return t as T
+                                        ^^^^
+== [2/5] compile core:domain ==
+== [3/5] compile core:games ==
+== [4/5] compile tests ==
+== [5/5] run tests ==
+PASS TrainingPlanTest.adaptivePlannerIsDeterministic
+PASS TrainingPlanTest.adaptivePlannerKeepsAllFourModulesWhenSkillsAreNarrow
+PASS TrainingPlanTest.dailyMinuteCeilingIsEnforced
+PASS TrainingPlanTest.dayLimitProtectsAgainstOverTraining
+PASS TrainingPlanTest.planItemsEnforceTheirOwnBounds
+PASS TrainingPlanTest.restDayConflictIsRejected
+PASS TrainingPlanTest.restDaysReturnNoItems
+PASS TrainingPlanTest.unknownExerciseIsRejected
+PASS TrainingPlanTest.validPlanIsAccepted
+PASS TrainingPlanTest.warningsFlagUnhealthyWeeks
+PASS TrainingPlanTest.weeklyGoalMustBeReachableByThePlan
+PASS VaultMappersTest.configRoundTripsIncludingNullableFields
+PASS VaultMappersTest.configToleratesUnknownAndMissingFields
+PASS VaultMappersTest.exportedSessionKeepsEveryMeasuredValue
+PASS VaultMappersTest.missingRequiredSessionFieldFailsLoudly
+PASS VaultMappersTest.payloadRoundTripsAndPreservesPersianNames
+PASS VaultMappersTest.planRoundTripsWithNestedDays
+PASS VaultMappersTest.sessionRoundTripsExactly
+PASS VaultValidatorTest.aadBindsVersionKdfAndSelection
+PASS VaultValidatorTest.acceptsAWellFormedEnvelope
+PASS VaultValidatorTest.checksumDetectsAnyChangeAndIsStable
+PASS VaultValidatorTest.payloadValidationCatchesTamperedContent
+PASS VaultValidatorTest.payloadValidationRejectsEmptyIdentityAndBadChecksum
+PASS VaultValidatorTest.pbkdf2FallbackIsAdvertisedWithItsIterationCount
+PASS VaultValidatorTest.rejectsDuplicatedOrUnknownSelection
+PASS VaultValidatorTest.rejectsPayloadThatIsNotBase64
+PASS VaultValidatorTest.rejectsShortSaltAndCorruptChecksumField
+PASS VaultValidatorTest.rejectsUnknownFormatAndVersion
+PASS VaultValidatorTest.rejectsWeakOrUnknownKeyDerivation
+PASS VaultValidatorTest.rejectsWrongCipherAndWrongNonceLength
+PASS WeakSkillAnalyzerTest.findsTheWeakestExerciseFirst
+PASS WeakSkillAnalyzerTest.ignoresExercisesWithTooLittleHistory
+PASS WeakSkillAnalyzerTest.zeroLimitReturnsNothing
+PASS WpmTest.ignoresSessionsShorterThanTheMinimum
+PASS WpmTest.netWpmAppliesErrorPenalty
+PASS WpmTest.persianAndLatinTextUseTheSameDefinition
+PASS WpmTest.usesFiveCharactersPerWord
+
+Total: 147   Passed: 147   Failed: 0   Skipped: 0
+Classpath entries: 4
+
+Verification artifacts: /home/user/vodiwalker_panel/NEUROX/.verify
+```

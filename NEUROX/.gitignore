@@ -1,0 +1,15 @@
+# Build output
+build/
+.gradle/
+local.properties
+*.iml
+.idea/
+
+# Offline verification artefacts: logs, class jars and generated R files.
+# These are reproducible from the scripts and must not bloat the repository.
+.verify/
+verify-artifacts/
+
+# Keystores: never commit signing material.
+*.jks
+*.keystore

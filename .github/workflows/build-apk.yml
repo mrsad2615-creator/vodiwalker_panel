@@ -43,6 +43,12 @@ jobs:
     name: Assemble debug APK
     runs-on: ubuntu-latest
     timeout-minutes: 40
+    # Repeated from the workflow level on purpose: the release step failed with
+    # HTTP 422, which is what a read-only token returns when asked to create a
+    # release. If this still fails, the organisation default workflow permission
+    # is read-only and must be raised in the repository settings.
+    permissions:
+      contents: write
 
     steps:
       - name: Check out
@@ -246,7 +252,8 @@ jobs:
                  --data-binary @release.json "$api/releases")
           if [ "$code" != "201" ]; then
             echo "::error::release creation failed with HTTP $code"
-            head -c 600 resp.json; echo
+            python3 -c "import json;d=json.load(open('resp.json'));print('message:',d.get('message'));[print(' -',e.get('resource'),e.get('code'),e.get('field')) for e in d.get('errors',[])]" 2>/dev/null || head -c 600 resp.json
+            echo
             exit 1
           fi
 

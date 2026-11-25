@@ -599,4 +599,28 @@ object HgIcons {
         moveTo(7.9f, 16.1f)
         lineTo(5.9f, 18.1f)
     }
+
+    /**
+     * Repeat. Two arrows chasing each other around an open box, in the accent when the
+     * mode is not off; the numeral beside it distinguishes "all" from "one".
+     *
+     * The numeral is not drawn inside this glyph. At 24 dp a digit inside a repeat mark
+     * collapses into a smudge, and two glyphs at different weights read better than one
+     * glyph trying to say two things. The control draws this arrow and a "1" or an "A"
+     * next to it.
+     */
+    val Repeat: ImageVector = icon("HG.Repeat") {
+        moveTo(4.6f, 9.4f)
+        curveTo(4.6f, 7.4f, 6.2f, 5.8f, 8.2f, 5.8f)
+        horizontalLineTo(17.2f)
+        moveTo(14.8f, 3.2f)
+        lineTo(17.4f, 5.8f)
+        lineTo(14.8f, 8.4f)
+        moveTo(19.4f, 14.6f)
+        curveTo(19.4f, 16.6f, 17.8f, 18.2f, 15.8f, 18.2f)
+        horizontalLineTo(6.8f)
+        moveTo(9.2f, 15.6f)
+        lineTo(6.6f, 18.2f)
+        lineTo(9.2f, 20.8f)
+    }
 }

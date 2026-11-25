@@ -40,6 +40,7 @@ import dev.hgallery.app.data.HgSettings
 import dev.hgallery.app.ui.components.HgTestTags
 import dev.hgallery.app.ui.icons.HgIcons
 import dev.hgallery.app.ui.theme.CountLabel
+import dev.hgallery.core.RepeatMode
 import dev.hgallery.app.ui.theme.HgMetrics
 import dev.hgallery.app.ui.theme.hgPalette
 import dev.hgallery.app.ui.theme.hgShapes
@@ -138,13 +139,27 @@ fun SettingsScreen(
                     modifier = Modifier.testTag(HgTestTags.FILMSTRIP_SWITCH),
                 )
             }
+            // Three modes, not a switch, for the same reason as the theme: "repeat this
+            // one" is a real choice that a two-state control cannot express. This row and
+            // the player's repeat control write the same stored value, so a change in
+            // either place is visible in the other.
+            item { SectionLabel(stringResource(R.string.settings_repeat)) }
+            RepeatMode.entries.forEach { mode ->
+                item(key = "repeat-${mode.name}") {
+                    ChoiceRow(
+                        label = stringResource(repeatLabel(mode)),
+                        selected = settings.repeatMode == mode,
+                        onClick = { scope.launch { container.settings.setRepeatMode(mode) } },
+                        modifier = Modifier.testTag(HgTestTags.repeatOption(mode.name)),
+                    )
+                }
+            }
             item {
-                ToggleRow(
-                    label = stringResource(R.string.settings_autoplay),
-                    detail = stringResource(R.string.settings_autoplay_detail),
-                    checked = settings.autoplayNext,
-                    onChange = { scope.launch { container.settings.setAutoplayNext(it) } },
-                    modifier = Modifier.testTag(HgTestTags.AUTOPLAY_SWITCH),
+                Text(
+                    text = stringResource(R.string.settings_repeat_detail),
+                    style = CountLabel,
+                    color = palette.textSecondary,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
                 )
             }
 
@@ -210,6 +225,13 @@ private fun themeLabel(mode: HgThemeMode): Int = when (mode) {
     HgThemeMode.SYSTEM -> R.string.settings_theme_system
     HgThemeMode.LIGHT -> R.string.settings_theme_light
     HgThemeMode.DARK -> R.string.settings_theme_dark
+}
+
+/** The three repeat modes, as the Settings rows name them. */
+private fun repeatLabel(mode: RepeatMode): Int = when (mode) {
+    RepeatMode.OFF -> R.string.settings_repeat_off
+    RepeatMode.ALL -> R.string.settings_repeat_all
+    RepeatMode.ONE -> R.string.settings_repeat_one
 }
 
 @Composable

@@ -60,6 +60,9 @@ object HgTestTags {
     const val VIDEO_FILL = "video-fill"
     const val VIDEO_MUTE = "video-mute"
 
+    /** The repeat mode control in the player's top bar. Displays the mode, cycles it. */
+    const val VIDEO_REPEAT = "video-repeat"
+
     /** The one-tap filter row under the gallery title, and one chip inside it. */
     const val FILTER_CHIPS = "filter-chips"
     fun filterChip(kind: String) = "filter-chip-$kind"
@@ -125,6 +128,8 @@ object HgTestTags {
     const val GRID_SLIDER = "settings-grid-slider"
     const val SETTINGS_TRASH = "settings-trash"
     const val FILMSTRIP_SWITCH = "settings-filmstrip"
-    const val AUTOPLAY_SWITCH = "settings-autoplay"
     fun themeOption(mode: String) = "settings-theme-$mode"
+
+    /** A repeat mode row in Settings. Separate tags so a test can pick a mode by name. */
+    fun repeatOption(mode: String) = "settings-repeat-$mode"
 }

@@ -16,10 +16,12 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.launch
 import dev.hgallery.app.ui.brand.HG_IGNITION_SCALE_EXTRA
 import dev.hgallery.app.ui.brand.HgIgnition
 import dev.hgallery.app.data.AppContainer
@@ -62,6 +64,10 @@ import dev.hgallery.core.VideoQueue
 @Composable
 fun HGalleryApp(container: AppContainer) {
     val palette = hgPalette
+    // One scope for writes that outlive the composition that started them. A repeat
+    // mode chosen in the player must survive the player being closed immediately after,
+    // so it cannot be tied to a per-screen scope.
+    val scope = rememberCoroutineScope()
     var tab by remember { mutableStateOf(HgTab.Photos) }
     var openAlbum by remember { mutableStateOf<Album?>(null) }
     var viewerId by remember { mutableStateOf<Long?>(null) }
@@ -251,7 +257,13 @@ fun HGalleryApp(container: AppContainer) {
                     item = media,
                     queue = videoQueue,
                     filmstripEnabled = settings.filmstripVisible,
-                    autoplayNext = settings.autoplayNext,
+                    repeatMode = settings.repeatMode,
+                    // Written through the repository, so the player's button and the
+                    // Settings row are two views of one stored value rather than two
+                    // pieces of state that have to be kept in step.
+                    onRepeatModeChange = { mode ->
+                        scope.launch { container.settings.setRepeatMode(mode) }
+                    },
                     entry = playerEntry,
                     // Switching clip replaces the item, not the screen: the player stays
                     // mounted, so the surface keeps its binding and the picture follows

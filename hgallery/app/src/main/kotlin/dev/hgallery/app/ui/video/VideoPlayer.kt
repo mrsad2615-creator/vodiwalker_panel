@@ -26,8 +26,10 @@ import dev.hgallery.app.data.rememberPlayerController
 import dev.hgallery.app.ui.components.HgTestTags
 import dev.hgallery.app.HGalleryApplication
 import dev.hgallery.core.MediaItem
+import dev.hgallery.core.EndOfClip
 import dev.hgallery.core.PlayerPolicy
-import dev.hgallery.core.VideoQueue
+import dev.hgallery.core.RepeatMode
+import dev.hgallery.core.RepeatPolicy
 import kotlinx.coroutines.delay
 
 /**
@@ -66,7 +68,13 @@ fun VideoPlayerScreen(
     item: MediaItem,
     queue: List<MediaItem>,
     filmstripEnabled: Boolean,
-    autoplayNext: Boolean,
+    /**
+     * What happens at the end of a clip. Replaces the old `autoplayNext` boolean, which
+     * could not express "repeat this clip".
+     */
+    repeatMode: RepeatMode,
+    /** Persists a mode the user selected in the player. */
+    onRepeatModeChange: (RepeatMode) -> Unit,
     /**
      * How the user arrived at this clip.
      *
@@ -142,13 +150,20 @@ fun VideoPlayerScreen(
         }
     }
 
-    // Advance at the end of a clip, but only when the user asked for it in Settings.
-    // `reachedEnd` is the latch the controller already sets, so this does not depend on
-    // polling the position and cannot fire twice for one clip.
-    LaunchedEffect(controller.reachedEnd, item.id) {
-        if (controller.reachedEnd && autoplayNext) {
-            val next = VideoQueue.next(queue, item.id)
-            if (next != null) onSelectItem(next.id)
+    // What happens at the end of a clip. `reachedEnd` is the latch the controller already
+    // sets, so this does not depend on polling the position and cannot fire twice for one
+    // clip. The decision itself is in `RepeatPolicy`, which is where a test can reach it:
+    // three modes and a wrap rule are exactly the kind of arithmetic that looks right in
+    // a composable and is wrong at the boundaries, and the boundaries here are the last
+    // clip of the queue and a one-clip queue.
+    LaunchedEffect(controller.reachedEnd, item.id, repeatMode) {
+        if (!controller.reachedEnd) return@LaunchedEffect
+        val wrapped = RepeatPolicy.nextWithWrap(queue, item.id)
+        when (val outcome = RepeatPolicy.onEnd(repeatMode, item.id, wrapped?.id)) {
+            is EndOfClip.PlayNext -> onSelectItem(outcome.id)
+            EndOfClip.ReplayThis -> controller.replay()
+            // The chrome is already revealed by the effect below, which shows replay.
+            EndOfClip.DoNothing -> Unit
         }
     }
 
@@ -210,6 +225,11 @@ fun VideoPlayerScreen(
             PlayerTopBar(
                 title = item.displayName,
                 visible = chrome.visible,
+                repeatMode = repeatMode,
+                onCycleRepeat = {
+                    onRepeatModeChange(repeatMode.next)
+                    chromeVisible = true
+                },
                 onClose = onClose,
                 onRotate = {
                     activity?.requestedOrientation = nextOrientation(activity.requestedOrientation)
@@ -243,6 +263,7 @@ fun VideoPlayerScreen(
                         speed = controller.speed,
                         fillScreen = fillScreen,
                         muted = controller.muted,
+                        repeatMode = repeatMode,
                     ),
                     actions = PlayerActions(
                         onTogglePlay = {
@@ -255,6 +276,12 @@ fun VideoPlayerScreen(
                         onSpeed = { controller.changeSpeed(it) },
                         onFillScreen = { fillScreen = !fillScreen },
                         onToggleMute = { controller.toggleMuted() },
+                        // The cycle is the only place the order of modes is written, so
+                        // the button and the setting cannot disagree about it.
+                        onCycleRepeat = {
+                            onRepeatModeChange(repeatMode.next)
+                            chromeVisible = true
+                        },
                     ),
                 )
             }

@@ -5,6 +5,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
@@ -46,6 +47,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -53,10 +56,12 @@ import dev.hgallery.app.R
 import dev.hgallery.app.ui.components.HgIconButton
 import dev.hgallery.app.ui.components.HgTestTags
 import dev.hgallery.app.ui.icons.HgIcons
+import dev.hgallery.app.ui.theme.HgMetrics
 import dev.hgallery.app.ui.theme.PlayerIndicatorLabel
 import dev.hgallery.app.ui.theme.TimecodeLabel
 import dev.hgallery.core.PlayerPolicy
 import dev.hgallery.core.PlayerState
+import dev.hgallery.core.RepeatMode
 
 /**
  * The scrims behind the chrome.
@@ -84,6 +89,8 @@ private val BottomScrim = Brush.verticalGradient(
 fun PlayerTopBar(
     title: String,
     visible: Boolean,
+    repeatMode: RepeatMode,
+    onCycleRepeat: () -> Unit,
     onClose: () -> Unit,
     onRotate: () -> Unit,
 ) {
@@ -117,6 +124,8 @@ fun PlayerTopBar(
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f),
                 )
+                RepeatControl(mode = repeatMode, onCycle = onCycleRepeat)
+
                 HgIconButton(
                     icon = HgIcons.Orientation,
                     contentDescription = stringResource(R.string.video_rotate),
@@ -146,6 +155,8 @@ data class PlayerTransport(
     val fillScreen: Boolean,
     /** True while the player's volume is zero. */
     val muted: Boolean,
+    /** What happens at the end of this clip. Drawn as the state of the repeat control. */
+    val repeatMode: RepeatMode,
 )
 
 /** The callbacks the bottom bar fires. Grouped for the same reason as the state. */
@@ -158,7 +169,66 @@ data class PlayerActions(
     val onSpeed: (Float) -> Unit,
     val onFillScreen: () -> Unit,
     val onToggleMute: () -> Unit,
+    /** Steps the repeat mode to its next value. */
+    val onCycleRepeat: () -> Unit,
 )
+
+/**
+ * The repeat control: one icon that states the current mode and one tap that steps it.
+ *
+ * ## Why it is in the top bar and not the transport bar
+ *
+ * The transport bar is already at its width limit. On a 320 dp screen its trailing
+ * controls are the mute button (48), the speed chip (about 42 drawn plus its padding),
+ * and the fill button (48), which with the leading play button and the timecode leaves
+ * almost nothing for the title. A fourth 48 dp control overflowed the row. The top bar
+ * has a title that ellipsises, so it can absorb a new control; the transport bar cannot.
+ *
+ * ## Why the mode is a letter and not a shape
+ *
+ * At 24 dp, a repeat glyph with a numeral inside is a smudge. The glyph says "repeat";
+ * the small label beside it says which repeat. Off draws no label at all and uses the
+ * secondary white, so the three states are distinguishable at a glance and the resting
+ * state is visibly the quiet one.
+ */
+@Composable
+private fun RepeatControl(mode: RepeatMode, onCycle: () -> Unit) {
+    val label = when (mode) {
+        RepeatMode.OFF -> ""
+        RepeatMode.ALL -> stringResource(R.string.video_repeat_all)
+        RepeatMode.ONE -> stringResource(R.string.video_repeat_one)
+    }
+    val description = when (mode) {
+        RepeatMode.OFF -> stringResource(R.string.video_repeat_off_desc)
+        RepeatMode.ALL -> stringResource(R.string.video_repeat_all_desc)
+        RepeatMode.ONE -> stringResource(R.string.video_repeat_one_desc)
+    }
+    Row(
+        modifier = Modifier
+            .height(HgMetrics.MinTouchTarget)
+            .clip(RoundedCornerShape(50))
+            .clickable(onClick = onCycle)
+            .semantics { contentDescription = description }
+            .padding(start = 12.dp, end = 12.dp)
+            .testTag(HgTestTags.VIDEO_REPEAT),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            imageVector = HgIcons.Repeat,
+            contentDescription = null,
+            tint = if (mode == RepeatMode.OFF) Color.White.copy(alpha = 0.72f) else hgColors.accentWarm,
+            modifier = Modifier.size(20.dp),
+        )
+        if (label.isNotEmpty()) {
+            Text(
+                text = label,
+                style = PlayerIndicatorLabel,
+                color = hgColors.accentWarm,
+                modifier = Modifier.padding(start = 3.dp),
+            )
+        }
+    }
+}
 
 /**
  * The progress line.

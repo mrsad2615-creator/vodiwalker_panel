@@ -9,6 +9,7 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import dev.hgallery.app.ui.theme.HgThemeMode
+import dev.hgallery.core.RepeatMode
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -42,8 +43,15 @@ data class HgSettings(
     val gridColumns: Int = DEFAULT_GRID_COLUMNS,
     /** Whether the video player shows its filmstrip. */
     val filmstripVisible: Boolean = true,
-    /** Whether playback continues to the next video when one ends. */
-    val autoplayNext: Boolean = false,
+    /**
+     * What happens when a clip ends: stop, repeat it, or advance and wrap.
+     *
+     * This replaces a boolean `autoplayNext`. The boolean could only say "advance or
+     * stop", so "repeat this clip" had nowhere to live, and the player had no way to
+     * express it. The default stays [RepeatMode.OFF], which is the old default of false:
+     * a video that restarts itself is a video the user cannot leave.
+     */
+    val repeatMode: RepeatMode = RepeatMode.OFF,
 ) {
     companion object {
         const val DEFAULT_GRID_COLUMNS = 4
@@ -70,7 +78,7 @@ class SettingsRepository(context: Context) {
             gridColumns = (prefs[Keys.GRID_COLUMNS] ?: HgSettings.DEFAULT_GRID_COLUMNS)
                 .coerceIn(HgSettings.MIN_GRID_COLUMNS, HgSettings.MAX_GRID_COLUMNS),
             filmstripVisible = prefs[Keys.FILMSTRIP_VISIBLE] ?: true,
-            autoplayNext = prefs[Keys.AUTOPLAY_NEXT] ?: false,
+            repeatMode = readRepeatMode(prefs),
         )
     }
 
@@ -97,8 +105,25 @@ class SettingsRepository(context: Context) {
         appContext.preferences.edit { it[Keys.FILMSTRIP_VISIBLE] = visible }
     }
 
-    suspend fun setAutoplayNext(enabled: Boolean) {
-        appContext.preferences.edit { it[Keys.AUTOPLAY_NEXT] = enabled }
+    suspend fun setRepeatMode(mode: RepeatMode) {
+        appContext.preferences.edit { it[Keys.REPEAT_MODE] = mode.name }
+    }
+
+    /**
+     * The repeat mode, including the migration from the boolean it replaced.
+     *
+     * An install that had "play the next video" switched on must not silently lose it:
+     * the user turned it on and this build renamed the concept underneath them. The
+     * legacy key is read only when the new one is absent, and the new key wins after the
+     * first write, so the old value cannot resurrect a setting the user has since
+     * changed. The legacy key is left in place rather than deleted: a downgrade to an
+     * older build should still find its own setting.
+     */
+    private fun readRepeatMode(prefs: Preferences): RepeatMode {
+        val stored = prefs[Keys.REPEAT_MODE]
+        if (stored != null) return RepeatMode.fromName(stored)
+        val legacyAutoplay = prefs[Keys.AUTOPLAY_NEXT] ?: false
+        return if (legacyAutoplay) RepeatMode.ALL else RepeatMode.OFF
     }
 
     /** The keys, named once. A typo in a key is a silently lost preference. */
@@ -106,6 +131,9 @@ class SettingsRepository(context: Context) {
         val THEME_MODE = stringPreferencesKey("theme_mode")
         val GRID_COLUMNS = intPreferencesKey("grid_columns")
         val FILMSTRIP_VISIBLE = booleanPreferencesKey("filmstrip_visible")
+        val REPEAT_MODE = stringPreferencesKey("repeat_mode")
+
+        /** Superseded by [REPEAT_MODE]. Read once, for the migration in [readRepeatMode]. */
         val AUTOPLAY_NEXT = booleanPreferencesKey("autoplay_next")
     }
 }

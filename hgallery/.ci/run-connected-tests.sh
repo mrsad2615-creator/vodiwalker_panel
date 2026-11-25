@@ -160,8 +160,9 @@ SUMMARY="$OUT_DIR/diag/instrumented-summary.txt"
   echo "every reported test:"
   grep -E "^[A-Za-z0-9_.]+ > [A-Za-z0-9_]+.*(FAILED|PASSED)" ui-test.log || echo "  (none)"
   echo
-  echo "failure reasons:"
-  grep -E "^(java|org|android|kotlin)\.[A-Za-z.]*(Error|Exception)" ui-test.log | sort | uniq -c | sort -rn || true
+  echo "failure reasons (leading whitespace allowed, because AGP indents them):"
+  grep -E "^[[:space:]]*(java|org|android|kotlin|androidx)\.[A-Za-z.$]*(Error|Exception)" ui-test.log \
+    | sed 's/^[[:space:]]*//' | sort | uniq -c | sort -rn || true
   echo
   echo "classes on the device with no line in the log (did not run, or ran nothing):"
   for F in app/src/androidTest/kotlin/dev/hgallery/app/*Test.kt; do
@@ -170,6 +171,15 @@ SUMMARY="$OUT_DIR/diag/instrumented-summary.txt"
   done
 } > "$SUMMARY" 2>&1
 cat "$SUMMARY"
+
+# The whole log, into `evidence/`.
+#
+# Annotations are capped, the artefact cannot be downloaded from every environment, and a
+# one-line reason is not enough to diagnose a failure -- which is exactly where this
+# landed: forty-five tests failed and the only readable reason was "Failed to inject touch
+# input" on five of them. The log is a text file of a few hundred lines; it belongs with
+# the evidence, next to the screenshots it describes.
+cp ui-test.log "$OUT_DIR/diag/instrumented-log.txt" 2>/dev/null || true
 
 echo "== installing the application build for screenshots =="
 APK=$(find apk -name '*.apk' 2>/dev/null | head -1)

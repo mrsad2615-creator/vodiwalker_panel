@@ -208,60 +208,7 @@ jobs:
 
           echo "--- token permissions ---"
           curl -s -H "$auth" "$api" \
-            | python3 -c "import json,sys; d=json.load(sys.stdin); print('repo:', d.get('full_name'), '| perms:', d.get('permissions'))" \
-            || echo "could not read repo metadata"
-
-          # Remove the previous release and its tag so /releases/latest always
-          # points at the newest APK. A 404 here is the normal first run.
-          old_id=$(curl -s -H "$auth" "$api/releases/tags/$tag" \
-            | python3 -c "import json,sys; print(json.load(sys.stdin).get('id',''))" 2>/dev/null || true)
-          if [ -n "${old_id:-}" ]; then
-            echo "deleting previous release $old_id"
-            curl -s -o /dev/null -w "  delete release: %{http_code}\n" \
-              -X DELETE -H "$auth" "$api/releases/$old_id"
-          fi
-          if curl -s -H "$auth" "$api/git/ref/tags/$tag" | grep -q '"ref"'; then
-            curl -s -o /dev/null -w "  delete tag ref: %{http_code}\n" \
-              -X DELETE -H "$auth" "$api/git/refs/tags/$tag"
-          fi
-
-          # Build the request body with a file, not a shell string: the notes
-          # contain backticks and newlines and a heredoc is the honest way to
-          # keep them.
-          cat > notes.md <<NOTES
-          Automatic build of \`$COMMIT\`.
-
-          **Install:** download \`$APK_NAME\` and open it on an Android 8.0+ device. Android will ask you to allow installs from this source.
-
-          - package \`com.neurox.app.debug\` if you also have a release build installed, both can coexist
-          - debug build: not minified, signed with a per-run throwaway key
-          - it cannot upgrade over another copy: uninstall the old one first
-          - built by GitHub Actions from $COMMIT, verified with aapt2 and apksigner before upload
-          - what is and is not tested is in NEUROX/docs/TEST_STATUS.md
-          NOTES
-          TAG="$tag" python3 - > release.json <<'JSONEOF'
-          import json, os
-          print(json.dumps({
-              "tag_name": os.environ["TAG"],
-              "target_commitish": os.environ["COMMIT"],
-              "name": "NEUROX SENSE - latest APK",
-              "body": open("notes.md").read(),
-              "draft": False,
-              "prerelease": True,
-          }))
-          JSONEOF
-
-          echo "--- create release ---"
-          code=$(curl -s -o resp.json -w "%{http_code}" -X POST -H "$auth" \
-                 -H "Accept: application/vnd.github+json" \
-                 --data-binary @release.json "$api/releases")
-          if [ "$code" != "201" ]; then
-            # NOT a build failure. The APK was built, verified and uploaded as an
-            # artifact; only publication needs a token with write access. The
-            # repository's default workflow permission is read-only, and
-            # GITHUB_TOKEN cannot be granted more than that from inside a run.
-            echo "::warning::Release publishing needs write permission (HTTP $code). The APK is attached to this run's artifacts."
-            python3 -c "import json;d=json.load(open('resp.json'));print('message:',d.get('message'))" 2>/dev/null || head -c 400 resp.json
+            python3 -c "import json,sys; d=json.load(open('resp.json')); print('message:', d.get('message')); [print('  -', e.get('message', e.get('code',''))) for e in d.get('errors',[])]" 2>/dev/null || head -c 400 resp.json
             {
               echo "### APK built, not published"
               echo

@@ -1,0 +1,17 @@
+name: Token probe
+on: workflow_dispatch
+permissions:
+  contents: write
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check scopes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "--- /user ---"
+          curl -s -H "Authorization: Bearer $GH_TOKEN" https://api.github.com/user | head -c 200; echo
+          echo "--- repo perms ---"
+          curl -s -H "Authorization: Bearer $GH_TOKEN" https://api.github.com/repos/${{ github.repository }} \
+            | python3 -c "import json,sys; d=json.load(sys.stdin); print('permissions:', d.get('permissions'))"

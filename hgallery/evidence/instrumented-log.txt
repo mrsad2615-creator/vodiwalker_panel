@@ -18,25 +18,26 @@ Daemon will be stopped at the end of the build
 > Task :app:preDebugBuild UP-TO-DATE
 > Task :app:generateDebugBuildConfig
 > Task :core:processResources NO-SOURCE
-> Task :core:compileKotlin
-> Task :core:compileJava NO-SOURCE
-> Task :core:classes UP-TO-DATE
-> Task :core:jar
 > Task :app:generateDebugResValues
 > Task :app:checkDebugAarMetadata
 > Task :app:mapDebugSourceSetPaths
 > Task :app:generateDebugResources
 > Task :app:packageDebugResources
-> Task :app:mergeDebugResources
 > Task :app:createDebugCompatibleScreenManifests
 > Task :app:extractDeepLinksDebug
+> Task :app:mergeDebugResources
 > Task :app:parseDebugLocalResources
 > Task :app:processDebugMainManifest
 > Task :app:processDebugManifest
 > Task :app:preDebugAndroidTestBuild SKIPPED
 > Task :app:javaPreCompileDebug
+> Task :core:compileKotlin
+> Task :core:compileJava NO-SOURCE
+> Task :core:classes UP-TO-DATE
+> Task :core:jar
 > Task :app:processDebugAndroidTestManifest
 > Task :app:generateDebugAndroidTestBuildConfig
+> Task :app:processDebugManifestForPackage
 > Task :app:checkDebugAndroidTestAarMetadata
 > Task :app:generateDebugAndroidTestResValues FROM-CACHE
 > Task :app:mapDebugAndroidTestSourceSetPaths
@@ -47,11 +48,10 @@ Daemon will be stopped at the end of the build
 > Task :app:generateDebugAssets UP-TO-DATE
 > Task :app:mergeDebugAndroidTestResources
 > Task :app:mergeDebugAssets
-> Task :app:processDebugManifestForPackage
-> Task :app:processDebugAndroidTestResources
 > Task :app:compressDebugAssets
 > Task :app:desugarDebugFileDependencies
 > Task :app:processDebugResources
+> Task :app:processDebugAndroidTestResources
 > Task :app:checkDebugDuplicateClasses
 > Task :app:compileDebugKotlin
 > Task :app:mergeExtDexDebug
@@ -68,9 +68,9 @@ w: file:///home/runner/work/vodiwalker_panel/vodiwalker_panel/hgallery/app/src/m
 > Task :app:compileDebugAndroidTestJavaWithJavac
 > Task :app:mergeDebugJniLibFolders
 > Task :app:mergeLibDexDebug
-> Task :app:mergeDebugNativeLibs
 > Task :app:mergeProjectDexDebug
 > Task :app:mergeDebugJavaResource
+> Task :app:mergeDebugNativeLibs
 > Task :app:validateSigningDebug
 > Task :app:writeDebugAppMetadata
 
@@ -90,11 +90,11 @@ Unable to strip the following libraries, packaging them as they are: libandroidx
 > Task :app:createDebugApkListingFileRedirect
 > Task :app:processDebugAndroidTestJavaRes
 > Task :app:checkDebugAndroidTestDuplicateClasses
-> Task :app:mergeDebugAndroidTestJniLibFolders
 > Task :app:mergeDebugAndroidTestJavaResource
+> Task :app:mergeDebugAndroidTestJniLibFolders
 > Task :app:mergeLibDexDebugAndroidTest
-> Task :app:mergeProjectDexDebugAndroidTest
 > Task :app:mergeDebugAndroidTestNativeLibs NO-SOURCE
+> Task :app:mergeProjectDexDebugAndroidTest
 > Task :app:stripDebugAndroidTestDebugSymbols NO-SOURCE
 > Task :app:validateSigningDebugAndroidTest
 > Task :app:writeDebugAndroidTestSigningConfigVersions
@@ -138,13 +138,13 @@ dev.hgallery.app.HeaderLayoutTest > theOverflowMenuOffersEverySecondaryAction[em
 	java.lang.AssertionError: Failed to inject touch input.
 	Reason: Expected exactly '1' node but could not find any node that satisfies: (TestTag = 'tab-Photos')
 
+emulator-5554 - 13 Tests 8/51 completed. (0 skipped) (8 failed)
+
+> Task :app:connectedDebugAndroidTest
+
 dev.hgallery.app.IgnitionTest > theCoverDoesNotExistAfterTheSequence[emulator-5554 - 13] [31mFAILED [0m
 	androidx.compose.ui.test.ComposeTimeoutException: Condition still not satisfied after 4900 ms
 	at androidx.compose.ui.test.AndroidComposeUiTestEnvironment$AndroidComposeUiTestImpl.waitUntil(ComposeUiTest.android.kt:441)
-
-emulator-5554 - 13 Tests 9/51 completed. (0 skipped) (9 failed)
-
-> Task :app:connectedDebugAndroidTest
 
 dev.hgallery.app.IgnitionTest > theShellIsUsableWithinTheBudget[emulator-5554 - 13] [31mFAILED [0m
 	androidx.compose.ui.test.ComposeTimeoutException: Condition still not satisfied after 4900 ms
@@ -278,6 +278,10 @@ dev.hgallery.app.ShellUiTest > anUnimplementedTabSaysSoInsteadOfShowingFakeConte
 	java.lang.AssertionError: Failed to inject touch input.
 	Reason: Expected exactly '1' node but could not find any node that satisfies: (TestTag = 'tab-Highlights')
 
+emulator-5554 - 13 Tests 47/51 completed. (0 skipped) (41 failed)
+
+> Task :app:connectedDebugAndroidTest
+
 dev.hgallery.app.ViewerDismissTest > aDownwardSwipeDismissesTheViewer[emulator-5554 - 13] [31mFAILED [0m
 	java.lang.AssertionError: Failed to inject touch input.
 	Reason: Expected exactly '1' node but could not find any node that satisfies: (TestTag = 'tab-Photos')
@@ -293,13 +297,12 @@ dev.hgallery.app.ViewerDismissTest > anUpwardSwipeDoesNotDismiss[emulator-5554 -
 dev.hgallery.app.ViewerDismissTest > theViewerOpensOnAPhoto[emulator-5554 - 13] [31mFAILED [0m
 	java.lang.AssertionError: Failed to inject touch input.
 	Reason: Expected exactly '1' node but could not find any node that satisfies: (TestTag = 'tab-Photos')
+Tests on emulator-5554 - 13 failed: There was 45 failure(s).
 
-emulator-5554 - 13 Tests 51/51 completed. (0 skipped) (45 failed)
 Finished 51 tests on emulator-5554 - 13
 
 > Task :app:connectedDebugAndroidTest FAILED
-Tests on emulator-5554 - 13 failed: There was 45 failure(s).
-gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/__reactivecircus_android-emulator-runner-1795591032678.json
+gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/__reactivecircus_android-emulator-runner-1795592295798.json
 
 FAILURE: Build failed with an exception.
 
@@ -313,5 +316,5 @@ Execution failed for task ':app:connectedDebugAndroidTest'.
 > Run with --scan to get full insights.
 > Get more help at https://help.gradle.org.
 
-BUILD FAILED in 4m 55s
+BUILD FAILED in 4m 59s
 69 actionable tasks: 64 executed, 5 from cache

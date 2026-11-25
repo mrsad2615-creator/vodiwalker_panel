@@ -141,13 +141,35 @@ echo "connectedDebugAndroidTest: $TEST_STATUS (0 = passed)"
 grep -E "^[A-Za-z0-9_.]+ > [A-Za-z0-9_]+.*(FAILED|PASSED)" ui-test.log | while IFS= read -r line; do
   echo "::notice title=e2e::$line"
 done
-# One line per class stating how many of its tests were seen, so a class that ran zero
-# tests is visibly different from a class whose tests passed.
-for CLASS in $(grep -oE "dev\.hgallery\.app\.[A-Za-z]+Test" ui-test.log | sort -u); do
-  RAN=$(grep -cE "^${CLASS} > " ui-test.log || true)
-  FAILED=$(grep -E "^${CLASS} > " ui-test.log | grep -c "FAILED" || true)
-  echo "::notice title=e2e::$CLASS: $RAN reported, $FAILED failed"
-done
+# A file as well as annotations. GitHub caps annotations per run, and this job produces
+# one per screenshot -- seventy-odd of them -- so anything after the captures is silently
+# dropped. That is how a full report of the instrumented suite reached the summary with no
+# test results in it. A file in `evidence/` has no such limit and is readable from git.
+SUMMARY="$OUT_DIR/diag/instrumented-summary.txt"
+{
+  echo "connectedDebugAndroidTest: $TEST_STATUS (0 = passed)"
+  echo
+  echo "per class: reported / failed / passed"
+  for CLASS in $(grep -oE "dev\.hgallery\.app\.[A-Za-z]+Test" ui-test.log | sort -u); do
+    RAN=$(grep -cE "^${CLASS} > " ui-test.log || true)
+    FAILED=$(grep -E "^${CLASS} > " ui-test.log | grep -c "FAILED" || true)
+    printf '%-42s %3s / %3s / %3s\n' "$CLASS" "$RAN" "$FAILED" "$((RAN - FAILED))"
+    echo "::notice title=e2e-tests::$CLASS: $RAN reported, $FAILED failed"
+  done
+  echo
+  echo "every reported test:"
+  grep -E "^[A-Za-z0-9_.]+ > [A-Za-z0-9_]+.*(FAILED|PASSED)" ui-test.log || echo "  (none)"
+  echo
+  echo "failure reasons:"
+  grep -E "^(java|org|android|kotlin)\.[A-Za-z.]*(Error|Exception)" ui-test.log | sort | uniq -c | sort -rn || true
+  echo
+  echo "classes on the device with no line in the log (did not run, or ran nothing):"
+  for F in app/src/androidTest/kotlin/dev/hgallery/app/*Test.kt; do
+    CLASS="dev.hgallery.app.$(basename "$F" .kt)"
+    grep -q "^${CLASS} > " ui-test.log || echo "  $CLASS"
+  done
+} > "$SUMMARY" 2>&1
+cat "$SUMMARY"
 
 echo "== installing the application build for screenshots =="
 APK=$(find apk -name '*.apk' 2>/dev/null | head -1)

@@ -18,6 +18,10 @@ android {
 
 dependencies {
     implementation(project(":core:common"))
+    // PresentationBridge translates the presentation layer's layout direction and
+    // motion mode into Compose types. Without this the module cannot see the
+    // enums it is bridging, which is what the real Gradle build reported.
+    api(project(":core:presentation"))
     implementation(libs.kotlinx.coroutines.android)
     api(platform(libs.androidx.compose.bom))
     api(libs.androidx.compose.ui)

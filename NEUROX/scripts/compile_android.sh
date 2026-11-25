@@ -152,6 +152,15 @@ for f in "${FEATURES[@]}"; do
 done
 build app "$APPCP"
 
+step "gradle dependency declarations"
+# An import that resolves against the shared classpath but has no matching
+# implementation(project(...)) fails ONLY under real Gradle, which gives each module
+# its own classpath. That happened four times before this check existed.
+if ! ( cd "$ROOT" && python3 tooling/check_gradle_deps.py ); then
+  echo "  FAIL: undeclared module dependencies (see above)"
+  FAIL=$((FAIL + 1))
+fi
+
 step "manifests"
 # A missing or invalid AndroidManifest.xml is invisible to a Kotlin compile, and it
 # is fatal: the first real Gradle build failed on exactly this, after every module

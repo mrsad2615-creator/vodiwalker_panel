@@ -28,6 +28,7 @@ android {
 
 dependencies {
     implementation(project(":core:common"))
+    implementation(project(":core:security"))
     api(project(":core:domain"))
     implementation(libs.kotlinx.coroutines.android)
     implementation(platform(libs.androidx.compose.bom))

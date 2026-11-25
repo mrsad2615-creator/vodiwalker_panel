@@ -7,6 +7,7 @@ kotlin { jvmToolchain(17) }
 
 dependencies {
     api(project(":core:domain"))
+    implementation(project(":core:common"))
     api(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.serialization.json)
     testImplementation(libs.junit)

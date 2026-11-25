@@ -24,6 +24,10 @@ OK   feature:settings
 == app
 OK   app
 
+== gradle dependency declarations
+checked 21 modules against 20 packages
+RESULT: every NEUROX import is backed by a declared dependency.
+
 == manifests
   ok   app
   ok   core/audio-android

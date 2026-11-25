@@ -94,12 +94,32 @@ jobs:
           grep -E "Could not resolve|Could not find|What went wrong|FAILURE:|Caused by:" -A2 build.log | head -30 || true
           echo "--- tail ---"
           tail -25 build.log
+          # Everything useful must come through annotations: the job log itself
+          # lives on a storage host that some clients cannot reach, so a failure
+          # that is only in the log is a failure nobody can read.
           echo "--- annotations ---"
-          n=0
-          while IFS= read -r line; do
-            n=$((n+1)); [ "$n" -gt 10 ] && break
-            echo "::error::$line"
-          done < <(grep -E "^e: |Could not resolve|Could not find" build.log | head -10)
+          emit() {
+            # collapse a block into single-line annotations
+            sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]\{2,\}/ /g' \
+              | grep -v '^$' | head -"${1:-8}" \
+              | while IFS= read -r line; do
+                  line="$(printf '%s' "$line" | cut -c1-900)"
+                  [ -n "$line" ] && echo "::error::$line"
+                done
+          }
+          echo "::group::diagnostics"
+          grep -E "^e: |^error:|What went wrong|Could not resolve|Could not find|Caused by" build.log | head -20 || true
+          echo "::endgroup::"
+
+          if grep -q "What went wrong" build.log; then
+            sed -n '/What went wrong/,/\* Try/p' build.log | emit 8
+          fi
+          grep -E "^e: " build.log | emit 6 || true
+          grep -iE "out of memory|heap space|configuration cache|duplicate class|unresolved" build.log | emit 4 || true
+          # Last resort so a failure is never silent.
+          if ! grep -qE "^e: |What went wrong" build.log; then
+            tail -12 build.log | emit 8
+          fi
           exit 1
 
       - name: Locate APK

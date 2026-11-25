@@ -1,21 +1,58 @@
 connectedDebugAndroidTest: 1 (0 = passed)
 
 per class: reported / failed / passed
+dev.hgallery.app.HeaderLayoutTest            3 /   3 /   0
+::notice title=e2e-tests::dev.hgallery.app.HeaderLayoutTest: 3 reported, 3 failed
+dev.hgallery.app.IgnitionTest                2 /   2 /   0
+::notice title=e2e-tests::dev.hgallery.app.IgnitionTest: 2 reported, 2 failed
+dev.hgallery.app.MonthViewTest               3 /   3 /   0
+::notice title=e2e-tests::dev.hgallery.app.MonthViewTest: 3 reported, 3 failed
+dev.hgallery.app.PlayerSessionTest           5 /   5 /   0
+::notice title=e2e-tests::dev.hgallery.app.PlayerSessionTest: 5 reported, 5 failed
+dev.hgallery.app.RepeatModeTest              4 /   4 /   0
+::notice title=e2e-tests::dev.hgallery.app.RepeatModeTest: 4 reported, 4 failed
+dev.hgallery.app.SelectionTest               2 /   2 /   0
+::notice title=e2e-tests::dev.hgallery.app.SelectionTest: 2 reported, 2 failed
+dev.hgallery.app.SettingsAndSectionsTest     4 /   4 /   0
+::notice title=e2e-tests::dev.hgallery.app.SettingsAndSectionsTest: 4 reported, 4 failed
+dev.hgallery.app.ShellUiTest                 1 /   1 /   0
+::notice title=e2e-tests::dev.hgallery.app.ShellUiTest: 1 reported, 1 failed
 
 every reported test:
-  (none)
+dev.hgallery.app.HeaderLayoutTest > theHeaderControlsAreStillReachable[emulator-5554 - 13] [31mFAILED [0m
+dev.hgallery.app.HeaderLayoutTest > theMenuRowsAnnounceTheirLabels[emulator-5554 - 13] [31mFAILED [0m
+dev.hgallery.app.HeaderLayoutTest > theOverflowMenuOffersEverySecondaryAction[emulator-5554 - 13] [31mFAILED [0m
+dev.hgallery.app.IgnitionTest > theShellIsUsableWithinTheBudget[emulator-5554 - 13] [31mFAILED [0m
+dev.hgallery.app.IgnitionTest > rotationDoesNotReplayTheSequence[emulator-5554 - 13] [31mFAILED [0m
+dev.hgallery.app.MonthViewTest > switchingToMonthAndBackKeepsTheGridAlive[emulator-5554 - 13] [31mFAILED [0m
+dev.hgallery.app.MonthViewTest > repeatedSwitchingDoesNotCrashTheScreen[emulator-5554 - 13] [31mFAILED [0m
+dev.hgallery.app.MonthViewTest > theViewSwitchIsReachable[emulator-5554 - 13] [31mFAILED [0m
+dev.hgallery.app.PlayerSessionTest > loadAppliesTheMuteStateOfTheNewClip[emulator-5554 - 13] [31mFAILED [0m
+dev.hgallery.app.PlayerSessionTest > aSwipedOntoClipStartsMutedBeforeAnyFrameIsReady[emulator-5554 - 13] [31mFAILED [0m
+dev.hgallery.app.PlayerSessionTest > unmutingIsAvailableImmediatelyAfterAMutedArrival[emulator-5554 - 13] [31mFAILED [0m
+dev.hgallery.app.PlayerSessionTest > aDirectOpenStartsUnmuted[emulator-5554 - 13] [31mFAILED [0m
+dev.hgallery.app.PlayerSessionTest > mutingAndUnmutingRoundTrips[emulator-5554 - 13] [31mFAILED [0m
+dev.hgallery.app.RepeatModeTest > selectingOffReturnsToTheDefault[emulator-5554 - 13] [31mFAILED [0m
+dev.hgallery.app.RepeatModeTest > everyModeIsOfferedAsARow[emulator-5554 - 13] [31mFAILED [0m
+dev.hgallery.app.RepeatModeTest > theChoiceSurvivesLeavingAndReopeningTheScreen[emulator-5554 - 13] [31mFAILED [0m
+dev.hgallery.app.RepeatModeTest > pickingAModeSelectsItAndOnlyIt[emulator-5554 - 13] [31mFAILED [0m
+dev.hgallery.app.SelectionTest > selectAllFromTheMenuEntersSelectionMode[emulator-5554 - 13] [31mFAILED [0m
+dev.hgallery.app.SelectionTest > theSelectControlIsReachable[emulator-5554 - 13] [31mFAILED [0m
+dev.hgallery.app.SettingsAndSectionsTest > discoverIsARealScreen[emulator-5554 - 13] [31mFAILED [0m
+dev.hgallery.app.SettingsAndSectionsTest > settingsOpensFromThePhotosToolbar[emulator-5554 - 13] [31mFAILED [0m
+dev.hgallery.app.SettingsAndSectionsTest > backReturnsFromSettingsToTheTimeline[emulator-5554 - 13] [31mFAILED [0m
+dev.hgallery.app.SettingsAndSectionsTest > everyThemeModeIsReachable[emulator-5554 - 13] [31mFAILED [0m
+dev.hgallery.app.ShellUiTest > anUnimplementedTabSaysSoInsteadOfShowingFakeContent[emulator-5554 - 13] [31mFAILED [0m
 
 failure reasons (leading whitespace allowed, because AGP indents them):
+     12 java.lang.AssertionError: Failed to inject touch input.
+      6 java.lang.AssertionError: Assert failed: The component is not displayed!
+      5 java.lang.IllegalStateException: Player is accessed on the wrong thread.
+      1 java.lang.AssertionError: Failed: assertExists.
+
+suite start line: Starting 51 tests
 
 classes on the device with no line in the log (did not run, or ran nothing):
   dev.hgallery.app.AlbumNavigationTest
-  dev.hgallery.app.HeaderLayoutTest
-  dev.hgallery.app.IgnitionTest
   dev.hgallery.app.LocalisationTest
-  dev.hgallery.app.MonthViewTest
-  dev.hgallery.app.PlayerSessionTest
-  dev.hgallery.app.RepeatModeTest
-  dev.hgallery.app.SelectionTest
-  dev.hgallery.app.SettingsAndSectionsTest
-  dev.hgallery.app.ShellUiTest
   dev.hgallery.app.ViewerDismissTest

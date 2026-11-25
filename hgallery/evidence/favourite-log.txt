@@ -1,3 +1,3 @@
-11-25 06:20:56.067  8987  8987 W HGalleryViewer: favourite id=1000000030 direct=false
-11-25 06:20:56.069  8987  8987 W HGalleryViewer: favourite id=1000000030 target=true sender=true
-11-25 06:20:56.308  8987  8987 W HGalleryViewer: favourite consent result=-1 pending=(1000000030, true)
+11-25 06:42:54.318  9190  9190 W HGalleryViewer: favourite id=1000000028 direct=false
+11-25 06:42:54.320  9190  9190 W HGalleryViewer: favourite id=1000000028 target=true sender=true
+11-25 06:42:54.662  9190  9190 W HGalleryViewer: favourite consent result=-1 pending=(1000000028, true)

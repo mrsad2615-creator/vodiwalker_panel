@@ -2,6 +2,10 @@ plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    // Room's @Query validation and DAO generation happen through KSP. Without
+    // this line `ksp(libs.androidx.room.compiler)` below is an unresolved
+    // reference, which is exactly what the first real Gradle run reported.
+    alias(libs.plugins.ksp)
 }
 
 android {

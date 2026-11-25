@@ -12,6 +12,7 @@ import com.neurox.games.content.ReadingLibrary
 import com.neurox.games.content.ReadingText
 import com.neurox.games.read.FocusGuide
 import com.neurox.presentation.di.AppServices
+import com.neurox.domain.repository.first
 import com.neurox.presentation.i18n.Strings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -45,12 +46,9 @@ fun ReadingStudioRoute(
         withContext(Dispatchers.IO) {
             val active = svc.profileRepository.getActiveProfile() ?: return@withContext
             profileId = active.id
-            // observeSettings is a stream; the first value is the stored snapshot.
-            val stored = mutableMapOf<String, String>()
-            svc.settingsRepository.observeSettings(active.id).collect { values ->
-                stored.clear()
-                stored.putAll(values)
-            }
+            // A snapshot, not a subscription: this screen only needs the stored values
+            // once, and the stream never ends on its own.
+            val stored = svc.settingsRepository.observeSettings(active.id).first().orEmpty()
             wpm = (stored[SettingsKeys.READING_WPM] ?: "240").toIntOrNull() ?: 240
             fontSize = (stored[SettingsKeys.READING_FONT_SIZE] ?: "19").toIntOrNull() ?: 19
             lineHeight = (stored[SettingsKeys.READING_LINE_HEIGHT] ?: "1.6").toFloatOrNull() ?: 1.6f

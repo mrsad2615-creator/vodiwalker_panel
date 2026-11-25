@@ -13,6 +13,7 @@ import com.neurox.domain.model.Module
 import com.neurox.domain.model.ProfileSummary
 import com.neurox.domain.model.SessionStatus
 import com.neurox.domain.repository.CustomExercise
+import com.neurox.domain.repository.first
 import com.neurox.presentation.i18n.Strings
 import com.neurox.presentation.screen.CustomExerciseRow
 import com.neurox.presentation.screen.ScreenBuilders
@@ -64,13 +65,11 @@ fun LibraryRoute(
     // Custom exercises and personal bests, one snapshot per reload.
     LaunchedEffect(profile?.id, reloadToken) {
         val id = profile?.id ?: return@LaunchedEffect
+        // first() takes the current value and returns. Collecting this stream to
+        // completion never happens (it is a Room flow), so the old code hung here and
+        // neither the custom list nor the personal bests below were ever set.
         val snapshot = withContext(Dispatchers.IO) {
-            val rows = mutableListOf<CustomExercise>()
-            services.exerciseRepository.observeCustomExercises(id).collect { list ->
-                rows.clear()
-                rows.addAll(list)
-            }
-            rows
+            services.exerciseRepository.observeCustomExercises(id).first().orEmpty()
         }
         custom = snapshot.map { exercise ->
             CustomExerciseRow(

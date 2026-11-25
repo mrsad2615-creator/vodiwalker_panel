@@ -60,13 +60,22 @@ compile() {
   fi
 }
 
+NX_COROUTINES_JAR="${NX_COROUTINES_JAR:-}"
+if [[ -z "$NX_COROUTINES_JAR" ]]; then
+  for candidate in \
+    "/home/user/.local/nx-tools/kc/lib/kotlinx-coroutines-core-jvm.jar" \
+    "$(dirname "$(command -v "$KOTLINC")")/../lib/kotlinx-coroutines-core-jvm.jar"; do
+    if [[ -f "$candidate" ]]; then NX_COROUTINES_JAR="$candidate"; break; fi
+  done
+fi
+
 CP=""
 compile "core:common" "$OUT/common.jar" core/common/src/main/kotlin
-CP="$OUT/common.jar"
+CP="$OUT/common.jar${NX_COROUTINES_JAR:+:$NX_COROUTINES_JAR}"
 compile "core:domain" "$OUT/domain.jar" core/domain/src/main/kotlin
-CP="$OUT/common.jar:$OUT/domain.jar"
+CP="$OUT/common.jar:$OUT/domain.jar${NX_COROUTINES_JAR:+:$NX_COROUTINES_JAR}"
 compile "core:games" "$OUT/games.jar" core/games/src/main/kotlin
-CP="$OUT/common.jar:$OUT/domain.jar:$OUT/games.jar"
+CP="$OUT/common.jar:$OUT/domain.jar:$OUT/games.jar${NX_COROUTINES_JAR:+:$NX_COROUTINES_JAR}"
 # core:audio/platform is Android-only (AudioTrack); android.jar is unavailable offline.
 find core/audio/src/main/kotlin -name '*.kt' -not -path '*/platform/*' > "$OUT/audio-sources.txt"
 echo "== compile core:audio =="
@@ -75,9 +84,9 @@ if [[ ! -f "$OUT/audio.jar" ]]; then
   echo "FATAL: compilation of core:audio failed" >&2
   exit 4
 fi
-CP="$OUT/common.jar:$OUT/domain.jar:$OUT/games.jar:$OUT/audio.jar"
+CP="$OUT/common.jar:$OUT/domain.jar:$OUT/games.jar:$OUT/audio.jar${NX_COROUTINES_JAR:+:$NX_COROUTINES_JAR}"
 compile "core:presentation" "$OUT/presentation.jar" core/presentation/src/main/kotlin
-CP="$OUT/common.jar:$OUT/domain.jar:$OUT/games.jar:$OUT/audio.jar:$OUT/presentation.jar"
+CP="$OUT/common.jar:$OUT/domain.jar:$OUT/games.jar:$OUT/audio.jar:$OUT/presentation.jar${NX_COROUTINES_JAR:+:$NX_COROUTINES_JAR}"
 # core:security has one Android-only file (Android Keystore). The pure crypto and
 # vault logic is compiled for the JVM; the Keystore wrapper is verified by Gradle.
 echo "== prepare core:security (pure part) =="
@@ -87,8 +96,9 @@ cp -r core/security/src/main/kotlin/* "$SEC_SRC"/
 rm -rf "$SEC_SRC/com/neurox/security/keystore"
 compile "core:security" "$OUT/security.jar" "$SEC_SRC"
 CP="$CP:$OUT/security.jar"
+CP="$CP${NX_COROUTINES_JAR:+:$NX_COROUTINES_JAR}"
 compile "tests" "$OUT/tests.jar" core/common/src/test/kotlin core/domain/src/test/kotlin core/games/src/test/kotlin core/security/src/test/kotlin core/audio/src/test/kotlin core/presentation/src/test/kotlin
-CP="$CP:$OUT/tests.jar:$NX_KOTLIN_STDLIB"
+CP="$CP:$OUT/tests.jar:$NX_KOTLIN_STDLIB${NX_COROUTINES_JAR:+:$NX_COROUTINES_JAR}"
 
 echo "== compile test runner =="
 kc -cp "$CP" scripts/verify/TestRunner.kt -d "$RUNNER"

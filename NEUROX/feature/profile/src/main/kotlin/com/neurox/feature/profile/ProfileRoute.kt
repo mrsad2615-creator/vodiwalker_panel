@@ -56,16 +56,19 @@ fun ProfileRoute(
 
     val scope = rememberCoroutineScope()
 
+    /**
+     * The profile list is a live subscription on purpose: creating, renaming or
+     * deleting a profile from anywhere must update this screen without a manual
+     * refresh. Everything derived from an emission is computed inside the collector,
+     * because code after `collect` never runs for a Room-backed stream.
+     */
     LaunchedEffect(reload) {
         withContext(Dispatchers.IO) {
-            val all = mutableListOf<ProfileSummary>()
             services.profileRepository.observeProfiles().collect { list ->
-                all.clear()
-                all.addAll(list)
+                profiles = list
+                activeId = list.firstOrNull { it.active }?.id
+                maxReached = list.size >= MAX_PROFILES
             }
-            profiles = all
-            activeId = all.firstOrNull { it.active }?.id
-            maxReached = all.size >= MAX_PROFILES
         }
     }
 

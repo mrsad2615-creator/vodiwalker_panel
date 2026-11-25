@@ -7,6 +7,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import com.neurox.domain.repository.first
 import com.neurox.presentation.di.AppServices
 import com.neurox.common.MotionModeName
 import com.neurox.data.prefs.NxPreferences
@@ -41,19 +42,23 @@ fun SettingsRoute(
     var preferences by remember { mutableStateOf(NxPreferences()) }
     var audio by remember { mutableStateOf(AudioSettings()) }
     var profileId by remember { mutableStateOf<String?>(null) }
+    // Bumped after a change so the snapshot reloads; a preference write does not
+    // push a new value to this screen by itself.
+    var reloadToken by remember { mutableStateOf(0) }
     var appVersion by remember { mutableStateOf("1.0.0") }
     val scope = rememberCoroutineScope()
 
-    LaunchedEffect(Unit) {
+    // First load: snapshots, not subscriptions. The two streams are Room flows, so
+    // collecting them would never return and the screen would sit on defaults forever.
+    LaunchedEffect(reloadToken) {
         withContext(Dispatchers.IO) {
             val active = services.profileRepository.getActiveProfile() ?: return@withContext
             profileId = active.id
-            val values = mutableMapOf<String, String>()
-            services.settingsRepository.observeSettings(active.id).collect { values.putAll(it) }
+            val values = services.settingsRepository.observeSettings(active.id).first().orEmpty()
             preferences = NxPreferences.from(values)
-            services.audioRepository.observe(active.id).collect {
-                audio = it
-                services.audioSettings.update(it)
+            services.audioRepository.observe(active.id).first()?.let { current ->
+                audio = current
+                services.audioSettings.update(current)
             }
         }
     }

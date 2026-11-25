@@ -152,9 +152,55 @@ for f in "${FEATURES[@]}"; do
 done
 build app "$APPCP"
 
+step "manifests"
+# A missing or invalid AndroidManifest.xml is invisible to a Kotlin compile, and it
+# is fatal: the first real Gradle build failed on exactly this, after every module
+# had "compiled clean" for the project's whole life. Each Android module that
+# produces an APK or an AAR needs a manifest, and the application one must declare
+# its launcher activity or the app installs with no way to open it.
+MANIFEST_FAIL=0
+xml_ok() {
+  # Structural check without a parser: balanced tags, one root, well-formed header.
+  python3 - "$1" <<'PYEOF' || return 1
+import sys, xml.etree.ElementTree as ET
+try:
+    ET.parse(sys.argv[1])
+except Exception as e:
+    print(f"  XML ERROR: {e}")
+    raise SystemExit(1)
+PYEOF
+}
+
+ANDROID_MODULES=(app core/audio-android core/data core/designsystem core/security)
+for m in "${ANDROID_MODULES[@]}"; do
+  mf="$m/src/main/AndroidManifest.xml"
+  if [[ ! -f "$mf" ]]; then
+    echo "  FAIL $m: no AndroidManifest.xml at $mf"
+    MANIFEST_FAIL=$((MANIFEST_FAIL + 1))
+    continue
+  fi
+  if ! xml_ok "$mf"; then
+    echo "  FAIL $m: AndroidManifest.xml is not well-formed"
+    MANIFEST_FAIL=$((MANIFEST_FAIL + 1))
+    continue
+  fi
+  echo "  ok   $m"
+done
+# Android library modules may omit a manifest, but the generated R needs a package,
+# which comes from the namespace - so check that separately in gen_r.py's caller.
+if [[ -f app/src/main/AndroidManifest.xml ]]; then
+  for token in ".NeuroxActivity" "android.intent.category.LAUNCHER" "android.intent.action.MAIN"; do
+    if ! grep -q -- "$token" app/src/main/AndroidManifest.xml; then
+      echo "  FAIL app: manifest does not declare $token"
+      MANIFEST_FAIL=$((MANIFEST_FAIL + 1))
+    fi
+  done
+fi
+FAIL=$((FAIL + MANIFEST_FAIL))
+
 echo
 if [[ "$FAIL" -eq 0 ]]; then
-  echo "RESULT: every Android module compiled with zero diagnostics."
+  echo "RESULT: every Android module compiled with zero diagnostics and every manifest is present."
   exit 0
 fi
 echo "RESULT: $FAIL module(s) failed to compile."

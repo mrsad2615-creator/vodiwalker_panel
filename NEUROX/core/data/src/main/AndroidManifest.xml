@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Library manifest for :core/data.
+
+  An Android library module needs one even with no components of its own: the
+  manifest merger and the R class both hang off it. Its absence is invisible to a
+  Kotlin compile, which is why compile_android.sh now checks for it.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" />

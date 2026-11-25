@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Launcher foreground, drawn as a vector so there is one file instead of five
+  PNG densities and it stays sharp at every size.
+
+  108x108 viewport with the artwork inside the middle 72dp, which is the area
+  adaptive icons guarantee is visible after any mask.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Three nodes and the edges between them: a small network, which is what
+         the product trains. Kept geometric so it survives a circle mask. -->
+    <path
+        android:fillColor="#D8B36A"
+        android:pathData="M54,34 m-7,0 a7,7 0 1,0 14,0 a7,7 0 1,0 -14,0" />
+    <path
+        android:fillColor="#D8B36A"
+        android:pathData="M38,70 m-7,0 a7,7 0 1,0 14,0 a7,7 0 1,0 -14,0" />
+    <path
+        android:fillColor="#D8B36A"
+        android:pathData="M70,70 m-7,0 a7,7 0 1,0 14,0 a7,7 0 1,0 -14,0" />
+    <path
+        android:strokeColor="#F6E7C1"
+        android:strokeWidth="3"
+        android:strokeLineCap="round"
+        android:pathData="M54,34 L38,70 M54,34 L70,70 M38,70 L70,70" />
+</vector>

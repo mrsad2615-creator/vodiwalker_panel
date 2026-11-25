@@ -95,8 +95,8 @@ Latest results, with the evidence files in `docs/evidence/`:
 
 | Gate | Result | Evidence |
 | --- | --- | --- |
-| `verify_domain.sh` | **323 / 323 tests pass** | `VERIFY_RUN_11.txt` |
-| `compile_android.sh` | **16 / 16 modules, zero diagnostics** | `COMPILE_RUN_05.txt` |
+| `verify_domain.sh` | **323 / 323 tests pass** | `VERIFY_RUN_12.txt` |
+| `compile_android.sh` | **16 / 16 modules, zero diagnostics** | `COMPILE_RUN_06.txt` |
 
 ### What `compile_android.sh` is, and is not
 

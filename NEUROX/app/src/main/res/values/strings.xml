@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      Only what the platform needs before Compose starts (the task label) plus the
+      permission rationale. All user-facing copy lives in the Kotlin catalogues in
+      core:presentation, which are the ones in parity and under test.
+    -->
+    <string name="app_name">NEUROX SENSE</string>
+</resources>

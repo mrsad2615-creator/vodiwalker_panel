@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      The activity theme.
+
+      Two things need a real XML theme, because they happen before Compose draws:
+        1. the window background for the first frame, and
+        2. androidx.core.splashscreen, whose SplashScreen.installSplashScreen (used
+           by NeuroxActivity for setKeepOnScreenCondition) reads
+           R.styleable.SplashScreen from THIS theme.
+
+      PARENT SELECTED DELIBERATELY: android:Theme.Material.NoActionBar.
+      The usual parent for Theme.SplashScreen is Theme.MaterialComponents.*, which
+      would pull in the AppCompat/Material XML libraries. This app has one
+      ComponentActivity, no AppCompat, and no Material 2 views - adding a whole
+      view-system library for one theme parent is not a trade worth making. The
+      splashscreen attributes are declared here directly instead, which is all that
+      library actually needs from the theme.
+    -->
+    <style name="Theme.Neurox" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/nx_obsidian_1</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">false</item>
+
+        <!-- androidx.core.splashscreen attributes -->
+        <item name="windowSplashScreenBackground">@color/nx_obsidian_0</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+        <item name="postSplashScreenTheme">@style/Theme.Neurox</item>
+    </style>
+</resources>

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Must stay in step with Palette.obsidian1 / obsidian0 in core:designsystem.
+         The window background shows for the frame before Compose draws, and during
+         the splash; a mismatched colour is a visible flash at cold start. -->
+    <color name="nx_obsidian_1">#FF0C0E11</color>
+    <color name="nx_obsidian_0">#FF07080A</color>
+    <color name="nx_champagne">#FFD8B36A</color>
+</resources>

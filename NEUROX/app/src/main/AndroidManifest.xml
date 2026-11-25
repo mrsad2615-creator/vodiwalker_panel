@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The application manifest.
+
+  It was missing entirely until the first real Gradle build reported it. Nothing in
+  the repository could have caught that: the offline compile gate compiles Kotlin
+  and never looks at a manifest, because without Gradle there is no manifest merger
+  to look at it.
+
+  It declares no permissions. The app is fully offline (DEC-0001): no INTERNET, no
+  storage, no location. Audio is synthesized in-process and needs none. That absence
+  is a feature and should stay visible here.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <application
+        android:name=".NeuroxApplication"
+        android:allowBackup="false"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.Neurox"
+        android:enableOnBackInvokedCallback="true"
+        android:localeConfig="@xml/locales_config">
+
+        <!--
+          allowBackup is false on purpose. The app stores training history locally and
+          ships its own encrypted export; letting the platform copy the database to
+          cloud backup would move a user's data off the device by a route the user
+          never chose and which the app cannot report.
+        -->
+
+        <activity
+            android:name=".NeuroxActivity"
+            android:exported="true"
+            android:theme="@style/Theme.Neurox"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|uiMode|density|fontScale"
+            android:windowSoftInputMode="adjustResize">
+
+            <!--
+              configChanges: a training session must survive rotation and a
+              light/dark switch without being recreated. Recreating the activity
+              mid-trial would restart the session and discard measurements already
+              taken. fontScale is included for the same reason - the theme applies
+              text scaling itself when it changes.
+              adjustResize so the typing exercise's field stays above the keyboard.
+            -->
+
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>

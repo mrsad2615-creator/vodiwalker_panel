@@ -24,4 +24,11 @@ OK   feature:settings
 == app
 OK   app
 
-RESULT: every Android module compiled with zero diagnostics.
+== manifests
+  ok   app
+  ok   core/audio-android
+  ok   core/data
+  ok   core/designsystem
+  ok   core/security
+
+RESULT: every Android module compiled with zero diagnostics and every manifest is present.

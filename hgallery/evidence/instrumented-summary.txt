@@ -1,0 +1,76 @@
+connectedDebugAndroidTest: 1 (0 = passed)
+
+per class: reported / failed / passed
+dev.hgallery.app.AlbumNavigationTest         2 /   2 /   0
+::notice title=e2e-tests::dev.hgallery.app.AlbumNavigationTest: 2 reported, 2 failed
+dev.hgallery.app.HeaderLayoutTest            6 /   6 /   0
+::notice title=e2e-tests::dev.hgallery.app.HeaderLayoutTest: 6 reported, 6 failed
+dev.hgallery.app.IgnitionTest                3 /   3 /   0
+::notice title=e2e-tests::dev.hgallery.app.IgnitionTest: 3 reported, 3 failed
+dev.hgallery.app.LocalisationTest            1 /   1 /   0
+::notice title=e2e-tests::dev.hgallery.app.LocalisationTest: 1 reported, 1 failed
+dev.hgallery.app.MonthViewTest               3 /   3 /   0
+::notice title=e2e-tests::dev.hgallery.app.MonthViewTest: 3 reported, 3 failed
+dev.hgallery.app.PlayerSessionTest           5 /   5 /   0
+::notice title=e2e-tests::dev.hgallery.app.PlayerSessionTest: 5 reported, 5 failed
+dev.hgallery.app.RepeatModeTest              4 /   4 /   0
+::notice title=e2e-tests::dev.hgallery.app.RepeatModeTest: 4 reported, 4 failed
+dev.hgallery.app.SelectionTest               7 /   7 /   0
+::notice title=e2e-tests::dev.hgallery.app.SelectionTest: 7 reported, 7 failed
+dev.hgallery.app.SettingsAndSectionsTest     5 /   5 /   0
+::notice title=e2e-tests::dev.hgallery.app.SettingsAndSectionsTest: 5 reported, 5 failed
+dev.hgallery.app.ShellUiTest                 5 /   5 /   0
+::notice title=e2e-tests::dev.hgallery.app.ShellUiTest: 5 reported, 5 failed
+dev.hgallery.app.ViewerDismissTest           4 /   4 /   0
+::notice title=e2e-tests::dev.hgallery.app.ViewerDismissTest: 4 reported, 4 failed
+
+every reported test:
+dev.hgallery.app.AlbumNavigationTest > tappingAnAlbumOpensItsContentsInsteadOfTheViewer[emulator-5554 - 13] [31mFAILED [0m
+dev.hgallery.app.AlbumNavigationTest > backFromAnAlbumReturnsToTheAlbumsTab[emulator-5554 - 13] [31mFAILED [0m
+dev.hgallery.app.HeaderLayoutTest > theHeaderControlsAreStillReachable[emulator-5554 - 13] [31mFAILED [0m
+dev.hgallery.app.HeaderLayoutTest > theMenuRowsAnnounceTheirLabels[emulator-5554 - 13] [31mFAILED [0m
+dev.hgallery.app.HeaderLayoutTest > theTitleKeepsSurvivingWidthBesideItsActions[emulator-5554 - 13] [31mFAILED [0m
+dev.hgallery.app.HeaderLayoutTest > theChipRowIsNotCoveredByAnything[emulator-5554 - 13] [31mFAILED [0m
+dev.hgallery.app.HeaderLayoutTest > thePhotosTitleIsDrawnOnOneLine[emulator-5554 - 13] [31mFAILED [0m
+dev.hgallery.app.HeaderLayoutTest > theOverflowMenuOffersEverySecondaryAction[emulator-5554 - 13] [31mFAILED [0m
+dev.hgallery.app.IgnitionTest > theCoverDoesNotExistAfterTheSequence[emulator-5554 - 13] [31mFAILED [0m
+dev.hgallery.app.IgnitionTest > theShellIsUsableWithinTheBudget[emulator-5554 - 13] [31mFAILED [0m
+dev.hgallery.app.IgnitionTest > rotationDoesNotReplayTheSequence[emulator-5554 - 13] [31mFAILED [0m
+dev.hgallery.app.LocalisationTest > englishIsTheDefaultAndStillRenders[emulator-5554 - 13] [31mFAILED [0m
+dev.hgallery.app.MonthViewTest > switchingToMonthAndBackKeepsTheGridAlive[emulator-5554 - 13] [31mFAILED [0m
+dev.hgallery.app.MonthViewTest > repeatedSwitchingDoesNotCrashTheScreen[emulator-5554 - 13] [31mFAILED [0m
+dev.hgallery.app.MonthViewTest > theViewSwitchIsReachable[emulator-5554 - 13] [31mFAILED [0m
+dev.hgallery.app.PlayerSessionTest > loadAppliesTheMuteStateOfTheNewClip[emulator-5554 - 13] [31mFAILED [0m
+dev.hgallery.app.PlayerSessionTest > aSwipedOntoClipStartsMutedBeforeAnyFrameIsReady[emulator-5554 - 13] [31mFAILED [0m
+dev.hgallery.app.PlayerSessionTest > unmutingIsAvailableImmediatelyAfterAMutedArrival[emulator-5554 - 13] [31mFAILED [0m
+dev.hgallery.app.PlayerSessionTest > aDirectOpenStartsUnmuted[emulator-5554 - 13] [31mFAILED [0m
+dev.hgallery.app.PlayerSessionTest > mutingAndUnmutingRoundTrips[emulator-5554 - 13] [31mFAILED [0m
+dev.hgallery.app.RepeatModeTest > selectingOffReturnsToTheDefault[emulator-5554 - 13] [31mFAILED [0m
+dev.hgallery.app.RepeatModeTest > everyModeIsOfferedAsARow[emulator-5554 - 13] [31mFAILED [0m
+dev.hgallery.app.RepeatModeTest > theChoiceSurvivesLeavingAndReopeningTheScreen[emulator-5554 - 13] [31mFAILED [0m
+dev.hgallery.app.RepeatModeTest > pickingAModeSelectsItAndOnlyIt[emulator-5554 - 13] [31mFAILED [0m
+dev.hgallery.app.SelectionTest > openingTheDeleteConfirmationIsNotItselfADeletion[emulator-5554 - 13] [31mFAILED [0m
+dev.hgallery.app.SelectionTest > selectAllFromTheMenuEntersSelectionMode[emulator-5554 - 13] [31mFAILED [0m
+dev.hgallery.app.SelectionTest > longPressingATileOpensTheSelectionToolbar[emulator-5554 - 13] [31mFAILED [0m
+dev.hgallery.app.SelectionTest > theSelectControlIsReachable[emulator-5554 - 13] [31mFAILED [0m
+dev.hgallery.app.SelectionTest > selectAllThenDeselectAllLeavesTheGridUsable[emulator-5554 - 13] [31mFAILED [0m
+dev.hgallery.app.SelectionTest > theActionBarIsLaidOutWithRealHeight[emulator-5554 - 13] [31mFAILED [0m
+dev.hgallery.app.SelectionTest > exitingSelectionRestoresThePhotosTitle[emulator-5554 - 13] [31mFAILED [0m
+dev.hgallery.app.SettingsAndSectionsTest > discoverIsARealScreen[emulator-5554 - 13] [31mFAILED [0m
+dev.hgallery.app.SettingsAndSectionsTest > settingsOpensFromThePhotosToolbar[emulator-5554 - 13] [31mFAILED [0m
+dev.hgallery.app.SettingsAndSectionsTest > backReturnsFromSettingsToTheTimeline[emulator-5554 - 13] [31mFAILED [0m
+dev.hgallery.app.SettingsAndSectionsTest > highlightsIsARealScreen[emulator-5554 - 13] [31mFAILED [0m
+dev.hgallery.app.SettingsAndSectionsTest > everyThemeModeIsReachable[emulator-5554 - 13] [31mFAILED [0m
+dev.hgallery.app.ShellUiTest > albumsTabShowsItsOwnTitle[emulator-5554 - 13] [31mFAILED [0m
+dev.hgallery.app.ShellUiTest > photosTabIsTheStartDestination[emulator-5554 - 13] [31mFAILED [0m
+dev.hgallery.app.ShellUiTest > appLaunchesAndShowsAllFourTabs[emulator-5554 - 13] [31mFAILED [0m
+dev.hgallery.app.ShellUiTest > everyTabCanBeSelected[emulator-5554 - 13] [31mFAILED [0m
+dev.hgallery.app.ShellUiTest > anUnimplementedTabSaysSoInsteadOfShowingFakeContent[emulator-5554 - 13] [31mFAILED [0m
+dev.hgallery.app.ViewerDismissTest > aDownwardSwipeDismissesTheViewer[emulator-5554 - 13] [31mFAILED [0m
+dev.hgallery.app.ViewerDismissTest > aShortPullDoesNotDismiss[emulator-5554 - 13] [31mFAILED [0m
+dev.hgallery.app.ViewerDismissTest > anUpwardSwipeDoesNotDismiss[emulator-5554 - 13] [31mFAILED [0m
+dev.hgallery.app.ViewerDismissTest > theViewerOpensOnAPhoto[emulator-5554 - 13] [31mFAILED [0m
+
+failure reasons:
+
+classes on the device with no line in the log (did not run, or ran nothing):

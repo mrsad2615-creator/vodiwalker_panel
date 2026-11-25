@@ -115,7 +115,40 @@ seed_fixture_media() {
 
 seed_fixture_media
 
+# The runtime media permissions, before the tests, because the app cannot leave its own
+# permission screen without them.
+#
+# On API 33 the app needs READ_MEDIA_IMAGES and READ_MEDIA_VIDEO to be granted at runtime.
+# `connectedDebugAndroidTest` installs the app itself; the explicit `adb install -g` that
+# grants them happens later in this script, for the screenshot build. So every
+# instrumented test ran against `PermissionScreen` -- no tabs, no grid, no overflow menu --
+# and all 51 of them failed on nodes that could not exist on the screen in front of them.
+#
+# This grants them on the package the tests will use. It is done after the APK the tests
+# install, so it is applied on the next run of the suite as well as this one; the
+# permission survives because the package is not uninstalled in between.
+TEST_PKG="$PKG"
+if adb shell pm list packages 2>/dev/null | grep -q "$TEST_PKG"; then
+  for PERM in android.permission.READ_MEDIA_IMAGES android.permission.READ_MEDIA_VIDEO \
+      android.permission.READ_MEDIA_VISUAL_USER_SELECTED android.permission.READ_EXTERNAL_STORAGE; do
+    adb shell pm grant "$TEST_PKG" "$PERM" >/dev/null 2>&1 || true
+  done
+  GRANTED=$(adb shell dumpsys package "$TEST_PKG" 2>/dev/null \
+    | grep -c "READ_MEDIA_IMAGES: granted=true" || true)
+  echo "::notice title=e2e::media permission grant on the test package: ${GRANTED:-0} match(es)"
+else
+  echo "::notice title=e2e::the test package is not installed yet; permissions granted after its first install"
+fi
+
 echo "== instrumented UI tests =="
+
+# After the suite runs, the app exists, so grant again and re-check. On the first run the
+# block above does nothing; on every later run it is what stops the suite from being 51
+# assertions against a permission screen.
+for PERM in android.permission.READ_MEDIA_IMAGES android.permission.READ_MEDIA_VIDEO \
+    android.permission.READ_MEDIA_VISUAL_USER_SELECTED android.permission.READ_EXTERNAL_STORAGE; do
+  adb shell pm grant "$TEST_PKG" "$PERM" >/dev/null 2>&1 || true
+done
 # The exit status must be Gradle's, not tee's.
 #
 # This was `./gradlew ... | tee ui-test.log` followed by `TEST_STATUS=$?`, which reports

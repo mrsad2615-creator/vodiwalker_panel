@@ -128,6 +128,22 @@ seed_fixture_media
 # install, so it is applied on the next run of the suite as well as this one; the
 # permission survives because the package is not uninstalled in between.
 TEST_PKG="$PKG"
+# Recorded before anything is granted, and copied to `evidence/`. The previous attempt at
+# this fix could not be checked: the grant either did not run or did not take, and nothing
+# in the log or the artefacts said which.
+{
+  echo "== package state before the suite =="
+  adb shell pm list packages 2>/dev/null | grep -i gallery || echo "  no gallery package installed"
+  echo
+  echo "== permission state before the suite =="
+  adb shell dumpsys package "$TEST_PKG" 2>/dev/null \
+    | grep -E "READ_MEDIA|READ_EXTERNAL|granted=" | head -12 || echo "  cannot read the package"
+  echo
+  echo "== runtime permission flags the app declares =="
+  awk '/<uses-permission/{print}' app/src/main/AndroidManifest.xml
+} > "$OUT_DIR/diag/permission-before.txt" 2>&1
+cat "$OUT_DIR/diag/permission-before.txt"
+
 if adb shell pm list packages 2>/dev/null | grep -q "$TEST_PKG"; then
   for PERM in android.permission.READ_MEDIA_IMAGES android.permission.READ_MEDIA_VIDEO \
       android.permission.READ_MEDIA_VISUAL_USER_SELECTED android.permission.READ_EXTERNAL_STORAGE; do

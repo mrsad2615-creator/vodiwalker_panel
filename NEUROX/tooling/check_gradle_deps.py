@@ -32,6 +32,11 @@ MODULE_PREFIX = {
 }
 
 IMPORT = re.compile(r"^import (com\.neurox\.[a-z0-9_.]+)", re.MULTILINE)
+# Fully-qualified references with no import, e.g.
+#   `audioRenderer: com.neurox.audio.platform.AudioRenderer? = null`
+# These are easy to miss by eye and were missed by the first version of this
+# checker, which only looked at import lines.
+QUALIFIED = re.compile(r"(?<!import )(?<![\w.])(com\.neurox\.[a-z0-9_]+\.[A-Za-z0-9_.]+)")
 
 
 def owner(imported: str) -> str | None:
@@ -70,7 +75,12 @@ def main() -> int:
         first_use: dict[str, str] = {}
         for kt in sources.rglob("*.kt"):
             text = kt.read_text()
-            for imported in IMPORT.findall(text):
+            found = IMPORT.findall(text)
+            # strip comments so prose about a package is not mistaken for a use
+            code = re.sub(r"/\*.*?\*/", "", text, flags=re.S)
+            code = re.sub(r"//[^\n]*", "", code)
+            found += QUALIFIED.findall(code)
+            for imported in found:
                 module = owner(imported)
                 if module and module != self_module:
                     used.add(module)

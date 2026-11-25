@@ -35,6 +35,7 @@ dependencies {
     implementation(project(":core:games"))
     implementation(project(":core:data"))
     implementation(project(":core:audio"))
+    implementation(project(":core:audio-android"))
     implementation(project(":core:presentation"))
     implementation(project(":core:security"))
     implementation(libs.androidx.navigation.compose)

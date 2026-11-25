@@ -1,1 +1,1 @@
-view switch did NOT change the page
+view switch changed the page (see view-change.txt)

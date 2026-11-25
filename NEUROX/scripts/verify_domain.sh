@@ -76,8 +76,9 @@ compile "core:domain" "$OUT/domain.jar" core/domain/src/main/kotlin
 CP="$OUT/common.jar:$OUT/domain.jar${NX_COROUTINES_JAR:+:$NX_COROUTINES_JAR}"
 compile "core:games" "$OUT/games.jar" core/games/src/main/kotlin
 CP="$OUT/common.jar:$OUT/domain.jar:$OUT/games.jar${NX_COROUTINES_JAR:+:$NX_COROUTINES_JAR}"
-# core:audio/platform is Android-only (AudioTrack); android.jar is unavailable offline.
-find core/audio/src/main/kotlin -name '*.kt' -not -path '*/platform/*' > "$OUT/audio-sources.txt"
+# core:audio is pure Kotlin. The Android AudioTrack renderer lives in the separate
+# :core:audio-android Gradle module, so nothing has to be filtered out here.
+find core/audio/src/main/kotlin -name '*.kt' > "$OUT/audio-sources.txt"
 echo "== compile core:audio =="
 kc -cp "$CP" $(cat "$OUT/audio-sources.txt") -d "$OUT/audio.jar"
 if [[ ! -f "$OUT/audio.jar" ]]; then

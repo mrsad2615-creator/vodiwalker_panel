@@ -30,6 +30,7 @@ include(
     ":core:designsystem",
     ":core:games",
     ":core:audio",
+    ":core:audio-android",
     ":core:security",
     ":core:presentation",
     ":feature:onboarding",

@@ -6,6 +6,7 @@ OK   stubs (48 files)
 OK   core:designsystem
 OK   core:data
 OK   core:audio
+OK   core:audio-android
 
 == features
 OK   feature:onboarding

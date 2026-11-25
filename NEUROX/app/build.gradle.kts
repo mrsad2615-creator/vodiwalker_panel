@@ -60,6 +60,7 @@ dependencies {
     implementation(project(":core:designsystem"))
     implementation(project(":core:games"))
     implementation(project(":core:audio"))
+    implementation(project(":core:audio-android"))
     implementation(project(":core:security"))
     implementation(project(":core:presentation"))
 

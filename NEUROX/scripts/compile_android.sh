@@ -131,10 +131,13 @@ step "core"
 build core:designsystem ""
 build core:data ":$OUT/c-core-designsystem.jar"
 build core:audio ":$OUT/c-core-designsystem.jar"
+# The Android edge of audio: AudioRenderer against AudioTrack.
+build core:audio-android ":$OUT/c-core-audio.jar:$OUT/c-core-designsystem.jar"
+
 
 # Features see the pure layers, the design system and the data layer - and the
 # container ONLY through com.neurox.presentation.di.AppServices.
-FEATCP=":$OUT/c-core-designsystem.jar:$OUT/c-core-data.jar:$OUT/c-core-audio.jar"
+FEATCP=":$OUT/c-core-designsystem.jar:$OUT/c-core-data.jar:$OUT/c-core-audio.jar:$OUT/c-core-audio-android.jar"
 
 step "features"
 FEATURES=(onboarding home session vision reflex read type analytics library profile settings)

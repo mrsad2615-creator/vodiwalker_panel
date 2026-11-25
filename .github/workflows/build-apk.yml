@@ -46,10 +46,10 @@ jobs:
 
     steps:
       - name: Check out
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
@@ -74,12 +74,33 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      # `exec` makes the step's exit code the Gradle exit code. Without it a
-      # pipeline would report the last command's status and a failed build would
-      # look green - the exact mistake the old offline audit made.
+      # A pipeline would report tee's status and a failed build would look green -
+      # the exact mistake the old offline audit made - so the exit code is captured
+      # explicitly. On failure the compiler's own error lines are republished as
+      # annotations: job logs live on a blob host that some clients cannot reach,
+      # annotations come through the API.
       - name: Assemble
         working-directory: NEUROX
-        run: ./gradlew --no-daemon --stacktrace assembleDebug
+        run: |
+          set -o pipefail
+          if ./gradlew --no-daemon --console=plain --stacktrace assembleDebug > build.log 2>&1; then
+            echo "BUILD SUCCEEDED"
+            exit 0
+          fi
+          echo "=========== BUILD FAILED ==========="
+          echo "--- compiler errors ---"
+          grep -E "^e: |^w: .*error" build.log | head -25 || true
+          echo "--- resolution / task failures ---"
+          grep -E "Could not resolve|Could not find|What went wrong|FAILURE:|Caused by:" -A2 build.log | head -30 || true
+          echo "--- tail ---"
+          tail -25 build.log
+          echo "--- annotations ---"
+          n=0
+          while IFS= read -r line; do
+            n=$((n+1)); [ "$n" -gt 10 ] && break
+            echo "::error::$line"
+          done < <(grep -E "^e: |Could not resolve|Could not find" build.log | head -10)
+          exit 1
 
       - name: Locate APK
         id: find

@@ -104,7 +104,7 @@ class ScreenBuildersTest {
         assertTrue(home.moduleCards.none { it.hasData })
         assertEquals(0.0, home.moduleCards.first { it.module == Module.VISION }.accuracy, 0.0)
         // The first recommendation is the onboarding one, not a fabricated weakness.
-        assertEquals("recommend.start", home.recommendation.reasonKey)
+        assertEquals("home.recommendedReason.start", home.recommendation.reasonKey)
     }
 
     @Test

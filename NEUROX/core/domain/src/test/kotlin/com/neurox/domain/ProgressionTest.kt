@@ -201,7 +201,7 @@ class RecommenderTest {
     @Test
     fun aNewProfileIsAskedToStart() {
         val suggestion = Recommender.suggest(emptyList(), Module.entries.toSet(), nowMillis = 0)
-        assertEquals("recommend.start", suggestion.reasonKey)
+        assertEquals("home.recommendedReason.start", suggestion.reasonKey)
         assertNotNull(suggestion.template)
     }
 
@@ -209,7 +209,7 @@ class RecommenderTest {
     fun untrainedModulesArePrioritized() {
         val history = Records.series(count = 6, exerciseId = ExerciseTemplate.FOCUS_LOCK.id, accuracy = 0.99)
         val suggestion = Recommender.suggest(history, setOf(Module.TYPE), nowMillis = 0)
-        assertEquals("recommend.weak_skill", suggestion.reasonKey)
+        assertEquals("home.recommendedReason.weak_skill", suggestion.reasonKey)
         assertNotNull(suggestion.template)
     }
 

@@ -253,9 +253,27 @@ object Quests {
  */
 object Recommender {
 
+    /**
+     * Catalogue keys for the four explanations.
+     *
+     * Declared as constants rather than built inline so the contract test can pin
+     * them against both catalogues, and so a rename is one edit.
+     */
+    const val REASON_START = "home.recommendedReason.start"
+    const val REASON_WEAK_SKILL = "home.recommendedReason.weak_skill"
+    const val REASON_NEW_MODULE = "home.recommendedReason.new_module"
+    const val REASON_ROTATION = "home.recommendedReason.rotation"
+
     data class Suggestion(
         val template: com.neurox.domain.exercise.ExerciseTemplate,
         val difficulty: Int,
+        /**
+         * Full catalogue key for the explanation shown with the suggestion.
+         *
+         * It is the whole key on purpose: a short suffix ("start") forces every
+         * caller to re-add a prefix, and a caller that guesses the prefix wrongly
+         * shows the key itself to the user. See Strings parity tests.
+         */
         val reasonKey: String,
         val minutes: Int,
     )
@@ -268,10 +286,10 @@ object Recommender {
         val completed = history.filter { it.status == SessionStatus.COMPLETED }
         val weak = WeakSkillShortcut.weakest(completed)
         val reasonKey = when {
-            completed.isEmpty() -> "recommend.start"
-            weak != null -> "recommend.weak_skill"
-            untrainedModules.isNotEmpty() -> "recommend.new_module"
-            else -> "recommend.rotation"
+            completed.isEmpty() -> REASON_START
+            weak != null -> REASON_WEAK_SKILL
+            untrainedModules.isNotEmpty() -> REASON_NEW_MODULE
+            else -> REASON_ROTATION
         }
         val template = weak
             ?: untrainedModules.minByOrNull { it.displayOrder }

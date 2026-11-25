@@ -280,7 +280,7 @@ private fun RecommendationHero(
             )
             Spacer(Modifier.height(NxSpacing.xs))
             Text(
-                text = strings.raw("home.recommendedReason.${recommendation.reasonKey.substringAfterLast('.')}"),
+                text = strings.raw("${recommendation.reasonKey}"),
                 style = NxTypography.caption,
                 color = NxTheme.colors.textTertiary,
             )

@@ -1,0 +1,45 @@
+== compile core:common ==
+core/common/src/main/kotlin/org/junit/Assert.kt:165:41: warning: unchecked cast of 'Throwable' to 'T (of fun <T> assertThrows)'.
+            if (clazz == null) return t as T
+                                        ^^^^
+== compile core:domain ==
+== compile core:games ==
+== compile core:audio ==
+== compile core:presentation ==
+== prepare core:security (pure part) ==
+== compile core:security ==
+== compile tests ==
+== compile test runner ==
+== run tests ==
+PASS StringsTest.persianUsesPersianDigitsForSocialNumbers
+PASS StringsTest.placeholdersMatchAcrossLanguages
+PASS StringsTest.unknownOrNullLanguageFallsBackToPersian
+PASS ConstantTimeTest.equalAndDifferentArraysBehaveCorrectly
+PASS ConstantTimeTest.sha256MatchesKnownDigest
+PASS ConstantTimeTest.wipeClearsSecrets
+PASS Pbkdf2VectorTest.matchesKnownSha256Vectors
+PASS Pbkdf2VectorTest.outputLengthIsExactAndRejectsInvalidInputs
+PASS Pbkdf2VectorTest.passwordChangeProducesADifferentKey
+PASS Pbkdf2VectorTest.thirtyTwoByteBlockBoundaryIsCorrect
+PASS PinHasherTest.hashIsSaltedAndVerifiable
+PASS PinHasherTest.malformedRecordsNeverThrow
+PASS PinHasherTest.pinRulesRejectUnsafeValues
+PASS PinHasherTest.twoHashesOfTheSamePinDiffer
+PASS VaultServiceTest.aWeakKeyDerivationSettingIsRefused
+PASS VaultServiceTest.argon2EnvelopeIsImportedAndTheFallbackIsDisclosed
+PASS VaultServiceTest.ciphertextNeverContainsThePlaintext
+PASS VaultServiceTest.emptyPasswordIsRefusedAtExport
+PASS VaultServiceTest.everyAlteredByteBreaksAuthentication
+PASS VaultServiceTest.everyExportUsesAFreshSaltAndNonce
+PASS VaultServiceTest.exerciseConfigsSurviveTheVault
+PASS VaultServiceTest.exportAndRestoreRoundTrip
+PASS VaultServiceTest.fingerprintOfADifferentFileIsNotAcceptedAsSameFile
+PASS VaultServiceTest.headerCanBeReadWithoutThePassword
+PASS VaultServiceTest.tamperedEnvelopeMetadataIsRejectedNotSilentlyAccepted
+PASS VaultServiceTest.truncatedOrCorruptFilesAreRejected
+PASS VaultServiceTest.wrongPasswordIsRejectedAndNeverYieldsData
+
+Total: 321   Passed: 321   Failed: 0   Skipped: 0
+Classpath entries: 7
+
+Full output: /home/user/vodiwalker_panel/NEUROX/.verify/test-output.txt

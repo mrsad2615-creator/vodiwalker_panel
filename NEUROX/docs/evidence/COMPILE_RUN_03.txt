@@ -1,0 +1,26 @@
+
+== platform stubs
+OK   stubs (48 files)
+
+== core
+OK   core:designsystem
+OK   core:data
+OK   core:audio
+
+== features
+OK   feature:onboarding
+OK   feature:home
+OK   feature:session
+OK   feature:vision
+OK   feature:reflex
+OK   feature:read
+OK   feature:type
+OK   feature:analytics
+OK   feature:library
+OK   feature:profile
+OK   feature:settings
+
+== app
+OK   app
+
+RESULT: every Android module compiled with zero diagnostics.

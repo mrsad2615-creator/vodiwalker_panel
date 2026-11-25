@@ -54,14 +54,22 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-
-      # The build needs API 35 because every module sets compileSdk = 35.
-      - name: Install platform 35
+      # The hosted runner already has an Android SDK at $ANDROID_HOME. Do NOT use
+      # android-actions/setup-android here: it re-downloads cmdline-tools and has
+      # failed at that step on this repository before the build ever started.
+      # Install only what is missing, and fail loudly if the SDK is absent.
+      - name: Ensure Android platform 35
         run: |
-          yes | sdkmanager --licenses > /dev/null || true
-          sdkmanager "platforms;android-35" "build-tools;35.0.0" "platform-tools"
+          set -eu
+          test -d "$ANDROID_HOME" || { echo "::error::no Android SDK at ANDROID_HOME"; exit 1; }
+          echo "SDK at $ANDROID_HOME"
+          ls "$ANDROID_HOME/platforms" || true
+          if [ ! -d "$ANDROID_HOME/platforms/android-35" ] || [ ! -d "$ANDROID_HOME/build-tools/35.0.0" ]; then
+            yes | sdkmanager --licenses > /dev/null 2>&1 || true
+            sdkmanager "platforms;android-35" "build-tools;35.0.0" \
+              || { echo "::error::platform 35 installation failed"; exit 1; }
+          fi
+          test -d "$ANDROID_HOME/platforms/android-35"
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4

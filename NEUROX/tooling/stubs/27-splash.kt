@@ -1,28 +1,34 @@
-// NEUROX offline compile stubs - core-splashscreen.
+// NEUROX offline compile stubs - androidx.core:core-splashscreen 1.0.1.
 package androidx.core.splashscreen
 
 /**
- * androidx.core.splashscreen 1.0.1.
+ * Verified against the real library by checking how working projects import it:
  *
- * REAL SHAPE: `installSplashScreen()` is a TOP-LEVEL extension function on
- * ComponentActivity declared in this package, not a member of SplashScreen's
- * companion. The previous stub put it on the companion, so the call site
- * `SplashScreen.installSplashScreen(this)` compiled perfectly offline and failed
- * under Gradle with "Unresolved reference 'installSplashScreen'".
+ *     import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
  *
- * Call sites must therefore import both the class and the extension, and call it
- * as `installSplashScreen()` on the activity (or via the import on a qualified
- * receiver). See NeuroxActivity.
+ * `installSplashScreen()` is an extension on ComponentActivity declared INSIDE
+ * SplashScreen's companion object. That detail matters for the import: it is
+ *
+ *     SplashScreen.Companion.installSplashScreen
+ *
+ * and not `androidx.core.splashscreen.installSplashScreen`, which is what a
+ * top-level extension would be named. Declaring it top-level here made the
+ * import fail under Gradle with an unresolved reference even after the previous
+ * fix - two wrong shapes in a row, both of which compiled offline.
  */
 class SplashScreen {
     /** Keeps the splash visible while [condition] returns true. */
     fun setKeepOnScreenCondition(condition: () -> Boolean) {}
 
     fun setOnExitAnimationListener(listener: (Any) -> Unit) {}
-}
 
-/**
- * The real signature: `fun ComponentActivity.installSplashScreen(): SplashScreen`.
- * Declared at package level so an `import androidx.core.splashscreen.*` finds it.
- */
-fun androidx.activity.ComponentActivity.installSplashScreen(): SplashScreen = SplashScreen()
+    companion object {
+        /**
+         * The real declaration:
+         * `fun ComponentActivity.installSplashScreen(): SplashScreen`
+         * as an extension inside this companion.
+         */
+        fun androidx.activity.ComponentActivity.installSplashScreen(): SplashScreen =
+            SplashScreen()
+    }
+}

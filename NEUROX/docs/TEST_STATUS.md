@@ -10,8 +10,8 @@ open.
 
 | Check | Command | Result | Evidence |
 | --- | --- | --- | --- |
-| Pure-layer tests | `bash scripts/verify_domain.sh` | **323 / 323 pass** | `evidence/VERIFY_RUN_17.txt` |
-| Android-module compile | `bash scripts/compile_android.sh` | **16 / 16 modules, 0 diagnostics** | `evidence/COMPILE_RUN_11.txt` |
+| Pure-layer tests | `bash scripts/verify_domain.sh` | **323 / 323 pass** | `evidence/VERIFY_RUN_18.txt` |
+| Android-module compile | `bash scripts/compile_android.sh` | **16 / 16 modules, 0 diagnostics** | `evidence/COMPILE_RUN_12.txt` |
 | Gradle build (`assembleDebug`) | `./gradlew assembleDebug` | **NOT RUN** | blocked, see below |
 | Instrumented / UI tests | `./gradlew connectedAndroidTest` | **NOT RUN, NOT WRITTEN** | requires a device |
 | APK on a device | - | **NOT PRODUCED** | - |
@@ -94,8 +94,8 @@ startup path that could never complete.
 ## How the numbers were produced
 
 ```
-Total: 323   Passed: 323   Failed: 0   Skipped: 0      # VERIFY_RUN_17.txt
-RESULT: every Android module compiled with zero diagnostics.   # COMPILE_RUN_11.txt
+Total: 323   Passed: 323   Failed: 0   Skipped: 0      # VERIFY_RUN_18.txt
+RESULT: every Android module compiled with zero diagnostics.   # COMPILE_RUN_12.txt
 ```
 
 Both scripts fail loudly: a compile error exits non-zero, a failed test is listed and

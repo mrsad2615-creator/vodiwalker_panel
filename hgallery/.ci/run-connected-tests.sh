@@ -144,27 +144,39 @@ TEST_PKG="$PKG"
 } > "$OUT_DIR/diag/permission-before.txt" 2>&1
 cat "$OUT_DIR/diag/permission-before.txt"
 
-if adb shell pm list packages 2>/dev/null | grep -q "$TEST_PKG"; then
-  for PERM in android.permission.READ_MEDIA_IMAGES android.permission.READ_MEDIA_VIDEO \
-      android.permission.READ_MEDIA_VISUAL_USER_SELECTED android.permission.READ_EXTERNAL_STORAGE; do
-    adb shell pm grant "$TEST_PKG" "$PERM" >/dev/null 2>&1 || true
-  done
-  GRANTED=$(adb shell dumpsys package "$TEST_PKG" 2>/dev/null \
-    | grep -c "READ_MEDIA_IMAGES: granted=true" || true)
-  echo "::notice title=e2e::media permission grant on the test package: ${GRANTED:-0} match(es)"
+# Install the APK before the suite, so the package exists to be granted against.
+#
+# The previous attempt granted permissions only if the package was already installed, and
+# `permission-before.txt` in run 45571127154 shows it never was: "no gallery package
+# installed". The grant was therefore a no-op on every run, and the suite kept asserting
+# against the permission screen.
+#
+# Installing first is safe: `connectedDebugAndroidTest` installs its own build over this
+# one, and a runtime permission is attached to the package name, so it survives the
+# replacement. The APK is the same one the previous job built and uploaded.
+EARLY_APK=$(find apk -name '*.apk' 2>/dev/null | head -1)
+if [ -n "$EARLY_APK" ]; then
+  adb install -r -g "$EARLY_APK" > "$OUT_DIR/diag/preinstall.txt" 2>&1 || true
+  echo "pre-installed $(basename "$EARLY_APK") for the permission grant"
 else
-  echo "::notice title=e2e::the test package is not installed yet; permissions granted after its first install"
+  echo "::warning title=e2e::no APK in apk/, so the suite will start behind the permission screen"
 fi
 
-echo "== instrumented UI tests =="
-
-# After the suite runs, the app exists, so grant again and re-check. On the first run the
-# block above does nothing; on every later run it is what stops the suite from being 51
-# assertions against a permission screen.
 for PERM in android.permission.READ_MEDIA_IMAGES android.permission.READ_MEDIA_VIDEO \
     android.permission.READ_MEDIA_VISUAL_USER_SELECTED android.permission.READ_EXTERNAL_STORAGE; do
-  adb shell pm grant "$TEST_PKG" "$PERM" >/dev/null 2>&1 || true
+  adb shell pm grant "$TEST_PKG" "$PERM" >> "$OUT_DIR/diag/preinstall.txt" 2>&1 || true
 done
+{
+  echo "== package state after the grant, before the suite =="
+  adb shell pm list packages 2>/dev/null | grep -i gallery || echo "  still no gallery package"
+  echo
+  echo "== READ_MEDIA flags after the grant =="
+  adb shell dumpsys package "$TEST_PKG" 2>/dev/null \
+    | grep -E "READ_MEDIA_IMAGES|READ_MEDIA_VIDEO" | head -8 || echo "  cannot read the package"
+} > "$OUT_DIR/diag/permission-after.txt" 2>&1
+cat "$OUT_DIR/diag/permission-after.txt"
+
+echo "== instrumented UI tests =="
 # The exit status must be Gradle's, not tee's.
 #
 # This was `./gradlew ... | tee ui-test.log` followed by `TEST_STATUS=$?`, which reports

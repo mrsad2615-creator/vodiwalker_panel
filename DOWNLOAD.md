@@ -51,22 +51,46 @@ Package id is `com.neurox.app.debug`, so it installs beside a release build.
 
 ## About this file
 
-It is the **first APK this project has ever produced.** Gradle had never run
-before this pipeline existed.
+This is the **second** build. The first was installable but could not get past
+onboarding; see "What changed" below.
 
 ### Verified inside the file
 
 | Check | Result |
 | --- | --- |
-| File size | 13,003,999 bytes |
-| Zip structure | 554 entries, valid |
+| File size | 13,020,442 bytes |
+| Zip structure | 555 entries, valid |
 | `AndroidManifest.xml` | present |
-| `classes*.dex` | 19 files |
+| `classes*.dex` | 20 files |
 | `resources.arsc` | present |
 | Vazirmatn fonts | 5 |
 | Signature | `APK Sig Block 42`, scheme v2 — **installable** |
 | Package id | `com.neurox.app.debug` |
 | `minSdk` / `targetSdk` | 26 / 35 |
+
+### What changed in this build
+
+The first build compiled and installed but was unusable past its first screen.
+Four independent defects, each with a root cause found in the code:
+
+| Defect | Root cause | Fixed by |
+| --- | --- | --- |
+| Onboarding never completed | Creating a guest sent an empty name; the repository rejected it and the failure was discarded, so the screen advanced with no profile | the flow moved into a tested `OnboardingFlow`; every write is awaited and failures render |
+| Home never loaded | its `LaunchedEffect` keyed on state it mutated itself, so it restarted forever | the key is a reload token that only a retry bumps |
+| Backup could not be exported | the bytes were computed and thrown away | `BackupFiles` + a Storage Access Framework implementation |
+| Restore was impossible | the "pick a file" button was wired to `{ }` | the same implementation reads the picked document |
+
+Analytics also showed an empty table while loading and its start-training
+button did nothing. Both are fixed. The licences row no longer pretends to
+open a screen that does not exist.
+
+### What is verified, and what is not
+
+The offline gates prove the code compiles and 338 unit tests pass. They do not
+prove the app behaves on a device: no test in this repository starts an
+Activity, touches Room, or exercises Compose. Onboarding, backup and home are
+now covered by tests at the flow level (fakes, not Android), which is stronger
+than before but still not a device run.
 
 ### Why it lives on a branch, not in Releases
 

@@ -158,48 +158,46 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-      # Publishing via the REST API rather than the gh CLI: inside a workflow the
-      # CLI failed with an empty diagnostic, and curl always reports the status and
-      # the response body.
+      # Publishing to an APK BRANCH, not a Release.
+      #
+      # The repository blocks tag creation (a ruleset: "Cannot create ref due to
+      # creations being restricted") and its releases are immutable, so there is no
+      # tag this token can publish to. Branch refs ARE allowed, and a file on a
+      # branch is served by raw.githubusercontent.com at a stable URL:
+      #
+      #   https://raw.githubusercontent.com/OWNER/REPO/apk-latest/NEUROX-sense-debug.apk
+      #
+      # That is a real one-click download with no tag and no release involved.
+      #
+      # One API call: the contents endpoint creates the file and, at the same time,
+      # the branch. An earlier draft did the blob -> tree -> commit -> ref dance by
+      # hand, which is four more places to be wrong for no benefit.
       #
       # A publishing failure does NOT fail this job. By this point the APK exists,
-      # was verified, and is attached to the run; calling the whole build failed
-      # because the last step lacks a permission misrepresents where the problem is.
-      - name: Publish release
+      # was verified, and is attached to the run; reporting the whole build as
+      # broken because an optional publishing step failed misstates where the
+      # problem is.
+      - name: Publish APK to the apk-latest branch
         if: github.event_name != 'pull_request'
         working-directory: NEUROX
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           APK_NAME: ${{ steps.find.outputs.name }}
-          APK_PATH: ${{ steps.find.outputs.path }}
           COMMIT: ${{ github.sha }}
           REPO: ${{ github.repository }}
         run: |
           set -eu
           api="https://api.github.com/repos/$REPO"
           auth="Authorization: Bearer $GH_TOKEN"
-          # Three separate repository settings block automatic publishing here,
-          # each found by a different HTTP error:
-          #   422 pre_receive "creations being restricted" - a ruleset forbids
-          #       creating new refs, so any fresh tag name is rejected;
-          #   422 already_exists / "used by an immutable release" - releases are
-          #       immutable, so an existing tag cannot gain a new asset either.
-          # Between them there is no tag this token can publish to. The APK is
-          # still built, verified and attached to the run; DOWNLOAD.md explains
-          # the one setting that unblocks the permanent link.
-          tag="neurox-v1.0.0-debug"
+          branch="apk-latest"
 
           note_failure() {
             echo "::warning::$1"
             {
               echo "### APK built, not published"
               echo
-              echo "The APK was built, verified with aapt2 and apksigner, and attached"
-              echo "to this run's artifacts."
-              echo
-              echo "Publishing needs a \`GITHUB_TOKEN\` with \`contents: write\`."
-              echo "Repository Settings -> Actions -> General -> Workflow permissions"
-              echo "-> **Read and write permissions**, then re-run this workflow."
+              echo "The APK was built, verified with aapt2 and apksigner, and is"
+              echo "attached to this run's artifacts."
               echo
               echo "Cause: $1"
             } >> "$GITHUB_STEP_SUMMARY"
@@ -210,72 +208,67 @@ jobs:
             | python3 -c "import json,sys; d=json.load(sys.stdin); print('repo:', d.get('full_name'), '| perms:', d.get('permissions'))" \
             || echo "could not read repository metadata"
 
-          # Replace any previous release on this tag so /releases/latest is current.
-          old_id=$(curl -s -H "$auth" "$api/releases/tags/$tag" \
-            | python3 -c "import json,sys; print(json.load(sys.stdin).get('id',''))" 2>/dev/null || true)
-          if [ -n "${old_id:-}" ]; then
-            echo "deleting previous release $old_id"
-            curl -s -o /dev/null -w "  delete release: %{http_code}\n" \
-              -X DELETE -H "$auth" "$api/releases/$old_id"
+          # If the branch is new, seed it from this commit so the file has a parent.
+          exists=$(curl -s -o /dev/null -w "%{http_code}" -H "$auth" "$api/git/ref/heads/$branch")
+          if [ "$exists" != "200" ]; then
+            echo "branch $branch does not exist; creating it from $COMMIT"
+            code=$(curl -s -o resp.json -w "%{http_code}" -X POST -H "$auth" \
+                   -H "Accept: application/vnd.github+json" \
+                   -d "{\"ref\":\"refs/heads/$branch\",\"sha\":\"$COMMIT\"}" "$api/git/refs")
+            if [ "$code" != "201" ]; then
+              note_failure "branch creation failed with HTTP $code"
+              head -c 400 resp.json; echo
+              exit 0
+            fi
           fi
 
-          cat > notes.md <<NOTES
-          Automatic build of \\`$COMMIT\\`.
+          # The file's sha is needed to replace an existing file; empty means create.
+          file_sha=$(curl -s -H "$auth" "$api/contents/$APK_NAME?ref=$branch" \
+            | python3 -c "import json,sys
+          try:
+              print(json.load(sys.stdin).get('sha',''))
+          except Exception:
+              print('')" 2>/dev/null || true)
 
-          **Install:** download \\`$APK_NAME\\` and open it on an Android 8.0+ device. Android will ask you to allow installs from this source.
-
-          - package \\`com.neurox.app.debug\\`; installs beside a release build
-          - debug build: not minified, signed with a per-run throwaway key
-          - it cannot upgrade over another copy: uninstall the old one first
-          - built by GitHub Actions from $COMMIT and verified with aapt2 and apksigner
-          - what is and is not tested is in NEUROX/docs/TEST_STATUS.md
-          NOTES
-
-          TAG="$tag" python3 - > release.json <<'JSONEOF'
-          import json, os
-          print(json.dumps({
-              "tag_name": os.environ["TAG"],
-              "target_commitish": os.environ["COMMIT"],
-              "name": "NEUROX SENSE - latest APK",
-              "body": open("notes.md").read(),
-              "draft": False,
-              "prerelease": True,
-          }))
+          APK_NAME="$APK_NAME" COMMIT="$COMMIT" BRANCH="$branch" FILE_SHA="${file_sha:-}" \
+            python3 - > body.json <<'JSONEOF'
+          import base64, json, os
+          body = {
+              "message": "APK " + os.environ["COMMIT"][:7],
+              "content": base64.b64encode(open(os.environ["APK_NAME"], "rb").read()).decode(),
+              "branch": os.environ["BRANCH"],
+          }
+          if os.environ.get("FILE_SHA"):
+              body["sha"] = os.environ["FILE_SHA"]
+          print(json.dumps(body))
           JSONEOF
 
-          echo "--- create release ---"
-          code=$(curl -s -o resp.json -w "%{http_code}" -X POST -H "$auth" \
+          echo "--- put $APK_NAME on $branch ($(stat -c%s "$APK_NAME") bytes) ---"
+          code=$(curl -s -o resp.json -w "%{http_code}" -X PUT -H "$auth" \
                  -H "Accept: application/vnd.github+json" \
-                 --data-binary @release.json "$api/releases")
-          if [ "$code" != "201" ]; then
-            # Show GitHub's own reason, not just the status: a 422 here reads like a
-            # permission error but was once a repository ruleset.
+                 --data-binary @body.json "$api/contents/$APK_NAME")
+          if [ "$code" != "200" ] && [ "$code" != "201" ]; then
             reason=$(python3 -c "
           import json
           try:
               d = json.load(open('resp.json'))
           except Exception:
-              print('unreadable response')
-              raise SystemExit
-          parts = [d.get('message', '')]
-          parts += [e.get('message', e.get('code', '')) for e in d.get('errors', [])]
+              print('unreadable response'); raise SystemExit
+          parts = [d.get('message','')]
+          parts += [e.get('message', e.get('code','')) for e in d.get('errors',[])]
           print(' | '.join(p for p in parts if p))
           " 2>/dev/null || head -c 300 resp.json)
-            note_failure "release creation failed with HTTP $code: $reason"
+            note_failure "upload failed with HTTP $code: $reason"
             exit 0
           fi
 
-          upload_url=$(python3 -c "import json; print(json.load(open('resp.json'))['upload_url'].split('{')[0])")
-          echo "release created; uploading $APK_NAME"
-
-          ucode=$(curl -s -o up.json -w "%{http_code}" -X POST -H "$auth" \
-                  -H "Content-Type: application/vnd.android.package-archive" \
-                  --data-binary "@$APK_PATH" "$upload_url?name=$APK_NAME&label=Debug%20APK")
-          if [ "$ucode" != "201" ]; then
-            note_failure "asset upload failed with HTTP $ucode"
-            exit 0
-          fi
-
-          size=$(python3 -c "import json; print(json.load(open('up.json'))['size'])")
-          echo "uploaded $size bytes"
-          echo "::notice::One-click download: https://github.com/$REPO/releases/latest/download/$APK_NAME"
+          url="https://raw.githubusercontent.com/$REPO/$branch/$APK_NAME"
+          echo "::notice::One-click download: $url"
+          {
+            echo "### APK published"
+            echo
+            echo "[Download $APK_NAME]($url)"
+            echo
+            echo "Built from \`$COMMIT\`. This is a direct file link: opening it on"
+            echo "an Android device downloads the APK."
+          } >> "$GITHUB_STEP_SUMMARY"

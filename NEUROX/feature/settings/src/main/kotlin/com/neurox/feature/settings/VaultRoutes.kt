@@ -10,7 +10,7 @@ import androidx.compose.runtime.setValue
 import com.neurox.presentation.di.AppServices
 import com.neurox.common.result.Outcome
 import com.neurox.data.prefs.BackupRestoreCoordinator
-import com.neurox.data.prefs.SettingsKeys
+import com.neurox.domain.prefs.SettingsKeys
 import com.neurox.domain.model.ProfileSummary
 import com.neurox.presentation.i18n.Strings
 import com.neurox.presentation.screen.ImportHeader
@@ -84,19 +84,40 @@ fun VaultExportRoute(
                 busy = false
                 when (outcome) {
                     is Outcome.Ok -> {
-                        // The document is returned to the caller, which owns file I/O
-                        // (SAF). Writing files from a screen without the picker would be
-                        // a permission bug.
-                        bytes = outcome.value.length
-                        done = true
-                        withContext(Dispatchers.IO) {
-                            services.settingsRepository.put(
-                                active.id,
-                                SettingsKeys.VAULT_LAST_EXPORT_AT,
-                                System.currentTimeMillis().toString(),
+                        val encrypted = outcome.value
+                        bytes = encrypted.length
+                        // WRITE IT. The previous version stopped here: it computed the
+                        // bytes, recorded a timestamp and told the user the export was
+                        // done, having written nothing anywhere. `onExported` then took
+                        // them back to settings where the file they expected was absent.
+                        try {
+                            val savedName = services.backupFiles.save(
+                                contents = encrypted,
+                                suggestedName = com.neurox.presentation.io.BackupFiles
+                                    .suggestedName(System.currentTimeMillis()),
                             )
+                            if (savedName == null) {
+                                // Cancelled at the picker. Nothing is written and
+                                // nothing is claimed: the screen stays on the export
+                                // step so the user can try again.
+                                busy = false
+                                return@launch
+                            }
+                            done = true
+                            withContext(Dispatchers.IO) {
+                                services.settingsRepository.put(
+                                    active.id,
+                                    SettingsKeys.VAULT_LAST_EXPORT_AT,
+                                    System.currentTimeMillis().toString(),
+                                )
+                            }
+                            onExported?.invoke()
+                        } catch (failure: Exception) {
+                            // A real write failure. Report it instead of a success that
+                            // did not happen.
+                            done = false
+                            errorKey = "error.storage_failure"
                         }
-                        onExported?.invoke()
                     }
                     is Outcome.Err -> errorKey = "error.${outcome.error.code}"
                 }
@@ -183,7 +204,31 @@ fun VaultImportRoute(
             restoredSettings = restoredSettings,
         ),
         strings = strings,
-        onPickFile = { },
+        onPickFile = {
+            // This was `{ }`. A locked vault, a full password field and a working
+            // restore pipeline all existed behind a button that did nothing.
+            scope.launch {
+                busy = true
+                errorKey = null
+                try {
+                    val picked = services.backupFiles.open()
+                    if (picked == null) {
+                        // The user cancelled: not an error, just nothing to do.
+                        busy = false
+                    } else {
+                        document = picked.contents
+                        name = picked.displayName
+                        busy = false
+                    }
+                } catch (failure: Exception) {
+                    // A file that cannot be read is a real, reportable failure. The
+                    // screen shows a domain code, so a new one is used for I/O.
+                    errorKey = "error.storage_failure"
+                    step = VaultImportState.Step.FAILED
+                    busy = false
+                }
+            }
+        },
         onPasswordChange = { password = it },
         onRestore = {
             val doc = document ?: return@VaultImportScreen

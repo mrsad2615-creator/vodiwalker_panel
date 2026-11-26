@@ -10,6 +10,7 @@ import com.neurox.domain.repository.ProfileRepository
 import com.neurox.domain.repository.SessionRepository
 import com.neurox.domain.repository.SettingsRepository
 import com.neurox.presentation.i18n.Strings
+import com.neurox.presentation.io.BackupFiles
 
 /**
  * The services a screen is allowed to use.
@@ -46,6 +47,16 @@ interface AppServices {
 
     /** Cached audio settings the policy reads; never performs I/O. */
     val audioSettings: AudioSettingsCache
+
+    /**
+     * Backup file I/O.
+     *
+     * On the boundary rather than passed down from the Activity because two screens
+     * await it directly: export needs to write the bytes it produces, and import
+     * needs to read the file the user picks. Both were previously wired to empty
+     * lambdas, which made backup and restore unreachable features.
+     */
+    val backupFiles: BackupFiles
 
     /**
      * Current string catalogue.

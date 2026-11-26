@@ -10,8 +10,8 @@ import androidx.compose.runtime.setValue
 import com.neurox.domain.repository.first
 import com.neurox.presentation.di.AppServices
 import com.neurox.common.MotionModeName
-import com.neurox.data.prefs.NxPreferences
-import com.neurox.data.prefs.SettingsKeys
+import com.neurox.domain.prefs.NxPreferences
+import com.neurox.domain.prefs.SettingsKeys
 import com.neurox.domain.model.AudioSettings
 import com.neurox.domain.model.ThemeDefinition
 import com.neurox.presentation.i18n.Strings

@@ -7,7 +7,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import com.neurox.data.prefs.SettingsKeys
+import com.neurox.domain.prefs.SettingsKeys
 import com.neurox.games.content.ReadingLibrary
 import com.neurox.games.content.ReadingText
 import com.neurox.games.read.FocusGuide

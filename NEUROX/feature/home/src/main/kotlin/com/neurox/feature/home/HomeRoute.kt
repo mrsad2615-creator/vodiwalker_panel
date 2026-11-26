@@ -64,12 +64,24 @@ fun HomeRoute(
     // The checkpoint JSON carries the exercise the user was in; the route decodes it
     // so "continue" resumes that exercise instead of guessing one.
     var resumeExerciseId by remember { mutableStateOf<String?>(null) }
+    // Bumping this re-runs the load. It is the ONLY key of the effect above, so a
+    // reload can never be triggered by the effect's own side effects.
+    var reloadToken by remember { mutableStateOf(0) }
 
-    LaunchedEffect(profile?.id, profile?.displayName) {
+    // THE KEY MUST NOT DEPEND ON ANYTHING THE BODY WRITES.
+    //
+    // This effect assigns `profile` below. When the key was
+    // `(profile?.id, profile?.displayName)`, that assignment changed the key, which
+    // restarted the effect, which assigned again - an endless reload loop that kept
+    // the screen in Loading forever. Every load "succeeded"; the screen never showed
+    // because the next loop immediately reset it to Loading.
+    //
+    // `reloadToken` is the only intended trigger, plus the profile id read once.
+    LaunchedEffect(reloadToken) {
         state = ScreenState.Loading
         state = withContext(Dispatchers.IO) {
             runCatching {
-                val active = profile ?: services.profileRepository.getActiveProfile()
+                val active = services.profileRepository.getActiveProfile()
                 profile = active
                 if (active == null) {
                     return@runCatching ScreenState.Error(DomainError.ProfileNotFound, retryable = false)
@@ -115,7 +127,7 @@ fun HomeRoute(
                 message = strings.raw(current.messageKey),
                 technicalCode = current.code,
                 retryLabel = strings.raw("common.retry"),
-                onRetry = { profile = null },
+                onRetry = { reloadToken += 1 },
             )
         }
         is ScreenState.Empty -> NxLoading(message = strings.raw("common.loading"))

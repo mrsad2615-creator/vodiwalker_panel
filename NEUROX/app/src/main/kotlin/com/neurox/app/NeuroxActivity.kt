@@ -24,7 +24,7 @@ import com.neurox.app.di.AppContainer
 import com.neurox.app.nav.NeuroxNavHost
 import com.neurox.app.nav.goTo
 import com.neurox.common.MotionModeName
-import com.neurox.data.prefs.NxPreferences
+import com.neurox.domain.prefs.NxPreferences
 import com.neurox.designsystem.components.NxChip
 import com.neurox.designsystem.components.NxSurface
 import com.neurox.designsystem.theme.NeuroxAppTheme
@@ -67,6 +67,9 @@ class NeuroxActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         val container = (application as NeuroxApplication).container
+        // Register the SAF launchers before the Activity is STARTED; Android throws
+        // if registerForActivityResult runs any later.
+        container.safBackupFiles.attach(this)
 
         // Hold the splash until the first real frame: a flash of an empty scaffold is
         // worse than 200 ms of branded splash.
@@ -159,7 +162,13 @@ class NeuroxActivity : ComponentActivity() {
                             onFinished = { nav.popBackStack() },
                         )
 
-                        AppDestination.ANALYTICS -> AnalyticsRoute(services = container, strings = strings)
+                        AppDestination.ANALYTICS -> AnalyticsRoute(
+                            services = container,
+                            strings = strings,
+                            // The empty state's button used to be an empty lambda, so a
+                            // brand-new profile saw a dead button on its first visit.
+                            onStartTraining = { nav.navigate(AppDestination.HOME.route) },
+                        )
 
                         AppDestination.LIBRARY,
                         AppDestination.EXERCISE_BUILDER,

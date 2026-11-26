@@ -1,11 +1,16 @@
 package com.neurox.feature.analytics
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import com.neurox.designsystem.components.NxLoading
 import com.neurox.presentation.di.AppServices
 import com.neurox.domain.analytics.AnalyticsService
 import com.neurox.presentation.i18n.Strings
@@ -26,11 +31,23 @@ fun AnalyticsRoute(
     services: AppServices,
     strings: Strings,
     initialRange: AnalyticsState.Range = AnalyticsState.Range.WEEK,
+    /**
+     * Where the empty state's "start training" button goes.
+     *
+     * It was previously a hard-coded `{ }`, so on a fresh profile - the only state
+     * in which that button is even shown - tapping it did nothing at all.
+     */
+    onStartTraining: () -> Unit = {},
 ) {
     var range by remember { mutableStateOf(initialRange) }
     var state by remember { mutableStateOf<AnalyticsState?>(null) }
+    // True until the first read for the current range completes. Rendering an empty
+    // table during that window showed "no data" to a user who has plenty, which is
+    // worse than a spinner: it is wrong rather than merely unfinished.
+    var loading by remember { mutableStateOf(true) }
 
     LaunchedEffect(range) {
+        loading = true
         state = withContext(Dispatchers.IO) {
             val active = services.profileRepository.getActiveProfile() ?: return@withContext null
             // ALL range starts at epoch: the builder filters by range itself, and a
@@ -50,17 +67,21 @@ fun AnalyticsRoute(
                 baseline = records.filter { it.kind == com.neurox.domain.model.SessionKind.BASELINE },
             )
         }
+        loading = false
+    }
+
+    val current = state
+    if (current == null || loading) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            NxLoading(message = strings.raw("common.loading"))
+        }
+        return
     }
 
     AnalyticsScreen(
-        state = state ?: ScreenBuilders.analytics(
-            records = emptyList(),
-            range = range,
-            rangeStartMillis = 0L,
-            rangeEndMillis = 0L,
-        ),
+        state = current,
         strings = strings,
         onSelectRange = { range = it },
-        onStartTraining = { },
+        onStartTraining = onStartTraining,
     )
 }

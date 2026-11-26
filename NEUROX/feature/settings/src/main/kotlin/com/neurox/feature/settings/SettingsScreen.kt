@@ -352,9 +352,14 @@ fun SettingsScreen(
                     label = strings.raw("settings.about.version"),
                     value = state.appVersion,
                 )
+                // This row used to call `onOpenLicenses`, which the route passed as
+                // `{ }` - a chevron and a ripple that led nowhere. There is no licence
+                // screen in this build, so the row states the licence inline instead
+                // of pretending to open one. The callback stays in the signature until
+                // a screen exists to receive it.
                 NxSettingRow(
                     label = strings.raw("settings.about.licenses"),
-                    onClick = onOpenLicenses,
+                    value = strings.raw("settings.about.licenseValue"),
                 )
                 Spacer(Modifier.height(NxSpacing.md))
                 DisclaimerBlock(

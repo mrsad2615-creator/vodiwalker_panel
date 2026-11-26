@@ -11,5 +11,15 @@ import androidx.savedstate.SavedStateRegistryOwner
 open class ComponentActivity : android.app.Activity(), LifecycleOwner, SavedStateRegistryOwner {
     override val lifecycle: Lifecycle = Lifecycle()
     override fun onCreate(savedInstanceState: Bundle?) {}
+
+    /**
+     * The Activity result bridge. Stubbed with the real registration shape: the
+     * callback is stored and would be invoked when the launched intent returns.
+     */
+    fun <I, O> registerForActivityResult(
+        contract: androidx.activity.result.contract.ActivityResultContract<I, O>,
+        callback: (O) -> Unit,
+    ): androidx.activity.result.ActivityResultLauncher<I> =
+        androidx.activity.result.ActivityResultLauncher()
 }
 

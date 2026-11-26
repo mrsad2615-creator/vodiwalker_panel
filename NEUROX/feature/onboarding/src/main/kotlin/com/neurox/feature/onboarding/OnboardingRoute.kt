@@ -1,30 +1,36 @@
 package com.neurox.feature.onboarding
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import com.neurox.presentation.di.AppServices
 import com.neurox.common.result.Outcome
-import com.neurox.data.prefs.SettingsKeys
+import com.neurox.presentation.di.AppServices
 import com.neurox.presentation.i18n.Strings
+import com.neurox.presentation.screen.OnboardingFlow
 import com.neurox.presentation.screen.OnboardingState
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 /**
  * First run.
  *
- * A profile is created at the end of the profile step, not at the end of the flow, so
- * the baseline has somewhere to store its results. If the user picks a guest profile,
- * it is still a real row: "guest" means no name and no PIN, not "no data isolation".
+ * THE BUG THIS REPLACES
+ * The previous version advanced the step and created the profile in the same
+ * gesture: `createProfileIfNeeded()` launched a coroutine and returned immediately,
+ * then `step = next` ran regardless. Three failures followed:
  *
- * Language is written to the *new profile* and to nothing global, because two people
- * sharing a phone may want different languages.
+ *  - the profile might not exist when the flow finished, so the completion flags
+ *    were written against a null id and silently skipped;
+ *  - a guest profile was created with an empty name, which the repository rejects,
+ *    and the rejection was discarded - guest mode never worked at all;
+ *  - `onFinished()` then reloaded the shell, which found no profile and sent the
+ *    user straight back to onboarding. That is the loop reported from a device.
+ *
+ * The decision logic now lives in [OnboardingFlow], which is plain Kotlin and
+ * covered by ten tests. This file only wires it to Compose: it awaits every write,
+ * shows every failure, and never advances on a step whose write did not succeed.
  */
 @Composable
 fun OnboardingRoute(
@@ -33,112 +39,119 @@ fun OnboardingRoute(
     onFinished: () -> Unit,
     onStartBaseline: () -> Unit = onFinished,
 ) {
-    var step by remember { mutableStateOf(OnboardingState.Step.WELCOME) }
-    var language by remember { mutableStateOf(strings.languageTag) }
-    var name by remember { mutableStateOf("") }
-    var guest by remember { mutableStateOf(false) }
-    var createdId by remember { mutableStateOf<String?>(null) }
+    val flow = remember(services) { OnboardingFlow(services.profileRepository, services.settingsRepository) }
+    var snapshot by remember(flow) { mutableStateOf(flow.snapshot()) }
     val scope = rememberCoroutineScope()
 
-    fun createProfileIfNeeded() {
-        if (createdId != null) return
-        scope.launch {
-            val outcome = withContext(Dispatchers.IO) {
-                services.profileRepository.createProfile(
-                    displayName = if (guest) "" else name.trim(),
-                    isGuest = guest,
-                )
-            }
-            if (outcome is Outcome.Ok) {
-                val id = outcome.value.id
-                createdId = id
-                withContext(Dispatchers.IO) {
-                    services.profileRepository.updateSettingsPatch(id, themeId = null, languageTag = language)
-                    services.settingsRepository.put(id, SettingsKeys.LANGUAGE_TAG, language)
-                    services.settingsRepository.put(id, SettingsKeys.ONBOARDING_SEEN_INTRO, "true")
-                }
-            }
-        }
+    // The screen's own model. It is derived from the flow so the two cannot disagree
+    // about which step is current or whether the profile exists.
+    val state = OnboardingState(
+        step = snapshot.step.toScreenStep(),
+        languageTag = snapshot.languageTag,
+        profileName = snapshot.profileName,
+        isGuest = snapshot.isGuest,
+        profileCreated = snapshot.profileCreated,
+    )
+
+    fun refresh() {
+        snapshot = flow.snapshot()
     }
 
-    val state = OnboardingState(
-        step = step,
-        languageTag = language,
-        profileName = name,
-        isGuest = guest,
-        profileCreated = createdId != null,
-    )
+    /** Creates the profile, then advances only if it was created. */
+    fun commitProfile(thenContinue: Boolean) {
+        scope.launch {
+            val outcome = flow.createProfile(OnboardingFlow.guestLabel(Strings.of(snapshot.languageTag)))
+            if (outcome is Outcome.Ok && thenContinue) {
+                flow.advanceAfterProfile()
+            }
+            refresh()
+        }
+    }
 
     OnboardingScreen(
         state = state,
-        strings = Strings.of(language),
-        onLanguageChange = { language = it },
-        onNameChange = { if (it.length <= MAX_NAME_LENGTH) name = it },
-        onGuestToggle = { guest = it },
-        onNext = {
-            when (step) {
-                OnboardingState.Step.PROFILE -> createProfileIfNeeded()
-                OnboardingState.Step.WELCOME,
-                OnboardingState.Step.LANGUAGE,
-                OnboardingState.Step.BASELINE,
-                OnboardingState.Step.PRIVACY,
-                OnboardingState.Step.ACCESSIBILITY,
-                -> Unit
-                OnboardingState.Step.DONE -> Unit
+        strings = Strings.of(snapshot.languageTag),
+        onLanguageChange = {
+            flow.setLanguage(it)
+            refresh()
+        },
+        onNameChange = { value ->
+            if (value.length <= MAX_NAME_LENGTH) {
+                flow.setName(value)
+                refresh()
             }
-            step = OnboardingState.Step.entries.getOrElse(step.ordinal + 1) { OnboardingState.Step.DONE }
+        },
+        onGuestToggle = {
+            flow.setGuest(it)
+            refresh()
+        },
+        onNext = {
+            if (snapshot.step == OnboardingFlow.Step.PROFILE) {
+                // The profile step is the only one that writes before advancing.
+                if (snapshot.profileCreated) {
+                    flow.advanceAfterProfile()
+                    refresh()
+                } else {
+                    commitProfile(thenContinue = true)
+                }
+            } else {
+                flow.next()
+                refresh()
+            }
         },
         onBack = {
-            step = OnboardingState.Step.entries.getOrElse(step.ordinal - 1) { OnboardingState.Step.WELCOME }
+            flow.back()
+            refresh()
         },
         onRunBaseline = {
-            // The baseline screen belongs to the host, so this only records the intent
-            // and hands over; a screen that navigated by itself could not be tested.
             scope.launch {
-                completeOnboarding(services, createdId, baselineRequested = true)
-                onStartBaseline()
+                // A profile must exist before the baseline can store anything.
+                if (!snapshot.profileCreated) {
+                    val created = flow.createProfile(OnboardingFlow.guestLabel(Strings.of(snapshot.languageTag)))
+                    if (created is Outcome.Err) {
+                        refresh()
+                        return@launch
+                    }
+                }
+                flow.complete(baselineRequested = true)
+                refresh()
+                if (flow.snapshot().error == null) onStartBaseline()
             }
         },
         onSkipBaseline = {
-            scope.launch {
-                createdId?.let { id ->
-                    withContext(Dispatchers.IO) {
-                        services.settingsRepository.put(id, SettingsKeys.BASELINE_SKIPPED, "true")
-                    }
-                }
-                step = OnboardingState.Step.PRIVACY
-            }
+            flow.skipBaseline()
+            refresh()
         },
         onFinish = {
             scope.launch {
-                completeOnboarding(services, createdId, baselineRequested = false)
-                onFinished()
+                // Never complete without a profile: the old code returned silently and
+                // left the user back at the beginning with no explanation.
+                if (!snapshot.profileCreated) {
+                    val created = flow.createProfile(OnboardingFlow.guestLabel(Strings.of(snapshot.languageTag)))
+                    if (created is Outcome.Err) {
+                        refresh()
+                        return@launch
+                    }
+                }
+                val done = flow.complete(baselineRequested = false)
+                refresh()
+                if (done is Outcome.Ok) onFinished()
             }
         },
+        errorKey = snapshot.error?.let { "error.${it.code}" },
+        busy = snapshot.busy,
     )
 }
 
-/**
- * Marks onboarding complete.
- *
- * This is the last write of the flow. If it fails, the flag stays false and onboarding
- * is offered again - the safe direction to fail, because a user who sees the intro
- * twice loses a minute, while a user who never sees it loses the explanation of what
- * the app is.
- */
-private suspend fun completeOnboarding(
-    services: AppServices,
-    profileId: String?,
-    baselineRequested: Boolean,
-) {
-    val id = profileId ?: return
-    withContext(Dispatchers.IO) {
-        services.settingsRepository.put(id, SettingsKeys.ONBOARDING_COMPLETE, "true")
-        services.settingsRepository.put(id, SettingsKeys.ONBOARDING_SEEN_INTRO, "true")
-        if (baselineRequested) {
-            services.settingsRepository.put(id, SettingsKeys.BASELINE_COMPLETE, "false")
-        }
-    }
+/** Maps the tested flow's step onto the screen model's step. */
+private fun OnboardingFlow.Step.toScreenStep(): OnboardingState.Step = when (this) {
+    OnboardingFlow.Step.WELCOME -> OnboardingState.Step.WELCOME
+    OnboardingFlow.Step.LANGUAGE -> OnboardingState.Step.LANGUAGE
+    OnboardingFlow.Step.PROFILE -> OnboardingState.Step.PROFILE
+    OnboardingFlow.Step.BASELINE -> OnboardingState.Step.BASELINE
+    OnboardingFlow.Step.PRIVACY -> OnboardingState.Step.PRIVACY
+    OnboardingFlow.Step.ACCESSIBILITY -> OnboardingState.Step.ACCESSIBILITY
+    OnboardingFlow.Step.DONE -> OnboardingState.Step.DONE
 }
 
 private const val MAX_NAME_LENGTH = 32

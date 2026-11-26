@@ -1,4 +1,4 @@
-package com.neurox.data.prefs
+package com.neurox.domain.prefs
 
 /**
  * Stable settings keys.

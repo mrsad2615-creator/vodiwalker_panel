@@ -449,6 +449,7 @@ internal val EnglishStrings: Map<String, String> = mapOf(
     "settings.data.privacyBody" to "NEUROX has no internet permission. Every score, setting and profile stays in this app's private storage.",
     "settings.about.version" to "Version",
     "settings.about.licenses" to "Licenses",
+    "settings.about.licenseValue" to "Vazirmatn font: OFL-1.1",
     "settings.about.medical" to "Not a medical device",
     "settings.about.medicalBody" to "NEUROX trains attention and speed. It does not diagnose, treat or prevent any condition, and its scores are not clinical measurements.",
     "settings.about.method" to "How scores work",

@@ -10,6 +10,9 @@ open class Context {
     open fun getString(resId: Int): String = ""
     open fun getSharedPreferences(name: String, mode: Int): SharedPreferences = SharedPreferences()
 
+    /** Content provider access; SAF hands back a per-file grant over this. */
+    open val contentResolver: ContentResolver get() = ContentResolver()
+
     companion object {
         const val MODE_PRIVATE = 0
         const val VIBRATOR_SERVICE = "vibrator"

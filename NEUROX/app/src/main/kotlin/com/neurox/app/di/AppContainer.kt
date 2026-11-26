@@ -6,7 +6,7 @@ import com.neurox.common.time.SystemClock
 import com.neurox.common.time.TimingCalibration
 import com.neurox.data.db.NeuroxDatabase
 import com.neurox.data.prefs.BackupRestoreCoordinator
-import com.neurox.data.prefs.SettingsKeys
+import com.neurox.domain.prefs.SettingsKeys
 import com.neurox.data.repository.AchievementRepositoryImpl
 import com.neurox.data.repository.ExerciseRepositoryImpl
 import com.neurox.data.repository.PlanRepositoryImpl
@@ -23,6 +23,7 @@ import com.neurox.domain.repository.SessionRepository
 import com.neurox.domain.repository.SettingsRepository
 import com.neurox.presentation.di.AppServices
 import com.neurox.presentation.i18n.Strings
+import com.neurox.presentation.io.BackupFiles
 import com.neurox.feature.session.AndroidHaptics
 import com.neurox.feature.session.Haptics
 import com.neurox.security.vault.VaultService
@@ -105,6 +106,15 @@ class AppContainer(context: Context) : AppServices {
 
     /** String catalogue for the default language; replaced when a profile loads. */
     override val strings: Strings = Strings.of(SettingsKeys.defaults[SettingsKeys.LANGUAGE_TAG])
+
+    /**
+     * Backup file I/O. The implementation needs an Activity to register its pickers,
+     * so it is attached in `NeuroxActivity.onCreate`; until then it refuses to be
+     * used rather than silently returning nothing, which is what the screens did
+     * before this existed.
+     */
+    val safBackupFiles = com.neurox.app.io.SafBackupFiles()
+    override val backupFiles: BackupFiles get() = safBackupFiles
 
     val clock = SystemClock
 

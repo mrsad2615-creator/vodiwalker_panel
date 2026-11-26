@@ -231,11 +231,23 @@ fun ProfileRoute(
         onCreate = ::openCreate,
         onCreateGuest = {
             scope.launch {
-                withContext(Dispatchers.IO) {
-                    services.profileRepository.createProfile(displayName = strings.raw("profile.guest"), isGuest = true)
+                val outcome = withContext(Dispatchers.IO) {
+                    services.profileRepository.createProfile(
+                        displayName = strings.raw("profile.guest"),
+                        isGuest = true,
+                    )
                 }
-                reload += 1
-                onProfileSwitched()
+                // A failure here used to reload the screen and say nothing, so a
+                // guest that could not be created looked like a guest that was
+                // created and then vanished. Report it like every other write.
+                when (outcome) {
+                    is Outcome.Err -> errorKey = "error.${outcome.error.code}"
+                    is Outcome.Ok -> {
+                        errorKey = null
+                        reload += 1
+                        onProfileSwitched()
+                    }
+                }
             }
         },
         onEdit = ::openEdit,

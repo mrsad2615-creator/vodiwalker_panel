@@ -450,6 +450,7 @@ internal val PersianStrings: Map<String, String> = mapOf(
     "settings.data.privacyBody" to "NEUROX دسترسی اینترنت ندارد. همه امتیازها، تنظیمات و پروفایل‌ها در حافظه خصوصی برنامه می‌مانند.",
     "settings.about.version" to "نسخه",
     "settings.about.licenses" to "مجوزها",
+    "settings.about.licenseValue" to "فونت وزیرمتن: OFL-1.1",
     "settings.about.medical" to "دستگاه پزشکی نیست",
     "settings.about.medicalBody" to "NEUROX توجه و سرعت را تمرین می‌دهد. هیچ بیماری‌ای را تشخیص، درمان یا پیشگیری نمی‌کند و امتیازهایش اندازه‌گیری بالینی نیست.",
     "settings.about.method" to "امتیازها چطور محاسبه می‌شوند",

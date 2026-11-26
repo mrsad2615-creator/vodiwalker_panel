@@ -47,6 +47,16 @@ fun OnboardingScreen(
     onRunBaseline: () -> Unit,
     onSkipBaseline: () -> Unit,
     onFinish: () -> Unit,
+    /**
+     * A failure from the last write, as a catalogue key, or null.
+     *
+     * The previous version had no way to show a failure at all, which is why a
+     * guest profile that could not be created looked like a screen that simply did
+     * not respond.
+     */
+    errorKey: String? = null,
+    /** True while a write is in flight; every button is disabled to prevent double taps. */
+    busy: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -136,11 +146,23 @@ fun OnboardingScreen(
                 .padding(bottom = NxSpacing.xxl),
             verticalArrangement = Arrangement.spacedBy(NxSpacing.sm),
         ) {
+            if (errorKey != null) {
+                Text(
+                    text = strings.raw(errorKey),
+                    style = NxTypography.body,
+                    color = NxTheme.colors.error,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = NxSpacing.sm),
+                )
+            }
             when (state.step) {
                 OnboardingState.Step.BASELINE -> {
                     NxPrimaryButton(
                         label = strings.raw("onboarding.baseline.run"),
                         onClick = onRunBaseline,
+                        enabled = !busy,
+                        loading = busy,
                         modifier = Modifier.fillMaxWidth(),
                     )
                     NxSecondaryButton(
@@ -152,13 +174,16 @@ fun OnboardingScreen(
                 OnboardingState.Step.DONE -> NxPrimaryButton(
                     label = strings.raw("common.start"),
                     onClick = onFinish,
+                    enabled = !busy,
+                    loading = busy,
                     modifier = Modifier.fillMaxWidth(),
                 )
                 else -> {
                     NxPrimaryButton(
                         label = strings.raw(if (state.step == OnboardingState.Step.WELCOME) "onboarding.welcome.action" else "common.continue"),
                         onClick = onNext,
-                        enabled = state.canContinue,
+                        enabled = state.canContinue && !busy,
+                        loading = busy,
                         modifier = Modifier.fillMaxWidth(),
                     )
                     if (state.step != OnboardingState.Step.WELCOME) {

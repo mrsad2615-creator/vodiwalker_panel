@@ -6,6 +6,13 @@ Gradle multi-module Kotlin project.
 **This README states what is verified and what is not. Read `docs/TEST_STATUS.md`
 before trusting any number in here.**
 
+## Download
+
+**[NEUROX-sense-debug.apk](https://raw.githubusercontent.com/mrsad2615-creator/vodiwalker_panel/apk-latest/NEUROX-sense-debug.apk)** — 13 MB, Android 8.0+.
+
+The first APK this project has produced. It has never run on a device; see
+`docs/TEST_STATUS.md` for exactly what that means.
+
 ## What it does
 
 Four training modules, each with its own exercises, measurement and analytics:

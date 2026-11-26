@@ -50,6 +50,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
   sampleBannerDismissed: false,
   sampleSetupComplete: false,
   sampleVisible: true,
+  widgetShowTitles: true,
   aiEnabled: false,
   aiBaseUrl: '',
   aiModel: '',

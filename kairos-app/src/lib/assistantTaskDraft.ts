@@ -8,7 +8,7 @@ import type { Task } from '@/types/domain';
 /** Only the explicitly supported request is intercepted; never guess titles. */
 export function wantsTodayTaskList(text: string): boolean {
   const q = normalizeCommand(text);
-  return /امروز/.test(q) && /(وظیفه|وظایف|کارها|کارهای|لیست کار|فهرست کار)/.test(q)
+  return /امروز/.test(q) && !/فردا/.test(q) && /(وظیفه|وظایف|کارها|کارهای|لیست کار|فهرست کار)/.test(q)
     && /(بساز|ایجاد کن|درست کن|اضافه کن|ثبت کن|بنویس)/.test(q);
 }
 

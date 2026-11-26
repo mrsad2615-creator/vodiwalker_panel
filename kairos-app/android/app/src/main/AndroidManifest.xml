@@ -45,14 +45,23 @@
 
         <receiver
             android:name=".ChronoWidgetProvider"
-            android:exported="false">
+            android:label="تمرکز کایروس"
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-                <action android:name="app.kairos.chrono.WIDGET_TICK" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/chrono_widget_info" />
+        </receiver>
+
+        <receiver android:name=".DailyWidgetProvider" android:exported="true" android:label="وظایف امروز کایروس">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/daily_widget_info" />
+        </receiver>
+        <receiver android:name=".AnnualWidgetProvider" android:exported="true" android:label="نمودار سالانه کایروس">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/annual_widget_info" />
         </receiver>
 
         <provider

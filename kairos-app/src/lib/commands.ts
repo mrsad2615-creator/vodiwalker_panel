@@ -123,7 +123,7 @@ export function normalizeCommand(input: string): string {
 const RULES: { intent: CommandIntent; patterns: RegExp[] }[] = [
   // Order is significance, not size: the first rule that matches wins, so a
   // sentence about a project is a project question even if it also says overdue.
-  { intent: 'brief.today', patterns: [/بریف/, /چی کار کنم/, /چه کار کنم/, /از کجا شروع/, /الان چه/, /اولویت امروز/, /brief/] },
+  { intent: 'brief.today', patterns: [/بریف/, /چی کار کنم/, /چه کار کنم/, /از کجا شروع/, /الان چه/, /اولویت امروز/, /پیشنهاد(?:ی)? (?:بده|کن|میدهی|می دهی)/, /نصیحت(?:ی)? (?:بده|کن)/, /brief/] },
   { intent: 'review.week', patterns: [/مرور هفته/, /هفته چطور/, /هفته گذشته چطور/, /جمع بندی هفته/, /review/] },
   { intent: 'why.suggestion', patterns: [/چرا/, /دلیل/, /why/] },
   {
@@ -338,7 +338,7 @@ export function runCommand(raw: string, context: CommandContext): CommandAnswer 
             : []),
         ],
         action: brief.recommendation
-          ? { label: 'رفتن به کارها', tab: brief.recommendation.tab }
+          ? { label: 'رفتن به بخش مربوط', tab: brief.recommendation.tab }
           : { label: 'دیدن وظایف', tab: 'tasks' },
       };
     }
@@ -543,7 +543,7 @@ export function runCommand(raw: string, context: CommandContext): CommandAnswer 
               brief.recommendation.reason,
               'این پیشنهاد بر پایهٔ قواعد محلی است، نه پیش‌بینی قطعی.',
             ],
-            action: { label: 'رفتن به کارها', tab: brief.recommendation.tab },
+            action: { label: 'رفتن به بخش مربوط', tab: brief.recommendation.tab },
           };
         }
       }

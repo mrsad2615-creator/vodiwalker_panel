@@ -6,7 +6,6 @@ import {
   useGoals,
   useHabitLogs,
   useHabits,
-  useJournal,
   useFocusSessions,
   useProjectStages,
   useProjects,
@@ -18,7 +17,6 @@ import { createConfirmedTodayTasks, parseTaskLines, validateTaskTitles, wantsTod
 import { QUICK_COMMANDS, runCommand, type CommandAnswer } from '@/lib/commands';
 import { applyConfirmedChange, interpretAssistantRequest, previewChange, revertAssistantChange, type AssistantRequest, type ChangePreview } from '@/lib/assistantActions';
 import { buildDailyBrief } from '@/lib/coach';
-import { pickInsights } from '@/lib/insights';
 import { triggerHaptic } from '@/lib/native';
 import type { NavTab } from '@/types/domain';
 
@@ -55,7 +53,6 @@ export function CommandCenter() {
   const projects = useProjects();
   const stages = useProjectStages();
   const sessions = useFocusSessions();
-  const journal = useJournal();
   const { setActiveTab, pushToast } = useApp();
 
   const todayKey = getTodayKey();
@@ -63,20 +60,6 @@ export function CommandCenter() {
     () => buildDailySeries({ focusSessions: sessions, tasks, habitLogs }, todayKey, 14),
     [sessions, tasks, habitLogs, todayKey]
   );
-
-  // The reason of the strongest open insight — what "چرا؟" is allowed to quote.
-  const topInsightReason = useMemo(() => {
-    const insights = pickInsights({
-      sessions,
-      tasks,
-      habits,
-      habitLogs,
-      journal,
-      goals,
-      todayKey,
-    });
-    return insights[0] ? `${insights[0].title}. ${insights[0].body}` : null;
-  }, [sessions, tasks, habits, habitLogs, journal, goals, todayKey]);
 
   const brief = useMemo(
     () =>
@@ -132,7 +115,7 @@ export function CommandCenter() {
       series,
       todayKey,
       sessions,
-      lastSuggestionReason: topInsightReason,
+      lastSuggestionReason: brief.recommendation?.reason ?? null,
     });
     setHistory((current) => [{ ...answer, prompt: trimmed }, ...current].slice(0, 6));
     setQuery('');
@@ -266,6 +249,7 @@ export function CommandCenter() {
             data-testid="manager-brief"
             className="rounded-[var(--r-rail)] border border-[var(--accent-fg)]/25 bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] p-3"
           >
+            <p className="mb-1 text-[10px] font-bold text-[var(--accent-fg)]">پیشنهاد مربی · بر اساس داده‌های ثبت‌شده</p>
             <p className="text-[11.5px] font-semibold leading-5 text-[var(--text)]">
               {brief.headline}
             </p>

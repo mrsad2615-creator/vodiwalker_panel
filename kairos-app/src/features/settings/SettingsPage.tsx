@@ -54,9 +54,16 @@ export function SettingsPage() {
   const [dailyTaskGoal, setDailyTaskGoal] = useState(settings.dailyTaskGoal);
   const [permState, setPermState] = useState<NotificationPermissionState>('prompt');
   const [confirmWipe, setConfirmWipe] = useState(false);
+  const [widgetSyncError, setWidgetSyncError] = useState(false);
   const [pendingBackup, setPendingBackup] = useState<KairosBackupPayload | null>(null);
   const [importing, setImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const fail = () => setWidgetSyncError(true);
+    window.addEventListener('kairos-widget-sync-error', fail);
+    return () => window.removeEventListener('kairos-widget-sync-error', fail);
+  }, []);
 
   useEffect(() => {
     setDisplayName(settings.displayName);
@@ -218,6 +225,17 @@ export function SettingsPage() {
         title="تنظیمات"
         meta={<span>شخصی‌سازی، یادآوری‌ها و مدیریت دادهٔ آفلاین دستگاه</span>}
       />
+
+      <LuxuryCard className="space-y-3 p-4">
+        <h2 className="text-xs font-bold text-[var(--text)]">ویجت‌های صفحهٔ اصلی</h2>
+        <p className="text-xs leading-6 text-[var(--text-2)]">در صفحهٔ اصلی گوشی، از فهرست ویجت‌های اندروید «وظایف امروز»، «نمودار سالانه» یا «تمرکز» را اضافه کن. ویجت‌ها تصویر آخرین دادهٔ همگام‌شده‌اند؛ برای تغییر وظیفه روی ویجت بزن و در برنامه تیک بزن.</p>
+        <label className="flex items-center gap-3 text-xs text-[var(--text)]">
+          <input type="checkbox" checked={settings.widgetShowTitles !== false} onChange={(event) => { void updateSettings({ widgetShowTitles: event.target.checked }).catch(() => pushToast({ title: 'ذخیرهٔ تنظیم ویجت انجام نشد', tone: 'warning' })); }} />
+          نمایش عنوان وظایف روی صفحهٔ اصلی
+        </label>
+        <p className="text-xs leading-5 text-[var(--text-3)]">عنوان‌ها به‌طور پیش‌فرض نمایش داده می‌شوند و ممکن است دیگران آن‌ها را ببینند؛ با خاموش‌کردن، برنامه تلاش می‌کند تصویر ویجت را بدون عنوان تازه کند.</p>
+        {widgetSyncError && <p role="alert" className="text-xs leading-6 text-[var(--danger)]">همگام‌سازی ویجت ناموفق بود. ممکن است تصویر قدیمی هنوز عنوان‌ها را نشان دهد؛ تا رفع مشکل، ویجت را از صفحهٔ اصلی بردار.</p>}
+      </LuxuryCard>
 
       {/* PROFILE & DAILY GOALS */}
       <LuxuryCard className="space-y-3.5 p-4">

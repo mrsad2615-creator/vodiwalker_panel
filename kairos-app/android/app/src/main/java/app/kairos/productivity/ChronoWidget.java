@@ -7,6 +7,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Build;
+import android.net.Uri;
 import android.widget.RemoteViews;
 import android.view.View;
 
@@ -66,7 +67,7 @@ public final class ChronoWidget {
         }
         views.setTextViewText(R.id.widget_meta, meta);
 
-        Intent open = new Intent(context, MainActivity.class);
+        Intent open = new Intent(Intent.ACTION_VIEW, Uri.parse("kairos-widget://open/focus"), context, MainActivity.class);
         open.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
         int flags = PendingIntent.FLAG_UPDATE_CURRENT;
         if (Build.VERSION.SDK_INT >= 23) flags |= PendingIntent.FLAG_IMMUTABLE;

@@ -235,6 +235,8 @@ export interface UserSettings {
   sampleSetupComplete?: boolean;
   /** Hide marked samples from normal views and analytics without deleting them. */
   sampleVisible?: boolean;
+  /** Show task titles on the Android home screen; default on. */
+  widgetShowTitles?: boolean;
   /** Four customizable shortcuts; home and the directory are fixed. */
   navShortcuts?: NavTab[];
   motivationFavorites?: string[];

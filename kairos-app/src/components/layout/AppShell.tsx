@@ -26,6 +26,7 @@ import { formatTimerSeconds } from '@/lib/format';
 import { setupAndroidBackButton, triggerHaptic } from '@/lib/native';
 import { SearchSheet } from '@/components/search/SearchSheet';
 import { CommandCenter } from '@/features/assistant/CommandCenter';
+import { WidgetSync } from '@/components/settings/WidgetSync';
 import { Folder as FolderOpen } from '@/components/ui/icons';
 import { changeShortcut, normalizeShortcuts, SHORTCUTS, type ShortcutTab } from '@/lib/navigation';
 import { updateSettings } from '@/lib/db';
@@ -177,6 +178,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="kairos-ambient-bg h-full w-full">
       <ToastHost toasts={toasts} onDismiss={dismissToast} />
+      <WidgetSync onNavigate={setActiveTab} />
       <SearchSheet open={searchOpen} onClose={() => setSearchOpen(false)} />
 
       {/* Shell owns the viewport; only `.app-scroll` moves. */}

@@ -18,6 +18,7 @@ describe('assistant task creation', () => {
     expect(wantsTodayTaskList('برای امروز لیست وظایف بساز')).toBe(true);
     expect(wantsTodayTaskList('وظایف امروز چیست؟')).toBe(false);
     expect(wantsTodayTaskList('برای فردا لیست وظایف بساز')).toBe(false);
+    expect(wantsTodayTaskList('برای امروز و فردا لیست وظایف بساز')).toBe(false);
     expect(wantsTodayTaskList('امروز لیست وظایف را حذف کن')).toBe(false);
   });
 

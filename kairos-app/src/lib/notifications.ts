@@ -192,7 +192,7 @@ export function syncTaskRemindersNative(
   notificationsEnabled: boolean
 ): Promise<void> {
   if (!Capacitor.isNativePlatform()) return Promise.resolve();
-  reminderSyncQueue = reminderSyncQueue.then(() => syncTaskRemindersNativeNow(tasks, notificationsEnabled));
+  reminderSyncQueue = reminderSyncQueue.catch(() => undefined).then(() => syncTaskRemindersNativeNow(tasks, notificationsEnabled));
   return reminderSyncQueue;
 }
 
@@ -201,37 +201,33 @@ async function syncTaskRemindersNativeNow(
   notificationsEnabled: boolean
 ): Promise<void> {
   if (!Capacitor.isNativePlatform()) return;
-  try {
-    const pending = await LocalNotifications.getPending();
-    const taskReminders = pending.notifications.filter((notification) =>
-      typeof notification.extra?.taskId === 'string'
-    );
-    if (taskReminders.length > 0) {
-      await LocalNotifications.cancel({ notifications: taskReminders });
-    }
-    if (!notificationsEnabled) return;
-
-    const perm = await getNotificationPermission();
-    if (perm !== 'granted') return;
-
-    const nowMs = Date.now();
-    const upcoming = tasks
-      .map((t) => ({ task: t, at: getTaskReminderDate(t) }))
-      .filter((item): item is { task: Task; at: Date } => !!item.at && item.at.getTime() > nowMs)
-      .slice(0, 48);
-
-    if (upcoming.length === 0) return;
-
-    await LocalNotifications.schedule({
-      notifications: upcoming.map(({ task, at }) => ({
-        id: stableNotificationId(task.id),
-        title: `یادآوری کایروس • ${task.title}`,
-        body: task.description || 'زمان انجام این وظیفه فرا رسیده است.',
-        schedule: { at, allowWhileIdle: true },
-        extra: { taskId: task.id },
-      })),
-    });
-  } catch {
-    // Graceful fallback
+  const pending = await LocalNotifications.getPending();
+  const taskReminders = pending.notifications.filter((notification) =>
+    typeof notification.extra?.taskId === 'string'
+  );
+  if (taskReminders.length > 0) {
+    await LocalNotifications.cancel({ notifications: taskReminders });
   }
+  if (!notificationsEnabled) return;
+
+  const perm = await getNotificationPermission();
+  if (perm !== 'granted') return;
+
+  const nowMs = Date.now();
+  const upcoming = tasks
+    .map((t) => ({ task: t, at: getTaskReminderDate(t) }))
+    .filter((item): item is { task: Task; at: Date } => !!item.at && item.at.getTime() > nowMs)
+    .slice(0, 48);
+
+  if (upcoming.length === 0) return;
+
+  await LocalNotifications.schedule({
+    notifications: upcoming.map(({ task, at }) => ({
+      id: stableNotificationId(task.id),
+      title: `یادآوری کایروس • ${task.title}`,
+      body: task.description || 'زمان انجام این وظیفه فرا رسیده است.',
+      schedule: { at, allowWhileIdle: true },
+      extra: { taskId: task.id },
+    })),
+  });
 }

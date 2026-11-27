@@ -26,6 +26,7 @@ import {
   fireInstantNotification,
   getNotificationPermission,
   requestNotificationPermission,
+  syncTaskRemindersNative,
   type NotificationPermissionState,
 } from '@/lib/notifications';
 import { isNativeAndroid, triggerHaptic } from '@/lib/native';
@@ -43,6 +44,9 @@ import { exportBackupFile, readBackupFile, saveTextFile } from '@/lib/backup';
 import { tasksToCsv, habitLogsToCsv, focusSessionsToCsv } from '@/lib/csv';
 import { APP_VERSION, BUILD_NUMBER, BUILD_SHA } from '@/lib/buildInfo';
 import { hasProgress } from '@/lib/chrono/persistence';
+import { syncWidgetSnapshot } from '@/components/settings/WidgetSync';
+import { buildWidgetSnapshot } from '@/lib/widgetSnapshot';
+import { getTodayKey } from '@/lib/date';
 import type { KairosBackupPayload } from '@/types/domain';
 
 export function SettingsPage() {
@@ -59,6 +63,7 @@ export function SettingsPage() {
   const [confirmWipe, setConfirmWipe] = useState(false);
   const [wiping, setWiping] = useState(false);
   const [widgetSyncError, setWidgetSyncError] = useState(false);
+  const [nativeCleanupError, setNativeCleanupError] = useState(false);
   const [pendingBackup, setPendingBackup] = useState<KairosBackupPayload | null>(null);
   const [backupEstimate, setBackupEstimate] = useState<BackupImportResult | null>(null);
   const [restorePreferences, setRestorePreferences] = useState(false);
@@ -523,6 +528,7 @@ export function SettingsPage() {
         )}
 
         <div className="space-y-2 border-t border-[var(--accent-fg)]/10 pt-3">
+          {nativeCleanupError && <p role="alert" className="text-xs leading-6 text-[var(--danger-fg)]">پاک‌سازی ویجت یا یادآوری سیستم تأیید نشد. ویجت‌ها و اعلان‌ها را دستی بررسی و در صورت نیاز حذف کنید.</p>}
           <SampleDataControl />
 
           {!confirmWipe ? (
@@ -554,7 +560,15 @@ export function SettingsPage() {
                       await clearAllUserData();
                       setFocusLinkedTask(null);
                       setConfirmWipe(false);
-                      pushToast({ title: 'رکوردها و تاریخچهٔ انتخاب‌شده پاک شدند', description: 'تنظیمات، فایل‌های پشتیبان و داده‌های سیستم ممکن است باقی بمانند.', tone: 'default' });
+                      const results = await Promise.allSettled([
+                        syncTaskRemindersNative([], false),
+                        syncWidgetSnapshot(buildWidgetSnapshot([], getTodayKey(), false, false)),
+                      ]);
+                      const failed = results.some((result) => result.status === 'rejected');
+                      setNativeCleanupError(failed);
+                      pushToast(failed
+                        ? { title: 'داده‌های پایگاه پاک شدند؛ پاک‌سازی دستگاه ناقص است', description: 'ویجت یا یادآوری سیستم ممکن است دادهٔ قدیمی را نشان دهد؛ بررسی و حذف دستی لازم است.', tone: 'warning' }
+                        : { title: 'رکوردها و تاریخچهٔ انتخاب‌شده پاک شدند', description: 'تنظیمات، فایل‌های پشتیبان و داده‌های سیستم ممکن است باقی بمانند.', tone: 'default' });
                     } catch {
                       pushToast({ title: 'پاک‌سازی کامل نشد', description: 'دوباره تلاش کنید؛ پاک‌شدن اطلاعات تأیید نشده است.', tone: 'warning' });
                     } finally {

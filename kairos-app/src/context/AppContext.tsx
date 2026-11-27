@@ -232,7 +232,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   // Sync Native Android LocalNotifications whenever tasks or notification toggle change
   useEffect(() => {
     if (!ready) return;
-    void syncTaskRemindersNative(allTasks, settings.notificationsEnabled);
+    void syncTaskRemindersNative(allTasks, settings.notificationsEnabled).catch(() => {
+      window.dispatchEvent(new Event('kairos-reminder-sync-error'));
+    });
   }, [ready, allTasks, settings.notificationsEnabled]);
 
   // Real-time Web/PWA Reminder Scheduler (fires in-app luxury reminder + browser Notification)

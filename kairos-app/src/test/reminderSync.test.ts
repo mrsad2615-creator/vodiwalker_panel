@@ -29,6 +29,14 @@ describe('native reminder synchronisation', () => {
     expect(native.schedule).not.toHaveBeenCalled();
   });
 
+  it('reports cancellation failure and keeps the queue usable for a retry', async () => {
+    native.pending.mockRejectedValueOnce(new Error('native unavailable'));
+    await expect(syncTaskRemindersNative([], false)).rejects.toThrow('native unavailable');
+    native.pending.mockResolvedValue({ notifications: [{ id: 3, extra: { taskId: 'sample' } }] });
+    await expect(syncTaskRemindersNative([], false)).resolves.toBeUndefined();
+    expect(native.cancel).toHaveBeenCalledTimes(1);
+  });
+
   it('applies a hide after an older schedule even if native calls are slow', async () => {
     let release!: () => void;
     const slow = new Promise<void>((resolve) => { release = resolve; });

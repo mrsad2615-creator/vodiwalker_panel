@@ -12,7 +12,7 @@ export function restorableSettings(input: unknown): Partial<UserSettings> {
   const source = input as Record<string, unknown>;
   const output: Record<string, unknown> = {};
   function copy(key: string, valid: (value: unknown) => boolean) {
-    if (!Object.hasOwn(source, key)) return;
+    if (!Object.prototype.hasOwnProperty.call(source, key)) return;
     if (!valid(source[key])) throw new Error('invalid-backup-settings');
     output[key] = source[key];
   }

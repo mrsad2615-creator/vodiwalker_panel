@@ -38,3 +38,9 @@ Before integration, investigate prompt/runtime and compare more suitable candida
 review Persian output and hallucination/safety cases; keep all data writes in the
 existing deterministic confirmation/undo path, never execute model output directly;
 measure on the target device. No private user data should enter this CI evaluation.
+
+## Larger candidates after the size limit was relaxed
+
+Qwen3-1.7B Q4_K_M (1.28 GB) ran on the Linux CI CPU in [run 46073327466](https://github.com/mrsad2615-creator/vodiwalker_panel/actions/runs/46073327466) using the same synthetic cases and Qwen3 prompt as above. Its automated smoke check passed, but human review **rejects it**: greeting and missing-data answers were nonsensical, clarification repeated the prompt, and the planning response was incoherent and truncated. Correct arithmetic and process success do not compensate. It was not integrated. This result is specific to the tested prompt and sampling; it is not a claim about every possible configuration.
+
+A separate pinned Qwen2.5-1.5B Instruct Q4_K_M candidate uses its own ChatML template (`evaluate-qwen25.py`, no Qwen3 think tokens). A CI result is not device validation; neither model is present in the app. See the workflows for exact model revisions and hashes. Do not use user data in these tests.

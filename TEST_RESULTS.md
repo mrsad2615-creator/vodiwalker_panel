@@ -1,6 +1,13 @@
-# Test results — flagship programme, cycle 1
+# Test results — flagship programme
 
-## Scope
+## Later evidence (subsequent to cycle 1)
+
+- Full local suite at `ed69b1c`: 66 files / 409 tests passed, plus typecheck, lint, web build and diff check. React act warnings and Vite chunk warnings remain. Tests use jsdom and fake-indexeddb.
+- Android CI [run 46009881246](https://github.com/mrsad2615-creator/vodiwalker_panel/actions/runs/46009881246) for `ed69b1c`: typecheck, lint, tests, Java timer-policy checks, Capacitor sync, APK assembly and artifact upload passed; Release skipped. This is not device testing.
+- Assistant name disambiguation changes at `bca5ea9` passed targeted command and assistant tests (32 tests), typecheck and lint. Android CI [run 46010714440](https://github.com/mrsad2615-creator/vodiwalker_panel/actions/runs/46010714440) passed its full test, Java policy and APK build steps; Release skipped. Conversation history includes user text and answers, supports failure retry, confirmed deletion and v4 backup; no local language model is implemented.
+- Physical POCO X3 Pro, upgrade, WebView migration, system notifications, TalkBack, model inference and battery/thermal measurements remain untested. Earlier entries below are historical and must not be read as the current APK status.
+
+## Scope (cycle 1)
 
 Working-tree source in `kairos-app`, not the published 3.18.0 APK. Web tests run in Vitest with jsdom and fake-indexeddb. They do not prove Android lifecycle, native widgets, system backup, launcher or performance behavior.
 

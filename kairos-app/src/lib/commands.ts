@@ -85,16 +85,24 @@ function matchByName<T extends { id: string }>(
   query: string,
   items: T[],
   nameOf: (item: T) => string
-): T | null {
+): T[] {
   const text = ` ${normalizeCommand(query)} `;
-  let best: { item: T; length: number } | null = null;
-  for (const item of items) {
+  const matches = items.map((item) => {
     const name = normalizeCommand(nameOf(item));
-    if (name.length < 2) continue;
-    if (!text.includes(name)) continue;
-    if (!best || name.length > best.length) best = { item, length: name.length };
-  }
-  return best?.item ?? null;
+    const spans: { start: number; end: number }[] = [];
+    if (name.length >= 2) {
+      const pattern = ` ${name} `;
+      for (let start = text.indexOf(pattern); start >= 0; start = text.indexOf(pattern, start + 1)) {
+        spans.push({ start, end: start + pattern.length });
+      }
+    }
+    return { item, name, spans };
+  }).filter(({ spans }) => spans.length > 0);
+  // Suppress a shorter name only when every mention is inside a longer match.
+  // Separate mentions and duplicate names remain ambiguous.
+  return matches.filter(({ name, spans }) => !spans.every((span) => matches.some((other) =>
+    other.name !== name && other.spans.some((outer) => outer.start <= span.start && outer.end >= span.end)
+  ))).map(({ item }) => item);
 }
 
 const FA_DIGITS = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
@@ -114,7 +122,7 @@ export function normalizeCommand(input: string): string {
     .replace(DIACRITICS, '')
     .replace(/ي/g, 'ی')
     .replace(/ك/g, 'ک')
-    .replace(/[؟?!.،,]/g, ' ')
+    .replace(/[؟?!.،,«»"“”؛;:()[\]{}]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
     .toLowerCase();
@@ -268,8 +276,8 @@ export function runCommand(raw: string, context: CommandContext): CommandAnswer 
       if (open.length === 0) {
         return {
           intent,
-          title: 'امروز کار بازی نداری',
-          lines: ['همهٔ کارهای امروز بسته شده‌اند. اگر کاری هست، سریع اضافه‌اش کن.'],
+          title: 'کاری برای نمایش پیدا نشد',
+          lines: ['در داده‌های قابل‌نمایش، کار بازی با موعد امروز یا گذشته یا بدون تاریخ ثبت نشده است.'],
           action: { label: 'دیدن وظایف', tab: 'tasks' },
         };
       }
@@ -278,7 +286,7 @@ export function runCommand(raw: string, context: CommandContext): CommandAnswer 
       );
       return {
         intent,
-        title: `${fa(open.length)} کار باز برای امروز`,
+        title: `${fa(open.length)} کار باز با موعد امروز، گذشته یا بدون تاریخ`,
         lines: [
           ...sorted.slice(0, 5).map((task) => {
             const when = task.dueTime ? ` · ${task.dueTime}` : '';
@@ -358,7 +366,13 @@ export function runCommand(raw: string, context: CommandContext): CommandAnswer 
     }
 
     case 'project.status': {
-      const named = matchByName(raw, context.projects, (project) => project.title);
+      const matches = matchByName(raw, context.projects, (project) => project.title);
+      if (matches.length > 1) {
+        return { intent, title: 'کدام پروژه را می‌گویی؟',
+          lines: ['چند پروژه با این توضیح تطبیق دارند. برای جلوگیری از پاسخ اشتباه، پروژه را در بخش پروژه‌ها انتخاب کن.'],
+          action: { label: 'دیدن پروژه‌ها', tab: 'projects' } };
+      }
+      const named = matches[0];
       if (named) {
         const progress = computeProjectProgress(
           context.stages.filter((stage) => stage.projectId === named.id),
@@ -378,28 +392,17 @@ export function runCommand(raw: string, context: CommandContext): CommandAnswer 
             `${fa(progress.stagesDone)} از ${fa(progress.stagesTotal)} مرحله و ${fa(
               progress.tasksDone
             )} از ${fa(progress.tasksTotal)} کار بسته شده است.`,
-            ...(risk ? [riskSentence(risk)] : ['ریسکی برای این پروژه نمی‌بینم.']),
-          ],
-          action: { label: 'دیدن پروژه‌ها', tab: 'projects' },
-        };
-      }
-      const risks = projectRisks({ projects: context.projects, stages: context.stages, tasks, todayKey });
-      if (risks.length === 0) {
-        return {
-          intent,
-          title: 'هیچ پروژه‌ای در خطر نیست',
-          lines: [
-            context.projects.length === 0
-              ? 'هنوز پروژه‌ای نساخته‌ای؛ از «بیشتر» → «پروژه‌ها» شروع کن.'
-              : 'همهٔ پروژه‌ها یا روی برنامه‌اند یا داده‌ای برای قضاوت ندارند.',
+            ...(risk ? [riskSentence(risk)] : ['در داده‌های موجود هشدار ریسکی پیدا نشد؛ نبود هشدار تضمین پیشرفت نیست.']),
           ],
           action: { label: 'دیدن پروژه‌ها', tab: 'projects' },
         };
       }
       return {
         intent,
-        title: `${fa(risks.length)} پروژه در خطر`,
-        lines: risks.slice(0, 4).map((risk) => `• ${risk.title}: ${riskSentence(risk)}`),
+        title: 'نام کدام پروژه را می‌گویی؟',
+        lines: [context.projects.length
+          ? 'نام کامل پروژه را بنویس یا آن را از بخش پروژه‌ها باز کن؛ وضعیت را حدس نمی‌زنم.'
+          : 'هنوز پروژه‌ای در داده‌های قابل‌نمایش پیدا نشد.'],
         action: { label: 'دیدن پروژه‌ها', tab: 'projects' },
       };
     }
@@ -422,8 +425,8 @@ export function runCommand(raw: string, context: CommandContext): CommandAnswer 
       if (risks.length === 0) {
         return {
           intent,
-          title: 'هیچ پروژه‌ای در معرض تأخیر نیست',
-          lines: [`${fa(context.projects.filter((p) => p.status === 'active').length)} پروژهٔ فعال، همه روی ریل.`],
+          title: 'هشدار تأخیر قابل‌تشخیصی پیدا نشد',
+          lines: [`${fa(context.projects.filter((p) => p.status === 'active').length)} پروژهٔ فعال بررسی شد؛ نبود هشدار به معنی کافی‌بودن اطلاعات یا پیشرفت قطعی نیست.`],
           action: { label: 'دیدن پروژه‌ها', tab: 'projects' },
         };
       }

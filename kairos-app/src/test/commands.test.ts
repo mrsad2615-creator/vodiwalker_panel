@@ -241,6 +241,31 @@ describe('the manager layer', () => {
     expect(answer.title).toContain('۱۰۰');
   });
 
+  it('asks when a named project is missing or multiple projects match instead of guessing', () => {
+    const project = { id: 'one', title: 'کتاب', description: '', category: 'work', goalId: null,
+      status: 'active', startDate: null, dueDate: null, createdAt: '2025-01-01', updatedAt: '2025-01-01' } as Project;
+    const duplicate = { ...project, id: 'two' };
+    const missing = runCommand('وضعیت پروژه ناشناخته', { ...baseContext, projects: [project] });
+    expect(missing.title).toContain('کدام پروژه');
+    expect(missing.lines.join(' ')).not.toContain('ریسک');
+    const ambiguous = runCommand('وضعیت پروژه «کتاب»', { ...baseContext, projects: [project, duplicate] });
+    expect(ambiguous.title).toContain('کدام پروژه');
+    expect(ambiguous.lines.join(' ')).toContain('چند پروژه');
+    const notSubstring = runCommand('وضعیت پروژه کتابخانه', { ...baseContext, projects: [project] });
+    expect(notSubstring.title).toContain('کدام پروژه');
+    const longer = { ...project, id: 'longer', title: 'کتاب چاپ اول' };
+    const exact = runCommand('وضعیت پروژه «کتاب چاپ اول»', { ...baseContext, projects: [project, longer] });
+    expect(exact.title).toContain('کتاب چاپ اول');
+    const both = runCommand('وضعیت پروژه کتاب و کتاب چاپ اول', { ...baseContext, projects: [project, longer] });
+    expect(both.title).toContain('کدام پروژه');
+  });
+
+  it('does not claim empty data means every task was completed', () => {
+    const answer = runCommand('وظایف امروز', baseContext);
+    expect(answer.lines.join(' ')).not.toContain('بسته شده');
+    expect(answer.lines.join(' ')).toContain('ثبت نشده');
+  });
+
   it('explains its own recommendation when asked "چرا" with nothing on screen', () => {
     const answer = runCommand('چرا؟', {
       ...baseContext,

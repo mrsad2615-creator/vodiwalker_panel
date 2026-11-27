@@ -1,5 +1,6 @@
 import { useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
+import { useLiveQuery } from 'dexie-react-hooks';
 import { Brain, Sparkles } from '@/components/ui/icons';
 import { useApp } from '@/context/AppContext';
 import {
@@ -18,7 +19,10 @@ import { QUICK_COMMANDS, runCommand, type CommandAnswer } from '@/lib/commands';
 import { applyConfirmedChange, interpretAssistantRequest, previewChange, revertAssistantChange, type AssistantRequest, type ChangePreview } from '@/lib/assistantActions';
 import { buildDailyBrief } from '@/lib/coach';
 import { triggerHaptic } from '@/lib/native';
-import type { NavTab } from '@/types/domain';
+import { db } from '@/lib/db';
+import { createId } from '@/lib/format';
+import { deleteAssistantHistorySnapshot } from '@/lib/assistantHistory';
+import type { AssistantHistoryEntry, NavTab } from '@/types/domain';
 
 /**
  * The command centre: a Persian question box with no model behind it.
@@ -34,7 +38,17 @@ const CHANGE_LABELS = {
 
 export function CommandCenter() {
   const [query, setQuery] = useState('');
-  const [history, setHistory] = useState<(CommandAnswer & { prompt?: string })[]>([]);
+  // Read visibility and history in one snapshot. Until settings load, fail closed
+  // so a hidden sample cannot flash on screen during startup.
+  const historySnapshot = useLiveQuery(() => db.transaction('r', [db.assistantHistory, db.settings], async () => {
+    const [rows, settings] = await Promise.all([db.assistantHistory.orderBy('createdAt').reverse().toArray(), db.settings.get('default')]);
+    return { rows, showSample: !!settings && settings.sampleVisible !== false };
+  }));
+  const savedHistory = historySnapshot?.rows ?? [];
+  const [pendingHistory, setPendingHistory] = useState<{ entry: AssistantHistoryEntry; failed: boolean }[]>([]);
+  const [showHistoryCount, setShowHistoryCount] = useState(30);
+  const [clearHistorySnapshot, setClearHistorySnapshot] = useState<AssistantHistoryEntry[] | null>(null);
+  const historyClock = useRef(0);
   const [request, setRequest] = useState<Extract<AssistantRequest, { type: 'change' }> | null>(null);
   const [changePreview, setChangePreview] = useState<ChangePreview | null>(null);
   const [changeError, setChangeError] = useState('');
@@ -54,6 +68,27 @@ export function CommandCenter() {
   const stages = useProjectStages();
   const sessions = useFocusSessions();
   const { setActiveTab, pushToast } = useApp();
+  const hasVisibleSample = [...tasks, ...habits, ...habitLogs, ...goals, ...projects, ...stages, ...sessions].some((row) => row.sample === true);
+  const savedIds = new Set(savedHistory.map((entry) => entry.id));
+  const history = [...pendingHistory.map(({ entry }) => entry).filter((entry) => !savedIds.has(entry.id)), ...savedHistory]
+    .filter((entry) => historySnapshot?.showSample === true || !entry.sample)
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt) || b.id.localeCompare(a.id));
+
+  const persistHistory = (entry: AssistantHistoryEntry) => {
+    void db.assistantHistory.add(entry).then(() => {
+      setPendingHistory((rows) => rows.filter((row) => row.entry.id !== entry.id));
+    }).catch(() => {
+      setPendingHistory((rows) => rows.map((row) => row.entry.id === entry.id ? { ...row, failed: true } : row));
+      pushToast({ title: 'گفت‌وگو ذخیره نشد', description: 'پاسخ فقط تا بسته‌شدن این صفحه باقی می‌ماند؛ دوباره ذخیره کنید.', tone: 'warning' });
+    });
+  };
+  const recordHistory = (answer: CommandAnswer, prompt?: string) => {
+    const timestamp = Math.max(Date.now(), historyClock.current + 1);
+    historyClock.current = timestamp;
+    const entry: AssistantHistoryEntry = { ...answer, id: createId('chat'), createdAt: new Date(timestamp).toISOString(), sample: hasVisibleSample, ...(prompt ? { prompt } : {}) };
+    setPendingHistory((rows) => [{ entry, failed: false }, ...rows]);
+    persistHistory(entry);
+  };
 
   const todayKey = getTodayKey();
   const series = useMemo(
@@ -79,20 +114,23 @@ export function CommandCenter() {
   const ask = (text: string) => {
     const trimmed = text.trim();
     if (!trimmed || savingRef.current) return;
+    setClearHistorySnapshot(null);
     setRequest(null); setChangePreview(null); setChangeError(''); setDraftOpen(false);
     const local = interpretAssistantRequest(trimmed, tasks, projects);
     if (local.type === 'blocked') {
-      setHistory((current) => [{ intent: 'help' as const, title: 'این کار را اجرا نکردم', lines: [local.message], prompt: trimmed }, ...current].slice(0, 6));
+      recordHistory({ intent: 'help', title: 'این کار را اجرا نکردم', lines: [local.message] }, trimmed);
       setQuery(''); return;
     }
     if (local.type === 'navigation') {
-      setHistory((current) => [{ intent: 'help' as const, title: `بخش ${local.label} باز شد`, lines: [], prompt: trimmed }, ...current].slice(0, 6));
+      recordHistory({ intent: 'help', title: `بخش ${local.label} باز شد`, lines: [] }, trimmed);
       setQuery(''); setActiveTab(local.tab); return;
     }
     if (local.type === 'change') {
+      recordHistory({ intent: 'help', title: 'انتخاب مورد برای پیش‌نمایش تغییر', lines: ['هنوز تغییری ثبت نشده است.'] }, trimmed);
       setDraftOpen(false); setRequest(local); setQuery(''); return;
     }
     if (wantsTodayTaskList(trimmed)) {
+      recordHistory({ intent: 'help', title: 'در انتظار جزئیات وظایف', lines: ['تا تأیید شما وظیفه‌ای ساخته نمی‌شود.'] }, trimmed);
       setDraftOpen(true);
       setDraftText('');
       setPreview(null);
@@ -102,7 +140,7 @@ export function CommandCenter() {
     }
     // Do not turn an unsupported write request into a misleading read-only answer.
     if (/(وظیفه|وظایف|کارها|عادت|پروژه|هدف|تنظیمات|یادداشت)/.test(trimmed) && /(بساز|ایجاد کن|اضافه کن|ثبت کن|ویرایش کن|تغییر بده|تنظیم کن)/.test(trimmed)) {
-      setHistory((current) => [{ intent: 'help' as const, title: 'این تغییر هنوز پشتیبانی نمی‌شود', lines: ['فعلاً این کار را از بخش مربوط انجام بده. هیچ داده‌ای تغییر نکرد.'], prompt: trimmed }, ...current].slice(0, 6));
+      recordHistory({ intent: 'help', title: 'این تغییر هنوز پشتیبانی نمی‌شود', lines: ['فعلاً این کار را از بخش مربوط انجام بده. هیچ داده‌ای تغییر نکرد.'] }, trimmed);
       setQuery(''); return;
     }
     const answer = runCommand(trimmed, {
@@ -117,7 +155,7 @@ export function CommandCenter() {
       sessions,
       lastSuggestionReason: brief.recommendation?.reason ?? null,
     });
-    setHistory((current) => [{ ...answer, prompt: trimmed }, ...current].slice(0, 6));
+    recordHistory(answer, trimmed);
     setQuery('');
     void triggerHaptic('light');
     if (answer.unknown) {
@@ -139,7 +177,7 @@ export function CommandCenter() {
     setSaving(true);
     try {
       const created = await createConfirmedTodayTasks(preview.titles, preview.dateKey, true);
-      setHistory((current) => [{ intent: 'today.tasks', title: 'وظایف ساخته شدند', lines: [`${created.length} وظیفه برای امروز ثبت شد.`, 'بدون زمان و یادآوری؛ اولویت متوسط و دستهٔ شخصی.'], action: { label: 'دیدن وظایف', tab: 'tasks' } } as CommandAnswer, ...current].slice(0, 6));
+      recordHistory({ intent: 'today.tasks', title: 'وظایف ساخته شدند', lines: [`${created.length} وظیفه برای امروز ثبت شد.`, 'بدون زمان و یادآوری؛ اولویت متوسط و دستهٔ شخصی.'], action: { label: 'دیدن وظایف', tab: 'tasks' } });
       setDraftOpen(false); setDraftText(''); setPreview(null); setDraftError('');
     } catch {
       setDraftError('ثبت انجام نشد. ممکن است تاریخ روز عوض شده باشد؛ دوباره پیش‌نمایش بگیر.');
@@ -161,7 +199,7 @@ export function CommandCenter() {
     try {
       const id = await applyConfirmedChange(changePreview, true);
       setLastChange(id); setRequest(null); setChangePreview(null);
-      setHistory((current) => [{ intent: 'help' as const, title: 'تغییر ثبت شد', lines: [changePreview.before.title, changePreview.description] }, ...current].slice(0, 6));
+      recordHistory({ intent: 'help', title: 'تغییر ثبت شد', lines: [changePreview.before.title, changePreview.description] });
     } catch (error) { setChangePreview(null); setChangeError(error instanceof Error ? error.message : 'تغییر ثبت نشد.'); }
     finally { savingRef.current = false; setSaving(false); }
   };
@@ -169,9 +207,22 @@ export function CommandCenter() {
   const revertChange = async () => {
     if (!lastChange || savingRef.current) return;
     savingRef.current = true; setSaving(true); setChangeError('');
-    try { await revertAssistantChange(lastChange); setLastChange(null); setHistory((current) => [{ intent: 'help' as const, title: 'تغییر بازگردانده شد', lines: ['دادهٔ قبلی بازیابی شد.'] }, ...current].slice(0, 6)); }
+    try { await revertAssistantChange(lastChange); setLastChange(null); recordHistory({ intent: 'help', title: 'تغییر بازگردانده شد', lines: ['دادهٔ قبلی بازیابی شد.'] }); }
     catch (error) { setChangeError(error instanceof Error ? error.message : 'بازگشت انجام نشد.'); }
     finally { savingRef.current = false; setSaving(false); }
+  };
+
+  const clearSavedHistory = async () => {
+    if (!clearHistorySnapshot || pendingHistory.length || savingRef.current) return;
+    savingRef.current = true; setSaving(true);
+    try {
+      await deleteAssistantHistorySnapshot(clearHistorySnapshot);
+      setClearHistorySnapshot(null);
+      pushToast({ title: 'گفت‌وگوهای انتخاب‌شده پاک شدند', description: 'پیام‌های تازهٔ ثبت‌شده در صفحه‌ای دیگر حفظ شدند.', tone: 'success' });
+    } catch {
+      setClearHistorySnapshot(null);
+      pushToast({ title: 'پاک‌سازی گفت‌وگو انجام نشد', description: 'تاریخچه تغییر کرده یا ذخیره‌سازی در دسترس نیست؛ دوباره بررسی کنید.', tone: 'warning' });
+    } finally { savingRef.current = false; setSaving(false); }
   };
 
   const submit = (text: string) => {
@@ -183,10 +234,11 @@ export function CommandCenter() {
       <div className="mb-4 flex items-start gap-3 rounded-[var(--r-rail)] border border-[var(--border)] bg-[var(--surface-1)] p-4">
         <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[color-mix(in_srgb,var(--accent)_18%,transparent)] text-[var(--accent-fg)]"><Sparkles size={22} aria-hidden="true" /></span>
         <div><p className="eyebrow">KAIROS ASSISTANT</p><h1 className="mt-1 text-lg font-bold text-[var(--text)]">دستیار کایروس</h1>
-          <p className="mt-1 text-xs leading-6 text-[var(--text-2)]">آفلاین و مبتنی بر فرمان‌های مشخص؛ مدل زبانی هنوز نصب یا فعال نشده است. تغییرات پشتیبانی‌شده پیش از اجرا تأیید می‌خواهند.</p></div>
+          <p className="mt-1 text-xs leading-6 text-[var(--text-2)]">آفلاین و مبتنی بر فرمان‌های مشخص؛ مدل زبانی هنوز نصب یا فعال نشده است. تغییرات پشتیبانی‌شده پیش از اجرا تأیید می‌خواهند.</p>
+          <p className="mt-1 text-xs leading-6 text-[var(--text-2)]">پرسش‌ها و پاسخ‌های ثبت‌شده روی دستگاه و در پشتیبان ذخیره می‌شوند. پاسخ‌های گذشته تصویر همان زمان‌اند، نه وضعیت فعلی داده‌ها.</p></div>
       </div>
       <form onSubmit={(event) => { event.preventDefault(); submit(query); }} className="flex items-center gap-2 rounded-2xl border border-[var(--border)] bg-[var(--surface-2)] p-2">
-        <input value={query} disabled={saving} onChange={(event) => setQuery(event.target.value)}
+        <input value={query} maxLength={4000} disabled={saving} onChange={(event) => setQuery(event.target.value)}
           placeholder="مثلاً: وظایف امروز من چیست؟" aria-label="فرمان" className="luxury-input min-w-0 flex-1 py-3 text-sm" />
         <button type="submit" disabled={saving} className="rounded-xl bg-[var(--accent)] px-4 py-3 text-xs font-bold text-[var(--accent-on)] disabled:opacity-60">بپرس</button>
       </form>
@@ -297,6 +349,21 @@ export function CommandCenter() {
             ))}
           </div>
 
+          {pendingHistory.some((item) => item.failed) && <div role="alert" className="rounded-xl border border-[var(--danger)]/40 p-3 text-xs leading-6 text-[var(--text)]">
+            بخشی از گفت‌وگو ذخیره نشده و با بستن صفحه از دست می‌رود.
+            <button type="button" className="ms-2 underline" onClick={() => {
+              const failed = pendingHistory.filter((item) => item.failed);
+              setPendingHistory((rows) => rows.map((row) => row.failed ? { ...row, failed: false } : row));
+              failed.forEach(({ entry }) => persistHistory(entry));
+            }}>تلاش دوباره برای ذخیره</button>
+          </div>}
+          {savedHistory.length > 0 && <div className="text-xs text-[var(--text-2)]">
+            {clearHistorySnapshot ? <div role="region" aria-label="تأیید پاک‌کردن گفت‌وگو" className="space-y-2">
+              <p>پاک‌کردن {clearHistorySnapshot.length} گفت‌وگوی ذخیره‌شده، شامل موارد نمونهٔ پنهان؟ فایل‌های پشتیبان قبلی پاک نمی‌شوند.</p>
+              <button type="button" disabled={saving || pendingHistory.length > 0} onClick={() => void clearSavedHistory()} className="btn-royal rounded-xl px-3 py-2">تأیید پاک‌کردن گفت‌وگو</button>
+              <button type="button" disabled={saving} onClick={() => setClearHistorySnapshot(null)} className="ms-2 rounded-xl border border-[var(--border)] px-3 py-2">انصراف</button>
+            </div> : <button type="button" disabled={saving || pendingHistory.length > 0} onClick={() => setClearHistorySnapshot([...savedHistory])} className="rounded-xl border border-[var(--border)] px-3 py-2 disabled:opacity-50">پاک‌کردن تاریخچهٔ گفت‌وگو</button>}
+          </div>}
           {history.length === 0 ? (
             <div className="rounded-[var(--r-rail)] border border-[var(--border)] bg-[var(--surface-1)] p-3">
               <p className="text-[11.5px] font-semibold text-[var(--text)]">
@@ -308,9 +375,9 @@ export function CommandCenter() {
               </p>
             </div>
           ) : (
-            history.map((answer, index) => (
+            history.slice(0, showHistoryCount).map((answer) => (
               <motion.div
-                key={`${answer.intent}-${index}-${answer.title}`}
+                key={answer.id}
                 initial={{ opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
                 className={`rounded-[var(--r-rail)] border p-3 ${
@@ -342,6 +409,7 @@ export function CommandCenter() {
               </motion.div>
             ))
           )}
+          {history.length > showHistoryCount && <button type="button" onClick={() => setShowHistoryCount((count) => count + 30)} className="rounded-xl border border-[var(--border)] px-3 py-2 text-xs text-[var(--accent-fg)]">نمایش گفت‌وگوهای قدیمی‌تر</button>}
         </div>
     </section>
   );

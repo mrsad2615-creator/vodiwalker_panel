@@ -10,6 +10,7 @@ beforeEach(async () => {
   window.localStorage.clear();
   await db.tasks.clear();
   await db.eventHistory.clear();
+  await db.assistantHistory.clear();
   await db.settings.clear();
 });
 

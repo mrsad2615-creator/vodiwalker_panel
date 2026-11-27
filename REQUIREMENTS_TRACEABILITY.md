@@ -15,7 +15,7 @@ The user’s 32-part flagship directive is the source of truth. This initial reg
 | DIR-09 | Projects and goals | P1 | Data models | NOT_STARTED | Existing partial models; linked progress needs verification. |
 | DIR-10 | Calendar and time | P1 | Date model, scheduling | NOT_STARTED | Existing Jalali views and ICS; full requirements open. |
 | DIR-11 | Focus and authoritative native timer | P0 | TIMER-01, Android tests | NOT_STARTED | Native/WebView divergence unresolved; web focus recording and recovery are more atomic. |
-| DIR-12 | Text-only local AI | P1 | runtime research, model/device | RESEARCHING | Current assistant rule-based; no local LLM. Audio exclusion needs full assistant audit. |
+| DIR-12 | Text-only local AI | P1 | runtime research, model/device | IMPLEMENTING | Current assistant remains rule-based; no local LLM. Local conversation snapshots are persisted with confirmed deletion and backup. Runtime, model compatibility, Persian quality, privacy boundaries and target-device evaluation remain open. |
 | DIR-13 | Inner Drive motivation | P2 | content evidence/privacy | NOT_STARTED | Existing quote interface differs from requested module. |
 | DIR-14 | Analytics | P1 | trustworthy data models | NOT_STARTED | Existing charts do not demonstrate full requirement. |
 | DIR-15 | Journal and knowledge | P2 | storage, backup | NOT_STARTED | Existing journal partial. |
@@ -47,8 +47,10 @@ The user’s 32-part flagship directive is the source of truth. This initial reg
 | DATA-03B | Avoid partial undo of legacy recurring-task completion. | P0 | recurrence model | TESTING | `src/lib/undo.ts`; `dataSafety.test.ts`. | Refuses rather than implements full recurrence undo; direct task actions still need work. |
 
 | DATA-03C | Commit task changes, status, generated occurrence and undo metadata atomically. | P0 | Dexie, occurrence identity | TESTING | `db.ts`, `undo.ts`, `recurrenceSafety.test.ts`, `taskSafetyUi.test.tsx`. | Other entities still have best-effort history; old series retain title-based duplicate heuristic. |
-| DATA-04A | Export a consistent snapshot and show an honest merge preview. | P0 | Backup schema, IndexedDB | TESTING | `db.ts`, `backupValidation.ts`, `SettingsPage.tsx`, `backupConsistency.test.ts`, `evolutionSafety.test.tsx`. | Not a complete backup; preview is an estimate and does not lock subsequent imports; no encrypted export. |
+| DATA-04A | Export a consistent snapshot and show an honest merge preview. | P0 | Backup schema, IndexedDB | TESTING | `db.ts`, `backupValidation.ts`, `SettingsPage.tsx`, `backupConsistency.test.ts`, `evolutionSafety.test.tsx`. Optional authenticated encryption: `backupCrypto.ts`, `backupCrypto.test.ts`, `encryptedBackupUi.test.tsx`. | Not a complete backup; preview is an estimate and does not lock subsequent imports; encrypted restore is not tested on Android. |
 | TIMER-02 | Atomically record completed focus and recovery state; avoid duplicate recorded durations. | P0 | IndexedDB, clock | TESTING | `chrono/persistence.ts`, `AppContext.tsx`, `focusRecordingSafety.test.tsx`. | Native notification actions can still diverge when WebView is absent; physical Android testing outstanding. |
 | NAV-01 | Five dock buttons, customize two shortcuts, retain old preferences and provide directory. | P1 | settings | TESTING | `navigation.ts`, `AppShell.tsx`, `momentumNavigation.test.tsx`. | Device, viewport and accessibility validation remain open. |
+
+| AI-HISTORY-01 | Persist local assistant exchanges; guard deletion, backup and sample visibility. | P0 | IndexedDB v6 and backup v4 | TESTING | `CommandCenter.tsx`, `assistantHistory.ts`, `assistantHistory.test.tsx`, `backupValidation.ts`. | Conversation snapshots are historical, rule-based and not an LLM. Sample-derived entries are conservatively hidden, which can hide unrelated messages too. Not tested on physical Android. |
 
 Test command results and limitations: `TEST_RESULTS.md`. All other granular requirements, design artifacts, data maps and test cases still need decomposition; this file must be expanded rather than declaring whole sections complete.

@@ -3,6 +3,7 @@ import { DEFAULT_APPEARANCE } from '@/lib/theme';
 import type { ClockSegment } from '@/lib/chrono/plan';
 import type { PomodoroPhase } from '@/lib/focusTimer';
 import type {
+  AssistantHistoryEntry,
   FocusModeType,
   FocusSession,
   Goal,
@@ -82,6 +83,7 @@ class KairosDatabase extends Dexie {
   /** goal → project → stage → task (v5). */
   projects!: Table<Project, string>;
   projectStages!: Table<ProjectStage, string>;
+  assistantHistory!: Table<AssistantHistoryEntry, string>;
 
   constructor() {
     super('KairosLuxuryProductivityDB');
@@ -182,6 +184,9 @@ class KairosDatabase extends Dexie {
           snapshot: { tasks, goals },
         });
       });
+
+    // New table only; existing rows and all previous schemas stay untouched.
+    this.version(6).stores({ assistantHistory: 'id, createdAt' });
   }
 }
 
@@ -877,8 +882,8 @@ export async function exportBackup(): Promise<KairosBackupPayload> {
   // Initialise before opening the readonly transaction; all exported tables
   // must be read in one snapshot so concurrent edits cannot mix two states.
   await ensureSettings();
-  const [tasks, habits, habitLogs, focusSessions, goals, settingsRow, journal, projects, projectStages] =
-    await db.transaction('r', [db.tasks, db.habits, db.habitLogs, db.focusSessions, db.goals, db.settings, db.journal, db.projects, db.projectStages],
+  const [tasks, habits, habitLogs, focusSessions, goals, settingsRow, journal, projects, projectStages, assistantHistory] =
+    await db.transaction('r', [db.tasks, db.habits, db.habitLogs, db.focusSessions, db.goals, db.settings, db.journal, db.projects, db.projectStages, db.assistantHistory],
       () => Promise.all([
         db.tasks.toArray(),
         db.habits.toArray(),
@@ -889,12 +894,12 @@ export async function exportBackup(): Promise<KairosBackupPayload> {
         db.journal.toArray(),
         db.projects.toArray(),
         db.projectStages.toArray(),
+        db.assistantHistory.toArray(),
       ]));
   const settings = settingsRow ?? { ...DEFAULT_SETTINGS };
   return {
-    // v3 is the first format that carries projects; restore stays backward
-    // compatible, so an old file is still accepted with the same version check.
-    version: 3,
+    // v4 adds assistant history. Older v1–v3 files remain readable.
+    version: 4,
     exportedAt: new Date().toISOString(),
     app: 'KAIROS',
     tasks,
@@ -908,6 +913,7 @@ export async function exportBackup(): Promise<KairosBackupPayload> {
     journal,
     projects,
     projectStages,
+    assistantHistory,
   };
 }
 
@@ -954,7 +960,7 @@ export async function importBackup(payload: KairosBackupPayload, options?: { res
     (sampleEligibleRows.length > 0 && payload.settings?.hasSampleData === true);
   await db.transaction(
     'rw',
-    [db.tasks, db.habits, db.habitLogs, db.focusSessions, db.goals, db.journal, db.projects, db.projectStages, db.settings, db.activeRun],
+    [db.tasks, db.habits, db.habitLogs, db.focusSessions, db.goals, db.journal, db.projects, db.projectStages, db.assistantHistory, db.settings, db.activeRun],
     async () => {
       if (preferences && await db.activeRun.get('active')) throw new Error('focus-session-active');
       await addMissing(db.tasks, payload.tasks);
@@ -965,6 +971,7 @@ export async function importBackup(payload: KairosBackupPayload, options?: { res
       await addMissing(db.journal, payload.journal);
       await addMissing(db.projects, payload.projects);
       await addMissing(db.projectStages, payload.projectStages);
+      await addMissing(db.assistantHistory, payload.assistantHistory);
       if (containsSamples || preferences) {
         const current = await db.settings.get('default');
         await db.settings.put({
@@ -1000,6 +1007,7 @@ export async function clearAllUserData(): Promise<void> {
       db.undoHistory,
       db.permissionGrants,
       db.migrationLog,
+      db.assistantHistory,
     ],
     async () => {
       const current = await ensureSettingsInTransaction();
@@ -1017,6 +1025,7 @@ export async function clearAllUserData(): Promise<void> {
         db.undoHistory.clear(),
         db.permissionGrants.clear(),
         db.migrationLog.clear(),
+        db.assistantHistory.clear(),
       ]);
       await db.settings.put({
         ...current,

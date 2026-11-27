@@ -494,7 +494,7 @@ export function SettingsPage() {
           </div>
         </div>
 
-        <p className="text-xs leading-6 text-[var(--text-2)]">پشتیبان وظایف، عادت‌ها، تمرکز، هدف‌ها، ژورنال، پروژه‌ها و بخشی از تنظیمات را ذخیره می‌کند. بازیابی ادغامی است و ترجیحات فقط با انتخاب شما جایگزین می‌شوند؛ نشست فعال و تاریخچه‌ها در فایل نیستند. بدون انتخاب رمزگذاری، فایل شامل اطلاعات شخصی آشکار است.</p>
+        <p className="text-xs leading-6 text-[var(--text-2)]">پشتیبان وظایف، عادت‌ها، تمرکز، هدف‌ها، ژورنال، پروژه‌ها، گفت‌وگوهای ذخیره‌شدهٔ دستیار و بخشی از تنظیمات را ذخیره می‌کند. بازیابی ادغامی است و ترجیحات فقط با انتخاب شما جایگزین می‌شوند؛ نشست فعال و تاریخچهٔ تغییرات در فایل نیستند. بدون انتخاب رمزگذاری، فایل شامل اطلاعات شخصی آشکار است. نسخه‌های قدیمی برنامه ممکن است این فایل را نخوانند.</p>
         <label className="flex min-h-11 items-center gap-2 text-xs text-[var(--text)]">
           <input type="checkbox" checked={encryptExport} onChange={(event) => { setEncryptExport(event.target.checked); setExportPassword(''); setExportConfirmation(''); }} />
           رمزگذاری فایل پشتیبان با گذرواژه
@@ -555,7 +555,7 @@ export function SettingsPage() {
           <div role="region" aria-label="پیش‌نمایش بازیابی" className="space-y-2 rounded-xl border border-[var(--accent-fg)]/30 bg-[var(--surface-1)] p-3 text-[11px] leading-6 text-[var(--text)]">
             <p className="font-bold">پیش‌نمایش بازیابی ادغامی</p>
             <p>وظیفه: {pendingBackup.tasks.length} · عادت: {pendingBackup.habits.length} · ثبت عادت: {pendingBackup.habitLogs.length} · تمرکز: {pendingBackup.focusSessions.length} · هدف: {pendingBackup.goals.length}</p>
-            <p>پروژه: {pendingBackup.projects?.length ?? 0} · مرحله: {pendingBackup.projectStages?.length ?? 0} · ژورنال: {pendingBackup.journal?.length ?? 0}</p>
+            <p>پروژه: {pendingBackup.projects?.length ?? 0} · مرحله: {pendingBackup.projectStages?.length ?? 0} · ژورنال: {pendingBackup.journal?.length ?? 0} · گفت‌وگو: {pendingBackup.assistantHistory?.length ?? 0}</p>
             {backupEstimate && <p>در بررسی فعلی: {backupEstimate.added} رکورد جدید و {backupEstimate.skipped} شناسهٔ موجود. در صورت تغییر داده‌ها پیش از تأیید، نتیجه ممکن است متفاوت باشد.</p>}
             <p className="text-[var(--text-2)]">فقط رکوردهای جدید اضافه می‌شوند؛ شناسه‌های موجود جایگزین نمی‌شوند. وضعیت دادهٔ نمونه ممکن است تغییر کند. فایل‌های قدیمی ممکن است همهٔ بخش‌ها را نداشته باشند. فایل بدون رمزگذاری تأیید صحت رمزنگاری‌شده ندارد؛ حتی رمزگذاری نیز هویت سازنده را ثابت نمی‌کند.</p>
             <label className="flex min-h-11 items-center gap-2 text-[var(--text)]">
@@ -586,7 +586,7 @@ export function SettingsPage() {
           ) : (
             <div className="space-y-3 rounded-xl border border-[var(--danger)]/35 bg-[var(--danger)]/12 p-3">
               <p className="text-xs leading-6 text-[var(--text)]">
-                وظایف، عادت‌ها، پروژه‌ها، هدف‌ها، ژورنال، نشست‌ها و سابقهٔ تغییر و بازگردانی از پایگاه محلی حذف می‌شوند. این کار قابل بازگردانی نیست.
+                وظایف، عادت‌ها، پروژه‌ها، هدف‌ها، ژورنال، نشست‌ها، گفت‌وگوهای دستیار و سابقهٔ تغییر و بازگردانی از پایگاه محلی حذف می‌شوند. این کار قابل بازگردانی نیست.
               </p>
               <p className="text-xs leading-6 text-[var(--text-2)]">
                 تنظیمات و بعضی داده‌های دستگاه حفظ می‌شوند؛ فایل‌های پشتیبان صادرشده و پشتیبان سیستم حذف نمی‌شوند. پاک‌شدن آنی ویجت‌ها و اعلان‌های سیستم تضمین نشده است. پیش از ادامه یک پشتیبان جداگانه بگیرید.

@@ -11,7 +11,7 @@ async function task(title = 'گزارش') {
 }
 beforeEach(async () => {
   window.localStorage.clear();
-  await Promise.all([db.tasks.clear(), db.projects.clear(), db.settings.clear(), db.undoHistory.clear(), db.eventHistory.clear()]);
+  await Promise.all([db.tasks.clear(), db.projects.clear(), db.settings.clear(), db.undoHistory.clear(), db.eventHistory.clear(), db.assistantHistory.clear()]);
 });
 
 describe('local assistant actions', () => {

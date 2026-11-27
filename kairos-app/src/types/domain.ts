@@ -331,6 +331,20 @@ export interface ProjectStage {
   updatedAt: string;
 }
 
+/** A saved answer is a historical snapshot, not live knowledge or permission to act. */
+export interface AssistantHistoryEntry {
+  id: string;
+  createdAt: string;
+  prompt?: string;
+  intent: string;
+  title: string;
+  lines: string[];
+  action?: { label: string; tab: 'dashboard' | 'tasks' | 'projects' | 'focus' | 'analytics' | 'habits' };
+  unknown?: boolean;
+  /** Conservatively hidden with sample data; records are never deleted by hiding. */
+  sample: boolean;
+}
+
 export interface KairosBackupPayload {
   version: number;
   exportedAt: string;
@@ -346,4 +360,6 @@ export interface KairosBackupPayload {
   /** v3.5+. A backup from an older build has no projects and restores fine. */
   projects?: Project[];
   projectStages?: ProjectStage[];
+  /** v4+: historical local assistant exchanges, not executable instructions. */
+  assistantHistory?: AssistantHistoryEntry[];
 }

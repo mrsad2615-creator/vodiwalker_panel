@@ -2,7 +2,7 @@ import type { KairosBackupPayload } from '@/types/domain';
 
 /** Supported historical JSON backup formats, independent of Dexie's schema version. */
 const REQUIRED = ['tasks', 'habits', 'habitLogs', 'focusSessions', 'goals'] as const;
-const OPTIONAL = ['journal', 'projects', 'projectStages'] as const;
+const OPTIONAL = ['journal', 'projects', 'projectStages', 'assistantHistory'] as const;
 export const BACKUP_COLLECTIONS = [...REQUIRED, ...OPTIONAL] as const;
 export type BackupCollection = (typeof BACKUP_COLLECTIONS)[number];
 
@@ -15,6 +15,7 @@ const REQUIRED_STRINGS: Record<BackupCollection, readonly string[]> = {
   journal: ['id', 'dateKey', 'note', 'highlight'],
   projects: ['id', 'title', 'status'],
   projectStages: ['id', 'projectId', 'title', 'kind'],
+  assistantHistory: ['id', 'createdAt', 'intent', 'title'],
 };
 
 const STRING_FIELDS: Record<BackupCollection, readonly string[]> = {
@@ -26,6 +27,7 @@ const STRING_FIELDS: Record<BackupCollection, readonly string[]> = {
   journal: ['createdAt', 'updatedAt'],
   projects: ['description', 'category', 'createdAt', 'updatedAt'],
   projectStages: ['createdAt', 'updatedAt'],
+  assistantHistory: [],
 };
 const NUMBER_FIELDS: Record<BackupCollection, readonly string[]> = {
   tasks: ['reminderOffsetMin', 'postponeCount'],
@@ -36,17 +38,18 @@ const NUMBER_FIELDS: Record<BackupCollection, readonly string[]> = {
   journal: ['mood'],
   projects: [],
   projectStages: ['order', 'weight'],
+  assistantHistory: [],
 };
 const BOOLEAN_FIELDS: Record<BackupCollection, readonly string[]> = {
   tasks: ['reminderEnabled', 'archived'], habits: ['archived'], habitLogs: [],
-  focusSessions: ['completedNaturally'], goals: ['completed'], journal: [], projects: [], projectStages: ['done'],
+  focusSessions: ['completedNaturally'], goals: ['completed'], journal: [], projects: [], projectStages: ['done'], assistantHistory: ['sample'],
 };
 
 const CATEGORIES = ['work', 'personal', 'health', 'learning', 'finance', 'creative'];
 const DATE_FIELDS: Record<BackupCollection, readonly string[]> = {
   tasks: ['dueDate', 'completedDate'], habits: ['startDate'], habitLogs: ['dateKey'],
   focusSessions: ['dateKey'], goals: ['deadline'], journal: ['dateKey'],
-  projects: ['startDate', 'dueDate'], projectStages: ['dueDate'],
+  projects: ['startDate', 'dueDate'], projectStages: ['dueDate'], assistantHistory: [],
 };
 function validDay(value: unknown): boolean {
   if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
@@ -67,12 +70,12 @@ function validOptionalTime(value: unknown): boolean {
 export function validateBackup(value: unknown): asserts value is KairosBackupPayload {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('invalid-backup');
   const data = value as Record<string, unknown>;
-  if (data.app !== 'KAIROS' || !Number.isInteger(data.version) || ![1, 2, 3].includes(data.version as number)) {
+  if (data.app !== 'KAIROS' || !Number.isInteger(data.version) || ![1, 2, 3, 4].includes(data.version as number)) {
     throw new Error('invalid-backup');
   }
   for (const name of BACKUP_COLLECTIONS) {
     const rows = data[name];
-    if (rows === undefined && (OPTIONAL as readonly string[]).includes(name)) continue;
+    if (rows === undefined && (OPTIONAL as readonly string[]).includes(name) && !(name === 'assistantHistory' && data.version === 4)) continue;
     if (!Array.isArray(rows)) throw new Error('invalid-backup');
     const ids = new Set<string>();
     for (const value of rows) {
@@ -114,6 +117,16 @@ export function validateBackup(value: unknown): asserts value is KairosBackupPay
       if (name === 'habitLogs' && !['completed', 'partial', 'missed'].includes(row.status as string)) throw new Error('invalid-backup');
       if (name === 'projects' && !['active', 'paused', 'done', 'archived'].includes(row.status as string)) throw new Error('invalid-backup');
       if (name === 'projectStages' && !['stage', 'milestone'].includes(row.kind as string)) throw new Error('invalid-backup');
+      if (name === 'assistantHistory') {
+        const action = row.action;
+        if (!Number.isFinite(Date.parse(row.createdAt as string)) ||
+            (row.prompt !== undefined && typeof row.prompt !== 'string') ||
+            !Array.isArray(row.lines) || row.lines.some((line: unknown) => typeof line !== 'string') ||
+            (row.unknown !== undefined && typeof row.unknown !== 'boolean') ||
+            (action !== undefined && (!action || typeof action !== 'object' || Array.isArray(action) ||
+              typeof (action as Record<string, unknown>).label !== 'string' ||
+              !['dashboard', 'tasks', 'projects', 'focus', 'analytics', 'habits'].includes((action as Record<string, unknown>).tab as string)))) throw new Error('invalid-backup');
+      }
     }
   }
 }

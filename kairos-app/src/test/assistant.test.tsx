@@ -35,6 +35,7 @@ beforeEach(async () => {
       db.projectStages,
       db.settings,
       db.eventHistory,
+      db.assistantHistory,
     ],
     async () => {
       await Promise.all([
@@ -47,6 +48,7 @@ beforeEach(async () => {
         db.projects.clear(),
         db.projectStages.clear(),
         db.eventHistory.clear(),
+        db.assistantHistory.clear(),
       ]);
     }
   );

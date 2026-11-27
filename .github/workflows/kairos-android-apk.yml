@@ -42,9 +42,10 @@ jobs:
         working-directory: kairos-app
         run: |
           mkdir -p /tmp/kairos-chrono-tests
-          javac -encoding UTF-8 -d /tmp/kairos-chrono-tests android/app/src/main/java/app/kairos/productivity/ChronoMirrorMath.java android/test/ChronoMirrorMathTest.java android/app/src/main/java/app/kairos/productivity/DndPolicy.java android/test/DndPolicyTest.java
+          javac -encoding UTF-8 -d /tmp/kairos-chrono-tests android/app/src/main/java/app/kairos/productivity/ChronoMirrorMath.java android/test/ChronoMirrorMathTest.java android/app/src/main/java/app/kairos/productivity/DndPolicy.java android/test/DndPolicyTest.java android/app/src/main/java/app/kairos/productivity/WidgetPolicy.java android/test/WidgetPolicyTest.java
           java -cp /tmp/kairos-chrono-tests app.kairos.productivity.ChronoMirrorMathTest
           java -cp /tmp/kairos-chrono-tests app.kairos.productivity.DndPolicyTest
+          java -cp /tmp/kairos-chrono-tests app.kairos.productivity.WidgetPolicyTest
 
       - name: Setup Android SDK
         run: |

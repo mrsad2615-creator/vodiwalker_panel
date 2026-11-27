@@ -34,6 +34,9 @@ export const ACCENT_PRESETS: AccentPreset[] = [
 ];
 
 export const DEFAULT_ACCENT = ACCENT_PRESETS[0].hex;
+/** Native widget surface and safe fallback text; kept aligned with its drawable. */
+export const WIDGET_SURFACE = '#101018';
+export const WIDGET_TEXT_FALLBACK = '#FFFFFF';
 
 export interface BackgroundPreset {
   id: BackgroundId;

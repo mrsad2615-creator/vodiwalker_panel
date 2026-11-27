@@ -933,3 +933,21 @@ button.rail-row:active {
 @media (prefers-reduced-motion: reduce) {
   .kairos-nav-item, .kairos-nav-icon { animation: none !important; transition: none !important; }
 }
+
+/* Motivation: a quiet editorial letter with the action set apart from the thought. */
+.motivation-letter {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  gap: 1.25rem;
+  padding: clamp(1rem, 5vw, 1.5rem);
+  border: 1px solid var(--border);
+  border-radius: 1.5rem;
+  background: radial-gradient(ellipse at 95% 0%, color-mix(in srgb, var(--accent) 18%, transparent), transparent 60%), var(--surface-1);
+}
+.motivation-letter__header { display: flex; align-items: center; justify-content: space-between; gap: .75rem; }
+.motivation-letter__body { position: relative; padding-block: 1.25rem; }
+.motivation-letter__quote { position: absolute; inset-block-start: -1rem; inset-inline-start: -.1rem; color: var(--accent-fg); opacity: .16; font: 700 6rem/1 Georgia, serif; pointer-events: none; }
+.motivation-letter__action { padding: 1rem; border-inline-start: 3px solid var(--accent-fg); border-radius: .75rem; background: var(--surface-2); }
+.chrono-progress-moving { transition: stroke-dashoffset 1s linear; }
+@media (prefers-reduced-motion: reduce) { .chrono-progress-moving { transition: none; } }

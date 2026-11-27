@@ -37,32 +37,35 @@ export function MotivationPage() {
   return (
     <div className="space-y-4 pb-4" data-testid="motivation-page">
       <SectionHeader eyebrow={sectionEyebrow('motivation')} title="نیروی حرکت" meta="کلمات محکم، قدم‌های واقعی" />
-      <p className="text-[11px] leading-6 text-[var(--text-2)]">جمله‌هایی برای شروع، ادامه و بازیابی؛ بدون فشار و بدون نیاز به اینترنت.</p>
+      <p className="text-xs leading-6 text-[var(--text-2)]">جمله‌هایی برای شروع، ادامه و بازیابی؛ بدون فشار و بدون نیاز به اینترنت.</p>
       <div className="flex flex-wrap gap-1.5" aria-label="دسته‌بندی جمله‌ها">
         {([{ id: 'all' as const, label: 'همه' }, ...MOTIVATION_CATEGORIES, { id: 'favorites' as const, label: 'علاقه‌مندی‌ها' }]).map((item) => (
           <button key={item.id} type="button" aria-pressed={filter === item.id} onClick={() => select(item.id)}
-            className={`rounded-full border px-3 py-2 text-[11px] ${filter === item.id ? 'border-[var(--accent-fg)] bg-[var(--accent)] text-[var(--accent-on)]' : 'border-[var(--border)] text-[var(--text-2)]'}`}>
+            className={`min-h-12 rounded-full border px-4 py-2 text-xs ${filter === item.id ? 'border-[var(--accent-fg)] bg-[var(--accent)] text-[var(--accent-on)]' : 'border-[var(--border)] text-[var(--text-2)]'}`}>
             {item.label}
           </button>
         ))}
       </div>
       {line ? (
-        <LuxuryCard className="space-y-5 p-5">
-          <div className="flex items-center justify-between">
-            <span className="flex items-center gap-1.5 text-[10px] font-semibold text-[var(--accent-fg)]"><Sparkles size={16} /> {MOTIVATION_CATEGORIES.find((item) => item.id === line.category)?.label} · الهام امروز</span>
-            <button type="button" disabled={saving} onClick={() => void toggleFavorite()} aria-label={favorites.includes(line.id) ? 'حذف از علاقه‌مندی‌ها' : 'افزودن به علاقه‌مندی‌ها'} aria-pressed={favorites.includes(line.id)} className="grid h-10 w-10 place-items-center rounded-full border border-[var(--border)] text-[var(--accent-fg)] disabled:opacity-50">
+        <section className="motivation-letter" aria-label="جمله و قدم عملی">
+          <div className="motivation-letter__header">
+            <span className="flex items-center gap-2 text-xs font-semibold text-[var(--accent-fg)]"><Sparkles size={16} /> {MOTIVATION_CATEGORIES.find((item) => item.id === line.category)?.label} · الهام امروز</span>
+            <button type="button" disabled={saving} onClick={() => void toggleFavorite()} aria-label={favorites.includes(line.id) ? 'حذف از علاقه‌مندی‌ها' : 'افزودن به علاقه‌مندی‌ها'} aria-pressed={favorites.includes(line.id)} className="grid h-12 w-12 shrink-0 place-items-center rounded-full border border-[var(--border)] text-[var(--accent-fg)] disabled:opacity-50">
               <Heart size={19} weight={favorites.includes(line.id) ? 'fill' : 'regular'} />
             </button>
           </div>
-          <blockquote className="text-[20px] font-bold leading-[2] text-[var(--text)]">{line.text}</blockquote>
-          <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-1)] p-3">
-            <p className="text-[10px] font-semibold text-[var(--accent-fg)]">یک قدم عملی</p>
-            <p className="mt-1 text-[12px] leading-6 text-[var(--text-2)]">{line.action}</p>
+          <div className="motivation-letter__body">
+            <span className="motivation-letter__quote" aria-hidden="true">“</span>
+            <blockquote className="relative text-[clamp(1.15rem,5vw,1.5rem)] font-bold leading-[1.9] text-[var(--text)]">{line.text}</blockquote>
           </div>
-          <button type="button" onClick={() => setOffset((value) => value + 1)} className="btn-ghost-luxury flex w-full items-center justify-center gap-2 rounded-xl py-3 text-xs font-semibold text-[var(--text)]">
+          <div className="motivation-letter__action">
+            <p className="text-xs font-semibold text-[var(--accent-fg)]">یک قدم عملی</p>
+            <p className="mt-1 text-sm leading-7 text-[var(--text)]">{line.action}</p>
+          </div>
+          <button type="button" onClick={() => setOffset((value) => value + 1)} className="btn-ghost-luxury flex min-h-12 w-full items-center justify-center gap-2 rounded-xl px-3 text-sm font-semibold text-[var(--text)]">
             <ArrowLeftRight size={16} /> جملهٔ بعدی
           </button>
-        </LuxuryCard>
+        </section>
       ) : (
         <LuxuryCard className="space-y-2 p-5"><p className="text-sm font-bold text-[var(--text)]">هنوز جمله‌ای ذخیره نکرده‌ای</p><p className="text-xs leading-6 text-[var(--text-2)]">از دسته‌های دیگر جمله‌ای را با دکمهٔ قلب به علاقه‌مندی‌ها اضافه کن.</p><button type="button" onClick={() => select('all')} className="text-xs text-[var(--accent-fg)]">دیدن همهٔ جمله‌ها ←</button></LuxuryCard>
       )}

@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useId, useMemo } from 'react';
 import type { FocusModeType } from '@/types/domain';
 import type { PomodoroPhase } from '@/context/AppContext';
 import { toEnDigits } from '@/lib/format';
@@ -86,12 +86,13 @@ export function CinematicFocusTimer({
   cinemaMode = false,
   nextFocusMinutes = 25,
 }: CinematicFocusTimerProps) {
+  const faceId = useId();
   const clamped = Math.max(0, Math.min(100, progressPercent));
   const dashOffset = ARC_CIRCUMFERENCE * (1 - clamped / 100);
   const activeTicks = Math.round((clamped / 100) * TICK_COUNT);
   const size = cinemaMode ? 318 : 276;
 
-  const shown = mode === 'pomodoro' ? remainingSeconds : elapsedSeconds;
+  const shown = mode === 'free' ? elapsedSeconds : remainingSeconds;
   const parts = splitParts(shown);
   const isBreak = mode !== 'free' && phase !== 'focus';
 
@@ -106,10 +107,10 @@ export function CinematicFocusTimer({
 
   // Label and value are separate nodes on purpose: a Persian word inside an
   // LTR numeric span is what makes a read-out look "jumbled".
-  const metaLabel = isBreak ? 'تمرکز بعدی' : mode === 'pomodoro' ? 'پایان' : 'بدون محدودیت زمان';
+  const metaLabel = isBreak ? 'تمرکز بعدی' : mode === 'free' ? 'بدون محدودیت زمان' : isRunning ? 'پایان تقریبی' : 'زمان باقی‌مانده';
   const metaValue = isBreak
     ? String(Math.max(1, Math.round(nextFocusMinutes)))
-    : mode === 'pomodoro' && remainingSeconds > 0
+    : mode !== 'free' && isRunning && remainingSeconds > 0
     ? finishClock(remainingSeconds)
     : null;
   const metaSuffix = isBreak ? 'دقیقه' : null;
@@ -134,18 +135,20 @@ export function CinematicFocusTimer({
 
   const cycleCount = Math.max(2, Math.min(6, cyclesBeforeLong || 4));
   const cyclesDone = completedCycles % cycleCount;
-  const minutesLabel = Math.max(1, Math.round((mode === 'pomodoro' ? shown : elapsedSeconds) / 60));
+  const hoursLabel = Math.floor(shown / 3600);
+  const minutesLabel = Math.floor((shown % 3600) / 60);
+  const secondsLabel = Math.floor(shown % 60);
 
   return (
     <div
       className="relative select-none"
-      style={{ width: size, height: size }}
+      style={{ width: `min(100%, ${size}px)`, aspectRatio: '1' }}
       role="group"
-      aria-label={`${kicker}، ${minutesLabel} دقیقه`}
+      aria-label={`${kicker}، ${mode === 'free' ? 'سپری‌شده' : 'باقی‌مانده'}، ${hoursLabel ? `${hoursLabel} ساعت و ` : ''}${minutesLabel} دقیقه و ${secondsLabel} ثانیه`}
     >
-      <svg width={size} height={size} viewBox={`0 0 ${VIEW} ${VIEW}`} aria-hidden="true" focusable="false">
+      <svg width="100%" height="100%" viewBox={`0 0 ${VIEW} ${VIEW}`} aria-hidden="true" focusable="false">
         <defs>
-          <radialGradient id="chrono-face" cx="50%" cy="26%" r="78%">
+          <radialGradient id={faceId} cx="50%" cy="26%" r="78%">
             <stop offset="0%" stopColor="var(--surface-2)" />
             <stop offset="72%" stopColor="var(--surface-input)" />
             <stop offset="100%" stopColor="var(--bg)" />
@@ -185,7 +188,7 @@ export function CinematicFocusTimer({
           cx={C}
           cy={C}
           r={FACE_R}
-          fill="url(#chrono-face)"
+          fill={`url(#${faceId})`}
           stroke="rgba(255,255,255,0.08)"
           strokeWidth="1"
         />
@@ -211,7 +214,7 @@ export function CinematicFocusTimer({
           strokeDasharray={ARC_CIRCUMFERENCE}
           strokeDashoffset={dashOffset}
           transform={`rotate(-90 ${C} ${C})`}
-          style={{ transition: isRunning ? 'stroke-dashoffset 1s linear' : 'none' }}
+          className={isRunning ? 'chrono-progress-moving' : undefined}
         />
       </svg>
 

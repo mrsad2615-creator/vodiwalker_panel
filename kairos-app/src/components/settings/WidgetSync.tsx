@@ -6,7 +6,7 @@ import { db } from '@/lib/db';
 import { getTodayKey } from '@/lib/date';
 import { isNativeAndroid } from '@/lib/native';
 import { buildWidgetSnapshot, type WidgetSnapshot } from '@/lib/widgetSnapshot';
-import type { NavTab } from '@/types/domain';
+import type { NavTab, Task } from '@/types/domain';
 
 interface WidgetPlugin { sync(options: { snapshot: WidgetSnapshot }): Promise<void> }
 const Widgets = registerPlugin<WidgetPlugin>('KairosWidgets');
@@ -25,14 +25,29 @@ export function widgetDestination(url: string): NavTab | null {
   return null;
 }
 
+/** Accept only an opaque task ID; no widget URI can mutate data. */
+export function widgetTaskId(url: string): string | null {
+  return /^kairos-widget:\/\/open\/task\/([A-Za-z0-9_-]{1,100})$/.exec(url)?.[1] ?? null;
+}
+
+/** Re-read permissions and task after a tap; a stale widget never opens hidden,
+ * archived, deleted, or no-longer-today content. */
+export async function resolveWidgetTask(id: string, today = getTodayKey()): Promise<Task | null> {
+  return db.transaction('r', [db.tasks, db.settings], async () => {
+    const [task, settings] = await Promise.all([db.tasks.get(id), db.settings.get('default')]);
+    if (!task || !settings || settings.widgetShowTitles === false || task.archived || task.dueDate !== today || (task.sample && settings.sampleVisible === false)) return null;
+    return task;
+  });
+}
+
 /** Runs once in the shell. LiveQuery's undefined loading state must never erase data. */
-export function WidgetSync({ onNavigate }: { onNavigate: (tab: NavTab) => void }) {
+export function WidgetSync({ onNavigate, onOpenTask }: { onNavigate: (tab: NavTab) => void; onOpenTask: (task: Task) => void }) {
   const [day, setDay] = useState(getTodayKey);
   const snapshot = useLiveQuery(async () => {
     const [tasks, settings] = await db.transaction('r', db.tasks, db.settings, async () =>
       Promise.all([db.tasks.toArray(), db.settings.get('default')]));
     if (!settings) return undefined;
-    return buildWidgetSnapshot(tasks, day, settings.widgetShowTitles !== false, settings.sampleVisible !== false);
+    return buildWidgetSnapshot(tasks, day, settings.widgetShowTitles !== false, settings.sampleVisible !== false, settings.accentColor);
   }, [day]);
   useEffect(() => { if (snapshot) void syncWidgetSnapshot(snapshot).catch(() => { window.dispatchEvent(new Event('kairos-widget-sync-error')); }); }, [snapshot]);
   useEffect(() => {
@@ -46,7 +61,19 @@ export function WidgetSync({ onNavigate }: { onNavigate: (tab: NavTab) => void }
     let disposed = false;
     let remove: (() => void) | undefined;
     let receivedNewUrl = false;
-    const open = (url: string) => { const tab = widgetDestination(url); if (!disposed && tab) onNavigate(tab); };
+    let sequence = 0;
+    const open = (url: string) => {
+      const request = ++sequence;
+      const tab = widgetDestination(url);
+      if (!disposed && tab) { onNavigate(tab); return; }
+      const id = widgetTaskId(url);
+      if (!id) return;
+      void resolveWidgetTask(id).then((task) => {
+        if (disposed || request !== sequence) return;
+        onNavigate('tasks');
+        if (task) onOpenTask(task);
+      }).catch(() => { if (!disposed && request === sequence) onNavigate('tasks'); });
+    };
     void App.addListener('appUrlOpen', ({ url }) => { receivedNewUrl = true; open(url); }).then((listener) => {
       if (disposed) { void listener.remove(); return; }
       remove = () => { void listener.remove(); };
@@ -54,6 +81,6 @@ export function WidgetSync({ onNavigate }: { onNavigate: (tab: NavTab) => void }
       void App.getLaunchUrl().then((result) => { if (!receivedNewUrl && result?.url) open(result.url); }).catch(() => undefined);
     }).catch(() => undefined);
     return () => { disposed = true; remove?.(); };
-  }, [onNavigate]);
+  }, [onNavigate, onOpenTask]);
   return null;
 }

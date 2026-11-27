@@ -48,6 +48,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const {
     activeTab,
     setActiveTab,
+    openEditTask,
     settings,
     toasts,
     dismissToast,
@@ -116,9 +117,9 @@ export function AppShell({ children }: { children: ReactNode }) {
   }, [moreOpen]);
 
   const liveFocusDisplay =
-    focus.mode === 'pomodoro'
-      ? formatTimerSeconds(focus.remainingSeconds)
-      : formatTimerSeconds(focus.elapsedSeconds);
+    focus.mode === 'free'
+      ? formatTimerSeconds(focus.elapsedSeconds)
+      : formatTimerSeconds(focus.remainingSeconds);
 
   // Ctrl/⌘+K anywhere in the product opens the box. Escape is handled by the sheet.
   useEffect(() => {
@@ -178,7 +179,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="kairos-ambient-bg h-full w-full">
       <ToastHost toasts={toasts} onDismiss={dismissToast} />
-      <WidgetSync onNavigate={setActiveTab} />
+      <WidgetSync onNavigate={setActiveTab} onOpenTask={openEditTask} />
       <SearchSheet open={searchOpen} onClose={() => setSearchOpen(false)} />
 
       {/* Shell owns the viewport; only `.app-scroll` moves. */}

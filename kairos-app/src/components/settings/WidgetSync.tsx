@@ -40,7 +40,7 @@ export function widgetTaskId(url: string): string | null {
 export async function resolveWidgetTask(id: string, today = getTodayKey()): Promise<Task | null> {
   return db.transaction('r', [db.tasks, db.settings], async () => {
     const [task, settings] = await Promise.all([db.tasks.get(id), db.settings.get('default')]);
-    if (!task || !settings || settings.widgetShowTitles === false || task.archived || task.dueDate !== today || (task.sample && settings.sampleVisible === false)) return null;
+    if (!task || !settings || settings.widgetShowTitles === false || task.archived || task.dueDate !== today || (settings.widgetTaskFilter === 'open' && task.status === 'completed') || (task.sample && settings.sampleVisible === false)) return null;
     return task;
   });
 }
@@ -52,7 +52,7 @@ export function WidgetSync({ onNavigate, onOpenTask, onCreateTask }: { onNavigat
     const [tasks, settings] = await db.transaction('r', db.tasks, db.settings, async () =>
       Promise.all([db.tasks.toArray(), db.settings.get('default')]));
     if (!settings) return undefined;
-    return buildWidgetSnapshot(tasks, day, settings.widgetShowTitles !== false, settings.sampleVisible !== false, settings.accentColor);
+    return buildWidgetSnapshot(tasks, day, settings.widgetShowTitles !== false, settings.sampleVisible !== false, settings.accentColor, Date.now(), settings.widgetTaskFilter === 'open' ? 'open' : 'all');
   }, [day]);
   useEffect(() => { if (snapshot) void syncWidgetSnapshot(snapshot).catch(() => { window.dispatchEvent(new Event('kairos-widget-sync-error')); }); }, [snapshot]);
   useEffect(() => {

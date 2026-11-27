@@ -5,6 +5,7 @@ import { resolveWidgetTask, widgetCreateTask, widgetDestination, widgetTaskId } 
 import { db, ensureSettings } from '@/lib/db';
 import { ACCENT_PRESETS, contrastRatio, WIDGET_SURFACE } from '@/lib/theme';
 import { detectIntent } from '@/lib/commands';
+import { restorableSettings } from '@/lib/backupSettings';
 
 const task = (overrides: Partial<Task>): Task => ({
   id: '1', title: 'گزارش', description: '', dueDate: '2025-03-21', dueTime: null,
@@ -44,6 +45,17 @@ describe('Android widget snapshots', () => {
       expect(snapshot.updatedAt).toBe(42);
     }
   });
+  it('filters widget rows without changing the full-day progress or annual totals', () => {
+    const rows = [task({ id: 'done', status: 'completed', completedDate: '2025-03-21' }), task({ id: 'open' })];
+    const open = buildWidgetSnapshot(rows, '2025-03-21', true, true, undefined, 42, 'open');
+    expect(open.tasks.map((entry) => entry.id)).toEqual(['open']);
+    expect(open.todayTotal).toBe(2);
+    expect(open.todayDone).toBe(1);
+    expect(open.monthlyDone[0]).toBe(1);
+    expect(buildWidgetSnapshot(rows, '2025-03-21', false, true, undefined, 42, 'open').tasks).toEqual([]);
+    expect(restorableSettings({ widgetTaskFilter: 'open' })).toEqual({ widgetTaskFilter: 'open' });
+    expect(() => restorableSettings({ widgetTaskFilter: 'other' })).toThrow();
+  });
   it('recognizes direct coaching requests without claiming a language model', () => {
     expect(detectIntent('یک پیشنهاد بده')).toBe('brief.today');
   });
@@ -75,8 +87,10 @@ describe('task widget navigation safety', () => {
     expect(await resolveWidgetTask(item.id, '2025-03-21')).toBeNull();
     await db.settings.update('default', { sampleVisible: true, widgetShowTitles: false });
     expect(await resolveWidgetTask(item.id, '2025-03-21')).toBeNull();
-    await db.settings.update('default', { widgetShowTitles: true });
-    await db.tasks.update(item.id, { archived: true });
+    await db.settings.update('default', { widgetShowTitles: true, widgetTaskFilter: 'open' });
+    await db.tasks.update(item.id, { status: 'completed' });
+    expect(await resolveWidgetTask(item.id, '2025-03-21')).toBeNull();
+    await db.tasks.update(item.id, { status: 'todo', archived: true });
     expect(await resolveWidgetTask(item.id, '2025-03-21')).toBeNull();
     await db.tasks.delete(item.id);
     expect(await resolveWidgetTask(item.id, '2025-03-21')).toBeNull();

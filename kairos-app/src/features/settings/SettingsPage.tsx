@@ -289,6 +289,16 @@ export function SettingsPage() {
           <input className="h-5 w-5 shrink-0 accent-[var(--accent)]" type="checkbox" checked={settings.widgetShowTitles !== false} onChange={(event) => { void updateSettings({ widgetShowTitles: event.target.checked }).catch(() => pushToast({ title: 'ذخیرهٔ تنظیم ویجت انجام نشد', tone: 'warning' })); }} />
           نمایش عنوان وظایف روی صفحهٔ اصلی
         </label>
+        <label className="flex min-h-12 flex-wrap items-center justify-between gap-2 rounded-xl bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--text)]">
+          <span>فهرست ویجت وظایف</span>
+          <select aria-label="فهرست ویجت وظایف" value={settings.widgetTaskFilter === 'open' ? 'open' : 'all'}
+            onChange={(event) => { const widgetTaskFilter = event.target.value === 'open' ? 'open' : 'all'; void updateSettings({ widgetTaskFilter }).catch(() => pushToast({ title: 'ذخیرهٔ تنظیم ویجت انجام نشد', tone: 'warning' })); }}
+            className="min-h-11 max-w-full rounded-lg border border-[var(--border)] bg-[var(--surface-1)] px-3 text-sm text-[var(--text)]">
+            <option value="all">همهٔ کارهای امروز</option>
+            <option value="open">فقط کارهای ناتمام</option>
+          </select>
+        </label>
+        <p className="text-xs leading-5 text-[var(--text-3)]">این تنظیم برای همهٔ ویجت‌های وظایف اعمال می‌شود؛ شمارنده همچنان همهٔ کارهای امروز را حساب می‌کند.</p>
         <p className="text-xs leading-5 text-[var(--text-3)]">عنوان‌ها به‌طور پیش‌فرض نمایش داده می‌شوند و ممکن است دیگران آن‌ها را ببینند؛ با خاموش‌کردن، برنامه تلاش می‌کند تصویر ویجت را بدون عنوان تازه کند.</p>
         {widgetSyncError && <p role="alert" className="text-xs leading-6 text-[var(--danger)]">همگام‌سازی ویجت ناموفق بود. ممکن است تصویر قدیمی هنوز عنوان‌ها را نشان دهد؛ تا رفع مشکل، ویجت را از صفحهٔ اصلی بردار.</p>}
       </LuxuryCard>

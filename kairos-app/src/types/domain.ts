@@ -239,6 +239,8 @@ export interface UserSettings {
   sampleVisible?: boolean;
   /** Show task titles on the Android home screen; default on. */
   widgetShowTitles?: boolean;
+  /** Filter the daily widget list; aggregate progress still includes all today’s tasks. */
+  widgetTaskFilter?: 'all' | 'open';
   /** Four retained shortcut preferences; the first two are shown in the five-button dock. */
   navShortcuts?: NavTab[];
   motivationFavorites?: string[];

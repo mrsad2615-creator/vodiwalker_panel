@@ -30,6 +30,7 @@ export function restorableSettings(input: unknown): Partial<UserSettings> {
   copy('pomodoroCyclesBeforeLong', count(1, 12));
   copy('intervalBlocks', count(1, 24));
   for (const key of ['autoAdvance', 'soundEnabled', 'hapticsEnabled', 'sampleVisible', 'widgetShowTitles']) copy(key, boolean);
+  copy('widgetTaskFilter', choice(['all', 'open']));
   copy('navShortcuts', (value) => Array.isArray(value) && value.length === 4 && new Set(value).size === 4 && value.every((tab) => SHORTCUTS.includes(tab)));
   copy('motivationFavorites', (value) => Array.isArray(value) && value.length <= 10000 && value.every((id) => typeof id === 'string' && id.length <= 200));
   return output as Partial<UserSettings>;

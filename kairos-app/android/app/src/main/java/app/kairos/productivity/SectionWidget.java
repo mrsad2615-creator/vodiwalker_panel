@@ -106,7 +106,7 @@ final class SectionWidget {
             views.setOnClickPendingIntent(ROWS[i], open(context, WidgetPolicy.safeTaskId(taskId) ? "task" : "tasks", taskId, widgetId * 8 + i + 1));
             views.setViewVisibility(ROWS[i], View.VISIBLE);
         }
-        String message = !showTitles ? "عنوان‌ها در تنظیمات پنهان شده‌اند" : total == 0 ? "امروز وظیفه‌ای ثبت نشده است" : visible == 0 ? "برای دیدن کارها برنامه را باز کن" : "";
+        String message = !showTitles ? "عنوان‌ها در تنظیمات پنهان شده‌اند" : total == 0 ? "امروز وظیفه‌ای ثبت نشده است" : count == 0 && data.optString("taskFilter").equals("open") && done == total ? "همهٔ کارهای امروز انجام شده‌اند" : visible == 0 ? "برای دیدن کارها برنامه را باز کن" : "";
         views.setTextViewText(R.id.daily_message, message);
         views.setViewVisibility(R.id.daily_message, message.isEmpty() ? View.GONE : View.VISIBLE);
     }
@@ -132,6 +132,8 @@ final class SectionWidget {
             if (i > 0) accessible.append("، ");
             accessible.append(names[i]).append(" ").append(fa(values[i]));
         }
+        // Short launchers need the graph and month labels more than the explanatory caption.
+        if (height < 160) views.setViewVisibility(R.id.annual_axis, View.GONE);
         views.setImageViewBitmap(R.id.annual_graph, annualChart(values, max, safeAccent(data)));
         views.setContentDescription(R.id.annual_graph, accessible.toString());
     }

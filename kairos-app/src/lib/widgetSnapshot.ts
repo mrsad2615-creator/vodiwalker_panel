@@ -8,6 +8,7 @@ export interface WidgetSnapshot {
   updatedAt: number;
   accent: string;
   showTitles: boolean;
+  taskFilter: 'all' | 'open';
   todayTotal: number;
   todayDone: number;
   tasks: { id: string; title: string; status: Task['status']; sample: boolean }[];
@@ -15,7 +16,7 @@ export interface WidgetSnapshot {
 }
 
 /** A small, read-only, date-stamped projection. No IDs or private titles when hidden. */
-export function buildWidgetSnapshot(tasks: Task[], day: string, showTitles: boolean, sampleVisible: boolean, accentColor = DEFAULT_ACCENT, updatedAt = Date.now()): WidgetSnapshot {
+export function buildWidgetSnapshot(tasks: Task[], day: string, showTitles: boolean, sampleVisible: boolean, accentColor = DEFAULT_ACCENT, updatedAt = Date.now(), taskFilter: 'all' | 'open' = 'all'): WidgetSnapshot {
   const derived = deriveAccent(accentColor).fg;
   const accent = contrastRatio(derived, WIDGET_SURFACE) >= 4.5 ? derived : WIDGET_TEXT_FALLBACK;
   const visible = tasks.filter((t) => sampleVisible || !t.sample);
@@ -36,10 +37,10 @@ export function buildWidgetSnapshot(tasks: Task[], day: string, showTitles: bool
     }
   }
   return {
-    day, year, updatedAt, accent, showTitles,
+    day, year, updatedAt, accent, showTitles, taskFilter,
     todayTotal: today.length,
     todayDone: today.filter((task) => task.status === 'completed').length,
-    tasks: showTitles ? today.slice(0, 3).map((task) => ({ id: task.id, title: task.title.slice(0, 80), status: task.status, sample: task.sample === true })) : [],
+    tasks: showTitles ? today.filter((task) => taskFilter !== 'open' || task.status !== 'completed').slice(0, 3).map((task) => ({ id: task.id, title: task.title.slice(0, 80), status: task.status, sample: task.sample === true })) : [],
     monthlyDone,
   };
 }

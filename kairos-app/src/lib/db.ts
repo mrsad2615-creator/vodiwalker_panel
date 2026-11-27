@@ -53,6 +53,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
   sampleSetupComplete: false,
   sampleVisible: true,
   widgetShowTitles: true,
+  widgetTaskFilter: 'all',
   aiEnabled: false,
   aiBaseUrl: '',
   aiModel: '',

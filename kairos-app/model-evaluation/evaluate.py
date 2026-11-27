@@ -32,12 +32,14 @@ def main():
                   f"<|im_start|>user\n{question} /no_think<|im_end|>\n"
                   "<|im_start|>assistant\n<think>\n\n</think>\n\n")
         command = [CLI, '-m', MODEL, '-p', prompt, '-n', '128', '-c', '1024',
-                   '-t', '4', '--temp', '0', '--no-display-prompt', '--no-conversation',
+                   '-t', '4', '--temp', '0.7', '--top-p', '0.8', '--top-k', '20',
+                   '--min-p', '0', '--seed', '42', '--no-display-prompt', '--no-conversation',
                    '--no-warmup']
         start = time.monotonic()
         try:
             process = subprocess.run(command, capture_output=True, text=True, timeout=180, check=False)
-            results.append({'case': name, 'question': question, 'response': process.stdout.strip(),
+            response = process.stdout.replace('[end of text]', '').strip()
+            results.append({'case': name, 'question': question, 'response': response,
                             'exit_code': process.returncode, 'seconds': round(time.monotonic() - start, 2),
                             'stderr_tail': process.stderr[-4000:]})
         except subprocess.TimeoutExpired:
@@ -49,7 +51,8 @@ def main():
     for result in results:
         print(f"{result['case']}: {result['seconds']} s; exit {result['exit_code']}\n{result['response']}\n{result.get('stderr_tail', '')}\n")
         # Annotations also make diagnostics available when artifact storage is unreachable.
-        encoded = base64.b64encode(json.dumps(result, ensure_ascii=False).encode('utf-8')).decode('ascii')
+        diagnostic = {key: result.get(key) for key in ('case', 'response', 'exit_code', 'seconds', 'error')}
+        encoded = base64.b64encode(json.dumps(diagnostic, ensure_ascii=False).encode('utf-8')).decode('ascii')
         print(f"::notice title=Model evaluation {result['case']}::{encoded}")
     if any(result['exit_code'] != 0 or not result['response'] for result in results):
         raise SystemExit('Inference failed or produced empty output. Manual quality review is still mandatory even on success.')

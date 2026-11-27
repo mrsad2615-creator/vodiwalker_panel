@@ -14,6 +14,18 @@ jobs:
   cpu-evaluation:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: IQ2_M
+            revision: 0b1243c067555ab5f7c016be22227b79ca2514ff
+            filename: Qwen3-0.6B-UD-IQ2_M.gguf
+            sha256: 2c473f73f162dae9e09de4cec78eb6569ac7e78aa65dfcd71e40939e52fcf69b
+          - name: IQ3_XXS
+            revision: 17429132c7b3c2dbe0ec7e06ee085aa89a96994f
+            filename: Qwen3-0.6B-UD-IQ3_XXS.gguf
+            sha256: 0ed6dab036349ba8198324c70002a15397e8bdeb06748eee5c631f872e1eaf2f
     steps:
       - uses: actions/checkout@v4
       - name: Retrieve pinned runtime and model
@@ -26,9 +38,10 @@ jobs:
           git -C "$RUNNER_TEMP/llama.cpp" checkout -q --detach FETCH_HEAD
           test "$(git -C "$RUNNER_TEMP/llama.cpp" rev-parse HEAD)" = c0a97b762e5ec767dc414f0dc4979befd4c09a52
           curl --fail --location --retry 3 --retry-all-errors \
-            'https://huggingface.co/unsloth/Qwen3-0.6B-GGUF/resolve/0b1243c067555ab5f7c016be22227b79ca2514ff/Qwen3-0.6B-UD-IQ2_M.gguf?download=true' \
+            'https://huggingface.co/unsloth/Qwen3-0.6B-GGUF/resolve/${{ matrix.revision }}/${{ matrix.filename }}?download=true' \
             -o "$RUNNER_TEMP/model.gguf"
-          echo "2c473f73f162dae9e09de4cec78eb6569ac7e78aa65dfcd71e40939e52fcf69b  $RUNNER_TEMP/model.gguf" | sha256sum -c -
+          echo "${{ matrix.sha256 }}  $RUNNER_TEMP/model.gguf" | sha256sum -c -
+          stat -c 'Model file: %s bytes' "$RUNNER_TEMP/model.gguf"
       - name: Build CPU inference engine
         shell: bash
         run: |
@@ -47,6 +60,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: model-evaluation-${{ github.run_number }}
+          name: model-evaluation-${{ matrix.name }}-${{ github.run_number }}
           path: results/
           if-no-files-found: warn

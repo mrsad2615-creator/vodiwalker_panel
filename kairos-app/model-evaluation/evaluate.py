@@ -54,8 +54,10 @@ def main():
         diagnostic = {key: result.get(key) for key in ('case', 'response', 'exit_code', 'seconds', 'error')}
         encoded = base64.b64encode(json.dumps(diagnostic, ensure_ascii=False).encode('utf-8')).decode('ascii')
         print(f"::notice title=Model evaluation {result['case']}::{encoded}")
-    if any(result['exit_code'] != 0 or not result['response'] for result in results):
-        raise SystemExit('Inference failed or produced empty output. Manual quality review is still mandatory even on success.')
+    arithmetic = next(result['response'] for result in results if result['case'] == 'arithmetic')
+    if (any(result['exit_code'] != 0 or not result['response'] for result in results)
+            or not any(value in arithmetic for value in ('50', '۵۰', 'پنجاه'))):
+        raise SystemExit('Inference failed, produced empty output, or missed the arithmetic smoke check. Manual quality review is mandatory even on success.')
 
 
 if __name__ == '__main__':

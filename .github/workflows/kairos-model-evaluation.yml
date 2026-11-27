@@ -26,6 +26,11 @@ jobs:
             revision: 17429132c7b3c2dbe0ec7e06ee085aa89a96994f
             filename: Qwen3-0.6B-UD-IQ3_XXS.gguf
             sha256: 0ed6dab036349ba8198324c70002a15397e8bdeb06748eee5c631f872e1eaf2f
+          # Diagnostic control only: this 397 MB model exceeds the APK budget.
+          - name: Q4_K_M_control
+            revision: f2d6f9ca53a254cc379437c49e4b2eb447f779df
+            filename: Qwen3-0.6B-Q4_K_M.gguf
+            sha256: ac2d97712095a558e31573f62f466a3f9d93990898b0ec79d7c974c1780d524a
     steps:
       - uses: actions/checkout@v4
       - name: Retrieve pinned runtime and model

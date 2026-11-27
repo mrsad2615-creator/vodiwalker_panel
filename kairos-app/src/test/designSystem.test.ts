@@ -1,6 +1,7 @@
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { contrastRatio } from '@/lib/theme';
 
 const ROOT = join(process.cwd(), 'src');
 const CSS = readFileSync(join(ROOT, 'styles/design-system.css'), 'utf8');
@@ -51,6 +52,17 @@ describe('design system standards', () => {
     // only two surface radii for containers
     expect(CSS).toMatch(/--r-rail: 16px;/);
     expect(CSS).toMatch(/--r-card: 16px;/);
+  });
+
+  it('keeps muted text at AA contrast on the four default solid surfaces', () => {
+    const value = (name: string) => {
+      const match = CSS.match(new RegExp(`--${name}:\\s*(#[0-9a-f]{6});`, 'i'));
+      if (!match) throw new Error(`Missing ${name}`);
+      return match[1];
+    };
+    for (const surface of ['bg', 'surface-1', 'surface-2', 'surface-3']) {
+      expect(contrastRatio(value('text-3'), value(surface))).toBeGreaterThanOrEqual(4.5);
+    }
   });
 
   it('keeps one accent and no per-section palette', () => {

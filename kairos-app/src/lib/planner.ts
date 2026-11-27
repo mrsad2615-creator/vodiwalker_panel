@@ -94,7 +94,7 @@ export function measureCapacity(
       basis: 'history',
       days,
       unknown: false,
-      note: `میانگین روزهای واقعی تمرکز (${days} روز ثبت‌شده)`,
+      note: `میانهٔ روزهای دارای تمرکز، با حداقل ۳۰ دقیقه (${days} روز ثبت‌شده)`,
     };
   }
 

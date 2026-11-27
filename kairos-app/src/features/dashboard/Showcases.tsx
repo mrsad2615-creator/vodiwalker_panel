@@ -754,8 +754,8 @@ export function PlanShowcase({
         <div className="min-w-0">
           <span className="eyebrow block leading-none">PLAN</span>
           <div className="mt-1 flex items-baseline gap-1.5">
-            <h2 className="text-[12.5px] font-semibold text-[var(--text)]">برنامهٔ امروز</h2>
-            <span className="num-geo text-[9.5px] text-[var(--text-3)]">
+            <h2 className="text-sm font-semibold text-[var(--text)]">برنامهٔ امروز</h2>
+            <span className="num-geo text-xs text-[var(--text-3)]">
               <Numeric value={totalMinutes} variant="geo" /> دقیقه از{' '}
               <Numeric value={plan.capacityMinutes} variant="geo" />
             </span>
@@ -765,13 +765,13 @@ export function PlanShowcase({
           type="button"
           onClick={onOpenTasks}
           aria-label="همهٔ وظایف"
-          className="shrink-0 text-[10px] font-medium text-[var(--accent-fg)]"
+          className="shrink-0 text-xs font-medium text-[var(--accent-fg)]"
         >
           همه
         </button>
       </header>
 
-      <p className="mt-1 text-[9.5px] leading-4 text-[var(--text-3)]">
+      <p className="mt-1 text-xs leading-4 text-[var(--text-3)]">
         {plan.capacityUnknown ? '⚠ ' : ''}
         {plan.capacityNote}
       </p>
@@ -780,7 +780,7 @@ export function PlanShowcase({
         <button
           type="button"
           onClick={onOpenTasks}
-          className="mt-2 text-[10.5px] text-[var(--text-3)]"
+          className="mt-2 text-xs text-[var(--text-3)]"
         >
           کاری برای امروز پیدا نکردم؛ اگر چیزی هست اضافه‌اش کن.
         </button>
@@ -795,12 +795,12 @@ export function PlanShowcase({
                 transition={{ delay: index * 0.04 }}
                 className="flex items-start gap-2"
               >
-                <span className="num-geo mt-0.5 grid h-4 w-4 shrink-0 place-items-center rounded-full bg-[color-mix(in_srgb,var(--accent)_18%,transparent)] text-[8.5px] font-bold text-[var(--accent-fg)]">
+                <span className="num-geo mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-[color-mix(in_srgb,var(--accent)_18%,transparent)] text-[10px] font-bold text-[var(--accent-fg)]">
                   <Numeric value={index + 1} variant="geo" />
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[11px] text-[var(--text)]">{block.title}</span>
-                  <span className="num-geo block text-[9px] text-[var(--text-3)]">
+                  <span className="block truncate text-sm text-[var(--text)]">{block.title}</span>
+                  <span className="num-geo block text-xs text-[var(--text-3)]">
                     <Numeric value={block.minutes} variant="geo" /> دقیقه · {block.reason}
                   </span>
                 </span>
@@ -809,7 +809,7 @@ export function PlanShowcase({
           </ol>
 
           {plan.overflow.length > 0 && (
-            <p className="mt-2 border-t border-[var(--border)] pt-1.5 text-[9px] text-[var(--text-3)]">
+            <p className="mt-2 border-t border-[var(--border)] pt-1.5 text-xs text-[var(--text-3)]">
               و <Numeric value={plan.overflow.length} variant="geo" /> کار که در ظرفیت امروز جا نمی‌شود — پنهانشان
               نمی‌کنم.
             </p>
@@ -818,9 +818,9 @@ export function PlanShowcase({
           <button
             type="button"
             onClick={onApply}
-            className="mt-2.5 w-full rounded-[var(--r-field)] border border-[var(--accent-fg)]/35 py-1.5 text-[10.5px] font-semibold text-[var(--accent-fg)] transition-colors active:bg-[color-mix(in_srgb,var(--accent)_14%,transparent)]"
+            className="mt-2.5 w-full rounded-[var(--r-field)] border border-[var(--accent-fg)]/35 min-h-11 py-2 text-xs font-semibold text-[var(--accent-fg)] transition-colors active:bg-[color-mix(in_srgb,var(--accent)_14%,transparent)]"
           >
-            اعمال در برنامهٔ روز
+            پیش‌نمایش زمان‌بندی
           </button>
         </>
       )}

@@ -6,7 +6,6 @@ import {
   clearHabitLog,
   setTaskStatus,
   updateGoal,
-  updateTask,
   updateSettings,
   upsertHabitLog,
 } from '@/lib/db';
@@ -61,11 +60,14 @@ import { GoalModal } from './GoalModal';
 import { JournalCard } from '@/features/journal/JournalCard';
 import { computeGoalProgress } from '@/lib/goals';
 import { nextDataStep, pickInsights } from '@/lib/insights';
-import { buildDayPlan, schedulePlan } from '@/lib/planner';
+import { buildDayPlan } from '@/lib/planner';
+import { DayPlanSheet } from './DayPlanSheet';
+import { RecentTimeChanges } from './RecentTimeChanges';
 
 export function DashboardPage() {
   const { setActiveTab, openCreateTask, openEditTask, settings, pushToast } = useApp();
   const [clock, setClock] = useState(() => formatClockHHMM());
+  const [planOpen, setPlanOpen] = useState(false);
   const [goalModalState, setGoalModalState] = useState<{ open: boolean; goal?: Goal | null }>({
     open: false,
   });
@@ -183,20 +185,11 @@ export function DashboardPage() {
     [tasks, focusSessions, todayKey, settings.dailyFocusGoalMinutes]
   );
 
-  const applyPlan = async () => {
-    const existing = new Map(tasks.map((task) => [task.id, task.dueTime]));
-    const { scheduled } = schedulePlan(plan, existing);
-    if (scheduled.length === 0) {
-      pushToast({ title: 'چیزی برای زمان‌بندی نبود', description: 'همهٔ کارها وقت داشتند.', tone: 'default' });
-      return;
-    }
-    for (const entry of scheduled) {
-      await updateTask(entry.taskId, { dueTime: entry.dueTime });
-    }
+  const planApplied = (count: number) => {
     void triggerHaptic('success', settings.hapticsEnabled);
     pushToast({
-      title: 'برنامه اعمال شد',
-      description: `${scheduled.length} کار زمان گرفت؛ هر کدام با یک بار «برگرد» قابل بازگشت است.`,
+      title: 'زمان‌ها ثبت شد',
+      description: `${count.toLocaleString('fa-IR')} کار زمان گرفت؛ پنج تغییر اخیر در خانه برای بازگردانی دیده می‌شوند.`,
       tone: 'success',
     });
   };
@@ -435,6 +428,7 @@ export function DashboardPage() {
 
       {/* ── JOURNAL — the day, in your own words ────────────────────────────── */}
       <JournalCard />
+      <RecentTimeChanges />
 
       {/* ── NOTICES — hairline rows, never cards ───────────────────────────── */}
       {summary.overdueCount > 0 && (
@@ -516,7 +510,7 @@ export function DashboardPage() {
           />
           <PlanShowcase
             plan={plan}
-            onApply={() => void applyPlan()}
+            onApply={() => setPlanOpen(true)}
             onOpenTasks={() => setActiveTab('tasks')}
           />
           <FocusShowcase
@@ -825,6 +819,7 @@ export function DashboardPage() {
         </>
       )}
 
+      <DayPlanSheet open={planOpen} onClose={() => setPlanOpen(false)} plan={plan} onApplied={planApplied} />
       <GoalModal
         open={goalModalState.open}
         goal={goalModalState.goal}

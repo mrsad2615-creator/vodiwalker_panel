@@ -1,5 +1,5 @@
 import { completeFirstRun } from '@/test/helpers/firstRun';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import App from '@/App';
 import { db } from '@/lib/db';
@@ -97,6 +97,8 @@ describe('projects room', () => {
   });
 });
 
+afterEach(() => vi.useRealTimers());
+
 describe('home intelligence', () => {
   it('says "not enough data" instead of inventing an insight', async () => {
     await boot();
@@ -107,6 +109,9 @@ describe('home intelligence', () => {
   });
 
   it('shows a measured plan and applies times that can be undone', async () => {
+    // Fixed morning avoids relying on the wall clock or crossing midnight.
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 10, 20, 9, 0));
     // Three measured days → the planner is allowed a real capacity.
     await boot();
     const today = getTodayKey();
@@ -154,7 +159,13 @@ describe('home intelligence', () => {
     expect(plan.textContent).toContain('گزارش هفتگی');
     expect(plan.textContent).not.toContain('⚠');
 
-    fireEvent.click(screen.getByRole('button', { name: 'اعمال در برنامهٔ روز' }));
+    fireEvent.click(screen.getByRole('button', { name: 'پیش‌نمایش زمان‌بندی' }));
+    const dialog = screen.getByRole('dialog', { name: 'زمان‌بندی برنامهٔ امروز' });
+    fireEvent.change(within(dialog).getByLabelText('شروع از'), { target: { value: '10:00' } });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'پیش‌نمایش زمان‌ها' }));
+    const preview = await within(dialog).findByRole('region', { name: 'پیش‌نمایش برنامه' });
+    expect((await db.tasks.get('tsk-plan-1'))?.dueTime).toBeNull();
+    fireEvent.click(within(preview).getByRole('button', { name: 'تأیید و ثبت زمان‌ها' }));
 
     await waitFor(async () => {
       const task = await db.tasks.get('tsk-plan-1');

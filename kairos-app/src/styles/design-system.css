@@ -21,7 +21,8 @@
   /* Type */
   --text: #ececef;
   --text-2: #9c9ca6;
-  --text-3: #6b6b75;
+  /* Secondary annotations remain readable on the four default surfaces. */
+  --text-3: #8b8b95;
 
   /* Single, themeable accent — pure high-voltage violet by default.
      The theme engine (src/lib/theme.ts) overwrites every one of these on :root

@@ -35,7 +35,8 @@ describe('focus recording safety', () => {
     fireEvent.click(screen.getByText('interval'));
     fireEvent.click(screen.getByText('auto'));
     fireEvent.click(screen.getByText('start'));
-    await waitFor(async () => expect(await db.activeRun.get('active')).toBeDefined());
+    await waitFor(() => expect(screen.getByTestId('clock')).toHaveTextContent('interval:true'));
+    await waitFor(async () => expect(await db.activeRun.get('active')).toMatchObject({ mode: 'interval', isRunning: true, autoAdvance: true }));
     const spy = vi.spyOn(db.activeRun, 'put').mockRejectedValueOnce(new Error('disk failure'));
     now += 190_000;
     fireEvent.focus(window);

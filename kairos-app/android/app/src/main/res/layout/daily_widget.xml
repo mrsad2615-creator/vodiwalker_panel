@@ -4,8 +4,9 @@
     android:layoutDirection="rtl" android:orientation="vertical" android:background="@drawable/section_widget_bg"
     android:paddingStart="16dp" android:paddingEnd="16dp" android:paddingTop="12dp" android:paddingBottom="10dp">
     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layoutDirection="ltr" android:gravity="center_vertical" android:orientation="horizontal">
-        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="KAIROS"
-            android:letterSpacing="0.1" android:textColor="#FFBCB7CD" android:textSize="10sp" />
+        <TextView android:id="@+id/daily_add" android:layout_width="44dp" android:layout_height="44dp"
+            android:gravity="center" android:text="+" android:textSize="25sp" android:textColor="#FFE0D3FF"
+            android:contentDescription="افزودن وظیفهٔ امروز" />
         <TextView android:id="@+id/daily_title" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content"
             android:layout_marginStart="12dp" android:gravity="end" android:textDirection="rtl"
             android:text="کارهای امروز" android:textColor="#FFFFFFFF" android:textStyle="bold" android:textSize="16sp" />

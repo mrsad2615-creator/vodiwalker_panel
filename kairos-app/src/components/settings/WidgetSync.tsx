@@ -25,6 +25,11 @@ export function widgetDestination(url: string): NavTab | null {
   return null;
 }
 
+/** Opens a form only; widget URLs never mutate application data. */
+export function widgetCreateTask(url: string): boolean {
+  return url === 'kairos-widget://open/create-task';
+}
+
 /** Accept only an opaque task ID; no widget URI can mutate data. */
 export function widgetTaskId(url: string): string | null {
   return /^kairos-widget:\/\/open\/task\/([A-Za-z0-9_-]{1,100})$/.exec(url)?.[1] ?? null;
@@ -41,7 +46,7 @@ export async function resolveWidgetTask(id: string, today = getTodayKey()): Prom
 }
 
 /** Runs once in the shell. LiveQuery's undefined loading state must never erase data. */
-export function WidgetSync({ onNavigate, onOpenTask }: { onNavigate: (tab: NavTab) => void; onOpenTask: (task: Task) => void }) {
+export function WidgetSync({ onNavigate, onOpenTask, onCreateTask }: { onNavigate: (tab: NavTab) => void; onOpenTask: (task: Task) => void; onCreateTask: () => void }) {
   const [day, setDay] = useState(getTodayKey);
   const snapshot = useLiveQuery(async () => {
     const [tasks, settings] = await db.transaction('r', db.tasks, db.settings, async () =>
@@ -64,6 +69,7 @@ export function WidgetSync({ onNavigate, onOpenTask }: { onNavigate: (tab: NavTa
     let sequence = 0;
     const open = (url: string) => {
       const request = ++sequence;
+      if (!disposed && widgetCreateTask(url)) { onNavigate('tasks'); onCreateTask(); return; }
       const tab = widgetDestination(url);
       if (!disposed && tab) { onNavigate(tab); return; }
       const id = widgetTaskId(url);
@@ -81,6 +87,6 @@ export function WidgetSync({ onNavigate, onOpenTask }: { onNavigate: (tab: NavTa
       void App.getLaunchUrl().then((result) => { if (!receivedNewUrl && result?.url) open(result.url); }).catch(() => undefined);
     }).catch(() => undefined);
     return () => { disposed = true; remove?.(); };
-  }, [onNavigate, onOpenTask]);
+  }, [onNavigate, onOpenTask, onCreateTask]);
   return null;
 }

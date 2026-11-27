@@ -49,6 +49,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     activeTab,
     setActiveTab,
     openEditTask,
+    openCreateTask,
     settings,
     toasts,
     dismissToast,
@@ -179,7 +180,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="kairos-ambient-bg h-full w-full">
       <ToastHost toasts={toasts} onDismiss={dismissToast} />
-      <WidgetSync onNavigate={setActiveTab} onOpenTask={openEditTask} />
+      <WidgetSync onNavigate={setActiveTab} onOpenTask={openEditTask} onCreateTask={openCreateTask} />
       <SearchSheet open={searchOpen} onClose={() => setSearchOpen(false)} />
 
       {/* Shell owns the viewport; only `.app-scroll` moves. */}

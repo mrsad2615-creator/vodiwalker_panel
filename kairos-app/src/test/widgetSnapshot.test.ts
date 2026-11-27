@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { Task } from '@/types/domain';
 import { buildWidgetSnapshot } from '@/lib/widgetSnapshot';
-import { resolveWidgetTask, widgetDestination, widgetTaskId } from '@/components/settings/WidgetSync';
+import { resolveWidgetTask, widgetCreateTask, widgetDestination, widgetTaskId } from '@/components/settings/WidgetSync';
 import { db, ensureSettings } from '@/lib/db';
 import { ACCENT_PRESETS, contrastRatio, WIDGET_SURFACE } from '@/lib/theme';
 import { detectIntent } from '@/lib/commands';
@@ -48,6 +48,8 @@ describe('Android widget snapshots', () => {
     expect(detectIntent('یک پیشنهاد بده')).toBe('brief.today');
   });
   it('only routes recognized widget links, never data-changing actions', () => {
+    expect(widgetCreateTask('kairos-widget://open/create-task')).toBe(true);
+    expect(widgetCreateTask('kairos-widget://open/create-task?title=test')).toBe(false);
     expect(widgetDestination('kairos-widget://open/tasks')).toBe('tasks');
     expect(widgetDestination('kairos-widget://open/analytics')).toBe('analytics');
     expect(widgetDestination('kairos-widget://open/focus')).toBe('focus');

@@ -52,6 +52,11 @@ final class SectionWidget {
         views.setOnClickPendingIntent(daily ? R.id.daily_root : R.id.annual_root,
                 open(context, daily ? "tasks" : "analytics", null, widgetId * 8));
 
+        if (daily) {
+            // This opens the app's create form; it never writes from a widget intent.
+            views.setOnClickPendingIntent(R.id.daily_add, open(context, "create-task", null, widgetId * 8 + 4));
+        }
+
         if (stale) {
             views.setTextViewText(summary, "برای تازه‌سازی برنامه را باز کن");
             views.setTextViewText(updated, "آخرین تصویر مربوط به امروز نیست");

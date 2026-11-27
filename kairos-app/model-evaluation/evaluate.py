@@ -33,7 +33,7 @@ def main():
                   "<|im_start|>assistant\n<think>\n\n</think>\n\n")
         command = [CLI, '-m', MODEL, '-p', prompt, '-n', '128', '-c', '1024',
                    '-t', '4', '--temp', '0', '--no-display-prompt', '--no-conversation',
-                   '--no-warmup', '--log-disable']
+                   '--no-warmup']
         start = time.monotonic()
         try:
             process = subprocess.run(command, capture_output=True, text=True, timeout=180, check=False)

@@ -1,0 +1,52 @@
+name: Evaluate embedded model candidate
+
+on:
+  push:
+    branches: ['arena/33c8480b-vodiwalker-panel']
+    paths:
+      - '.github/workflows/kairos-model-evaluation.yml'
+      - 'kairos-app/model-evaluation/**'
+
+permissions:
+  contents: read
+
+jobs:
+  cpu-evaluation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Retrieve pinned runtime and model
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/llama.cpp"
+          git -C "$RUNNER_TEMP/llama.cpp" init -q
+          git -C "$RUNNER_TEMP/llama.cpp" fetch -q --depth 1 https://github.com/ggml-org/llama.cpp.git c0a97b762e5ec767dc414f0dc4979befd4c09a52
+          git -C "$RUNNER_TEMP/llama.cpp" checkout -q --detach FETCH_HEAD
+          test "$(git -C "$RUNNER_TEMP/llama.cpp" rev-parse HEAD)" = c0a97b762e5ec767dc414f0dc4979befd4c09a52
+          curl --fail --location --retry 3 --retry-all-errors \
+            'https://huggingface.co/unsloth/Qwen3-0.6B-GGUF/resolve/0b1243c067555ab5f7c016be22227b79ca2514ff/Qwen3-0.6B-UD-IQ2_M.gguf?download=true' \
+            -o "$RUNNER_TEMP/model.gguf"
+          echo "2c473f73f162dae9e09de4cec78eb6569ac7e78aa65dfcd71e40939e52fcf69b  $RUNNER_TEMP/model.gguf" | sha256sum -c -
+      - name: Build CPU inference engine
+        shell: bash
+        run: |
+          set -euo pipefail
+          cmake -S "$RUNNER_TEMP/llama.cpp" -B "$RUNNER_TEMP/llama-build" \
+            -DCMAKE_BUILD_TYPE=Release -DLLAMA_CURL=OFF -DLLAMA_BUILD_TESTS=OFF -DGGML_NATIVE=OFF
+          cmake --build "$RUNNER_TEMP/llama-build" --target llama-cli -j 2
+      - name: Run real offline inference against Persian prompts
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p results
+          python3 kairos-app/model-evaluation/evaluate.py \
+            "$RUNNER_TEMP/llama-build/bin/llama-cli" "$RUNNER_TEMP/model.gguf" results
+      - name: Upload synthetic evaluation results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: model-evaluation-${{ github.run_number }}
+          path: results/
+          if-no-files-found: warn

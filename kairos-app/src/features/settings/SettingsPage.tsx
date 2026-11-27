@@ -68,6 +68,12 @@ export function SettingsPage() {
   const [backupEstimate, setBackupEstimate] = useState<BackupImportResult | null>(null);
   const [restorePreferences, setRestorePreferences] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [encryptExport, setEncryptExport] = useState(false);
+  const [exportPassword, setExportPassword] = useState('');
+  const [exportConfirmation, setExportConfirmation] = useState('');
+  const [encryptedFile, setEncryptedFile] = useState<File | null>(null);
+  const [importPassword, setImportPassword] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const backupReadVersion = useRef(0);
 
@@ -145,13 +151,21 @@ export function SettingsPage() {
   };
 
   const handleExport = async () => {
+    if (exporting) return;
+    if (encryptExport && (exportPassword.length < 12 || exportPassword !== exportConfirmation)) {
+      pushToast({ title: 'گذرواژه را بررسی کنید', description: 'حداقل ۱۲ نویسه و تکرار یکسان لازم است.', tone: 'warning' });
+      return;
+    }
+    setExporting(true);
     let result: Awaited<ReturnType<typeof exportBackupFile>>;
     try {
       const data = await exportBackup();
-      result = await exportBackupFile(data);
+      result = await exportBackupFile(data, encryptExport ? exportPassword : undefined);
     } catch {
-      pushToast({ title: 'ساخت پشتیبان انجام نشد', description: 'خواندن داده‌ها کامل نشد؛ دوباره تلاش کنید.', tone: 'warning' });
+      pushToast({ title: 'ساخت پشتیبان انجام نشد', description: 'خواندن داده‌ها یا رمزگذاری کامل نشد؛ دوباره تلاش کنید.', tone: 'warning' });
       return;
+    } finally {
+      setExporting(false);
     }
     if (!result.ok) {
       pushToast({
@@ -161,6 +175,8 @@ export function SettingsPage() {
       });
       return;
     }
+    setExportPassword('');
+    setExportConfirmation('');
     pushToast({
       title: result.via === 'share' ? 'پشتیبان آمادهٔ اشتراک‌گذاری است' : 'درخواست دانلود پشتیبان ارسال شد',
       description:
@@ -205,22 +221,32 @@ export function SettingsPage() {
     );
   };
 
-  const handleImportFile = async (file: File) => {
+  const handleImportFile = async (file: File, password?: string) => {
     const version = ++backupReadVersion.current;
     setPendingBackup(null);
     setBackupEstimate(null);
     setRestorePreferences(false);
+    if (password === undefined) {
+      setEncryptedFile(null);
+      setImportPassword('');
+    }
     try {
-      const backup = await readBackupFile(file);
+      const backup = await readBackupFile(file, password);
       const estimate = await inspectBackup(backup);
       if (version !== backupReadVersion.current) return;
+      setEncryptedFile(null);
+      setImportPassword('');
       setBackupEstimate(estimate);
       setPendingBackup(backup);
-    } catch {
+    } catch (error) {
       if (version !== backupReadVersion.current) return;
+      if (error instanceof Error && error.message === 'backup-password-required') {
+        setEncryptedFile(file);
+        return;
+      }
       pushToast({
         title: 'فایل قابل بررسی نیست',
-        description: 'ساختار یا نسخهٔ فایل یا دسترسی به پایگاه داده را بررسی کنید؛ هیچ داده‌ای تغییر نکرد.',
+        description: password !== undefined ? 'گذرواژه، سلامت یا نسخهٔ فایل را بررسی کنید؛ هیچ داده‌ای تغییر نکرد.' : 'ساختار یا نسخهٔ فایل یا دسترسی به پایگاه داده را بررسی کنید؛ هیچ داده‌ای تغییر نکرد.',
         tone: 'warning',
       });
     }
@@ -468,12 +494,22 @@ export function SettingsPage() {
           </div>
         </div>
 
-        <p className="text-xs leading-6 text-[var(--text-2)]">پشتیبان فعلی وظایف، عادت‌ها، تمرکز، هدف‌ها، ژورنال، پروژه‌ها و بخشی از تنظیمات را در فایل JSON ذخیره می‌کند. بازیابی فقط رکوردهای جدید را می‌افزاید و تنظیمات را برنمی‌گرداند؛ نشست فعال و تاریخچه‌ها در فایل نیستند. فایل شامل اطلاعات شخصی و بدون رمزگذاری است.</p>
+        <p className="text-xs leading-6 text-[var(--text-2)]">پشتیبان وظایف، عادت‌ها، تمرکز، هدف‌ها، ژورنال، پروژه‌ها و بخشی از تنظیمات را ذخیره می‌کند. بازیابی ادغامی است و ترجیحات فقط با انتخاب شما جایگزین می‌شوند؛ نشست فعال و تاریخچه‌ها در فایل نیستند. بدون انتخاب رمزگذاری، فایل شامل اطلاعات شخصی آشکار است.</p>
+        <label className="flex min-h-11 items-center gap-2 text-xs text-[var(--text)]">
+          <input type="checkbox" checked={encryptExport} onChange={(event) => { setEncryptExport(event.target.checked); setExportPassword(''); setExportConfirmation(''); }} />
+          رمزگذاری فایل پشتیبان با گذرواژه
+        </label>
+        {encryptExport && <div className="space-y-2 text-xs">
+          <p className="leading-6 text-[var(--text-2)]">گذرواژه را در جای امن نگه دارید؛ در صورت فراموشی هیچ راه بازیابی فایل وجود ندارد. رمزگذاری شامل فایل‌های CSV نیست.</p>
+          <label className="block">گذرواژهٔ پشتیبان (حداقل ۱۲ نویسه)<input type="password" autoComplete="new-password" maxLength={1024} value={exportPassword} onChange={(event) => setExportPassword(event.target.value)} className="mt-1 w-full rounded-xl border border-[var(--accent-fg)]/30 bg-[var(--surface-input)] p-2" /></label>
+          <label className="block">تکرار گذرواژه<input type="password" autoComplete="new-password" maxLength={1024} value={exportConfirmation} onChange={(event) => setExportConfirmation(event.target.value)} className="mt-1 w-full rounded-xl border border-[var(--accent-fg)]/30 bg-[var(--surface-input)] p-2" /></label>
+        </div>}
         <div className="grid grid-cols-2 gap-2">
           <button
             type="button"
-            onClick={handleExport}
-            className="btn-ghost-luxury flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-xs font-medium text-[var(--text)]"
+            onClick={() => void handleExport()}
+            disabled={exporting}
+            className="btn-ghost-luxury flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-xs font-medium text-[var(--text)] disabled:opacity-50"
           >
             <Download className="h-3.5 w-3.5 text-[var(--accent-fg)]" />
             <span>خروجی پشتیبان</span>
@@ -508,13 +544,20 @@ export function SettingsPage() {
           />
         </div>
 
+        {encryptedFile && <div role="region" aria-label="گذرواژهٔ پشتیبان" className="space-y-2 rounded-xl border border-[var(--accent-fg)]/30 p-3 text-xs">
+          <label className="block">گذرواژهٔ فایل<input type="password" autoComplete="current-password" maxLength={1024} value={importPassword} onChange={(event) => setImportPassword(event.target.value)} className="mt-1 w-full rounded-xl border border-[var(--accent-fg)]/30 bg-[var(--surface-input)] p-2" /></label>
+          <div className="flex gap-2">
+            <button type="button" onClick={() => void handleImportFile(encryptedFile, importPassword)} className="btn-royal rounded-xl px-3 py-2">بررسی فایل</button>
+            <button type="button" onClick={() => { backupReadVersion.current++; setEncryptedFile(null); setImportPassword(''); }} className="btn-ghost-luxury rounded-xl px-3 py-2">انصراف</button>
+          </div>
+        </div>}
         {pendingBackup && (
           <div role="region" aria-label="پیش‌نمایش بازیابی" className="space-y-2 rounded-xl border border-[var(--accent-fg)]/30 bg-[var(--surface-1)] p-3 text-[11px] leading-6 text-[var(--text)]">
             <p className="font-bold">پیش‌نمایش بازیابی ادغامی</p>
             <p>وظیفه: {pendingBackup.tasks.length} · عادت: {pendingBackup.habits.length} · ثبت عادت: {pendingBackup.habitLogs.length} · تمرکز: {pendingBackup.focusSessions.length} · هدف: {pendingBackup.goals.length}</p>
             <p>پروژه: {pendingBackup.projects?.length ?? 0} · مرحله: {pendingBackup.projectStages?.length ?? 0} · ژورنال: {pendingBackup.journal?.length ?? 0}</p>
             {backupEstimate && <p>در بررسی فعلی: {backupEstimate.added} رکورد جدید و {backupEstimate.skipped} شناسهٔ موجود. در صورت تغییر داده‌ها پیش از تأیید، نتیجه ممکن است متفاوت باشد.</p>}
-            <p className="text-[var(--text-2)]">فقط رکوردهای جدید اضافه می‌شوند؛ شناسه‌های موجود جایگزین نمی‌شوند. وضعیت دادهٔ نمونه ممکن است تغییر کند. فایل‌های قدیمی ممکن است همهٔ بخش‌ها را نداشته باشند. این فایل تأیید اصالت رمزنگاری‌شده ندارد.</p>
+            <p className="text-[var(--text-2)]">فقط رکوردهای جدید اضافه می‌شوند؛ شناسه‌های موجود جایگزین نمی‌شوند. وضعیت دادهٔ نمونه ممکن است تغییر کند. فایل‌های قدیمی ممکن است همهٔ بخش‌ها را نداشته باشند. فایل بدون رمزگذاری تأیید صحت رمزنگاری‌شده ندارد؛ حتی رمزگذاری نیز هویت سازنده را ثابت نمی‌کند.</p>
             <label className="flex min-h-11 items-center gap-2 text-[var(--text)]">
               <input type="checkbox" checked={restorePreferences} disabled={importing} onChange={(event) => setRestorePreferences(event.target.checked)} />
               جایگزینی ترجیحات شخصی با تنظیمات فایل

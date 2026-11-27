@@ -3,6 +3,7 @@ import { Directory, Filesystem } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
 import type { KairosBackupPayload } from '@/types/domain';
 import { validateBackup } from './backupValidation';
+import { decryptBackup, encryptBackup, isEncryptedBackup } from './backupCrypto';
 
 /**
  * Backup export that actually works on Android.
@@ -86,10 +87,11 @@ export async function saveTextFile(
   }
 }
 
-export async function exportBackupFile(payload: KairosBackupPayload): Promise<BackupSaveResult> {
+export async function exportBackupFile(payload: KairosBackupPayload, password?: string): Promise<BackupSaveResult> {
+  const content = password === undefined ? payload : await encryptBackup(payload, password);
   return saveTextFile(
-    buildBackupFileName(),
-    JSON.stringify(payload, null, 2),
+    password === undefined ? buildBackupFileName() : buildBackupFileName().replace('.json', '-encrypted.json'),
+    JSON.stringify(content, null, 2),
     'application/json',
     'پشتیبان KAIROS'
   );
@@ -106,10 +108,15 @@ export async function readFileText(file: File): Promise<string> {
   });
 }
 
-/** Accepts a backup file from an <input type="file"> or the share sheet. */
-export async function readBackupFile(file: File): Promise<KairosBackupPayload> {
+/** Limit untrusted input before allocating and parsing it. */
+export async function readBackupFile(file: File, password?: string): Promise<KairosBackupPayload> {
+  if (file.size > 90 * 1024 * 1024) throw new Error('backup-too-large');
   const raw = await readFileText(file);
   const parsed: unknown = JSON.parse(raw);
+  if (isEncryptedBackup(parsed)) {
+    if (password === undefined) throw new Error('backup-password-required');
+    return decryptBackup(parsed, password);
+  }
   validateBackup(parsed);
   return parsed;
 }

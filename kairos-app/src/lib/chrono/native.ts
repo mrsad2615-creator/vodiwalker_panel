@@ -128,10 +128,14 @@ export async function readDndStatus(): Promise<DndStatus | null> {
   }
 }
 
+let dndQueue: Promise<void> = Promise.resolve();
 export async function setDoNotDisturb(enabled: boolean): Promise<'ok' | 'not-granted' | 'unsupported'> {
   if (!chronoNativeAvailable()) return 'unsupported';
+  // Native bridge calls must not apply an old start after a newer pause/reset.
+  const pending = dndQueue.catch(() => undefined).then(() => Chrono.setDnd({ enabled }));
+  dndQueue = pending.catch(() => undefined);
   try {
-    await Chrono.setDnd({ enabled });
+    await pending;
     return 'ok';
   } catch (error) {
     const message = String((error as { message?: string })?.message ?? error);

@@ -24,8 +24,8 @@ import androidx.core.content.ContextCompat;
  * Why this exists: a WebView-only timer dies with the page. Android reclaims a
  * backgrounded app within minutes, so a 45-minute deep-work block could be
  * silently erased by switching to another app. A foreground service keeps the
- * session alive, shows the countdown in the shade, and lets the reader pause it
- * without reopening KAIROS.
+ * session alive and shows the countdown in the shade. Timer controls live in
+ * KAIROS, where the authoritative state and session record can be saved together.
  *
  * Two deliberate choices:
  *  - the countdown in the notification is a **chronometer** (`setUsesChronometer`
@@ -43,6 +43,7 @@ public class ChronoService extends Service {
     public static final String ACTION_UPDATE = "app.kairos.chrono.UPDATE";
     public static final String ACTION_TOGGLE = "app.kairos.chrono.TOGGLE";
     public static final String ACTION_STOP = "app.kairos.chrono.STOP";
+    public static final String ACTION_STOP_MIRROR = "app.kairos.chrono.STOP_MIRROR";
 
     public static final String EXTRA_LABEL = "label";
     public static final String EXTRA_SUBTITLE = "subtitle";
@@ -66,6 +67,7 @@ public class ChronoService extends Service {
         public void run() {
             if (!sRunning) return;
             sRunning = false;
+            DndGuard.releaseBestEffort(ChronoService.this);
             getSharedPreferences(PREFS, MODE_PRIVATE).edit().putBoolean("running", false).putInt("remaining", 0).putBoolean("completed", true).apply();
             ChronoWidget.refresh(ChronoService.this);
             SoundscapeBus.playBell();
@@ -108,9 +110,11 @@ public class ChronoService extends Service {
         }
 
         String action = intent.getAction();
-        if (ACTION_STOP.equals(action)) {
+        if (ACTION_STOP_MIRROR.equals(action)) {
             endHandler.removeCallbacks(endRunnable);
             sRunning = false;
+            // JS releases DND according to the authoritative focus state. A
+            // delayed mirror-stop must not release DND for a newer session.
             getSharedPreferences(PREFS, MODE_PRIVATE).edit().clear().apply();
             ChronoWidget.refresh(this);
             stopForeground(true);
@@ -118,31 +122,17 @@ public class ChronoService extends Service {
             return START_NOT_STICKY;
         }
 
-        if (ACTION_TOGGLE.equals(action)) {
+        // Old notification PendingIntents can outlive an upgrade. Do not mutate
+        // the mirror without updating the authoritative IndexedDB clock.
+        if (ACTION_TOGGLE.equals(action) || ACTION_STOP.equals(action)) {
             SharedPreferences prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
-            long now = System.currentTimeMillis();
-            int total = prefs.getInt("total", 0);
-            sRunning = prefs.getBoolean("running", false);
-            if (sRunning) {
-                long left = ChronoMirrorMath.remaining(true, prefs.getLong("endAt", 0L), 0, now);
-                long elapsed = ChronoMirrorMath.elapsed(true, prefs.getLong("anchor", 0L), prefs.getInt("elapsed", 0), now);
-                prefs.edit().putInt("remaining", (int) ((left + 999L) / 1000L))
-                        .putInt("elapsed", (int) (elapsed / 1000L)).putBoolean("running", false).apply();
-                sRunning = false;
-            } else {
-                if (total > 0 && prefs.getInt("remaining", 0) <= 0) return START_STICKY;
-                sRunning = true;
-                prefs.edit().putLong("endAt", now + prefs.getInt("remaining", 0) * 1000L)
-                        .putLong("anchor", now).putBoolean("running", true).apply();
+            if (!prefs.getBoolean("present", false)) {
+                stopSelf();
+                return START_NOT_STICKY;
             }
-            scheduleEnd();
+            sRunning = prefs.getBoolean("running", false);
             publish();
-            // Broadcast is best effort; JS persistence remains authoritative.
-            // If the WebView is absent this does not update its saved run.
-            Intent control = new Intent(ChronoPlugin.EVENT_CONTROL);
-            control.setPackage(getPackageName());
-            control.putExtra("action", sRunning ? "resume" : "pause");
-            sendBroadcast(control);
+            scheduleEnd();
             return START_STICKY;
         }
 
@@ -298,16 +288,10 @@ public class ChronoService extends Service {
         if (Build.VERSION.SDK_INT >= 23) flags |= PendingIntent.FLAG_IMMUTABLE;
         PendingIntent contentIntent = PendingIntent.getActivity(this, 0, open, flags);
 
-        Intent toggleIntent = new Intent(this, ChronoService.class).setAction(ACTION_TOGGLE);
-        PendingIntent togglePending = PendingIntent.getService(this, 1, toggleIntent, flags);
-
-        Intent stopIntent = new Intent(this, ChronoService.class).setAction(ACTION_STOP);
-        PendingIntent stopPending = PendingIntent.getService(this, 2, stopIntent, flags);
-
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
                 .setSmallIcon(android.R.drawable.ic_menu_recent_history)
                 .setContentTitle(label)
-                .setContentText(running ? subtitle : "متوقف شد — برای ادامه ضربه بزنید")
+                .setContentText(running ? subtitle + " — برای کنترل، کایروس را باز کنید" : "متوقف شد — برای ادامه کایروس را باز کنید")
                 .setContentIntent(contentIntent)
                 .setOngoing(true)
                 .setOnlyAlertOnce(true)
@@ -316,9 +300,7 @@ public class ChronoService extends Service {
                 .setUsesChronometer(running)
                 .setChronometerCountDown(total > 0)
                 .setPriority(NotificationCompat.PRIORITY_LOW)
-                .setCategory(NotificationCompat.CATEGORY_STOPWATCH)
-                .addAction(0, running ? "توقف" : "ادامه", togglePending)
-                .addAction(0, "پایان", stopPending);
+                .setCategory(NotificationCompat.CATEGORY_STOPWATCH);
 
         if (total > 0) {
             int leftSeconds = (int) Math.max(0, leftMs / 1000);

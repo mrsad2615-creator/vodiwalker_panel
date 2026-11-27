@@ -550,6 +550,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
     void setDoNotDisturb(enabled);
   }, []);
 
+  // A break or paused phase must not leave the device in our temporary DND.
+  // On restart, a saved run is reconciled to the same policy once ready.
+  useEffect(() => {
+    if (!ready) return;
+    void setDoNotDisturb(settings.dndInFocus && focus.isRunning && focus.phase === 'focus');
+  }, [ready, settings.dndInFocus, focus.isRunning, focus.phase]);
+
   const startOrResumeFocus = useCallback(() => {
     if (focusCommitInFlight.current) return;
     if (focusRef.current.finished) {
@@ -558,7 +565,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
     void triggerHaptic('light', settingsRef.current.hapticsEnabled);
     setFocus((prev) => startClock(prev, Date.now()));
-    applyDnd(true);
+    applyDnd(focusRef.current.phase === 'focus');
   }, [applyDnd, pushToast]);
 
   const pauseFocus = useCallback(() => {

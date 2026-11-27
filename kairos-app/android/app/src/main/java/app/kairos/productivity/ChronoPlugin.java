@@ -19,7 +19,7 @@ import com.getcapacitor.annotation.CapacitorPlugin;
  * Capacitor bridge for the Chrono Core foreground service.
  *
  * JS owns the clock; this plugin only mirrors it into the notification shade and
- * reports back when the reader presses pause/resume on the notification itself.
+ * reports completion to the page when it is available.
  * Every method is safe to call from any screen: the service is idempotent, so a
  * repeated `start` simply updates the countdown.
  */
@@ -106,10 +106,11 @@ public class ChronoPlugin extends Plugin {
     /**
      * Turns "do not disturb" on for the length of a focus session.
      *
-     * Only the priority filter is touched — alarms and the user's starred contacts
-     * still come through — and it is always restored to ALL when the session ends.
-     * Without the policy grant this is a no-op that reports failure, never a silent
-     * lie in the UI.
+     * Only acquire a priority filter when the system is currently allowing all
+     * interruptions; do not weaken a stricter filter the user already selected.
+     * Restore only a filter KAIROS acquired if its current value still matches.
+     * Android does not report who selected the same value in the meantime.
+     * Without policy access this reports failure.
      */
     @PluginMethod
     public void setDnd(PluginCall call) {
@@ -125,10 +126,8 @@ public class ChronoPlugin extends Plugin {
                 call.reject("dnd_not_granted");
                 return;
             }
-            manager.setInterruptionFilter(
-                    enabled
-                            ? NotificationManager.INTERRUPTION_FILTER_PRIORITY
-                            : NotificationManager.INTERRUPTION_FILTER_ALL);
+            if (enabled) DndGuard.acquire(getContext(), manager);
+            else DndGuard.release(getContext(), manager);
             call.resolve();
         } catch (Exception error) {
             call.reject("dnd_failed", error);
@@ -151,7 +150,7 @@ public class ChronoPlugin extends Plugin {
     @PluginMethod
     public void stop(PluginCall call) {
         Intent intent = new Intent(getContext(), ChronoService.class);
-        intent.setAction(ChronoService.ACTION_STOP);
+        intent.setAction(ChronoService.ACTION_STOP_MIRROR);
         try {
             getContext().startService(intent);
         } catch (Exception ignored) {

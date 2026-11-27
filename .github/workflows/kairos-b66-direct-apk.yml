@@ -1,0 +1,51 @@
+name: Publish b66 preview APK
+
+# One-time publication of the already-tested working-branch artifact. This is
+# not the main-branch release pipeline and does not rebuild or replace a release.
+on:
+  push:
+    branches:
+      - arena/33c8480b-vodiwalker-panel
+    paths:
+      - .github/workflows/kairos-b66-direct-apk.yml
+
+permissions:
+  actions: read
+  contents: write
+
+jobs:
+  publish-preview:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_REPO: ${{ github.repository }}
+      SOURCE_RUN: '45997993906'
+      SOURCE_SHA: '356220e9f48cd302ee7fbf707fc77459c84beb0f'
+      RELEASE_TAG: 'kairos-v3.18.0-b66-preview'
+      APK: 'KAIROS-3.18.0-b66-356220e.apk'
+    steps:
+      - name: Verify successful source build and download its artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(gh run view "$SOURCE_RUN" --json headSha --jq .headSha)" = "$SOURCE_SHA"
+          test "$(gh run view "$SOURCE_RUN" --json status --jq .status)" = completed
+          test "$(gh run view "$SOURCE_RUN" --json conclusion --jq .conclusion)" = success
+          gh run download "$SOURCE_RUN" --name KAIROS-3.18.0-b66 --dir apk
+          test -s "apk/$APK"
+          sha256sum "apk/$APK"
+
+      - name: Publish immutable prerelease
+        shell: bash
+        run: |
+          set -euo pipefail
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            echo "Preview release already exists; refusing to replace it." >&2
+            exit 1
+          fi
+          HASH="$(sha256sum "apk/$APK" | cut -d' ' -f1)"
+          gh release create "$RELEASE_TAG" "apk/$APK" \
+            --target "$SOURCE_SHA" --prerelease --latest=false \
+            --title 'KAIROS 3.18.0 · b66 preview' \
+            --notes "Experimental build from commit $SOURCE_SHA (CI run $SOURCE_RUN). Not a final release; on-device testing remains outstanding. SHA-256: $HASH"
+          echo "Direct APK: https://github.com/$GH_REPO/releases/download/$RELEASE_TAG/$APK" >> "$GITHUB_STEP_SUMMARY"

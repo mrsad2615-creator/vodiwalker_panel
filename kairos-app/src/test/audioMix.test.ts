@@ -10,9 +10,9 @@ import {
 } from '@/lib/audio/layers';
 
 describe('sound mix', () => {
-  it('ships eleven real layers and four profiles', () => {
+  it('ships eleven real layers and seven profiles', () => {
     expect(LAYERS).toHaveLength(11);
-    expect(SOUND_PROFILES).toHaveLength(4);
+    expect(SOUND_PROFILES).toHaveLength(7);
     expect(SLEEP_TIMER_PRESETS).toContain(0);
   });
 

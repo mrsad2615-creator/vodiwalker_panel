@@ -90,6 +90,24 @@ export const SOUND_PROFILES: SoundProfile[] = [
     mix: { forest: 0.35, binaural: 0.2 },
   },
   {
+    id: 'rainy-cafe',
+    label: 'کافهٔ بارانی',
+    hint: 'کافه + باران',
+    mix: { cafe: 0.4, rain: 0.3 },
+  },
+  {
+    id: 'fireside',
+    label: 'کنار آتش',
+    hint: 'آتش + باد',
+    mix: { fire: 0.45, wind: 0.18 },
+  },
+  {
+    id: 'forest-air',
+    label: 'هوای جنگل',
+    hint: 'پرندگان + باد',
+    mix: { forest: 0.4, wind: 0.2 },
+  },
+  {
     id: 'sleep',
     label: 'خواب',
     hint: 'قهوه‌ای + صورتی',

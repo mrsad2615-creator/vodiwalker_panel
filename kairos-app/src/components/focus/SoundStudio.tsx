@@ -308,10 +308,10 @@ export function SoundStudio() {
             key={profile.id}
             type="button"
             onClick={() => applyProfile(profile.id)}
-            className="shrink-0 rounded-full border border-[var(--border)] px-2.5 py-1 text-start transition-colors hover:border-[var(--accent-fg)]/50"
+            className="min-h-11 shrink-0 rounded-xl border border-[var(--border)] px-3 py-1.5 text-start transition-colors hover:border-[var(--accent-fg)]/50"
           >
-            <span className="block text-[10px] font-medium text-[var(--text)]">{profile.label}</span>
-            <span className="block text-[8px] text-[var(--text-3)]">{profile.hint}</span>
+            <span className="block text-xs font-medium text-[var(--text)]">{profile.label}</span>
+            <span className="block text-[10px] text-[var(--text-2)]">{profile.hint}</span>
           </button>
         ))}
       </div>

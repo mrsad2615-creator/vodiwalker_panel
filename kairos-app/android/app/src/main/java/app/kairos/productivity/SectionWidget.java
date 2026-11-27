@@ -6,6 +6,9 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
+import android.graphics.Bitmap;
+import android.graphics.Canvas;
+import android.graphics.Paint;
 import android.net.Uri;
 import android.os.Bundle;
 import android.view.View;
@@ -58,6 +61,7 @@ final class SectionWidget {
                 for (int row : ROWS) views.setViewVisibility(row, View.GONE);
             } else {
                 views.setViewVisibility(R.id.annual_graph, View.GONE);
+                views.setViewVisibility(R.id.annual_labels, View.GONE);
                 views.setViewVisibility(R.id.annual_axis, View.GONE);
             }
             return views;
@@ -113,19 +117,38 @@ final class SectionWidget {
         views.setTextViewText(R.id.annual_summary, "سال " + fa(data.optInt("year")) + " · " + fa(sum) + " تکمیل به تاریخ ثبت");
         if (max == 0 || height < 140) {
             views.setViewVisibility(R.id.annual_graph, View.GONE);
+            views.setViewVisibility(R.id.annual_labels, View.GONE);
             views.setTextViewText(R.id.annual_axis, max == 0 ? "هنوز وظیفهٔ تکمیل‌شده‌ای ثبت نشده است" : "برای جزئیات گزارش را باز کن");
             return;
         }
-        String[] levels = {"▁", "▂", "▃", "▄", "▅", "▆", "▇", "█"};
-        StringBuilder graph = new StringBuilder();
-        StringBuilder accessible = new StringBuilder("از فروردین تا اسفند: ");
+        String[] names = {"فروردین", "اردیبهشت", "خرداد", "تیر", "مرداد", "شهریور", "مهر", "آبان", "آذر", "دی", "بهمن", "اسفند"};
+        StringBuilder accessible = new StringBuilder("تعداد وظایف تکمیل‌شده: ");
         for (int i = 0; i < 12; i++) {
-            graph.append(levels[(int) (7L * values[i] / max)]).append(' ');
             if (i > 0) accessible.append("، ");
-            accessible.append(fa(values[i]));
+            accessible.append(names[i]).append(" ").append(fa(values[i]));
         }
-        views.setTextViewText(R.id.annual_graph, "\u200e" + graph);
+        views.setImageViewBitmap(R.id.annual_graph, annualChart(values, max, safeAccent(data)));
         views.setContentDescription(R.id.annual_graph, accessible.toString());
+    }
+
+    /** Bitmap contains shapes only: all Persian text remains native and accessible.
+     * Rightmost bar is Farvardin; zero values are a baseline, never fake bars. */
+    private static Bitmap annualChart(int[] values, int max, int accent) {
+        int width = 600, height = 100;
+        Bitmap bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(bitmap);
+        Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        float slot = width / 12f, barWidth = 22f, base = 94f;
+        paint.setColor(Color.rgb(64, 60, 78));
+        canvas.drawRoundRect(0, base, width, base + 2, 1, 1, paint);
+        for (int i = 0; i < 12; i++) {
+            if (values[i] <= 0) continue;
+            float x = width - (i + 0.5f) * slot;
+            float barHeight = Math.max(3f, 86f * ((float) values[i] / max));
+            paint.setColor(accent);
+            canvas.drawRoundRect(x - barWidth / 2, base - barHeight, x + barWidth / 2, base, 5, 5, paint);
+        }
+        return bitmap;
     }
 
     private static PendingIntent open(Context context, String destination, String id, int request) {

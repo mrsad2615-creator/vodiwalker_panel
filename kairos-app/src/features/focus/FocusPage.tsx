@@ -570,7 +570,25 @@ export function FocusPage() {
           </button>
         )}
 
-        {/* Sound Studio — real synthesised layers, mixer, sleep timer, breath */}
+        {/* Quick actions use the same mounted studio and audio engine as the mixer. */}
+        <div className="relative mt-5 rounded-2xl border border-[var(--border)] bg-[var(--surface-1)] p-3">
+          <div className="flex items-baseline justify-between gap-3">
+            <h2 className="text-sm font-semibold text-[var(--text)]">صدای تمرکز</h2>
+            <span className="text-xs text-[var(--text-2)]">آفلاین</span>
+          </div>
+          <p className="mt-1 text-xs leading-5 text-[var(--text-2)]">برای پخش، یک فضای صوتی را انتخاب کن.</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {SOUND_PROFILES.filter((profile) => ['deep', 'rainy-cafe', 'calm'].includes(profile.id)).map((profile) => (
+              <button key={profile.id} type="button" onClick={() => requestSound({ type: 'profile', profileId: profile.id })}
+                className="min-h-11 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] px-3 text-xs font-medium text-[var(--text)]">
+                {profile.label}
+              </button>
+            ))}
+            <button type="button" onClick={() => requestSound({ type: 'stop' })}
+              className="min-h-11 rounded-xl border border-[var(--border)] px-3 text-xs text-[var(--text-2)]">توقف صدا</button>
+          </div>
+        </div>
+        {/* Sound Studio — actual recordings and synthesised layers, mixer, sleep timer, breath */}
         <details className="relative mt-5 rounded-2xl border border-[var(--border)] bg-[var(--surface-1)] px-4 py-3">
           <summary className="cursor-pointer text-sm font-semibold text-[var(--text)]">فضای صوتی و تنفس</summary>
           <div className="mt-3"><SoundStudio /></div>

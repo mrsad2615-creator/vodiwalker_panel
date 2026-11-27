@@ -81,6 +81,16 @@ public class ChronoPlugin extends Plugin {
         push(call, ChronoService.ACTION_UPDATE);
     }
 
+    /** Keep the alert preference in native storage for a backgrounded timer. */
+    @PluginMethod
+    public void setAlertEnabled(PluginCall call) {
+        boolean enabled = Boolean.TRUE.equals(call.getBoolean("enabled", false));
+        boolean stored = getContext().getSharedPreferences("kairos_chrono", Context.MODE_PRIVATE)
+                .edit().putBoolean("soundEnabled", enabled).commit();
+        if (stored) call.resolve();
+        else call.reject("chrono_alert_preference_failed");
+    }
+
     /** Is the app allowed to change the interruption filter at all? */
     @PluginMethod
     public void dndStatus(PluginCall call) {

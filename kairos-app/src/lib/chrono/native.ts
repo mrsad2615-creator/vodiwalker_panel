@@ -30,6 +30,7 @@ interface ChronoPlugin {
   start(options: ChronoNotificationOptions): Promise<void>;
   update(options: ChronoNotificationOptions): Promise<void>;
   stop(): Promise<void>;
+  setAlertEnabled(options: { enabled: boolean }): Promise<void>;
   dndStatus(): Promise<DndStatus>;
   setDnd(options: { enabled: boolean }): Promise<void>;
   openDndSettings(): Promise<void>;
@@ -43,6 +44,15 @@ const Chrono = registerPlugin<ChronoPlugin>('Chrono');
 
 export function chronoNativeAvailable(): boolean {
   return Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android';
+}
+
+let alertQueue: Promise<void> = Promise.resolve();
+/** Serialize preference writes so an old bridge call cannot overwrite a newer choice. */
+export function syncNativeFocusAlert(enabled: boolean): Promise<void> {
+  if (!chronoNativeAvailable()) return Promise.resolve();
+  const pending = alertQueue.catch(() => undefined).then(() => Chrono.setAlertEnabled({ enabled }));
+  alertQueue = pending;
+  return pending;
 }
 
 /** Human label for the shade: mode name plus the current segment. */

@@ -70,7 +70,10 @@ public class ChronoService extends Service {
             DndGuard.releaseBestEffort(ChronoService.this);
             getSharedPreferences(PREFS, MODE_PRIVATE).edit().putBoolean("running", false).putInt("remaining", 0).putBoolean("completed", true).apply();
             ChronoWidget.refresh(ChronoService.this);
-            SoundscapeBus.playBell();
+            // Fail silent until the app has synced the user's preference.
+            if (getSharedPreferences(PREFS, MODE_PRIVATE).getBoolean("soundEnabled", false)) {
+                SoundscapeBus.playBell();
+            }
             announceCompletion();
         }
     };

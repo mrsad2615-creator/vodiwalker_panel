@@ -17,7 +17,7 @@ import type {
   UserSettings,
 } from '@/types/domain';
 import { Capacitor } from '@capacitor/core';
-import { ensureSettings, updateSettings } from '@/lib/db';
+import { db, ensureSettings, updateSettings } from '@/lib/db';
 import { useSettings, useTasks } from '@/lib/queries';
 import { getTodayKey } from '@/lib/date';
 import { applyAppearance, cacheAppearance, normalizeAppearance } from '@/lib/theme';
@@ -57,6 +57,7 @@ import {
   setDoNotDisturb,
   startChronoNotification,
   stopChronoNotification,
+  syncNativeFocusAlert,
 } from '@/lib/chrono/native';
 
 export type PomodoroPhase = 'focus' | 'short_break' | 'long_break';
@@ -271,6 +272,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [ready, allTasks, settings.notificationsEnabled, settings.soundEnabled, pushToast]);
 
   // Ref for latest settings & tasks inside interval callback
+  useEffect(() => {
+    if (!ready) return;
+    let active = true;
+    // useSettings has a temporary default while Dexie loads. Re-read the stored
+    // value so that a previously muted timer cannot ring during app startup.
+    void db.settings.get('default').then((stored) => {
+      if (active && stored) return syncNativeFocusAlert(stored.soundEnabled === true);
+    }).catch(() => {
+      if (active) pushToast({ title: 'تنظیم صدای تایمر همگام نشد', description: 'تنظیمات را دوباره بررسی کن؛ ممکن است صدای پایان با انتخابت مطابقت نداشته باشد.', tone: 'warning' });
+    });
+    return () => { active = false; };
+  }, [ready, settings.soundEnabled, pushToast]);
+
   const settingsRef = useRef(settings);
   settingsRef.current = settings;
   const tasksRef = useRef(allTasks);

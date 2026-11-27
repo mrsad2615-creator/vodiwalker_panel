@@ -14,6 +14,7 @@ import {
   HabitIcon,
 } from '@/components/ui/KairosMark';
 import { ModalSheet } from '@/components/ui/ModalSheet';
+import { ConfirmDeleteButton } from '@/components/ui/ConfirmDeleteButton';
 import { NumericInput } from '@/components/ui/NumericInput';
 import { useApp } from '@/context/AppContext';
 
@@ -85,43 +86,47 @@ export function HabitModal({ open, habit, onClose, onDeleted }: HabitModalProps)
     const finalDays =
       scheduleType === 'specific_days' ? scheduledDays : [0, 1, 2, 3, 4, 5, 6];
 
-    if (habit) {
-      await updateHabit(habit.id, {
-        name: name.trim(),
-        description: description.trim(),
-        icon,
-        accentColor,
-        scheduleType,
-        scheduledDays: finalDays,
-        weeklyTarget: scheduleType === 'weekly_target' ? weeklyTarget : finalDays.length,
-        trackingMode,
-        targetValue: finalTarget,
-        unit: finalUnit,
-      });
-      pushToast({ title: 'عادت به‌روزرسانی شد', tone: 'success' });
-    } else {
-      await createHabit({
-        name: name.trim(),
-        description: description.trim(),
-        icon,
-        accentColor,
-        scheduleType,
-        scheduledDays: finalDays,
-        weeklyTarget: scheduleType === 'weekly_target' ? weeklyTarget : finalDays.length,
-        trackingMode,
-        targetValue: finalTarget,
-        unit: finalUnit,
-        reminderTime: null,
-        startDate: getTodayKey(),
-      });
-      pushToast({ title: 'عادت جدید ساخته شد', tone: 'success' });
+    try {
+      if (habit) {
+        await updateHabit(habit.id, {
+          name: name.trim(),
+          description: description.trim(),
+          icon,
+          accentColor,
+          scheduleType,
+          scheduledDays: finalDays,
+          weeklyTarget: scheduleType === 'weekly_target' ? weeklyTarget : finalDays.length,
+          trackingMode,
+          targetValue: finalTarget,
+          unit: finalUnit,
+        }, habit);
+        pushToast({ title: 'عادت به‌روزرسانی شد', tone: 'success' });
+      } else {
+        await createHabit({
+          name: name.trim(),
+          description: description.trim(),
+          icon,
+          accentColor,
+          scheduleType,
+          scheduledDays: finalDays,
+          weeklyTarget: scheduleType === 'weekly_target' ? weeklyTarget : finalDays.length,
+          trackingMode,
+          targetValue: finalTarget,
+          unit: finalUnit,
+          reminderTime: null,
+          startDate: getTodayKey(),
+        });
+        pushToast({ title: 'عادت جدید ساخته شد', tone: 'success' });
+      }
+      onClose();
+    } catch {
+      pushToast({ title: 'ذخیره انجام نشد', description: 'رکورد ممکن است تغییر کرده باشد؛ متن فرم باقی مانده است.', tone: 'warning' });
     }
-    onClose();
   };
 
   const handleDelete = async () => {
     if (!habit) return;
-    await deleteHabit(habit.id);
+    await deleteHabit(habit.id, habit);
     pushToast({ title: 'عادت و تاریخچه آن حذف شد', tone: 'default' });
     onClose();
     onDeleted?.();
@@ -136,14 +141,11 @@ export function HabitModal({ open, habit, onClose, onDeleted }: HabitModalProps)
       footer={
         <div className="flex items-center gap-2.5">
           {habit && (
-            <button
-              type="button"
-              onClick={handleDelete}
-              aria-label="حذف عادت"
-              className="flex h-11 w-11 items-center justify-center rounded-xl border border-[var(--danger)]/25 bg-[var(--danger)]/10 text-[var(--danger-fg)] hover:bg-[var(--danger)]/20"
-            >
+            <ConfirmDeleteButton label="حذف عادت" description={`عادت «${habit.name}» و همهٔ ثبت‌های روزانهٔ آن حذف می‌شوند و بازگردانی ندارند. پشتیبان‌های قبلی باقی می‌مانند. ادامه می‌دهید؟`} onConfirm={handleDelete}
+              onError={() => pushToast({ title: 'حذف انجام نشد', description: 'عادت ممکن است تغییر کرده باشد؛ آن را دوباره بررسی کنید.', tone: 'warning' })}
+              className="flex h-11 w-11 items-center justify-center rounded-xl border border-[var(--danger)]/25 bg-[var(--danger)]/10 text-[var(--danger-fg)] hover:bg-[var(--danger)]/20">
               <Trash2 className="h-4 w-4" />
-            </button>
+            </ConfirmDeleteButton>
           )}
           <button
             type="button"

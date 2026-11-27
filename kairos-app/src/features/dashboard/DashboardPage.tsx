@@ -75,11 +75,10 @@ export function DashboardPage() {
     return () => window.clearInterval(t);
   }, []);
 
-  // If the setting changes elsewhere (settings screen, a restored backup), follow
-  // it — but never fight the local value during a tap.
+  // The localStorage value is only a first-paint cache. Once the live settings
+  // row changes (including after restore), the database is authoritative.
   useEffect(() => {
-    const stored = readStoredMode(settings.homeMode);
-    setBoardMode((current) => (stored === current ? current : stored));
+    setBoardMode((current) => (settings.homeMode === current ? current : settings.homeMode));
   }, [settings.homeMode]);
 
   const todayKey = getTodayKey();

@@ -33,11 +33,12 @@ describe('shortcut model', () => {
     expect(changeShortcut(swapped, 1, 'calendar')).toEqual(['focus', 'calendar', 'tasks', 'motivation']);
   });
 
-  it('offers six destinations, saves custom shortcuts, and keeps every section in the directory', async () => {
+  it('offers five buttons, preserves legacy preferences and keeps every section in the directory', async () => {
     await db.settings.update('default', { navShortcuts: ['tasks', 'habits', 'focus', 'motivation'] });
     await boot();
     const nav = screen.getByRole('navigation', { name: 'ناوبری اصلی' });
-    expect(within(nav).getAllByRole('button')).toHaveLength(6);
+    expect(within(nav).getAllByRole('button')).toHaveLength(5);
+    expect(within(nav).queryByRole('button', { name: 'تمرکز' })).not.toBeInTheDocument();
     expect(within(nav).getByRole('button', { name: 'خانه' })).toHaveAttribute('aria-current', 'page');
     fireEvent.click(within(nav).getByRole('button', { name: 'دستیار' }));
     expect(within(nav).getByRole('button', { name: 'دستیار' })).toHaveAttribute('aria-current', 'page');
@@ -79,6 +80,9 @@ describe('motivation', () => {
     const first = within(page).getByRole('blockquote').textContent;
     fireEvent.click(within(page).getByRole('button', { name: 'افزودن به علاقه‌مندی‌ها' }));
     await waitFor(async () => expect((await db.settings.get('default'))?.motivationFavorites).toHaveLength(1));
+    // Dexie's live query can render after the database commit; wait for the
+    // visible state rather than assuming the two notifications are synchronous.
+    await within(page).findByRole('button', { name: 'حذف از علاقه‌مندی‌ها' });
     fireEvent.click(within(page).getByRole('button', { name: 'جملهٔ بعدی' }));
     expect(within(page).getByRole('blockquote').textContent).not.toBe(first);
     fireEvent.click(within(page).getByRole('button', { name: 'علاقه‌مندی‌ها' }));

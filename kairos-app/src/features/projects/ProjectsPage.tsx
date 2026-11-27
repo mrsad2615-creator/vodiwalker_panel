@@ -6,6 +6,7 @@ import { ComparisonChart } from '@/components/charts/ComparisonChart';
 import { Rail, RailRow } from '@/components/ui/Rail';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { ModalSheet } from '@/components/ui/ModalSheet';
+import { ConfirmDeleteButton } from '@/components/ui/ConfirmDeleteButton';
 import { JalaliDatePicker } from '@/components/ui/JalaliDatePicker';
 import { CATEGORY_META, createId } from '@/lib/format';
 import { formatJalaaliFull, getTodayKey } from '@/lib/date';
@@ -25,7 +26,7 @@ import {
   projectRisks,
   riskSentence,
 } from '@/lib/projects';
-import type { Project, TaskCategory } from '@/types/domain';
+import type { Project, ProjectStage, TaskCategory } from '@/types/domain';
 import { triggerHaptic } from '@/lib/native';
 import { addSampleProject, SAMPLE_PROJECT_ID } from '@/lib/sampleProject';
 
@@ -254,7 +255,7 @@ function ProjectSheet({
   project: Project | null;
   creating: boolean;
   goals: { id: string; title: string }[];
-  stages: { id: string; projectId: string; title: string; done: boolean; kind: string; order: number }[];
+  stages: ProjectStage[];
   tasks: { id: string; projectId?: string | null; status: string; title: string }[];
   onClose: () => void;
   /** Called with the new project so the sheet can stay open on it. */
@@ -300,6 +301,7 @@ function ProjectSheet({
       pushToast({ title: 'نام پروژه را وارد کن', tone: 'warning' });
       return;
     }
+    try {
     if (project) {
       await updateProject(project.id, {
         title: title.trim(),
@@ -307,7 +309,7 @@ function ProjectSheet({
         category,
         goalId: goalId || null,
         dueDate,
-      });
+      }, project);
       pushToast({ title: 'پروژه به‌روز شد', tone: 'success' });
     } else {
       const created = await createProject({
@@ -331,20 +333,27 @@ function ProjectSheet({
     }
     void triggerHaptic('success');
     closeIfStillMine(savedKey);
+    } catch {
+      pushToast({ title: 'ذخیره انجام نشد', description: 'پروژه ممکن است تغییر کرده باشد؛ متن فرم باقی مانده است.', tone: 'warning' });
+    }
   };
 
   const addStage = async () => {
     if (!project || !stageTitle.trim()) return;
-    await createStage({
-      projectId: project.id,
-      title: stageTitle.trim(),
-      kind: 'stage',
-      order: ownStages.length,
-      weight: 1,
-      dueDate: null,
-    });
-    setStageTitle('');
-    void triggerHaptic('light');
+    try {
+      await createStage({
+        projectId: project.id,
+        title: stageTitle.trim(),
+        kind: 'stage',
+        order: ownStages.length,
+        weight: 1,
+        dueDate: null,
+      });
+      setStageTitle('');
+      void triggerHaptic('light');
+    } catch {
+      pushToast({ title: 'ساخت مرحله انجام نشد', description: 'پروژه را دوباره بررسی کنید.', tone: 'warning' });
+    }
   };
 
   return (
@@ -356,18 +365,17 @@ function ProjectSheet({
       footer={
         <div className="flex items-center justify-between gap-3 px-5 pb-1">
           {project ? (
-            <button
-              type="button"
-              onClick={async () => {
-                await deleteProject(project.id);
+            <ConfirmDeleteButton label="حذف پروژه" description={`پروژهٔ «${project.title}» و مرحله‌هایش حذف می‌شوند. وظایف باقی می‌مانند اما از پروژه جدا می‌شوند؛ پشتیبان‌های قبلی تغییر نمی‌کنند. ادامه می‌دهید؟`}
+              onConfirm={async () => {
+                await deleteProject(project.id, project);
                 pushToast({ title: 'پروژه حذف شد؛ کارهایش باقی ماندند', tone: 'warning' });
                 if (alive.current) onClose();
               }}
-              className="flex items-center gap-1 text-[11px] text-[var(--danger-fg)]"
-            >
+              onError={() => pushToast({ title: 'حذف انجام نشد', description: 'پروژه ممکن است تغییر کرده باشد.', tone: 'warning' })}
+              className="flex min-h-11 items-center gap-1 text-[11px] text-[var(--danger-fg)]">
               <Trash2 className="h-3.5 w-3.5" />
               حذف پروژه
-            </button>
+            </ConfirmDeleteButton>
           ) : (
             <span className="text-[10.5px] text-[var(--text-3)]">بعداً هم می‌توانی مرحله اضافه کنی</span>
           )}
@@ -482,7 +490,7 @@ function ProjectSheet({
                 <div key={stage.id} className="flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={() => void toggleStage(stage.id)}
+                    onClick={() => void toggleStage(stage.id).catch(() => pushToast({ title: 'ثبت مرحله انجام نشد', tone: 'warning' }))}
                     aria-pressed={stage.done}
                     aria-label={`${stage.title} ${stage.done ? 'انجام شد' : 'باز'}`}
                     className={`grid h-5 w-5 shrink-0 place-items-center rounded-full border ${
@@ -500,14 +508,12 @@ function ProjectSheet({
                   >
                     {stage.title}
                   </span>
-                  <button
-                    type="button"
-                    onClick={() => void deleteStage(stage.id)}
-                    aria-label={`حذف مرحله ${stage.title}`}
-                    className="text-[var(--text-3)]"
-                  >
+                  <ConfirmDeleteButton label={`حذف مرحله ${stage.title}`} description={`مرحلهٔ «${stage.title}» حذف می‌شود و بازگردانی ندارد؛ فایل‌های پشتیبان قبلی تغییر نمی‌کنند. ادامه می‌دهید؟`}
+                    onConfirm={() => deleteStage(stage.id, stage)}
+                    onError={() => pushToast({ title: 'حذف مرحله انجام نشد', description: 'مرحله ممکن است تغییر کرده باشد.', tone: 'warning' })}
+                    className="grid h-11 w-11 place-items-center text-[var(--text-3)]">
                     <Trash2 className="h-3 w-3" />
-                  </button>
+                  </ConfirmDeleteButton>
                 </div>
               ))}
               {ownStages.length === 0 && (

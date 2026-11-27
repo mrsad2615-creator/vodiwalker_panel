@@ -1,4 +1,6 @@
-import { db, type ActiveRunRecord } from '@/lib/db';
+import { db, logEvent, type ActiveRunRecord } from '@/lib/db';
+import { createId } from '@/lib/format';
+import type { FocusSession } from '@/types/domain';
 import type { FocusClockState } from '@/lib/focusTimer';
 
 /**
@@ -16,6 +18,15 @@ import type { FocusClockState } from '@/lib/focusTimer';
  */
 
 const ACTIVE_ID = 'active';
+
+// Keep snapshot writes, completion commits and resets ordered even when callers
+// do not await them. A failed write must not poison the queue for later retry.
+let writeQueue: Promise<unknown> = Promise.resolve();
+function enqueue<T>(work: () => Promise<T>): Promise<T> {
+  const pending = writeQueue.then(work, work);
+  writeQueue = pending.catch(() => undefined);
+  return pending;
+}
 
 export function hasProgress(state: FocusClockState): boolean {
   return (
@@ -41,6 +52,8 @@ export function toRecord(state: FocusClockState, nowMs: number): ActiveRunRecord
     anchorElapsed: state.anchorElapsed,
     completedCycles: state.completedCycles,
     accruedFocusSeconds: state.accruedFocusSeconds ?? 0,
+    recordedFocusSeconds: state.recordedFocusSeconds ?? 0,
+    finished: state.finished === true,
     autoAdvance: state.autoAdvance === true,
     linkedTaskId: state.linkedTaskId,
     sessionStartedAt: state.sessionStartedAt,
@@ -70,17 +83,36 @@ export function fromRecord(record: ActiveRunRecord): FocusClockState {
     segmentIndex: record.segmentIndex,
     autoAdvance: record.autoAdvance,
     accruedFocusSeconds: record.accruedFocusSeconds,
-    finished: false,
+    // Old builds recorded completed segments separately but had no counter.
+    // Assume they were recorded rather than double-counting them on upgrade.
+    recordedFocusSeconds: record.recordedFocusSeconds ?? record.accruedFocusSeconds ?? 0,
+    finished: record.finished === true,
   };
+}
+
+/** Record focus and advance/clear its crash-recovery row in the same transaction. */
+export async function recordFocusProgress(input: Omit<FocusSession, 'id'>, next: FocusClockState | null, nowMs = Date.now()): Promise<FocusSession> {
+  const session = { ...input, id: createId('foc') };
+  await enqueue(() => db.transaction('rw', [db.focusSessions, db.activeRun], async () => {
+    await db.focusSessions.add(session);
+    if (next && hasProgress(next)) await db.activeRun.put(toRecord(next, nowMs));
+    else await db.activeRun.delete(ACTIVE_ID);
+  }));
+  void logEvent('focus.recorded', 'focusSession', session.id, {
+    data: { minutes: Math.round(session.durationMinutes), mode: session.mode, natural: session.completedNaturally },
+  });
+  return session;
 }
 
 export async function saveActiveRun(state: FocusClockState, nowMs = Date.now()): Promise<void> {
   try {
-    if (!hasProgress(state)) {
-      await db.activeRun.delete(ACTIVE_ID);
-      return;
-    }
-    await db.activeRun.put(toRecord(state, nowMs));
+    await enqueue(async () => {
+      if (!hasProgress(state)) {
+        await db.activeRun.delete(ACTIVE_ID);
+        return;
+      }
+      await db.activeRun.put(toRecord(state, nowMs));
+    });
   } catch {
     // Storage is a nice-to-have: a locked or full database must never break the
     // timer that is already on screen.
@@ -89,6 +121,7 @@ export async function saveActiveRun(state: FocusClockState, nowMs = Date.now()):
 
 export async function loadActiveRun(): Promise<FocusClockState | null> {
   try {
+    await writeQueue;
     const record = await db.activeRun.get(ACTIVE_ID);
     return record ? fromRecord(record) : null;
   } catch {
@@ -98,7 +131,7 @@ export async function loadActiveRun(): Promise<FocusClockState | null> {
 
 export async function clearActiveRun(): Promise<void> {
   try {
-    await db.activeRun.delete(ACTIVE_ID);
+    await enqueue(() => db.activeRun.delete(ACTIVE_ID));
   } catch {
     // ignore
   }

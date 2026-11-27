@@ -1,4 +1,5 @@
 import { ComparisonChart } from '@/components/charts/ComparisonChart';
+import { ConfirmDeleteButton } from '@/components/ui/ConfirmDeleteButton';
 import { useMemo, useState } from 'react';
 import {
   Archive,
@@ -254,13 +255,15 @@ export function HabitsPage() {
   ) => {
     if (dateKey > todayKey) return;
     const current = logLookup.get(`${habit.id}::${dateKey}`);
+    const expected = { habit, log: current ?? null };
+    try {
     if (action === 'unlogged') {
-      await clearHabitLog(habit.id, dateKey);
+      await clearHabitLog(habit.id, dateKey, expected);
       void triggerHaptic('light', settings.hapticsEnabled);
       return;
     }
     if (action === 'missed') {
-      await upsertHabitLog(habit.id, dateKey, 'missed', 0);
+      await upsertHabitLog(habit.id, dateKey, 'missed', 0, undefined, expected);
       void triggerHaptic('warning', settings.hapticsEnabled);
       return;
     }
@@ -272,18 +275,21 @@ export function HabitsPage() {
           ? Math.min(habit.targetValue, curVal + step)
           : Math.max(0, curVal - step);
       if (nextVal <= 0) {
-        await clearHabitLog(habit.id, dateKey);
+        await clearHabitLog(habit.id, dateKey, expected);
         void triggerHaptic('light', settings.hapticsEnabled);
         return;
       }
       const done = nextVal >= habit.targetValue;
-      await upsertHabitLog(habit.id, dateKey, done ? 'completed' : 'partial', nextVal);
+      await upsertHabitLog(habit.id, dateKey, done ? 'completed' : 'partial', nextVal, undefined, expected);
       void triggerHaptic(done ? 'success' : 'light', settings.hapticsEnabled);
       return;
     }
 
-    await upsertHabitLog(habit.id, dateKey, 'completed', habit.targetValue);
+    await upsertHabitLog(habit.id, dateKey, 'completed', habit.targetValue, undefined, expected);
     void triggerHaptic('success', settings.hapticsEnabled);
+    } catch {
+      pushToast({ title: 'ثبت عادت انجام نشد', description: 'وضعیت ممکن است تغییر کرده باشد؛ دوباره بررسی و تلاش کنید.', tone: 'warning' });
+    }
   };
 
   // Cycle single day cell on the 7-day strip: unlogged -> completed -> missed -> unlogged
@@ -311,7 +317,7 @@ export function HabitsPage() {
   };
 
   const handlePermanentDelete = async (habit: Habit) => {
-    await deleteHabit(habit.id);
+    await deleteHabit(habit.id, habit);
     void triggerHaptic('warning', settings.hapticsEnabled);
     pushToast({
       title: 'عادت برای همیشه حذف شد',
@@ -653,14 +659,11 @@ export function HabitsPage() {
                     <ArchiveRestore className="h-3.5 w-3.5" />
                     بازگردانی
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => void handlePermanentDelete(habit)}
-                    aria-label="حذف کامل عادت"
-                    className="flex h-8 w-8 items-center justify-center rounded-xl border border-[var(--danger)]/25 bg-[var(--danger)]/10 text-[var(--danger-fg)]"
-                  >
+                  <ConfirmDeleteButton label="حذف کامل عادت" description={`عادت «${habit.name}» و ثبت‌های روزانه‌اش حذف می‌شوند و بازگردانی ندارند. پشتیبان‌های قبلی باقی می‌مانند. ادامه می‌دهید؟`} onConfirm={() => handlePermanentDelete(habit)}
+                    onError={() => pushToast({ title: 'حذف انجام نشد', description: 'عادت ممکن است تغییر کرده باشد.', tone: 'warning' })}
+                    className="flex h-11 w-11 items-center justify-center rounded-xl border border-[var(--danger)]/25 bg-[var(--danger)]/10 text-[var(--danger-fg)]">
                     <Trash2 className="h-3.5 w-3.5" />
-                  </button>
+                  </ConfirmDeleteButton>
                 </div>
               </LuxuryCard>
             ))}

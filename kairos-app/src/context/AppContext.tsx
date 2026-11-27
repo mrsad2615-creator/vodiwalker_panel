@@ -17,7 +17,7 @@ import type {
   UserSettings,
 } from '@/types/domain';
 import { Capacitor } from '@capacitor/core';
-import { ensureSettings, recordFocusSession, updateSettings } from '@/lib/db';
+import { ensureSettings, updateSettings } from '@/lib/db';
 import { useSettings, useTasks } from '@/lib/queries';
 import { getTodayKey } from '@/lib/date';
 import { applyAppearance, cacheAppearance, normalizeAppearance } from '@/lib/theme';
@@ -46,6 +46,7 @@ import {
   clearActiveRun,
   hasProgress,
   loadActiveRun,
+  recordFocusProgress,
   saveActiveRun,
 } from '@/lib/chrono/persistence';
 import {
@@ -92,6 +93,7 @@ export function freshFocusState(mode: FocusModeType, config: ChronoConfig): Focu
     segmentIndex: 0,
     autoAdvance: false,
     accruedFocusSeconds: 0,
+    recordedFocusSeconds: 0,
     finished: false,
   };
 }
@@ -194,8 +196,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
             focusMinutes: config.focusMinutes,
             shortBreakMinutes: config.shortBreakMinutes,
             longBreakMinutes: config.longBreakMinutes,
-            autoAdvance: restored.autoAdvance || s.autoAdvance,
-            plan: restored.plan && restored.plan.length > 0 ? restored.plan : planForMode('pomodoro', config),
+            autoAdvance: restored.autoAdvance,
+            plan: restored.plan && restored.plan.length > 0 ? restored.plan : planForMode(restored.mode, config),
           });
         } else {
           setFocus((prev) => ({
@@ -278,14 +280,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
       elapsedSeconds: number,
       linkedTaskId: string | null,
       startedAt: string | null,
-      completedNaturally: boolean
+      completedNaturally: boolean,
+      next: FocusState | null
     ) => {
       if (elapsedSeconds < 60) return false;
       const linked = linkedTaskId
         ? tasksRef.current.find((t) => t.id === linkedTaskId)
         : undefined;
       const mins = Math.max(1, Math.round(elapsedSeconds / 60));
-      await recordFocusSession({
+      await recordFocusProgress({
         mode,
         durationMinutes: mins,
         durationSeconds: elapsedSeconds,
@@ -295,7 +298,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         completedNaturally,
         startedAt: startedAt ?? new Date(Date.now() - elapsedSeconds * 1000).toISOString(),
         endedAt: new Date().toISOString(),
-      });
+      }, next);
       return true;
     },
     []
@@ -340,51 +343,54 @@ export function AppProvider({ children }: { children: ReactNode }) {
   // one render per second instead of four.
   const focusRef = useRef(focus);
   focusRef.current = focus;
+  // A completed phase and its recovery state must reach disk together. During
+  // that small critical section controls cannot replace the same session.
+  const focusCommitInFlight = useRef(false);
+  const focusRetryAfter = useRef(0);
 
   const syncFocusClock = useCallback(() => {
     const prev = focusRef.current;
-    if (!prev.isRunning) return;
+    if (!prev.isRunning || focusCommitInFlight.current) return;
 
     const result = tickClock(prev, Date.now(), settingsRef.current.pomodoroCyclesBeforeLong);
     if (result.state === prev) return;
-
-    focusRef.current = result.state;
-    setFocus(result.state);
-    if (!result.completedPhase) return;
-
     const s = settingsRef.current;
-    // On Android the bell is rung by the native service, at the exact end time,
-    // screen off or not. Ringing here as well would double it.
-    if (!Capacitor.isNativePlatform()) playLuxuryChime(s.soundEnabled);
-    void triggerHaptic('success', s.hapticsEnabled);
 
-    if (result.completedPhase === 'focus') {
-      const totalFocused = result.completedFocusSeconds;
-      void commitFocusRecord(
-        'pomodoro',
-        totalFocused,
-        prev.linkedTaskId,
-        prev.sessionStartedAt,
-        true
-      );
-      void fireInstantNotification(
-        'جلسه تمرکز با موفقیت پایان یافت',
-        `${Math.max(1, Math.round(totalFocused / 60))} دقیقه تمرکز در آمار شما ثبت شد.`,
-        { soundEnabled: false }
-      );
-      pushToast({
-        title: 'جلسه تمرکز ثبت شد',
-        description: `${Math.max(1, Math.round(totalFocused / 60))} دقیقه به آمار امروز اضافه شد. اکنون زمان استراحت است.`,
-        tone: 'success',
-      });
+    // A catch-up can cross focus AND break boundaries; the last phase alone is
+    // not enough to decide whether there are focus seconds to record.
+    if (result.completedFocusSeconds >= 60) {
+      if (Date.now() < focusRetryAfter.current) return;
+      const next = {
+        ...result.state,
+        recordedFocusSeconds: (prev.recordedFocusSeconds ?? 0) + result.completedFocusSeconds,
+      };
+      focusCommitInFlight.current = true;
+      void commitFocusRecord(prev.mode, result.completedFocusSeconds, prev.linkedTaskId,
+        prev.sessionStartedAt, true, next).then(() => {
+        focusRef.current = next;
+        setFocus(next);
+        if (!Capacitor.isNativePlatform()) playLuxuryChime(s.soundEnabled);
+        void triggerHaptic('success', s.hapticsEnabled);
+        void fireInstantNotification('جلسه تمرکز با موفقیت پایان یافت',
+          `${Math.max(1, Math.round(result.completedFocusSeconds / 60))} دقیقه تمرکز در آمار شما ثبت شد.`,
+          { soundEnabled: false });
+        pushToast({ title: 'جلسه تمرکز ثبت شد',
+          description: `${Math.max(1, Math.round(result.completedFocusSeconds / 60))} دقیقه به آمار اضافه شد.`, tone: 'success' });
+        focusRetryAfter.current = 0;
+      }).catch(() => {
+        focusRetryAfter.current = Date.now() + 10_000;
+        pushToast({ title: 'ثبت تمرکز انجام نشد', description: 'دادهٔ جلسه حفظ شده و ثبت دوباره تلاش می‌شود.', tone: 'warning' });
+      }).finally(() => { focusCommitInFlight.current = false; });
       return;
     }
 
-    pushToast({
-      title: 'زمان استراحت به پایان رسید',
-      description: 'آماده شروع چرخه جدید تمرکز هستید.',
-      tone: 'default',
-    });
+    focusRef.current = result.state;
+    setFocus(result.state);
+    if (result.completedPhase === 'break') {
+      if (!Capacitor.isNativePlatform()) playLuxuryChime(s.soundEnabled);
+      void triggerHaptic('success', s.hapticsEnabled);
+      pushToast({ title: 'زمان استراحت به پایان رسید', description: 'آماده شروع چرخه جدید تمرکز هستید.', tone: 'default' });
+    }
   }, [commitFocusRecord, pushToast]);
 
   useEffect(() => {
@@ -413,6 +419,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
    * half-pomodoro, half-interval state can survive a tap.
    */
   const setFocusMode = useCallback((mode: FocusModeType) => {
+    if (focusCommitInFlight.current) return;
     const config = chronoConfigFromSettings(settingsRef.current);
     setFocus((prev) => ({
       ...freshFocusState(mode, config),
@@ -424,6 +431,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const setChronoConfig = useCallback((patch: Partial<ChronoConfig>) => {
+    if (focusCommitInFlight.current) return;
     const settingsPatch: Record<string, number> = {};
     if (patch.focusMinutes !== undefined) settingsPatch.pomodoroFocusMin = patch.focusMinutes;
     if (patch.shortBreakMinutes !== undefined) settingsPatch.pomodoroShortBreakMin = patch.shortBreakMinutes;
@@ -449,6 +457,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const seekFocusSegment = useCallback((index: number) => {
+    if (focusCommitInFlight.current) return;
     setFocus((prev) => {
       const base = prev.isRunning ? pauseClock(prev, Date.now()) : prev;
       return seekSegment(base, index, settingsRef.current.pomodoroCyclesBeforeLong);
@@ -456,12 +465,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const setAutoAdvance = useCallback((value: boolean) => {
+    if (focusCommitInFlight.current) return;
     setFocus((prev) => ({ ...prev, autoAdvance: value }));
     void updateSettings({ autoAdvance: value });
   }, []);
 
   const setFocusDurations = useCallback(
     (focusMin: number, shortMin: number, longMin: number) => {
+      if (focusCommitInFlight.current) return;
       setFocus((prev) => {
         const config = {
           ...chronoConfigFromSettings(settingsRef.current),
@@ -491,6 +502,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   );
 
   const setFocusLinkedTask = useCallback((taskId: string | null) => {
+    if (focusCommitInFlight.current) return;
     setFocus((prev) => ({ ...prev, linkedTaskId: taskId }));
   }, []);
 
@@ -537,12 +549,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const startOrResumeFocus = useCallback(() => {
+    if (focusCommitInFlight.current) return;
+    if (focusRef.current.finished) {
+      pushToast({ title: 'برنامهٔ تمرکز پایان یافته است', description: 'برای شروع دوباره تایمر را بازنشانی کنید.', tone: 'warning' });
+      return;
+    }
     void triggerHaptic('light', settingsRef.current.hapticsEnabled);
     setFocus((prev) => startClock(prev, Date.now()));
     applyDnd(true);
-  }, [applyDnd]);
+  }, [applyDnd, pushToast]);
 
   const pauseFocus = useCallback(() => {
+    if (focusCommitInFlight.current) return;
     void triggerHaptic('light', settingsRef.current.hapticsEnabled);
     setFocus((prev) => pauseClock(prev, Date.now()));
     // Pausing is a pause for the phone too: notifications are not held hostage.
@@ -550,6 +568,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [applyDnd]);
 
   const resetFocus = useCallback(() => {
+    if (focusCommitInFlight.current) return;
     setFocus((prev) => {
       const config = chronoConfigFromSettings(settingsRef.current);
       return {
@@ -564,54 +583,41 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [applyDnd]);
 
   const finishAndSaveFocus = useCallback(async () => {
-    const snap = focus;
-    if (snap.phase !== 'focus' && snap.mode === 'pomodoro') {
-      resetFocus();
-      return;
-    }
-    // Read the live value: the anchor may be several seconds ahead of the last
-    // rendered state (the UI only re-renders once per second). A plan session
-    // banks every focus segment it has passed plus the part of the current one —
-    // finishing during the third block must not report "0 minutes focused".
-    const liveElapsed = totalFocusSeconds(
-      snap,
-      Date.now(),
-      settingsRef.current.pomodoroCyclesBeforeLong
-    );
+    if (focusCommitInFlight.current) return;
+    const snap = focusRef.current;
+    const now = Date.now();
+    // Account for boundaries crossed while the UI was suspended, without
+    // treating elapsed break time as focus.
+    const caughtUp = tickClock(snap, now, settingsRef.current.pomodoroCyclesBeforeLong).state;
+    const liveElapsed = Math.max(0, totalFocusSeconds(
+      caughtUp, now, settingsRef.current.pomodoroCyclesBeforeLong
+    ) - (snap.recordedFocusSeconds ?? 0));
     if (liveElapsed < 60) {
-      pushToast({
-        title: 'حداقل 1 دقیقه تمرکز نیاز است',
-        description: 'جلسات کمتر از یک دقیقه در تاریخچه ثبت نمی‌شوند.',
-        tone: 'warning',
-      });
+      pushToast({ title: 'حداقل 1 دقیقه تمرکز ثبت‌نشده نیاز است',
+        description: 'بخش‌های قبلاً ثبت‌شده دوباره به آمار اضافه نمی‌شوند.', tone: 'warning' });
       return;
     }
-    const saved = await commitFocusRecord(
-      snap.mode,
-      liveElapsed,
-      snap.linkedTaskId,
-      snap.sessionStartedAt,
-      false
-    );
-    if (saved) {
+    focusCommitInFlight.current = true;
+    try {
+      await commitFocusRecord(snap.mode, liveElapsed, snap.linkedTaskId, snap.sessionStartedAt, false, null);
+      const fresh = {
+        ...freshFocusState(snap.mode, chronoConfigFromSettings(settingsRef.current)),
+        linkedTaskId: snap.linkedTaskId, autoAdvance: snap.autoAdvance,
+      };
+      focusRef.current = fresh;
+      setFocus(fresh);
       if (!Capacitor.isNativePlatform()) playLuxuryChime(settingsRef.current.soundEnabled);
       void triggerHaptic('success', settingsRef.current.hapticsEnabled);
-      const mins = Math.max(1, Math.round(liveElapsed / 60));
-      pushToast({
-        title: 'جلسه تمرکز ذخیره شد',
-        description: `${mins} دقیقه تمرکز در گزارش‌های شما ثبت گردید.`,
-        tone: 'success',
-      });
+      pushToast({ title: 'جلسه تمرکز ذخیره شد',
+        description: `${Math.max(1, Math.round(liveElapsed / 60))} دقیقه تمرکز در گزارش‌های شما ثبت گردید.`, tone: 'success' });
+      void stopChronoNotification();
+      applyDnd(false);
+    } catch {
+      pushToast({ title: 'ثبت تمرکز انجام نشد', description: 'جلسه همچنان در دسترس است؛ دوباره تلاش کنید.', tone: 'warning' });
+    } finally {
+      focusCommitInFlight.current = false;
     }
-    await clearActiveRun();
-    void stopChronoNotification();
-    applyDnd(false);
-    setFocus((prev) => ({
-      ...freshFocusState(prev.mode, chronoConfigFromSettings(settingsRef.current)),
-      linkedTaskId: prev.linkedTaskId,
-      autoAdvance: prev.autoAdvance,
-    }));
-  }, [focus, commitFocusRecord, pushToast, resetFocus, applyDnd]);
+  }, [commitFocusRecord, pushToast, applyDnd]);
 
   /**
    * Advances past the current segment. In a cyclic plan (pomodoro) it wraps to the
@@ -619,6 +625,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
    * so a skip can never invent work that was not planned.
    */
   const skipPomodoroPhase = useCallback(() => {
+    if (focusCommitInFlight.current) return;
     setFocus((prev) => {
       const plan = resolvePlan(prev, settingsRef.current.pomodoroCyclesBeforeLong);
       if (plan.length === 0) return prev;
@@ -633,15 +640,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
   // The session is written to IndexedDB on every structural change and once every
   // 15 s while it runs. Writing per second would be noise; writing never is how a
   // 45-minute block disappears when Android reclaims the app.
+  const pausedRemaining = focus.isRunning ? null : focus.remainingSeconds;
+  const pausedElapsed = focus.isRunning ? null : focus.elapsedSeconds;
   useEffect(() => {
     if (!ready) return;
-    void saveActiveRun(focus);
+    if (!focusCommitInFlight.current) void saveActiveRun(focusRef.current);
     if (!focus.isRunning) return;
     const id = window.setInterval(() => {
-      void saveActiveRun(focusRef.current);
+      if (!focusCommitInFlight.current) void saveActiveRun(focusRef.current);
     }, 15_000);
     return () => window.clearInterval(id);
-  }, [ready, focus]);
+    // The running display changes every second, but anchors are sufficient to
+    // recover it. Persist only structural changes and the periodic checkpoint.
+  }, [ready, focus.mode, focus.isRunning, focus.phase, focus.segmentIndex, focus.plan,
+    focus.anchorMs, focus.anchorRemaining, focus.anchorElapsed, focus.completedCycles,
+    focus.accruedFocusSeconds, focus.recordedFocusSeconds, focus.finished,
+    focus.linkedTaskId, focus.sessionStartedAt, focus.autoAdvance, pausedRemaining, pausedElapsed]);
 
   // ── Chrono Core: notification mirror ──────────────────────────────────────
   // Only structural moments are pushed: the shade counts down on its own.

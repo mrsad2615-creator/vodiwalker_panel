@@ -118,7 +118,7 @@ describe('KAIROS Full Application End-to-End Flow', () => {
     });
 
     // Navigate to Focus Mode -> test Cinematic Timer & Full-Screen Cinema Mode
-    fireEvent.click(screen.getByRole('button', { name: 'تمرکز' }));
+    await openSecondary(/^بخش تمرکز$/);
     await waitFor(() => {
       expect(screen.getByText('محیط تمرکز')).toBeInTheDocument();
     });

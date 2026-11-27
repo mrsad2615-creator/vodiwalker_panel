@@ -4,6 +4,7 @@ import type { Goal, TaskCategory } from '@/types/domain';
 import { createGoal, deleteGoal, updateGoal } from '@/lib/db';
 import { CATEGORY_META } from '@/lib/format';
 import { ModalSheet } from '@/components/ui/ModalSheet';
+import { ConfirmDeleteButton } from '@/components/ui/ConfirmDeleteButton';
 import { JalaliDatePicker } from '@/components/ui/JalaliDatePicker';
 import { formatJalaaliFull } from '@/lib/date';
 import { Numeric } from '@/components/ui/Numeric';
@@ -57,35 +58,39 @@ export function GoalModal({ open, goal, onClose }: GoalModalProps) {
     const safeTarget = Math.max(1, Number(targetValue) || 1);
     const safeCurrent = Math.max(0, Number(currentValue) || 0);
 
-    if (goal) {
-      await updateGoal(goal.id, {
-        title: title.trim(),
-        description: description.trim(),
-        category,
-        currentValue: safeCurrent,
-        targetValue: safeTarget,
-        unit: unit.trim() || 'واحد',
-        deadline,
-      });
-      pushToast({ title: 'هدف به‌روزرسانی شد', tone: 'success' });
-    } else {
-      await createGoal({
-        title: title.trim(),
-        description: description.trim(),
-        category,
-        currentValue: safeCurrent,
-        targetValue: safeTarget,
-        unit: unit.trim() || 'واحد',
-        deadline,
-      });
-      pushToast({ title: 'هدف جدید ایجاد شد', tone: 'success' });
+    try {
+      if (goal) {
+        await updateGoal(goal.id, {
+          title: title.trim(),
+          description: description.trim(),
+          category,
+          currentValue: safeCurrent,
+          targetValue: safeTarget,
+          unit: unit.trim() || 'واحد',
+          deadline,
+        }, goal);
+        pushToast({ title: 'هدف به‌روزرسانی شد', tone: 'success' });
+      } else {
+        await createGoal({
+          title: title.trim(),
+          description: description.trim(),
+          category,
+          currentValue: safeCurrent,
+          targetValue: safeTarget,
+          unit: unit.trim() || 'واحد',
+          deadline,
+        });
+        pushToast({ title: 'هدف جدید ایجاد شد', tone: 'success' });
+      }
+      onClose();
+    } catch {
+      pushToast({ title: 'ذخیره انجام نشد', description: 'رکورد ممکن است تغییر کرده باشد؛ متن فرم باقی مانده است.', tone: 'warning' });
     }
-    onClose();
   };
 
   const handleDelete = async () => {
     if (!goal) return;
-    await deleteGoal(goal.id);
+    await deleteGoal(goal.id, goal);
     pushToast({ title: 'هدف حذف شد', tone: 'default' });
     onClose();
   };
@@ -99,14 +104,11 @@ export function GoalModal({ open, goal, onClose }: GoalModalProps) {
       footer={
         <div className="flex items-center gap-2.5">
           {goal && (
-            <button
-              type="button"
-              onClick={handleDelete}
-              className="flex h-11 w-11 items-center justify-center rounded-xl border border-[var(--danger)]/25 bg-[var(--danger)]/10 text-[var(--danger-fg)] transition hover:bg-[var(--danger)]/20"
-              aria-label="حذف هدف"
-            >
+            <ConfirmDeleteButton label="حذف هدف" description={`هدف «${goal.title}» حذف می‌شود و بازگردانی ندارد. وظایف، پروژه‌ها و پشتیبان‌های قبلی حذف نمی‌شوند. ادامه می‌دهید؟`} onConfirm={handleDelete}
+              onError={() => pushToast({ title: 'حذف انجام نشد', description: 'هدف ممکن است تغییر کرده باشد.', tone: 'warning' })}
+              className="flex h-11 w-11 items-center justify-center rounded-xl border border-[var(--danger)]/25 bg-[var(--danger)]/10 text-[var(--danger-fg)] transition hover:bg-[var(--danger)]/20">
               <Trash2 className="h-4 w-4" />
-            </button>
+            </ConfirmDeleteButton>
           )}
           <button
             type="button"

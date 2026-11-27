@@ -140,7 +140,8 @@ describe('undo manager', () => {
       unit: 'فصل',
       deadline: null,
     });
-    await db.goals.put({ ...goal, currentValue: 5, updatedAt: new Date().toISOString() });
+    const updatedGoal = { ...goal, currentValue: 5, updatedAt: new Date().toISOString() };
+    await db.goals.put(updatedGoal);
     await db.undoHistory.put({
       id: 'und-manual-goal',
       at: new Date().toISOString(),
@@ -149,7 +150,7 @@ describe('undo manager', () => {
       entityId: goal.id,
       label: 'ویرایش هدف',
       before: goal,
-      after: { ...goal, currentValue: 5 },
+      after: updatedGoal,
       undoneAt: null,
     });
     const result = await undoLast();

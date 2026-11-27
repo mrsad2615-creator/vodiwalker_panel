@@ -127,9 +127,9 @@ describe('event history', () => {
     await clearAllUserData();
 
     const counts = await eventCountsByKind('2000-01-01');
-    expect(counts['habit.logged']).toBe(1);
-    expect(counts['focus.recorded']).toBe(1);
-    expect(counts['journal.saved']).toBe(1);
+    expect(counts['habit.logged']).toBeUndefined();
+    expect(counts['focus.recorded']).toBeUndefined();
+    expect(counts['journal.saved']).toBeUndefined();
     expect(counts['data.cleared']).toBe(1);
   });
 

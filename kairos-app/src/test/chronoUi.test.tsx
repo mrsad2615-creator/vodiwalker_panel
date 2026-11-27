@@ -14,7 +14,8 @@ async function openFocus() {
   fireEvent.click(screen.getByRole('status', { name: /kairos/i }));
     await completeFirstRun();
   await waitFor(() => expect(screen.getByText('پیشرفت امروز')).toBeInTheDocument());
-  fireEvent.click(screen.getByRole('button', { name: 'تمرکز' }));
+  fireEvent.click(screen.getByRole('button', { name: 'بیشتر' }));
+  fireEvent.click(await screen.findByRole('button', { name: 'بخش تمرکز' }));
   await waitFor(() => expect(screen.getByText('محیط تمرکز')).toBeInTheDocument());
 }
 
@@ -77,6 +78,32 @@ describe('Chrono Core — the focus screen', () => {
         within(screen.getByRole('region', { name: 'برنامهٔ جلسه' })).getAllByRole('button')[3]
       ).toHaveAttribute('aria-current', 'step')
     );
+  });
+
+  it('requires confirmation before discarding a running session', async () => {
+    await openFocus();
+    const stage = screen.getByRole('region', { name: 'صحنهٔ تمرکز' });
+    fireEvent.click(within(stage).getByRole('button', { name: 'شروع تمرکز' }));
+    fireEvent.click(within(stage).getByRole('button', { name: 'بازنشانی تایمر' }));
+    const confirmation = screen.getByRole('dialog', { name: 'تأیید تغییر جلسه' });
+    expect(within(confirmation).getByText(/زمان ثبت‌نشده/)).toBeInTheDocument();
+    fireEvent.click(within(confirmation).getByRole('button', { name: 'انصراف' }));
+    expect(within(stage).getByRole('button', { name: 'توقف موقت' })).toBeInTheDocument();
+    fireEvent.click(within(stage).getByRole('button', { name: 'بازنشانی تایمر' }));
+    fireEvent.click(within(screen.getByRole('dialog', { name: 'تأیید تغییر جلسه' })).getByRole('button', { name: 'تأیید' }));
+    await waitFor(() => expect(within(stage).getByRole('button', { name: 'شروع تمرکز' })).toBeInTheDocument());
+  });
+
+  it('requires confirmation to delete a focus session', async () => {
+    await db.focusSessions.put({ id: 'session-1', mode: 'free', durationMinutes: 10, durationSeconds: 600, dateKey: '2026-01-01', taskId: null, taskTitleSnapshot: null, completedNaturally: false, startedAt: '2026-01-01T00:00:00Z', endedAt: '2026-01-01T00:10:00Z' });
+    await openFocus();
+    fireEvent.click(await screen.findByRole('button', { name: 'حذف جلسه' }));
+    expect(await db.focusSessions.get('session-1')).toBeDefined();
+    fireEvent.click(within(screen.getByRole('dialog', { name: 'تأیید تغییر جلسه' })).getByRole('button', { name: 'انصراف' }));
+    expect(await db.focusSessions.get('session-1')).toBeDefined();
+    fireEvent.click(screen.getByRole('button', { name: 'حذف جلسه' }));
+    fireEvent.click(within(screen.getByRole('dialog', { name: 'تأیید تغییر جلسه' })).getByRole('button', { name: 'تأیید' }));
+    await waitFor(async () => expect(await db.focusSessions.get('session-1')).toBeUndefined());
   });
 
   it('rebuilds the plan when the mode changes', async () => {

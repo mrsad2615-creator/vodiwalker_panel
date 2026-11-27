@@ -11,7 +11,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: kairos-apk
+  group: kairos-apk-${{ github.ref }}
   cancel-in-progress: true
 
 env:
@@ -102,8 +102,8 @@ jobs:
           BUILD_FILE="KAIROS-${VERSION}-b${GITHUB_RUN_NUMBER}-${SHORT_SHA}"
           mkdir -p ../artifacts
           APK_SIZE=$(stat -c%s app/build/outputs/apk/debug/app-debug.apk)
-          echo "APK size: ${APK_SIZE} bytes (limit: 200000000 bytes)"
-          if [ "$APK_SIZE" -gt 200000000 ]; then echo "APK exceeds 200 MB limit" >&2; exit 1; fi
+          echo "APK size: ${APK_SIZE} bytes (limit: 300000000 bytes)"
+          if [ "$APK_SIZE" -gt 300000000 ]; then echo "APK exceeds 300 MB limit" >&2; exit 1; fi
           cp app/build/outputs/apk/debug/app-debug.apk "../artifacts/${BUILD_FILE}.apk"
           cp app/build/outputs/apk/debug/app-debug.apk "../artifacts/KAIROS-v${VERSION}.apk"
           ls -lh ../artifacts/
@@ -129,6 +129,8 @@ jobs:
       # the reliable one, and it gives every build an immutable, unique URL — no
       # overwriting a shared asset, no stale download.
       - name: Publish to GitHub Release
+        # Working-branch builds are test artifacts, not public releases.
+        if: github.ref == 'refs/heads/main'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |

@@ -1,6 +1,7 @@
 import { db } from './db';
 import { can, consumeGrant } from './permissions';
 import type { EventEntity } from './events';
+import type { Task } from '@/types/domain';
 
 /**
  * Undo manager.
@@ -42,6 +43,9 @@ export interface UndoEntry {
   before: unknown | null;
   /** Row as it became, so a future redo is possible without guessing. */
   after: unknown | null;
+  /** Present only for a transactionally recorded recurring completion.
+   * A null spawned row means an existing occurrence was reused, never deleted. */
+  recurrenceEffect?: { version: 1; spawned: Task | null };
   /** Set when the entry has already been replayed. */
   undoneAt?: string | null;
 }
@@ -93,7 +97,7 @@ function tableFor(kind: UndoKind) {
 export interface UndoResult {
   ok: boolean;
   entry?: UndoEntry;
-  reason?: 'empty' | 'not-restorable' | 'not-allowed' | 'failed';
+  reason?: 'empty' | 'not-restorable' | 'not-allowed' | 'conflict' | 'recurring-unsafe' | 'failed';
 }
 
 /** The most recent restorable entry that has not been replayed yet. */
@@ -125,31 +129,64 @@ export async function undoEntry(entryId: string): Promise<UndoResult> {
   const table = tableFor(entry.kind);
 
   try {
-    await db.transaction('rw', table, db.undoHistory, db.eventHistory, async () => {
-      if (entry.before === null || entry.before === undefined) {
-        await table.delete(entry.entityId);
+    const result = await db.transaction('rw', [table, db.undoHistory, db.eventHistory, db.tasks, db.activeRun, db.focusSessions], async (): Promise<UndoResult> => {
+      // Re-read both rows while holding the write transaction: a stale undo may
+      // otherwise overwrite a later edit or replay an entry twice.
+      const latest = await db.undoHistory.get(entryId);
+      if (!latest || latest.undoneAt) return { ok: false, reason: 'empty', entry };
+      if (JSON.stringify(latest) !== JSON.stringify(entry)) return { ok: false, reason: 'conflict', entry: latest };
+      const current = await table.get(latest.entityId);
+      if (JSON.stringify(current ?? null) !== JSON.stringify(latest.after ?? null)) {
+        return { ok: false, reason: 'conflict', entry: latest };
+      }
+      // Legacy entries did not record the generated occurrence. New entries do;
+      // remove only an unchanged, unreferenced occurrence created by this exact
+      // operation. A pre-existing duplicate is never removed.
+      if (latest.kind === 'task.status' && latest.after && latest.before) {
+        const before = latest.before as { status?: string };
+        const after = latest.after as { status?: string; recurrence?: string };
+        if (after.recurrence && after.recurrence !== 'none' && before.status !== 'completed' && after.status === 'completed') {
+          const effect = latest.recurrenceEffect;
+          if (!effect || effect.version !== 1 || effect.spawned === undefined) return { ok: false, reason: 'recurring-unsafe', entry: latest };
+          if (effect.spawned) {
+            const spawned = await db.tasks.get(effect.spawned.id);
+            const [tasks, active, sessions] = await Promise.all([
+              db.tasks.toArray(), db.activeRun.get('active'), db.focusSessions.where('taskId').equals(effect.spawned.id).count(),
+            ]);
+            const referenced = active?.linkedTaskId === effect.spawned.id || sessions > 0 ||
+              tasks.some((task) => task.id !== effect.spawned!.id && task.dependsOn?.includes(effect.spawned!.id));
+            if (!spawned || JSON.stringify(spawned) !== JSON.stringify(effect.spawned) || referenced) {
+              return { ok: false, reason: 'recurring-unsafe', entry: latest };
+            }
+            await db.tasks.delete(spawned.id);
+          }
+        }
+      }
+      if (latest.before === null || latest.before === undefined) {
+        await table.delete(latest.entityId);
       } else {
-        await table.put(entry.before as never);
+        await table.put(latest.before as never);
       }
 
-      await db.undoHistory.put({ ...entry, undoneAt: new Date().toISOString() });
+      const undone = { ...latest, undoneAt: new Date().toISOString() };
+      await db.undoHistory.put(undone);
       await db.eventHistory.put({
         id: `evt-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
         at: new Date().toISOString(),
         kind: 'undo.applied',
-        entity: entry.entity,
-        entityId: entry.entityId,
+        entity: latest.entity,
+        entityId: latest.entityId,
         source: 'undo',
         level: 3,
-        data: { undoKind: entry.kind },
+        data: { undoKind: latest.kind },
       });
+      return { ok: true, entry: undone };
     });
+    if (result.ok && decision.grantId) await consumeGrant(decision.grantId);
+    return result;
   } catch {
     return { ok: false, reason: 'failed', entry };
   }
-
-  if (decision.grantId) await consumeGrant(decision.grantId);
-  return { ok: true, entry: { ...entry, undoneAt: new Date().toISOString() } };
 }
 
 /** Undo the newest thing, which is what a real "برگرد" button means. */

@@ -18,11 +18,12 @@ import type {
   UserSettings,
 } from '@/types/domain';
 import { computeNextRecurrenceDate, getTodayKey } from './date';
-import { validateBackup } from './backupValidation';
+import { BACKUP_COLLECTIONS, validateBackup } from './backupValidation';
+import { restorableSettings } from './backupSettings';
 import { createId } from './format';
 import type { Authority, EventEntity, EventKind, EventSource, KairosEvent } from './events';
 import type { PermissionGrant } from './permissions';
-import type { UndoEntry, UndoKind } from './undo';
+import type { UndoEntry } from './undo';
 
 export const DEFAULT_SETTINGS: UserSettings = {
   id: 'default',
@@ -205,6 +206,9 @@ export interface ActiveRunRecord {
   anchorElapsed: number;
   completedCycles: number;
   accruedFocusSeconds: number;
+  /** Missing on older saved sessions; migrated conservatively during read. */
+  recordedFocusSeconds?: number;
+  finished?: boolean;
   autoAdvance: boolean;
   linkedTaskId: string | null;
   sessionStartedAt: string | null;
@@ -234,36 +238,32 @@ export function makeHabitLogId(habitId: string, dateKey: string): string {
   return `${habitId}::${dateKey}`;
 }
 
-export async function ensureSettings(): Promise<UserSettings> {
+async function ensureSettingsInTransaction(): Promise<UserSettings> {
   const existing = await db.settings.get('default');
   if (existing) {
-    // Backfill every field added after the row was first written (1.4.0
-    // appearance, 1.6.0 home mode, 1.8.0 Chrono Core). A field-by-field check
-    // beats a hand-maintained list: the list is what kept getting forgotten.
     const merged: UserSettings = { ...DEFAULT_SETTINGS, ...existing, id: 'default' };
-    const missing = (Object.keys(DEFAULT_SETTINGS) as (keyof UserSettings)[]).some(
-      (key) => existing[key] === undefined
-    );
+    const missing = (Object.keys(DEFAULT_SETTINGS) as (keyof UserSettings)[]).some((key) => existing[key] === undefined);
     if (missing) await db.settings.put(merged);
     return merged;
   }
   const fresh: UserSettings = { ...DEFAULT_SETTINGS, updatedAt: new Date().toISOString() };
-  await db.settings.put(fresh);
+  await db.settings.add(fresh);
   return fresh;
 }
 
+export async function ensureSettings(): Promise<UserSettings> {
+  return db.transaction('rw', db.settings, ensureSettingsInTransaction);
+}
+
 export async function updateSettings(patch: Partial<Omit<UserSettings, 'id'>>): Promise<UserSettings> {
-  const current = await ensureSettings();
-  const next: UserSettings = {
-    ...current,
-    ...patch,
-    id: 'default',
-    updatedAt: new Date().toISOString(),
-  };
-  await db.settings.put(next);
+  const next = await db.transaction('rw', db.settings, async () => {
+    const current = await ensureSettingsInTransaction();
+    const value: UserSettings = { ...current, ...patch, id: 'default', updatedAt: new Date().toISOString() };
+    await db.settings.put(value);
+    return value;
+  });
   await logEvent('settings.updated', 'settings', 'default', {
-    level: 2,
-    data: { keys: Object.keys(patch).join(',').slice(0, 200) },
+    level: 2, data: { keys: Object.keys(patch).join(',').slice(0, 200) },
   });
   return next;
 }
@@ -276,6 +276,12 @@ export async function updateSettings(patch: Partial<Omit<UserSettings, 'id'>>): 
 // must never turn a successful save into a failed one, so every call is guarded.
 
 let writeCounter = 0;
+
+function pruneTaskLedgerOccasionally(): void {
+  if ((writeCounter += 1) % 64 !== 0) return;
+  void import('./undo').then(({ pruneUndo }) => pruneUndo()).catch(() => undefined);
+  void import('./events').then(({ pruneEvents }) => pruneEvents()).catch(() => undefined);
+}
 
 export async function logEvent(
   kind: EventKind,
@@ -308,44 +314,36 @@ export async function logEvent(
   }
 }
 
-async function pushUndo(entry: {
-  kind: UndoKind;
-  entity: EventEntity;
-  entityId: string;
-  label: string;
-  before: unknown | null;
-  after: unknown | null;
-}): Promise<void> {
-  try {
-    // Serialise ordering with the write. Two edits can share the same clock
-    // millisecond; random IDs otherwise make "latest" nondeterministic.
-    await db.transaction('rw', db.undoHistory, async () => {
-      const latest = await db.undoHistory.orderBy('at').last();
-      const previous = latest ? Date.parse(latest.at) : NaN;
-      const timestamp = Math.max(Date.now(), Number.isFinite(previous) ? previous + 1 : 0);
-      await db.undoHistory.put({
-        id: createId('und'), at: new Date(timestamp).toISOString(), undoneAt: null, ...entry,
-      });
-    });
-    if ((writeCounter += 1) % 64 === 0) {
-      const { pruneUndo } = await import('./undo');
-      void pruneUndo().catch(() => undefined);
-    }
-  } catch {
-    // the edit still stands; the safety net is a bonus, not a condition
-  }
+/** Caller must include undoHistory in its write transaction. */
+async function appendUndoInTransaction(entry: Pick<UndoEntry, 'kind' | 'entity' | 'entityId' | 'label' | 'before' | 'after'>): Promise<void> {
+  const latest = await db.undoHistory.orderBy('at').last();
+  const previous = latest ? Date.parse(latest.at) : NaN;
+  const at = new Date(Math.max(Date.now(), Number.isFinite(previous) ? previous + 1 : 0)).toISOString();
+  await db.undoHistory.add({ id: createId('und'), at, undoneAt: null, ...entry });
 }
 
 // ==================== TASKS ====================
+
+function nextOccurrence(task: Task, dueDate: string, now: string): Task {
+  return {
+    ...task,
+    id: createId('tsk'), dueDate, status: 'todo',
+    subtasks: task.subtasks.map((subtask) => ({ ...subtask, id: createId('sub'), completed: false })),
+    tags: [...task.tags], dependsOn: task.dependsOn ? [...task.dependsOn] : undefined,
+    archived: false, postponeCount: 0, createdAt: now, updatedAt: now, completedAt: null, completedDate: null,
+  };
+}
 
 export async function createTask(
   input: Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'completedAt' | 'completedDate' | 'postponeCount' | 'archived'>
 ): Promise<Task> {
   const now = new Date().toISOString();
   const isDone = input.status === 'completed';
+  const id = createId('tsk');
   const task: Task = {
     ...input,
-    id: createId('tsk'),
+    id,
+    ...(input.recurrence !== 'none' ? { recurrenceSeriesId: input.recurrenceSeriesId || id } : {}),
     archived: false,
     postponeCount: 0,
     createdAt: now,
@@ -353,10 +351,32 @@ export async function createTask(
     completedAt: isDone ? now : null,
     completedDate: isDone ? getTodayKey() : null,
   };
-  await db.tasks.put(task);
-  await logEvent('task.created', 'task', task.id, {
-    data: { status: task.status, hasDueDate: task.dueDate !== null, quadrant: task.quadrant },
-  });
+  const recurrence = task.recurrence;
+  if (isDone && recurrence !== 'none') {
+    // Creating an already-completed recurring task is still a completion; both
+    // occurrences must commit together or neither is written.
+    await db.transaction('rw', [db.tasks, db.eventHistory], async () => {
+      const nextDate = computeNextRecurrenceDate(task.dueDate ?? getTodayKey(), recurrence);
+      const candidates = await db.tasks.where('dueDate').equals(nextDate).toArray();
+      const duplicate = candidates.some((candidate) => candidate.recurrenceSeriesId === task.recurrenceSeriesId &&
+        candidate.recurrence === task.recurrence && candidate.status !== 'completed' && !candidate.archived);
+      await db.tasks.add(task);
+      await db.eventHistory.add({ id: createId('evt'), at: now, kind: 'task.created', entity: 'task', entityId: task.id,
+        source: 'user', level: 1, data: { status: task.status, hasDueDate: task.dueDate !== null, quadrant: task.quadrant } });
+      if (!duplicate) {
+        const next = nextOccurrence(task, nextDate, now);
+        await db.tasks.add(next);
+        await db.eventHistory.add({ id: createId('evt'), at: now, kind: 'task.created', entity: 'task', entityId: next.id,
+          source: 'user', level: 1, data: { status: next.status, hasDueDate: true, quadrant: next.quadrant } });
+      }
+    });
+    pruneTaskLedgerOccasionally();
+  } else {
+    await db.tasks.put(task);
+    await logEvent('task.created', 'task', task.id, {
+      data: { status: task.status, hasDueDate: task.dueDate !== null, quadrant: task.quadrant },
+    });
+  }
   return task;
 }
 
@@ -364,126 +384,132 @@ export async function updateTask(
   id: string,
   patch: Partial<Omit<Task, 'id' | 'createdAt'>>
 ): Promise<Task | undefined> {
-  const existing = await db.tasks.get(id);
-  if (!existing) return undefined;
-  const now = new Date().toISOString();
-
-  // Detect postponement when dueDate moves strictly forward on an incomplete task
-  let postponeCount = existing.postponeCount;
-  if (
-    patch.dueDate &&
-    existing.dueDate &&
-    patch.dueDate > existing.dueDate &&
-    existing.status !== 'completed'
-  ) {
-    postponeCount += 1;
-  }
-
-  let completedAt = existing.completedAt;
-  let completedDate = existing.completedDate;
-  if (patch.status && patch.status !== existing.status) {
-    if (patch.status === 'completed') {
-      completedAt = now;
-      completedDate = getTodayKey();
-    } else {
-      completedAt = null;
-      completedDate = null;
+  // A single transaction prevents simultaneous updates from reading the same
+  // old row and guarantees the undo snapshot belongs to the committed change.
+  const result = await db.transaction('rw', [db.tasks, db.undoHistory, db.eventHistory], async () => {
+    const existing = await db.tasks.get(id);
+    if (!existing) return undefined;
+    if (patch.status !== undefined && patch.status !== existing.status && existing.recurrence !== 'none') {
+      throw new Error('recurring-status-requires-setTaskStatus');
     }
-  }
-
-  const next: Task = {
-    ...existing,
-    ...patch,
-    postponeCount,
-    completedAt,
-    completedDate,
-    updatedAt: now,
-  };
-  await db.tasks.put(next);
-
-  const postponed = postponeCount > existing.postponeCount;
-  await pushUndo({
-    kind: patch.status && patch.status !== existing.status ? 'task.status' : 'task.update',
-    entity: 'task',
-    entityId: id,
-    label: patch.status && patch.status !== existing.status ? 'تغییر وضعیت وظیفه' : 'ویرایش وظیفه',
-    before: existing,
-    after: next,
+    const now = new Date().toISOString();
+    const postponed = Boolean(patch.dueDate && existing.dueDate && patch.dueDate > existing.dueDate && existing.status !== 'completed');
+    const statusChanged = patch.status !== undefined && patch.status !== existing.status;
+    const next: Task = {
+      ...existing,
+      ...patch,
+      ...(existing.recurrence === 'none' && patch.recurrence && patch.recurrence !== 'none' && !existing.recurrenceSeriesId
+        ? { recurrenceSeriesId: existing.id } : {}),
+      postponeCount: existing.postponeCount + (postponed ? 1 : 0),
+      completedAt: statusChanged ? (patch.status === 'completed' ? now : null) : existing.completedAt,
+      completedDate: statusChanged ? (patch.status === 'completed' ? getTodayKey() : null) : existing.completedDate,
+      updatedAt: now,
+    };
+    await db.tasks.put(next);
+    const latest = await db.undoHistory.orderBy('at').last();
+    const previousAt = latest ? Date.parse(latest.at) : NaN;
+    const at = new Date(Math.max(Date.now(), Number.isFinite(previousAt) ? previousAt + 1 : 0)).toISOString();
+    await db.undoHistory.add({
+      id: createId('und'), at, kind: statusChanged ? 'task.status' : 'task.update', entity: 'task', entityId: id,
+      label: statusChanged ? 'تغییر وضعیت وظیفه' : 'ویرایش وظیفه', before: existing, after: next, undoneAt: null,
+    });
+    await db.eventHistory.add({ id: createId('evt'), at: now, kind: 'task.updated', entity: 'task', entityId: id, source: 'user', level: 2 });
+    if (postponed) await db.eventHistory.add({
+      id: createId('evt'), at: now, kind: 'task.postponed', entity: 'task', entityId: id,
+      source: 'user', level: 2, data: { count: next.postponeCount },
+    });
+    if (statusChanged) await db.eventHistory.add({
+      id: createId('evt'), at: now, kind: 'task.status', entity: 'task', entityId: id,
+      source: 'user', level: 2, data: { from: existing.status, to: next.status },
+    });
+    return next;
   });
-  await logEvent('task.updated', 'task', id, { level: 2 });
-  if (postponed) {
-    await logEvent('task.postponed', 'task', id, {
-      level: 2,
-      data: { count: postponeCount },
-    });
-  }
-  if (patch.status && patch.status !== existing.status) {
-    await logEvent('task.status', 'task', id, {
-      level: 2,
-      data: { from: existing.status, to: patch.status },
-    });
-  }
-  return next;
+  if (result) pruneTaskLedgerOccasionally();
+  return result;
 }
 
 /**
- * Transitions a task status cleanly and automatically schedules the next recurrence
- * without creating duplicate tasks.
+ * Status, next occurrence and undo metadata commit together. New series use
+ * stable identity; old rows without an identity retain the legacy title/date
+ * heuristic because automatically joining old records could lose user data.
  */
+type TaskEditPatch = Partial<Omit<Task, 'id' | 'createdAt' | 'status' | 'completedAt' | 'completedDate'>>;
+
 export async function setTaskStatus(
   id: string,
-  newStatus: TaskStatus
+  newStatus: TaskStatus,
+  options?: { expected: Task; patch: TaskEditPatch }
 ): Promise<{ task?: Task; spawnedNext?: Task }> {
-  const existing = await db.tasks.get(id);
-  if (!existing) return {};
+  const result = await db.transaction('rw', [db.tasks, db.undoHistory, db.eventHistory], async () => {
+    const existing = await db.tasks.get(id);
+    if (!existing) {
+      if (options) throw new Error('task-edit-conflict');
+      return {};
+    }
+    if (options && JSON.stringify(existing) !== JSON.stringify(options.expected)) throw new Error('task-edit-conflict');
+    const statusChanged = existing.status !== newStatus;
+    if (!statusChanged && !options) return { task: existing };
 
-  const updated = await updateTask(id, { status: newStatus });
-  let spawnedNext: Task | undefined;
-
-  if (
-    updated &&
-    newStatus === 'completed' &&
-    existing.status !== 'completed' &&
-    existing.recurrence !== 'none'
-  ) {
-    const baseDate = existing.dueDate ?? getTodayKey();
-    const nextDate = computeNextRecurrenceDate(baseDate, existing.recurrence);
-
-    // Prevent duplicates: check if an uncompleted task with identical title & dueDate already exists
-    const existingCandidates = await db.tasks.where('dueDate').equals(nextDate).toArray();
-    const duplicate = existingCandidates.find(
-      (c) =>
-        c.title.trim() === existing.title.trim() &&
-        c.recurrence === existing.recurrence &&
-        c.status !== 'completed' &&
-        !c.archived
-    );
-
-    if (!duplicate) {
-      spawnedNext = await createTask({
-        title: existing.title,
-        sample: existing.sample,
-        description: existing.description,
-        dueDate: nextDate,
-        dueTime: existing.dueTime,
-        priority: existing.priority,
-        quadrant: existing.quadrant,
-        category: existing.category,
-        tags: [...existing.tags],
-        status: 'todo',
-        subtasks: existing.subtasks.map((s) => ({
-          id: createId('sub'),
-          title: s.title,
-          completed: false,
-        })),
-        recurrence: existing.recurrence,
-        reminderEnabled: existing.reminderEnabled,
-        reminderOffsetMin: existing.reminderOffsetMin,
+    const now = new Date().toISOString();
+    const today = getTodayKey();
+    const patch = options?.patch ?? {};
+    const postponed = Boolean(patch.dueDate && existing.dueDate && patch.dueDate > existing.dueDate && existing.status !== 'completed');
+    const updated: Task = {
+      ...existing,
+      ...patch,
+      ...(existing.recurrence === 'none' && patch.recurrence && patch.recurrence !== 'none' && !existing.recurrenceSeriesId
+        ? { recurrenceSeriesId: existing.id } : {}),
+      status: newStatus,
+      postponeCount: existing.postponeCount + (postponed ? 1 : 0),
+      completedAt: statusChanged ? (newStatus === 'completed' ? now : null) : existing.completedAt,
+      completedDate: statusChanged ? (newStatus === 'completed' ? today : null) : existing.completedDate,
+      updatedAt: now,
+    };
+    const recurringCompletion = statusChanged && newStatus === 'completed' && updated.recurrence !== 'none';
+    let spawnedNext: Task | undefined;
+    if (recurringCompletion && updated.recurrence !== 'none') {
+      const nextDate = computeNextRecurrenceDate(updated.dueDate ?? today, updated.recurrence);
+      const candidates = await db.tasks.where('dueDate').equals(nextDate).toArray();
+      const duplicate = candidates.find((candidate) => candidate.id !== id &&
+        (updated.recurrenceSeriesId
+          ? candidate.recurrenceSeriesId === updated.recurrenceSeriesId
+          : candidate.title.trim() === updated.title.trim()) &&
+        candidate.recurrence === updated.recurrence && candidate.status !== 'completed' && !candidate.archived);
+      if (!duplicate) {
+        spawnedNext = nextOccurrence(updated, nextDate, now);
+        await db.tasks.add(spawnedNext);
+      }
+    }
+    await db.tasks.put(updated);
+    const latest = await db.undoHistory.orderBy('at').last();
+    const previousAt = latest ? Date.parse(latest.at) : NaN;
+    const at = new Date(Math.max(Date.now(), Number.isFinite(previousAt) ? previousAt + 1 : 0)).toISOString();
+    await db.undoHistory.add({
+      id: createId('und'), at, kind: statusChanged ? 'task.status' : 'task.update', entity: 'task', entityId: id,
+      label: statusChanged ? 'تغییر وضعیت وظیفه' : 'ویرایش وظیفه', before: existing, after: updated, undoneAt: null,
+      ...(recurringCompletion ? { recurrenceEffect: { version: 1 as const, spawned: spawnedNext ?? null } } : {}),
+    });
+    if (options) await db.eventHistory.add({
+      id: createId('evt'), at: now, kind: 'task.updated', entity: 'task', entityId: id, source: 'user', level: 2,
+    });
+    if (postponed) await db.eventHistory.add({
+      id: createId('evt'), at: now, kind: 'task.postponed', entity: 'task', entityId: id, source: 'user', level: 2,
+      data: { count: updated.postponeCount },
+    });
+    if (statusChanged) await db.eventHistory.add({
+      id: createId('evt'), at: now, kind: 'task.status', entity: 'task', entityId: id,
+      source: 'user', level: 2, data: { from: existing.status, to: newStatus },
+    });
+    if (spawnedNext) {
+      await db.eventHistory.add({
+        id: createId('evt'), at: now, kind: 'task.created', entity: 'task', entityId: spawnedNext.id,
+        source: 'user', level: 1, data: { status: 'todo', hasDueDate: true, quadrant: spawnedNext.quadrant },
       });
     }
-  }
-
-  return { task: updated, spawnedNext };
+    return { task: updated, spawnedNext };
+  });
+  if (result.task) pruneTaskLedgerOccasionally();
+  return result;
 }
 
 export async function archiveTask(id: string, archived: boolean): Promise<void> {
@@ -491,10 +517,25 @@ export async function archiveTask(id: string, archived: boolean): Promise<void> 
   await logEvent('task.archived', 'task', id, { level: 2, data: { archived } });
 }
 
-export async function deleteTask(id: string): Promise<void> {
-  await db.tasks.delete(id);
-  // Deletion is level 3 on purpose: it is confirmed, logged, and *not* undoable.
-  await logEvent('task.deleted', 'task', id, { level: 3 });
+export async function deleteTask(id: string, expected?: Task): Promise<void> {
+  await db.transaction('rw', [db.tasks, db.undoHistory, db.migrationLog, db.eventHistory], async () => {
+    const current = await db.tasks.get(id);
+    if (!current || (expected && JSON.stringify(current) !== JSON.stringify(expected))) throw new Error('task-delete-conflict');
+    await db.tasks.delete(id);
+    await db.undoHistory.where('entityId').equals(id).and((row) => row.entity === 'task').delete();
+    // v5 migration snapshots can contain an older copy of the deleted title.
+    const migrations = await db.migrationLog.toArray();
+    for (const migration of migrations) {
+      if (!Array.isArray(migration.snapshot?.tasks)) continue;
+      const tasks = migration.snapshot.tasks.filter((row) => !(row && typeof row === 'object' && 'id' in row && row.id === id));
+      if (tasks.length !== migration.snapshot.tasks.length) {
+        await db.migrationLog.put({ ...migration, snapshot: { ...migration.snapshot, tasks } });
+      }
+    }
+    await db.eventHistory.add({ id: createId('evt'), at: new Date().toISOString(), kind: 'task.deleted',
+      entity: 'task', entityId: id, source: 'user', level: 3 });
+  });
+  pruneTaskLedgerOccasionally();
 }
 
 // ==================== HABITS & LOGS ====================
@@ -517,32 +558,38 @@ export async function createHabit(
 
 export async function updateHabit(
   id: string,
-  patch: Partial<Omit<Habit, 'id' | 'createdAt'>>
+  patch: Partial<Omit<Habit, 'id' | 'createdAt'>>,
+  expected?: Habit
 ): Promise<Habit | undefined> {
-  const existing = await db.habits.get(id);
-  if (!existing) return undefined;
-  const next: Habit = {
-    ...existing,
-    ...patch,
-    updatedAt: new Date().toISOString(),
-  };
-  await db.habits.put(next);
-  await pushUndo({
-    kind: 'habit.update',
-    entity: 'habit',
-    entityId: id,
-    label: 'ویرایش عادت',
-    before: existing,
-    after: next,
+  const result = await db.transaction('rw', [db.habits, db.undoHistory, db.eventHistory], async () => {
+    const existing = await db.habits.get(id);
+    if (expected && JSON.stringify(existing) !== JSON.stringify(expected)) throw new Error('habit-edit-conflict');
+    if (!existing) return undefined;
+    const next: Habit = { ...existing, ...patch, updatedAt: new Date().toISOString() };
+    await db.habits.put(next);
+    await appendUndoInTransaction({ kind: 'habit.update', entity: 'habit', entityId: id,
+      label: 'ویرایش عادت', before: existing, after: next });
+    await db.eventHistory.add({ id: createId('evt'), at: next.updatedAt, kind: 'habit.updated', entity: 'habit', entityId: id, source: 'user', level: 2 });
+    return next;
   });
-  await logEvent('habit.updated', 'habit', id, { level: 2 });
-  return next;
+  if (result) pruneTaskLedgerOccasionally();
+  return result;
 }
 
-export async function deleteHabit(id: string): Promise<void> {
-  await db.transaction('rw', db.habits, db.habitLogs, async () => {
+export async function deleteHabit(id: string, expected?: Habit): Promise<void> {
+  await db.transaction('rw', [db.habits, db.habitLogs, db.undoHistory], async () => {
+    const current = await db.habits.get(id);
+    if (!current || (expected && JSON.stringify(current) !== JSON.stringify(expected))) throw new Error('habit-delete-conflict');
+    const logs = await db.habitLogs.where('habitId').equals(id).primaryKeys();
     await db.habits.delete(id);
-    await db.habitLogs.where('habitId').equals(id).delete();
+    await db.habitLogs.bulkDelete(logs);
+    await db.undoHistory.filter((row) => {
+      if (row.entity === 'habit') return row.entityId === id;
+      if (row.entity !== 'habitLog') return false;
+      const before = row.before as { habitId?: unknown } | null;
+      const after = row.after as { habitId?: unknown } | null;
+      return before?.habitId === id || after?.habitId === id;
+    }).delete();
   });
   await logEvent('habit.deleted', 'habit', id, { level: 3 });
 }
@@ -556,55 +603,48 @@ export async function upsertHabitLog(
   dateKey: string,
   status: HabitLogStatus,
   value: number,
-  note?: string
+  note?: string,
+  expected?: { habit: Habit; log: HabitLog | null }
 ): Promise<HabitLog> {
-  const habit = await db.habits.get(habitId);
-  const log: HabitLog = {
-    sample: habit?.sample,
-    id: makeHabitLogId(habitId, dateKey),
-    habitId,
-    dateKey,
-    status,
-    value,
-    note,
-    updatedAt: new Date().toISOString(),
-  };
-  const previous = await db.habitLogs.get(log.id);
-  await db.habitLogs.put(log);
-  await pushUndo({
-    kind: 'habit.log',
-    entity: 'habitLog',
-    entityId: log.id,
-    label: 'ثبت عادت',
-    before: previous ?? null,
-    after: log,
+  const result = await db.transaction('rw', [db.habits, db.habitLogs, db.undoHistory, db.eventHistory], async () => {
+    const habit = await db.habits.get(habitId);
+    if (!habit) throw new Error('habit-not-found');
+    const now = new Date().toISOString();
+    const log: HabitLog = { sample: habit.sample, id: makeHabitLogId(habitId, dateKey), habitId, dateKey, status, value, note, updatedAt: now };
+    const previous = await db.habitLogs.get(log.id);
+    if (expected && (JSON.stringify(habit) !== JSON.stringify(expected.habit) || JSON.stringify(previous ?? null) !== JSON.stringify(expected.log))) throw new Error('habit-log-conflict');
+    await db.habitLogs.put(log);
+    const latest = await db.undoHistory.orderBy('at').last();
+    const at = new Date(Math.max(Date.now(), latest ? Date.parse(latest.at) + 1 || 0 : 0)).toISOString();
+    await db.undoHistory.add({ id: createId('und'), at, kind: 'habit.log', entity: 'habitLog', entityId: log.id,
+      label: 'ثبت عادت', before: previous ?? null, after: log, undoneAt: null });
+    await db.eventHistory.add({ id: createId('evt'), at: now, kind: 'habit.logged', entity: 'habitLog', entityId: log.id,
+      source: 'user', level: 2, data: { habitId, dateKey, status, value } });
+    return log;
   });
-  await logEvent('habit.logged', 'habitLog', log.id, {
-    level: 2,
-    data: { habitId, dateKey, status, value },
-  });
-  return log;
+  pruneTaskLedgerOccasionally();
+  return result;
 }
 
-/**
- * Clears a log record so that day accurately returns to the "Unlogged / No Data" state
- * (distinct from explicitly missed!).
- */
-export async function clearHabitLog(habitId: string, dateKey: string): Promise<void> {
-  const id = makeHabitLogId(habitId, dateKey);
-  const previous = await db.habitLogs.get(id);
-  await db.habitLogs.delete(id);
-  if (previous) {
-    await pushUndo({
-      kind: 'habit.log',
-      entity: 'habitLog',
-      entityId: id,
-      label: 'برداشتن ثبت عادت',
-      before: previous,
-      after: null,
-    });
-  }
-  await logEvent('habit.unlogged', 'habitLog', id, { level: 2, data: { habitId, dateKey } });
+/** Clear one day's log and record a conflict-safe undo in the same transaction. */
+export async function clearHabitLog(habitId: string, dateKey: string, expected?: { habit: Habit; log: HabitLog | null }): Promise<void> {
+  await db.transaction('rw', [db.habits, db.habitLogs, db.undoHistory, db.eventHistory], async () => {
+    const id = makeHabitLogId(habitId, dateKey);
+    const habit = await db.habits.get(habitId);
+    if (!habit) throw new Error('habit-not-found');
+    const previous = await db.habitLogs.get(id);
+    if (expected && (JSON.stringify(habit) !== JSON.stringify(expected.habit) || JSON.stringify(previous ?? null) !== JSON.stringify(expected.log))) throw new Error('habit-log-conflict');
+    await db.habitLogs.delete(id);
+    if (previous) {
+      const latest = await db.undoHistory.orderBy('at').last();
+      const at = new Date(Math.max(Date.now(), latest ? Date.parse(latest.at) + 1 || 0 : 0)).toISOString();
+      await db.undoHistory.add({ id: createId('und'), at, kind: 'habit.log', entity: 'habitLog', entityId: id,
+        label: 'برداشتن ثبت عادت', before: previous, after: null, undoneAt: null });
+    }
+    await db.eventHistory.add({ id: createId('evt'), at: new Date().toISOString(), kind: 'habit.unlogged',
+      entity: 'habitLog', entityId: id, source: 'user', level: 2, data: { habitId, dateKey } });
+  });
+  pruneTaskLedgerOccasionally();
 }
 
 // ==================== FOCUS SESSIONS ====================
@@ -623,8 +663,12 @@ export async function recordFocusSession(
   return session;
 }
 
-export async function deleteFocusSession(id: string): Promise<void> {
-  await db.focusSessions.delete(id);
+export async function deleteFocusSession(id: string, expected?: FocusSession): Promise<void> {
+  await db.transaction('rw', db.focusSessions, async () => {
+    const current = await db.focusSessions.get(id);
+    if (!current || (expected && JSON.stringify(current) !== JSON.stringify(expected))) throw new Error('focus-delete-conflict');
+    await db.focusSessions.delete(id);
+  });
   await logEvent('focus.deleted', 'focusSession', id, { level: 3 });
 }
 
@@ -649,42 +693,39 @@ export async function createGoal(
 
 export async function updateGoal(
   id: string,
-  patch: Partial<Omit<Goal, 'id' | 'createdAt'>>
+  patch: Partial<Omit<Goal, 'id' | 'createdAt'>>,
+  expected?: Goal
 ): Promise<Goal | undefined> {
-  const existing = await db.goals.get(id);
-  if (!existing) return undefined;
-  const currentValue = patch.currentValue ?? existing.currentValue;
-  const targetValue = patch.targetValue ?? existing.targetValue;
-  const completed =
-    patch.completed !== undefined
-      ? patch.completed
-      : targetValue > 0 && currentValue >= targetValue;
-  const next: Goal = {
-    ...existing,
-    ...patch,
-    currentValue,
-    targetValue,
-    completed,
-    updatedAt: new Date().toISOString(),
-  };
-  await db.goals.put(next);
-  await pushUndo({
-    kind: 'goal.update',
-    entity: 'goal',
-    entityId: id,
-    label: 'ویرایش هدف',
-    before: existing,
-    after: next,
+  const result = await db.transaction('rw', [db.goals, db.undoHistory, db.eventHistory], async () => {
+    const existing = await db.goals.get(id);
+    if (expected && JSON.stringify(existing) !== JSON.stringify(expected)) throw new Error('goal-edit-conflict');
+    if (!existing) return undefined;
+    const currentValue = patch.currentValue ?? existing.currentValue;
+    const targetValue = patch.targetValue ?? existing.targetValue;
+    const completed = patch.completed !== undefined ? patch.completed : targetValue > 0 && currentValue >= targetValue;
+    const next: Goal = { ...existing, ...patch, currentValue, targetValue, completed, updatedAt: new Date().toISOString() };
+    await db.goals.put(next);
+    await appendUndoInTransaction({ kind: 'goal.update', entity: 'goal', entityId: id, label: 'ویرایش هدف', before: existing, after: next });
+    await db.eventHistory.add({ id: createId('evt'), at: next.updatedAt, kind: 'goal.updated', entity: 'goal', entityId: id,
+      source: 'user', level: 2, data: { current: next.currentValue, target: next.targetValue, completed: next.completed } });
+    return next;
   });
-  await logEvent('goal.updated', 'goal', id, {
-    level: 2,
-    data: { current: next.currentValue, target: next.targetValue, completed: next.completed },
-  });
-  return next;
+  if (result) pruneTaskLedgerOccasionally();
+  return result;
 }
 
-export async function deleteGoal(id: string): Promise<void> {
-  await db.goals.delete(id);
+export async function deleteGoal(id: string, expected?: Goal): Promise<void> {
+  await db.transaction('rw', [db.goals, db.undoHistory, db.migrationLog], async () => {
+    const current = await db.goals.get(id);
+    if (!current || (expected && JSON.stringify(current) !== JSON.stringify(expected))) throw new Error('goal-delete-conflict');
+    await db.goals.delete(id);
+    await db.undoHistory.where('entityId').equals(id).and((row) => row.entity === 'goal').delete();
+    for (const migration of await db.migrationLog.toArray()) {
+      if (!Array.isArray(migration.snapshot?.goals)) continue;
+      const goals = migration.snapshot.goals.filter((row) => !(row && typeof row === 'object' && 'id' in row && row.id === id));
+      if (goals.length !== migration.snapshot.goals.length) await db.migrationLog.put({ ...migration, snapshot: { ...migration.snapshot, goals } });
+    }
+  });
   await logEvent('goal.deleted', 'goal', id, { level: 3 });
 }
 
@@ -709,34 +750,37 @@ export async function createProject(
 
 export async function updateProject(
   id: string,
-  patch: Partial<Omit<Project, 'id' | 'createdAt'>>
+  patch: Partial<Omit<Project, 'id' | 'createdAt'>>,
+  expected?: Project
 ): Promise<Project | undefined> {
-  const existing = await db.projects.get(id);
-  if (!existing) return undefined;
-  const next: Project = { ...existing, ...patch, updatedAt: new Date().toISOString() };
-  await db.projects.put(next);
-  const statusChanged = patch.status !== undefined && patch.status !== existing.status;
-  await pushUndo({
-    kind: statusChanged ? 'project.status' : 'project.update',
-    entity: 'project',
-    entityId: id,
-    label: statusChanged ? 'تغییر وضعیت پروژه' : 'ویرایش پروژه',
-    before: existing,
-    after: next,
+  const result = await db.transaction('rw', [db.projects, db.undoHistory, db.eventHistory], async () => {
+    const existing = await db.projects.get(id);
+    if (expected && JSON.stringify(existing) !== JSON.stringify(expected)) throw new Error('project-edit-conflict');
+    if (!existing) return undefined;
+    const next: Project = { ...existing, ...patch, updatedAt: new Date().toISOString() };
+    const statusChanged = patch.status !== undefined && patch.status !== existing.status;
+    await db.projects.put(next);
+    await appendUndoInTransaction({ kind: statusChanged ? 'project.status' : 'project.update', entity: 'project', entityId: id,
+      label: statusChanged ? 'تغییر وضعیت پروژه' : 'ویرایش پروژه', before: existing, after: next });
+    await db.eventHistory.add({ id: createId('evt'), at: next.updatedAt, kind: statusChanged ? 'project.archived' : 'project.updated',
+      entity: 'project', entityId: id, source: 'user', level: 2,
+      ...(statusChanged ? { data: { from: existing.status, to: next.status } } : {}) });
+    return next;
   });
-  await logEvent(statusChanged ? 'project.archived' : 'project.updated', 'project', id, {
-    level: 2,
-    data: statusChanged ? { from: existing.status, to: next.status } : undefined,
-  });
-  return next;
+  if (result) pruneTaskLedgerOccasionally();
+  return result;
 }
 
 export async function setProjectStatus(id: string, status: Project['status']): Promise<void> {
   await updateProject(id, { status });
 }
 
-export async function deleteProject(id: string): Promise<void> {
-  await db.transaction('rw', db.projects, db.projectStages, db.tasks, async () => {
+export async function deleteProject(id: string, expected?: Project): Promise<void> {
+  await db.transaction('rw', [db.projects, db.projectStages, db.tasks, db.undoHistory], async () => {
+    const current = await db.projects.get(id);
+    if (!current || (expected && JSON.stringify(current) !== JSON.stringify(expected))) throw new Error('project-delete-conflict');
+    const stages = await db.projectStages.where('projectId').equals(id).primaryKeys();
+    await db.undoHistory.where('entityId').anyOf([id, ...stages]).and((row) => row.entity === 'project').delete();
     await db.projects.delete(id);
     await db.projectStages.where('projectId').equals(id).delete();
     // Tasks are never deleted with their project: the work happened.
@@ -763,7 +807,10 @@ export async function createStage(
     createdAt: now,
     updatedAt: now,
   };
-  await db.projectStages.put(stage);
+  await db.transaction('rw', [db.projects, db.projectStages], async () => {
+    if (!await db.projects.get(stage.projectId)) throw new Error('project-not-found');
+    await db.projectStages.add(stage);
+  });
   await logEvent('stage.created', 'project', stage.projectId, {
     level: 2,
     data: { stageId: stage.id },
@@ -775,43 +822,47 @@ export async function updateStage(
   id: string,
   patch: Partial<Omit<ProjectStage, 'id' | 'projectId' | 'createdAt'>>
 ): Promise<ProjectStage | undefined> {
-  const existing = await db.projectStages.get(id);
-  if (!existing) return undefined;
-  const done = patch.done ?? existing.done;
-  const next: ProjectStage = {
-    ...existing,
-    ...patch,
-    done,
-    completedAt: done ? existing.completedAt ?? new Date().toISOString() : null,
-    updatedAt: new Date().toISOString(),
-  };
-  await db.projectStages.put(next);
-  const toggled = done !== existing.done;
-  await pushUndo({
-    kind: toggled ? 'stage.toggle' : 'stage.update',
-    entity: 'project',
-    // The row itself is the restoration target, so the id is the stage's.
-    entityId: id,
-    label: toggled ? 'تیک مرحله' : 'ویرایش مرحله',
-    before: existing,
-    after: next,
+  const result = await db.transaction('rw', [db.projectStages, db.undoHistory, db.eventHistory], async () => {
+    const existing = await db.projectStages.get(id);
+    if (!existing) return undefined;
+    const done = patch.done ?? existing.done;
+    const next: ProjectStage = { ...existing, ...patch, done, completedAt: done ? existing.completedAt ?? new Date().toISOString() : null, updatedAt: new Date().toISOString() };
+    const toggled = done !== existing.done;
+    await db.projectStages.put(next);
+    await appendUndoInTransaction({ kind: toggled ? 'stage.toggle' : 'stage.update', entity: 'project', entityId: id,
+      label: toggled ? 'تیک مرحله' : 'ویرایش مرحله', before: existing, after: next });
+    await db.eventHistory.add({ id: createId('evt'), at: next.updatedAt, kind: toggled ? 'stage.toggled' : 'stage.created',
+      entity: 'project', entityId: next.projectId, source: 'user', level: 2, data: { stageId: id, done } });
+    return next;
   });
-  await logEvent(toggled ? 'stage.toggled' : 'stage.created', 'project', next.projectId, {
-    level: 2,
-    data: { stageId: id, done },
-  });
-  return next;
+  if (result) pruneTaskLedgerOccasionally();
+  return result;
 }
 
 export async function toggleStage(id: string): Promise<ProjectStage | undefined> {
-  const existing = await db.projectStages.get(id);
-  if (!existing) return undefined;
-  return updateStage(id, { done: !existing.done });
+  const result = await db.transaction('rw', [db.projectStages, db.undoHistory, db.eventHistory], async () => {
+    const existing = await db.projectStages.get(id);
+    if (!existing) return undefined;
+    const now = new Date().toISOString();
+    const next: ProjectStage = { ...existing, done: !existing.done, completedAt: existing.done ? null : now, updatedAt: now };
+    await db.projectStages.put(next);
+    await appendUndoInTransaction({ kind: 'stage.toggle', entity: 'project', entityId: id, label: 'تیک مرحله', before: existing, after: next });
+    await db.eventHistory.add({ id: createId('evt'), at: now, kind: 'stage.toggled', entity: 'project', entityId: next.projectId,
+      source: 'user', level: 2, data: { stageId: id, done: next.done } });
+    return next;
+  });
+  if (result) pruneTaskLedgerOccasionally();
+  return result;
 }
 
-export async function deleteStage(id: string): Promise<void> {
-  const existing = await db.projectStages.get(id);
-  await db.projectStages.delete(id);
+export async function deleteStage(id: string, expected?: ProjectStage): Promise<void> {
+  const existing = await db.transaction('rw', [db.projectStages, db.undoHistory], async () => {
+    const current = await db.projectStages.get(id);
+    if (!current || (expected && JSON.stringify(current) !== JSON.stringify(expected))) throw new Error('stage-delete-conflict');
+    await db.projectStages.delete(id);
+    await db.undoHistory.where('entityId').equals(id).and((row) => row.entity === 'project').delete();
+    return current;
+  });
   if (existing) {
     await logEvent('stage.deleted', 'project', existing.projectId, {
       level: 3,
@@ -823,18 +874,23 @@ export async function deleteStage(id: string): Promise<void> {
 // ==================== BACKUP / RESTORE / WIPE ====================
 
 export async function exportBackup(): Promise<KairosBackupPayload> {
-  const [tasks, habits, habitLogs, focusSessions, goals, settings, journal, projects, projectStages] =
-    await Promise.all([
-      db.tasks.toArray(),
-      db.habits.toArray(),
-      db.habitLogs.toArray(),
-      db.focusSessions.toArray(),
-      db.goals.toArray(),
-      ensureSettings(),
-      db.journal.toArray(),
-      db.projects.toArray(),
-      db.projectStages.toArray(),
-    ]);
+  // Initialise before opening the readonly transaction; all exported tables
+  // must be read in one snapshot so concurrent edits cannot mix two states.
+  await ensureSettings();
+  const [tasks, habits, habitLogs, focusSessions, goals, settingsRow, journal, projects, projectStages] =
+    await db.transaction('r', [db.tasks, db.habits, db.habitLogs, db.focusSessions, db.goals, db.settings, db.journal, db.projects, db.projectStages],
+      () => Promise.all([
+        db.tasks.toArray(),
+        db.habits.toArray(),
+        db.habitLogs.toArray(),
+        db.focusSessions.toArray(),
+        db.goals.toArray(),
+        db.settings.get('default'),
+        db.journal.toArray(),
+        db.projects.toArray(),
+        db.projectStages.toArray(),
+      ]));
+  const settings = settingsRow ?? { ...DEFAULT_SETTINGS };
   return {
     // v3 is the first format that carries projects; restore stays backward
     // compatible, so an old file is still accepted with the same version check.
@@ -860,9 +916,27 @@ export interface BackupImportResult {
   skipped: number;
 }
 
-/** Restore missing records only. Existing rows and settings are never overwritten. */
-export async function importBackup(payload: KairosBackupPayload): Promise<BackupImportResult> {
+/** Point-in-time estimate only; import repeats the checks inside its write transaction. */
+export async function inspectBackup(payload: KairosBackupPayload): Promise<BackupImportResult> {
   validateBackup(payload);
+  return db.transaction('r', BACKUP_COLLECTIONS.map((name) => db.table(name)), async () => {
+    let added = 0;
+    let skipped = 0;
+    for (const name of BACKUP_COLLECTIONS) {
+      const rows = payload[name] ?? [];
+      const existing = await db.table(name).bulkGet(rows.map((row) => row.id));
+      const present = existing.filter((row) => row !== undefined).length;
+      skipped += present;
+      added += rows.length - present;
+    }
+    return { added, skipped };
+  });
+}
+
+/** Merge missing records. Personal preferences are replaced only by explicit opt-in. */
+export async function importBackup(payload: KairosBackupPayload, options?: { restorePreferences?: boolean }): Promise<BackupImportResult> {
+  validateBackup(payload);
+  const preferences = options?.restorePreferences ? restorableSettings(payload.settings) : undefined;
   let added = 0;
   let skipped = 0;
   async function addMissing<T extends { id: string }>(table: Table<T, string>, rows?: T[]) {
@@ -880,8 +954,9 @@ export async function importBackup(payload: KairosBackupPayload): Promise<Backup
     (sampleEligibleRows.length > 0 && payload.settings?.hasSampleData === true);
   await db.transaction(
     'rw',
-    [db.tasks, db.habits, db.habitLogs, db.focusSessions, db.goals, db.journal, db.projects, db.projectStages, db.settings],
+    [db.tasks, db.habits, db.habitLogs, db.focusSessions, db.goals, db.journal, db.projects, db.projectStages, db.settings, db.activeRun],
     async () => {
+      if (preferences && await db.activeRun.get('active')) throw new Error('focus-session-active');
       await addMissing(db.tasks, payload.tasks);
       await addMissing(db.habits, payload.habits);
       await addMissing(db.habitLogs, payload.habitLogs);
@@ -890,9 +965,13 @@ export async function importBackup(payload: KairosBackupPayload): Promise<Backup
       await addMissing(db.journal, payload.journal);
       await addMissing(db.projects, payload.projects);
       await addMissing(db.projectStages, payload.projectStages);
-      if (containsSamples) {
+      if (containsSamples || preferences) {
         const current = await db.settings.get('default');
-        if (!current || !current.hasSampleData) await db.settings.put({ ...DEFAULT_SETTINGS, ...current, id: 'default', hasSampleData: true });
+        await db.settings.put({
+          ...DEFAULT_SETTINGS, ...current, ...preferences, id: 'default',
+          hasSampleData: containsSamples || current?.hasSampleData === true,
+          updatedAt: new Date().toISOString(),
+        });
       }
     }
   );
@@ -904,7 +983,6 @@ export async function importBackup(payload: KairosBackupPayload): Promise<Backup
 }
 
 export async function clearAllUserData(): Promise<void> {
-  const current = await ensureSettings();
   await db.transaction(
     'rw',
     [
@@ -917,8 +995,14 @@ export async function clearAllUserData(): Promise<void> {
       db.journal,
       db.projects,
       db.projectStages,
+      db.activeRun,
+      db.eventHistory,
+      db.undoHistory,
+      db.permissionGrants,
+      db.migrationLog,
     ],
     async () => {
+      const current = await ensureSettingsInTransaction();
       await Promise.all([
         db.tasks.clear(),
         db.habits.clear(),
@@ -928,6 +1012,11 @@ export async function clearAllUserData(): Promise<void> {
         db.journal.clear(),
         db.projects.clear(),
         db.projectStages.clear(),
+        db.activeRun.clear(),
+        db.eventHistory.clear(),
+        db.undoHistory.clear(),
+        db.permissionGrants.clear(),
+        db.migrationLog.clear(),
       ]);
       await db.settings.put({
         ...current,
@@ -948,41 +1037,37 @@ export async function clearAllUserData(): Promise<void> {
  */
 export async function upsertJournalEntry(
   dateKey: string,
-  patch: { mood?: number; note?: string; highlight?: string }
+  patch: { mood?: number; note?: string; highlight?: string },
+  expected?: JournalEntry | null
 ): Promise<JournalEntry> {
-  const id = `journal-${dateKey}`;
-  const existing = await db.journal.get(id);
-  const now = new Date().toISOString();
-
-  const entry: JournalEntry = {
-    id,
-    dateKey,
-    mood: patch.mood ?? existing?.mood ?? 3,
-    note: patch.note ?? existing?.note ?? '',
-    highlight: patch.highlight ?? existing?.highlight ?? '',
-    createdAt: existing?.createdAt ?? now,
-    updatedAt: now,
-  };
-
-  await db.journal.put(entry);
-  await pushUndo({
-    kind: 'journal.save',
-    entity: 'journal',
-    entityId: id,
-    label: existing ? 'ویرایش ژورنال' : 'نوشتن ژورنال',
-    before: existing ?? null,
-    after: entry,
+  const entry = await db.transaction('rw', [db.journal, db.undoHistory, db.eventHistory], async () => {
+    const id = `journal-${dateKey}`;
+    const existing = await db.journal.get(id);
+    if (expected !== undefined && JSON.stringify(existing ?? null) !== JSON.stringify(expected)) throw new Error('journal-edit-conflict');
+    const now = new Date().toISOString();
+    const next: JournalEntry = {
+      id, dateKey, mood: patch.mood ?? existing?.mood ?? 3,
+      note: patch.note ?? existing?.note ?? '', highlight: patch.highlight ?? existing?.highlight ?? '',
+      createdAt: existing?.createdAt ?? now, updatedAt: now,
+    };
+    await db.journal.put(next);
+    await appendUndoInTransaction({ kind: 'journal.save', entity: 'journal', entityId: id,
+      label: existing ? 'ویرایش ژورنال' : 'نوشتن ژورنال', before: existing ?? null, after: next });
+    await db.eventHistory.add({ id: createId('evt'), at: now, kind: 'journal.saved', entity: 'journal', entityId: id,
+      source: 'user', level: existing ? 3 : 2, data: { dateKey, mood: next.mood, isOverwrite: Boolean(existing) } });
+    return next;
   });
-  // Overwriting an existing day is level 3 in the spec; the first write is not.
-  await logEvent('journal.saved', 'journal', id, {
-    level: existing ? 3 : 2,
-    data: { dateKey, mood: entry.mood, isOverwrite: Boolean(existing) },
-  });
+  pruneTaskLedgerOccasionally();
   return entry;
 }
 
-export async function deleteJournalEntry(dateKey: string): Promise<void> {
+export async function deleteJournalEntry(dateKey: string, expected?: JournalEntry): Promise<void> {
   const id = `journal-${dateKey}`;
-  await db.journal.delete(id);
+  await db.transaction('rw', [db.journal, db.undoHistory], async () => {
+    const current = await db.journal.get(id);
+    if (!current || (expected && JSON.stringify(current) !== JSON.stringify(expected))) throw new Error('journal-delete-conflict');
+    await db.journal.delete(id);
+    await db.undoHistory.where('entityId').equals(id).and((row) => row.entity === 'journal').delete();
+  });
   await logEvent('journal.deleted', 'journal', id, { level: 3, data: { dateKey } });
 }

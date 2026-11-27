@@ -1,10 +1,11 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { db } from '@/lib/db';
 import {
   clearActiveRun,
   fromRecord,
   hasProgress,
   loadActiveRun,
+  recordFocusProgress,
   saveActiveRun,
   toRecord,
 } from '@/lib/chrono/persistence';
@@ -48,7 +49,8 @@ function runningState(): FocusClockState {
 
 describe('Chrono Core — crash recovery', () => {
   beforeEach(async () => {
-    await db.activeRun.clear();
+    await clearActiveRun();
+    await db.focusSessions.clear();
   });
 
   it('writes a running session and rebuilds it with its anchors intact', async () => {
@@ -101,6 +103,41 @@ describe('Chrono Core — crash recovery', () => {
 
     await clearActiveRun();
     expect(await loadActiveRun()).toBeNull();
+  });
+
+  it('atomically records a completed segment and its advanced recovery state', async () => {
+    const state = runningState();
+    await saveActiveRun(state, T0);
+    const advanced = { ...tickClock(state, T0 + 300_000, 4).state, recordedFocusSeconds: 300 };
+    await recordFocusProgress({ mode: 'interval', durationMinutes: 5, durationSeconds: 300, dateKey: '2026-01-01', taskId: null, taskTitleSnapshot: null, completedNaturally: true, startedAt: '2026-01-01T00:00:00.000Z', endedAt: '2026-01-01T00:05:00.000Z' }, advanced, T0 + 300_000);
+    expect(await db.focusSessions.count()).toBe(1);
+    expect((await loadActiveRun())?.recordedFocusSeconds).toBe(300);
+    expect((await loadActiveRun())?.segmentIndex).toBe(1);
+  });
+
+  it('rolls back the session if the recovery write fails and allows a retry', async () => {
+    const state = runningState();
+    await saveActiveRun(state, T0);
+    const spy = vi.spyOn(db.activeRun, 'put').mockRejectedValueOnce(new Error('storage failure'));
+    const input = { mode: 'interval' as const, durationMinutes: 5, durationSeconds: 300, dateKey: '2026-01-01', taskId: null, taskTitleSnapshot: null, completedNaturally: true, startedAt: '2026-01-01T00:00:00.000Z', endedAt: '2026-01-01T00:05:00.000Z' };
+    const next = { ...tickClock(state, T0 + 300_000, 4).state, recordedFocusSeconds: 300 };
+    try {
+      await expect(recordFocusProgress(input, next)).rejects.toThrow('storage failure');
+      expect(await db.focusSessions.count()).toBe(0);
+      expect((await loadActiveRun())?.segmentIndex).toBe(0);
+      await recordFocusProgress(input, next);
+      expect(await db.focusSessions.count()).toBe(1);
+    } finally { spy.mockRestore(); }
+  });
+
+  it('orders an outstanding save before a subsequent reset and preserves finished state', async () => {
+    const state = { ...runningState(), recordedFocusSeconds: 300, finished: true };
+    const save = saveActiveRun(state, T0);
+    const clear = clearActiveRun();
+    await Promise.all([save, clear]);
+    expect(await loadActiveRun()).toBeNull();
+    await saveActiveRun(state, T0);
+    expect(await loadActiveRun()).toMatchObject({ recordedFocusSeconds: 300, finished: true });
   });
 
   it('keeps a paused session so a pause is not a data loss', async () => {

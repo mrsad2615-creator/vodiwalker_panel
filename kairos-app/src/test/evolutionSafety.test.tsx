@@ -53,6 +53,11 @@ describe('protected local data', () => {
       { ...backup, tasks: [backup.tasks[0], backup.tasks[0]] },
       { ...backup, tasks: [{ ...backup.tasks[0], subtasks: [null] }] },
       { ...backup, tasks: [{ ...backup.tasks[0], status: 'bogus' }] },
+      { ...backup, tasks: [{ ...backup.tasks[0], category: 'unknown-category' }] },
+      { ...backup, tasks: [{ ...backup.tasks[0], recurrence: 'invalid' }] },
+      { ...backup, tasks: [{ ...backup.tasks[0], dueDate: '2026-02-30' }] },
+      { ...backup, tasks: [{ ...backup.tasks[0], dueTime: '29:70' }] },
+      { ...backup, tasks: [{ ...backup.tasks[0], dependsOn: [null] }] },
     ]) {
       await expect(importBackup(broken as never)).rejects.toThrow('invalid-backup');
       expect(await db.tasks.get(current.id)).toEqual(current);
@@ -111,6 +116,45 @@ describe('protected local data', () => {
   });
 });
 
+describe('clear data confirmation', () => {
+  it('requires confirmation and preserves settings while clearing private history', async () => {
+    const task = await makeTask('کار خصوصی');
+    await db.table('undoHistory').put({ id: 'private-history', at: new Date().toISOString(), kind: 'task.update', entity: 'task', entityId: task.id, before: task, after: task });
+    render(<App />);
+    fireEvent.click(screen.getByRole('status', { name: /kairos/i }));
+    await completeFirstRun();
+    await screen.findByTestId('home-ready');
+    fireEvent.click(screen.getByRole('button', { name: 'بیشتر' }));
+    fireEvent.click(await screen.findByRole('button', { name: /^بخش تنظیمات$/ }));
+    fireEvent.click(await screen.findByRole('button', { name: 'پاک‌سازی داده‌های ثبت‌شده' }));
+    expect(screen.getByText(/فایل‌های پشتیبان صادرشده/)).toBeInTheDocument();
+    expect(await db.tasks.get(task.id)).toBeDefined();
+    fireEvent.click(screen.getByRole('button', { name: 'بله، پاک کن' }));
+    await screen.findByText('رکوردها و تاریخچهٔ انتخاب‌شده پاک شدند');
+    expect(await db.tasks.get(task.id)).toBeUndefined();
+    expect(await db.undoHistory.count()).toBe(0);
+    expect(await db.settings.get('default')).toBeDefined();
+  });
+
+  it('prevents clearing while a focus session is in progress', async () => {
+    await makeTask('باید باقی بماند');
+    render(<App />);
+    fireEvent.click(screen.getByRole('status', { name: /kairos/i }));
+    await completeFirstRun();
+    await screen.findByTestId('home-ready');
+    fireEvent.click(screen.getByRole('button', { name: 'بیشتر' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'بخش تمرکز' }));
+    const stage = await screen.findByRole('region', { name: 'صحنهٔ تمرکز' });
+    fireEvent.click(within(stage).getByRole('button', { name: 'شروع تمرکز' }));
+    fireEvent.click(screen.getByRole('button', { name: 'بیشتر' }));
+    fireEvent.click(await screen.findByRole('button', { name: /^بخش تنظیمات$/ }));
+    fireEvent.click(await screen.findByRole('button', { name: 'پاک‌سازی داده‌های ثبت‌شده' }));
+    expect(screen.getByRole('button', { name: 'بله، پاک کن' })).toBeDisabled();
+    expect(screen.getByRole('alert')).toHaveTextContent('جلسهٔ تمرکز');
+    expect(await db.tasks.count()).toBe(1);
+  });
+});
+
 describe('restore confirmation', () => {
   it('does not change data until explicit confirmation and allows cancellation', async () => {
     const current = await makeTask('کار فعلی');
@@ -127,6 +171,7 @@ describe('restore confirmation', () => {
     const file = new File([JSON.stringify(backup)], 'backup.json', { type: 'application/json' });
     fireEvent.change(input, { target: { files: [file] } });
     const preview = await screen.findByRole('region', { name: 'پیش‌نمایش بازیابی' });
+    expect(within(preview).getByText(/۱ رکورد جدید|1 رکورد جدید/)).toHaveTextContent(/۱ شناسهٔ موجود|1 شناسهٔ موجود/);
     expect(await db.tasks.get('incoming')).toBeUndefined();
     fireEvent.click(within(preview).getByRole('button', { name: 'انصراف' }));
     expect(await db.tasks.get('incoming')).toBeUndefined();

@@ -61,6 +61,7 @@ describe('KAIROS 3.2 — ژورنال و ورود تقویم', () => {
       target: { value: 'بخش سخت گزارش تمام شد' },
     });
     fireEvent.click(screen.getByRole('button', { name: 'ذخیرهٔ روز' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'تأیید ویرایش' }));
 
     await waitFor(async () => {
       const row = await db.journal.get(`journal-${today}`);

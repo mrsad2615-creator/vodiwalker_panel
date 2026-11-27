@@ -53,6 +53,8 @@ export function TasksPage() {
   const [filterPriority, setFilterPriority] = useState<TaskPriority | 'all'>('all');
   const [onlyRecurring, setOnlyRecurring] = useState(false);
   const [dragTaskId, setDragTaskId] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<Task | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const todayKey = getTodayKey();
   const tasks = useTasks();
@@ -709,7 +711,7 @@ export function TasksPage() {
             filteredTasks.map((task) => (
               <LuxuryCard
                 key={task.id}
-                className="flex items-center justify-between gap-3 px-3.5 py-3"
+                className="flex flex-wrap items-center justify-between gap-3 px-3.5 py-3"
               >
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-xs font-medium text-[var(--text-2)] line-through">
@@ -743,16 +745,32 @@ export function TasksPage() {
                   </button>
                   <button
                     type="button"
-                    onClick={async () => {
-                      await deleteTask(task.id);
-                      pushToast({ title: 'برای همیشه حذف شد', tone: 'default' });
-                    }}
-                    aria-label="حذف دائمی"
-                    className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--danger)]/12 text-[var(--danger-fg)] hover:bg-[var(--danger)]/25"
+                    disabled={deleting}
+                    onClick={() => setPendingDelete(task)}
+                    aria-label="حذف وظیفهٔ آرشیوشده"
+                    className="flex h-11 w-11 items-center justify-center rounded-lg bg-[var(--danger)]/12 text-[var(--danger-fg)] hover:bg-[var(--danger)]/25 disabled:opacity-50"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </button>
                 </div>
+                {pendingDelete?.id === task.id && (
+                  <div role="region" aria-label="تأیید حذف وظیفهٔ آرشیوشده" className="w-full space-y-2 rounded-xl border border-[var(--danger)]/35 p-3 text-xs leading-6 text-[var(--text)]">
+                    <p>وظیفهٔ «{pendingDelete.title}» حذف شود؟ بازگردانی ندارد؛ پشتیبان‌ها و جلسه‌های تمرکز مرتبط باقی می‌مانند.</p>
+                    <div className="flex gap-2">
+                      <button type="button" disabled={deleting} onClick={async () => {
+                        setDeleting(true);
+                        try {
+                          await deleteTask(pendingDelete.id, pendingDelete);
+                          setPendingDelete(null);
+                          pushToast({ title: 'وظیفه حذف شد', tone: 'default' });
+                        } catch {
+                          pushToast({ title: 'حذف انجام نشد', description: 'وظیفه ممکن است تغییر کرده باشد؛ دوباره بررسی کنید.', tone: 'warning' });
+                        } finally { setDeleting(false); }
+                      }} className="min-h-11 rounded-lg bg-[var(--danger)] px-3 font-bold text-[var(--bg)] disabled:opacity-50">تأیید حذف</button>
+                      <button type="button" disabled={deleting} onClick={() => setPendingDelete(null)} className="min-h-11 rounded-lg bg-[var(--surface-2)] px-3">انصراف از حذف</button>
+                    </div>
+                  </div>
+                )}
               </LuxuryCard>
             ))
           )}

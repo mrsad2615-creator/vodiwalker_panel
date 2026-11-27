@@ -1,6 +1,7 @@
 import type { NavTab } from '@/types/domain';
 
-/** The fourth shortcut is kept in settings as a reserve for safe upgrades. */
+/** Keep all four legacy shortcut slots, including the two not currently visible,
+ * so upgrading the dock never overwrites the user's earlier preferences. */
 export type ShortcutTab = Exclude<NavTab, 'dashboard' | 'assistant'>;
 export const SHORTCUTS: readonly ShortcutTab[] = ['tasks', 'habits', 'focus', 'motivation', 'projects', 'calendar', 'analytics', 'settings'];
 export const DEFAULT_SHORTCUTS: ShortcutTab[] = ['tasks', 'habits', 'focus', 'motivation'];

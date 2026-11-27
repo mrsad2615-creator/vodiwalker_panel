@@ -17,7 +17,9 @@ import {
   db,
   exportBackup,
   importBackup,
+  inspectBackup,
   updateSettings,
+  type BackupImportResult,
 } from '@/lib/db';
 import { SampleDataControl } from '@/components/settings/SampleDataControl';
 import {
@@ -40,10 +42,11 @@ import { useFocusSessions, useHabitLogs, useHabits, useTasks } from '@/lib/queri
 import { exportBackupFile, readBackupFile, saveTextFile } from '@/lib/backup';
 import { tasksToCsv, habitLogsToCsv, focusSessionsToCsv } from '@/lib/csv';
 import { APP_VERSION, BUILD_NUMBER, BUILD_SHA } from '@/lib/buildInfo';
+import { hasProgress } from '@/lib/chrono/persistence';
 import type { KairosBackupPayload } from '@/types/domain';
 
 export function SettingsPage() {
-  const { settings, pushToast } = useApp();
+  const { settings, pushToast, focus, setFocusLinkedTask } = useApp();
   // The CSV export reads the same live rows the rest of the app draws from.
   const tasks = useTasks();
   const habits = useHabits();
@@ -54,10 +57,14 @@ export function SettingsPage() {
   const [dailyTaskGoal, setDailyTaskGoal] = useState(settings.dailyTaskGoal);
   const [permState, setPermState] = useState<NotificationPermissionState>('prompt');
   const [confirmWipe, setConfirmWipe] = useState(false);
+  const [wiping, setWiping] = useState(false);
   const [widgetSyncError, setWidgetSyncError] = useState(false);
   const [pendingBackup, setPendingBackup] = useState<KairosBackupPayload | null>(null);
+  const [backupEstimate, setBackupEstimate] = useState<BackupImportResult | null>(null);
+  const [restorePreferences, setRestorePreferences] = useState(false);
   const [importing, setImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const backupReadVersion = useRef(0);
 
   useEffect(() => {
     const fail = () => setWidgetSyncError(true);
@@ -133,8 +140,14 @@ export function SettingsPage() {
   };
 
   const handleExport = async () => {
-    const data = await exportBackup();
-    const result = await exportBackupFile(data);
+    let result: Awaited<ReturnType<typeof exportBackupFile>>;
+    try {
+      const data = await exportBackup();
+      result = await exportBackupFile(data);
+    } catch {
+      pushToast({ title: 'ساخت پشتیبان انجام نشد', description: 'خواندن داده‌ها کامل نشد؛ دوباره تلاش کنید.', tone: 'warning' });
+      return;
+    }
     if (!result.ok) {
       pushToast({
         title: 'ذخیرهٔ پشتیبان انجام نشد',
@@ -144,11 +157,11 @@ export function SettingsPage() {
       return;
     }
     pushToast({
-      title: result.via === 'share' ? 'پشتیبان آمادهٔ اشتراک‌گذاری است' : 'فایل پشتیبان ذخیره شد',
+      title: result.via === 'share' ? 'پشتیبان آمادهٔ اشتراک‌گذاری است' : 'درخواست دانلود پشتیبان ارسال شد',
       description:
         result.via === 'share'
-          ? 'فایل JSON ساخته شد؛ از پنجرهٔ باز‌شده در درایو، تلگرام یا فایل‌ها ذخیره‌اش کنید.'
-          : 'فایل JSON در پوشهٔ دانلود ذخیره شد.',
+          ? 'فایل JSON ساخته شد؛ از پنجرهٔ باز‌شده در مقصد دلخواه ذخیره‌اش کنید.'
+          : 'محل ذخیره و کامل‌شدن دانلود را در مرورگر بررسی کنید.',
       tone: 'success',
     });
   };
@@ -188,13 +201,21 @@ export function SettingsPage() {
   };
 
   const handleImportFile = async (file: File) => {
+    const version = ++backupReadVersion.current;
     setPendingBackup(null);
+    setBackupEstimate(null);
+    setRestorePreferences(false);
     try {
-      setPendingBackup(await readBackupFile(file));
+      const backup = await readBackupFile(file);
+      const estimate = await inspectBackup(backup);
+      if (version !== backupReadVersion.current) return;
+      setBackupEstimate(estimate);
+      setPendingBackup(backup);
     } catch {
+      if (version !== backupReadVersion.current) return;
       pushToast({
-        title: 'فایل قابل بازیابی نیست',
-        description: 'ساختار یا نسخهٔ پشتیبان معتبر نیست؛ هیچ داده‌ای تغییر نکرد.',
+        title: 'فایل قابل بررسی نیست',
+        description: 'ساختار یا نسخهٔ فایل یا دسترسی به پایگاه داده را بررسی کنید؛ هیچ داده‌ای تغییر نکرد.',
         tone: 'warning',
       });
     }
@@ -202,17 +223,21 @@ export function SettingsPage() {
 
   const confirmImport = async () => {
     if (!pendingBackup || importing) return;
+    if (restorePreferences && hasProgress(focus)) {
+      pushToast({ title: 'ابتدا جلسهٔ تمرکز را پایان دهید', tone: 'warning' });
+      return;
+    }
     setImporting(true);
     try {
-      const result = await importBackup(pendingBackup);
+      const result = await importBackup(pendingBackup, { restorePreferences });
       setPendingBackup(null);
       pushToast({
         title: 'بازیابی ادغامی انجام شد',
-        description: `${result.added} رکورد اضافه شد؛ ${result.skipped} رکورد موجود دست‌نخورده ماند. تنظیمات تغییر نکرد.`,
+        description: `${result.added} رکورد اضافه شد؛ ${result.skipped} رکورد موجود دست‌نخورده ماند. ${restorePreferences ? 'ترجیحات انتخاب‌شده بازیابی شدند.' : 'تنظیمات شخصی جایگزین نشد.'}`,
         tone: 'success',
       });
     } catch {
-      pushToast({ title: 'بازیابی انجام نشد', description: 'تراکنش برگشت داده شد؛ داده‌های قبلی حفظ شدند.', tone: 'warning' });
+      pushToast({ title: 'بازیابی انجام نشد', description: 'فایل، تنظیمات یا جلسهٔ تمرکز را بررسی کنید؛ تراکنش تغییرات را بازگرداند.', tone: 'warning' });
     } finally {
       setImporting(false);
     }
@@ -438,6 +463,7 @@ export function SettingsPage() {
           </div>
         </div>
 
+        <p className="text-xs leading-6 text-[var(--text-2)]">پشتیبان فعلی وظایف، عادت‌ها، تمرکز، هدف‌ها، ژورنال، پروژه‌ها و بخشی از تنظیمات را در فایل JSON ذخیره می‌کند. بازیابی فقط رکوردهای جدید را می‌افزاید و تنظیمات را برنمی‌گرداند؛ نشست فعال و تاریخچه‌ها در فایل نیستند. فایل شامل اطلاعات شخصی و بدون رمزگذاری است.</p>
         <div className="grid grid-cols-2 gap-2">
           <button
             type="button"
@@ -449,8 +475,9 @@ export function SettingsPage() {
           </button>
           <button
             type="button"
+            disabled={importing}
             onClick={() => fileInputRef.current?.click()}
-            className="btn-ghost-luxury flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-xs font-medium text-[var(--text)]"
+            className="btn-ghost-luxury flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-xs font-medium text-[var(--text)] disabled:opacity-50"
           >
             <Upload className="h-3.5 w-3.5 text-[var(--accent-fg)]" />
             <span>بازیابی پشتیبان</span>
@@ -481,7 +508,13 @@ export function SettingsPage() {
             <p className="font-bold">پیش‌نمایش بازیابی ادغامی</p>
             <p>وظیفه: {pendingBackup.tasks.length} · عادت: {pendingBackup.habits.length} · ثبت عادت: {pendingBackup.habitLogs.length} · تمرکز: {pendingBackup.focusSessions.length} · هدف: {pendingBackup.goals.length}</p>
             <p>پروژه: {pendingBackup.projects?.length ?? 0} · مرحله: {pendingBackup.projectStages?.length ?? 0} · ژورنال: {pendingBackup.journal?.length ?? 0}</p>
-            <p className="text-[var(--text-2)]">فقط رکوردهای جدید اضافه می‌شوند؛ شناسه‌های موجود و تنظیمات فعلی تغییر نمی‌کنند. فایل‌های قدیمی ممکن است همهٔ بخش‌ها را نداشته باشند. این فایل تأیید اصالت رمزنگاری‌شده ندارد.</p>
+            {backupEstimate && <p>در بررسی فعلی: {backupEstimate.added} رکورد جدید و {backupEstimate.skipped} شناسهٔ موجود. در صورت تغییر داده‌ها پیش از تأیید، نتیجه ممکن است متفاوت باشد.</p>}
+            <p className="text-[var(--text-2)]">فقط رکوردهای جدید اضافه می‌شوند؛ شناسه‌های موجود جایگزین نمی‌شوند. وضعیت دادهٔ نمونه ممکن است تغییر کند. فایل‌های قدیمی ممکن است همهٔ بخش‌ها را نداشته باشند. این فایل تأیید اصالت رمزنگاری‌شده ندارد.</p>
+            <label className="flex min-h-11 items-center gap-2 text-[var(--text)]">
+              <input type="checkbox" checked={restorePreferences} disabled={importing} onChange={(event) => setRestorePreferences(event.target.checked)} />
+              جایگزینی ترجیحات شخصی با تنظیمات فایل
+            </label>
+            <p className="text-[var(--text-2)]">در صورت انتخاب، ظاهر، هدف‌های روزانه، میان‌برها و تنظیمات معمول تمرکز جایگزین می‌شوند؛ کلید و مجوزها و تنظیمات حساس دستگاه منتقل نمی‌شوند. ابتدا جلسهٔ تمرکز را پایان دهید.</p>
             <div className="flex gap-2">
               <button type="button" disabled={importing} onClick={() => void confirmImport()} className="btn-royal rounded-xl px-3 py-2 disabled:opacity-50">{importing ? 'در حال بازیابی…' : 'تأیید و افزودن'}</button>
               <button type="button" disabled={importing} onClick={() => setPendingBackup(null)} className="btn-ghost-luxury rounded-xl px-3 py-2">انصراف</button>
@@ -499,31 +532,48 @@ export function SettingsPage() {
               className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-[var(--danger)]/25 bg-[var(--danger)]/10 py-2 text-[11px] font-medium text-[var(--danger-fg)] transition hover:bg-[var(--danger)]/20"
             >
               <Trash2 className="h-3.5 w-3.5" />
-              <span>پاک‌سازی کامل و شروع از فضای خالی</span>
+              <span>پاک‌سازی داده‌های ثبت‌شده</span>
             </button>
           ) : (
-            <div className="flex items-center gap-2 rounded-xl border border-[var(--danger)]/35 bg-[var(--danger)]/12 p-2.5">
-              <span className="flex-1 text-[11px] text-[var(--text)]">
-                تمام داده‌ها حذف شوند؟
-              </span>
-              <button
-                type="button"
-                onClick={async () => {
-                  await clearAllUserData();
-                  setConfirmWipe(false);
-                  pushToast({ title: 'تمام داده‌ها پاک شدند', tone: 'default' });
-                }}
-                className="rounded-lg bg-[var(--danger)] px-3 py-1 text-[11px] font-bold text-[var(--bg)]"
-              >
-                بله، پاک کن
-              </button>
-              <button
-                type="button"
-                onClick={() => setConfirmWipe(false)}
-                className="rounded-lg bg-[var(--surface-2)] px-2.5 py-1 text-[11px] text-[var(--text-2)]"
-              >
-                انصراف
-              </button>
+            <div className="space-y-3 rounded-xl border border-[var(--danger)]/35 bg-[var(--danger)]/12 p-3">
+              <p className="text-xs leading-6 text-[var(--text)]">
+                وظایف، عادت‌ها، پروژه‌ها، هدف‌ها، ژورنال، نشست‌ها و سابقهٔ تغییر و بازگردانی از پایگاه محلی حذف می‌شوند. این کار قابل بازگردانی نیست.
+              </p>
+              <p className="text-xs leading-6 text-[var(--text-2)]">
+                تنظیمات و بعضی داده‌های دستگاه حفظ می‌شوند؛ فایل‌های پشتیبان صادرشده و پشتیبان سیستم حذف نمی‌شوند. پاک‌شدن آنی ویجت‌ها و اعلان‌های سیستم تضمین نشده است. پیش از ادامه یک پشتیبان جداگانه بگیرید.
+              </p>
+              {hasProgress(focus) && <p role="alert" className="text-xs leading-6 text-[var(--danger-fg)]">ابتدا جلسهٔ تمرکز جاری یا مکث‌شده را ذخیره یا بازنشانی کنید.</p>}
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  disabled={wiping || hasProgress(focus)}
+                  onClick={async () => {
+                    if (wiping || hasProgress(focus)) return;
+                    setWiping(true);
+                    try {
+                      await clearAllUserData();
+                      setFocusLinkedTask(null);
+                      setConfirmWipe(false);
+                      pushToast({ title: 'رکوردها و تاریخچهٔ انتخاب‌شده پاک شدند', description: 'تنظیمات، فایل‌های پشتیبان و داده‌های سیستم ممکن است باقی بمانند.', tone: 'default' });
+                    } catch {
+                      pushToast({ title: 'پاک‌سازی کامل نشد', description: 'دوباره تلاش کنید؛ پاک‌شدن اطلاعات تأیید نشده است.', tone: 'warning' });
+                    } finally {
+                      setWiping(false);
+                    }
+                  }}
+                  className="min-h-12 rounded-lg bg-[var(--danger)] px-3 py-1 text-xs font-bold text-[var(--bg)] disabled:opacity-50"
+                >
+                  {wiping ? 'در حال پاک‌سازی…' : 'بله، پاک کن'}
+                </button>
+                <button
+                  type="button"
+                  disabled={wiping}
+                  onClick={() => setConfirmWipe(false)}
+                  className="min-h-12 rounded-lg bg-[var(--surface-2)] px-3 py-1 text-xs text-[var(--text-2)] disabled:opacity-50"
+                >
+                  انصراف
+                </button>
+              </div>
             </div>
           )}
         </div>

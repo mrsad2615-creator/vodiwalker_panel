@@ -8,6 +8,7 @@ import { MOODS, computeJournalStats } from '@/lib/journal';
 import { formatJalaaliFull, getTodayKey } from '@/lib/date';
 import { triggerHaptic } from '@/lib/native';
 import { useApp } from '@/context/AppContext';
+import type { JournalEntry } from '@/types/domain';
 import { JournalSheet } from './JournalSheet';
 
 /**
@@ -24,6 +25,7 @@ export function JournalCard() {
   const { settings, pushToast } = useApp();
   const entries = useJournal();
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [quickEntry, setQuickEntry] = useState<JournalEntry | null>(null);
   const todayKey = getTodayKey();
 
   const todayEntry = entries.find((entry) => entry.dateKey === todayKey) ?? null;
@@ -31,9 +33,15 @@ export function JournalCard() {
   const dateInfo = formatJalaaliFull(todayKey);
 
   const quickMood = async (mood: number) => {
-    void triggerHaptic('light', settings.hapticsEnabled);
-    await upsertJournalEntry(todayKey, { mood });
-    setSheetOpen(true);
+    try {
+      const saved = await upsertJournalEntry(todayKey, { mood }, null);
+      void triggerHaptic('light', settings.hapticsEnabled);
+      setQuickEntry(saved);
+      setSheetOpen(true);
+      pushToast({ title: 'حال امروز ثبت شد', description: 'اگر خواستی، یک خط هم بنویس.', tone: 'success' });
+    } catch {
+      pushToast({ title: 'ثبت انجام نشد', description: 'ممکن است یادداشت امروز هم‌زمان تغییر کرده باشد.', tone: 'warning' });
+    }
   };
 
   return (
@@ -86,14 +94,7 @@ export function JournalCard() {
                 <button
                   key={mood.value}
                   type="button"
-                  onClick={() => {
-                    void quickMood(mood.value);
-                    void pushToast({
-                      title: 'حال امروز ثبت شد',
-                      description: 'اگر خواستی، یک خط هم بنویس.',
-                      tone: 'success',
-                    });
-                  }}
+                  onClick={() => void quickMood(mood.value)}
                   aria-label={`حال ${mood.label}`}
                   className="flex-1 rounded-[var(--r-field)] border border-[var(--border)] bg-[var(--surface-1)] px-1 py-2 text-[10px] text-[var(--text-2)] transition-colors active:border-[var(--accent-fg)]/40 active:text-[var(--accent-fg)]"
                 >
@@ -128,8 +129,8 @@ export function JournalCard() {
 
       <JournalSheet
         open={sheetOpen}
-        entry={todayEntry}
-        onClose={() => setSheetOpen(false)}
+        entry={todayEntry ?? quickEntry}
+        onClose={() => { setSheetOpen(false); setQuickEntry(null); }}
       />
     </>
   );

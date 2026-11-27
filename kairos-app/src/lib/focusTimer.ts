@@ -66,6 +66,8 @@ export interface FocusClockState {
   finished?: boolean;
   /** Focus seconds banked from segments already completed in this session. */
   accruedFocusSeconds?: number;
+  /** Portion already recorded in focus history, to avoid counting it twice. */
+  recordedFocusSeconds?: number;
 }
 
 export interface FocusTickResult {

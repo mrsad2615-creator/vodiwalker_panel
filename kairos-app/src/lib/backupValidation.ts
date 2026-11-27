@@ -42,6 +42,23 @@ const BOOLEAN_FIELDS: Record<BackupCollection, readonly string[]> = {
   focusSessions: ['completedNaturally'], goals: ['completed'], journal: [], projects: [], projectStages: ['done'],
 };
 
+const CATEGORIES = ['work', 'personal', 'health', 'learning', 'finance', 'creative'];
+const DATE_FIELDS: Record<BackupCollection, readonly string[]> = {
+  tasks: ['dueDate', 'completedDate'], habits: ['startDate'], habitLogs: ['dateKey'],
+  focusSessions: ['dateKey'], goals: ['deadline'], journal: ['dateKey'],
+  projects: ['startDate', 'dueDate'], projectStages: ['dueDate'],
+};
+function validDay(value: unknown): boolean {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const [year, month, day] = value.split('-').map(Number);
+  const leap = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+  const days = [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  return year >= 1 && month >= 1 && month <= 12 && day >= 1 && day <= days[month - 1];
+}
+function validOptionalTime(value: unknown): boolean {
+  return value === undefined || value === null || (typeof value === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(value));
+}
+
 /**
  * Reject incompatible or structurally unsafe files before any DB transaction.
  * This is a conservative structural check, not cryptographic authenticity or
@@ -70,15 +87,30 @@ export function validateBackup(value: unknown): asserts value is KairosBackupPay
       const id = row.id as string;
       if (ids.has(id)) throw new Error('invalid-backup');
       ids.add(id);
+      if (row.sample !== undefined && typeof row.sample !== 'boolean') throw new Error('invalid-backup');
+      if (DATE_FIELDS[name].some((field) => row[field] !== undefined && row[field] !== null && !validDay(row[field]))) throw new Error('invalid-backup');
+      if (['tasks', 'goals', 'projects'].includes(name) && !CATEGORIES.includes(row.category as string)) throw new Error('invalid-backup');
       if (name === 'tasks') {
+        const refs = [row.goalId, row.projectId];
         if (!Array.isArray(row.tags) || row.tags.some((tag: unknown) => typeof tag !== 'string') ||
             !Array.isArray(row.subtasks) || row.subtasks.some((item: unknown) => {
               if (!item || typeof item !== 'object' || Array.isArray(item)) return true;
               const subtask = item as Record<string, unknown>;
               return typeof subtask.id !== 'string' || typeof subtask.title !== 'string' || typeof subtask.completed !== 'boolean';
-            }) || !['todo', 'in_progress', 'completed'].includes(row.status as string)) throw new Error('invalid-backup');
+            }) || !['todo', 'in_progress', 'completed'].includes(row.status as string) ||
+            !['high', 'medium', 'low'].includes(row.priority as string) ||
+            !['q1', 'q2', 'q3', 'q4'].includes(row.quadrant as string) ||
+            !['none', 'daily', 'weekdays', 'weekly', 'monthly'].includes(row.recurrence as string) ||
+            !validOptionalTime(row.dueTime) ||
+            (row.recurrenceSeriesId !== undefined && (typeof row.recurrenceSeriesId !== 'string' || !row.recurrenceSeriesId.trim())) ||
+            refs.some((ref) => ref !== undefined && ref !== null && typeof ref !== 'string') ||
+            (row.dependsOn !== undefined && (!Array.isArray(row.dependsOn) || row.dependsOn.some((ref: unknown) => typeof ref !== 'string'))) ||
+            (row.estimateMin !== undefined && row.estimateMin !== null && (typeof row.estimateMin !== 'number' || !Number.isFinite(row.estimateMin)))) throw new Error('invalid-backup');
       }
-      if (name === 'habits' && (!Array.isArray(row.scheduledDays) || row.scheduledDays.some((day: unknown) => !Number.isInteger(day) || (day as number) < 0 || (day as number) > 6))) throw new Error('invalid-backup');
+      if (name === 'habits' && (!Array.isArray(row.scheduledDays) || row.scheduledDays.some((day: unknown) => !Number.isInteger(day) || (day as number) < 0 || (day as number) > 6) ||
+        !['daily', 'specific_days', 'weekly_target'].includes(row.scheduleType as string) ||
+        !['boolean', 'quantitative'].includes(row.trackingMode as string) || !validOptionalTime(row.reminderTime))) throw new Error('invalid-backup');
+      if (name === 'focusSessions' && !['pomodoro', 'free', 'interval', 'countdown'].includes(row.mode as string)) throw new Error('invalid-backup');
       if (name === 'habitLogs' && !['completed', 'partial', 'missed'].includes(row.status as string)) throw new Error('invalid-backup');
       if (name === 'projects' && !['active', 'paused', 'done', 'archived'].includes(row.status as string)) throw new Error('invalid-backup');
       if (name === 'projectStages' && !['stage', 'milestone'].includes(row.kind as string)) throw new Error('invalid-backup');

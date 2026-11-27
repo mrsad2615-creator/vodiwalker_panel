@@ -9,7 +9,7 @@ import type {
   TaskStatus,
 } from '@/types/domain';
 import { useApp } from '@/context/AppContext';
-import { archiveTask, createTask, deleteTask, setTaskStatus, updateTask } from '@/lib/db';
+import { archiveTask, createTask, deleteTask, setTaskStatus } from '@/lib/db';
 import {
   CATEGORY_META,
   createId,
@@ -52,6 +52,8 @@ export function TaskModal() {
   const [goalId, setGoalId] = useState<string>('');
   const [projectId, setProjectId] = useState<string>('');
   const [estimateMin, setEstimateMin] = useState<string>('');
+  const [saving, setSaving] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   useEffect(() => {
     if (!taskModal.open) return;
@@ -94,6 +96,7 @@ export function TaskModal() {
     setTagInput('');
     setSubtaskInput('');
     setShowDatePicker(false);
+    setConfirmDelete(false);
   }, [taskModal.open, editing, taskModal.defaultDueDate, taskModal.defaultQuadrant]);
 
   const handleAddTag = () => {
@@ -114,66 +117,53 @@ export function TaskModal() {
   };
 
   const handleSave = async () => {
+    if (saving) return;
     if (!title.trim()) {
       pushToast({ title: 'عنوان وظیفه را وارد کنید', tone: 'warning' });
       return;
     }
     const cleanTime = dueTime.trim() ? dueTime.trim() : null;
-
-    if (editing) {
-      const statusChanged = editing.status !== status;
-      await updateTask(editing.id, {
-        title: title.trim(),
-        description: description.trim(),
-        dueDate,
-        dueTime: cleanTime,
-        priority,
-        quadrant,
-        category,
-        tags,
-        subtasks,
-        recurrence,
-        reminderEnabled,
-        reminderOffsetMin,
-        goalId: goalId || null,
-        projectId: projectId || null,
-        estimateMin: estimateMin ? Math.max(5, Number(estimateMin) || 0) : null,
-      });
-      if (statusChanged) {
-        await setTaskStatus(editing.id, status);
+    const patch = {
+      title: title.trim(), description: description.trim(), dueDate, dueTime: cleanTime,
+      priority, quadrant, category, tags, subtasks, recurrence, reminderEnabled, reminderOffsetMin,
+      goalId: goalId || null, projectId: projectId || null,
+      estimateMin: estimateMin ? Math.max(5, Number(estimateMin) || 0) : null,
+    };
+    setSaving(true);
+    try {
+      if (editing) {
+        const result = await setTaskStatus(editing.id, status, { expected: editing, patch });
+        void triggerHaptic('success', settings.hapticsEnabled);
+        pushToast({ title: 'تغییرات وظیفه ذخیره شد', description: result.spawnedNext ? 'نوبت بعدی نیز ساخته شد.' : undefined, tone: 'success' });
+      } else {
+        await createTask({ ...patch, status });
+        void triggerHaptic('success', settings.hapticsEnabled);
+        pushToast({ title: 'وظیفه جدید ایجاد شد', tone: 'success' });
       }
-      void triggerHaptic('success', settings.hapticsEnabled);
-      pushToast({ title: 'تغییرات وظیفه ذخیره شد', tone: 'success' });
-    } else {
-      await createTask({
-        title: title.trim(),
-        description: description.trim(),
-        dueDate,
-        dueTime: cleanTime,
-        priority,
-        quadrant,
-        category,
-        tags,
-        status,
-        subtasks,
-        recurrence,
-        reminderEnabled,
-        reminderOffsetMin,
-        goalId: goalId || null,
-        projectId: projectId || null,
-        estimateMin: estimateMin ? Math.max(5, Number(estimateMin) || 0) : null,
+      closeTaskModal();
+    } catch (error) {
+      pushToast({
+        title: error instanceof Error && error.message === 'task-edit-conflict' ? 'وظیفه در این فاصله تغییر کرده است' : 'ذخیره انجام نشد',
+        description: 'متن فعلی باقی مانده است؛ پیش از ذخیره دوباره، آخرین نسخهٔ وظیفه را بررسی کنید.',
+        tone: 'warning',
       });
-      void triggerHaptic('success', settings.hapticsEnabled);
-      pushToast({ title: 'وظیفه جدید ایجاد شد', tone: 'success' });
+    } finally {
+      setSaving(false);
     }
-    closeTaskModal();
   };
 
   const handleDelete = async () => {
-    if (!editing) return;
-    await deleteTask(editing.id);
-    pushToast({ title: 'وظیفه حذف شد', tone: 'default' });
-    closeTaskModal();
+    if (!editing || saving) return;
+    setSaving(true);
+    try {
+      await deleteTask(editing.id, editing);
+      pushToast({ title: 'وظیفه حذف شد', description: 'پشتیبان‌ها و جلسه‌های تمرکز مرتبط حذف نشده‌اند.', tone: 'default' });
+      closeTaskModal();
+    } catch {
+      pushToast({ title: 'حذف انجام نشد', description: 'وظیفه ممکن است تغییر کرده باشد؛ آخرین نسخه را بررسی کنید.', tone: 'warning' });
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleArchiveToggle = async () => {
@@ -193,33 +183,47 @@ export function TaskModal() {
       title={editing ? 'ویرایش وظیفه' : 'افزودن وظیفه جدید'}
       subtitle="سریع، دقیق و هماهنگ با ماتریس آیزنهاور و تقویم شمسی"
       footer={
-        <div className="flex items-center gap-2">
-          {editing && (
-            <>
-              <button
-                type="button"
-                onClick={handleDelete}
-                aria-label="حذف وظیفه"
-                className="flex h-11 w-11 items-center justify-center rounded-xl border border-[var(--danger)]/25 bg-[var(--danger)]/10 text-[var(--danger-fg)] transition hover:bg-[var(--danger)]/20"
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
-              <button
-                type="button"
-                onClick={handleArchiveToggle}
-                className="btn-ghost-luxury rounded-xl px-3 py-2.5 text-xs font-medium text-[var(--text-2)]"
-              >
-                {editing.archived ? 'بازیابی' : 'آرشیو'}
-              </button>
-            </>
+        <div className="space-y-3">
+          {confirmDelete && editing && (
+            <div role="region" aria-label="تأیید حذف وظیفه" className="space-y-2 rounded-xl border border-[var(--danger)]/35 p-3 text-xs leading-6 text-[var(--text)]">
+              <p>وظیفهٔ «{editing.title}» حذف شود؟ این کار قابل بازگردانی نیست. پشتیبان‌ها و جلسه‌های تمرکز مرتبط باقی می‌مانند.</p>
+              <div className="flex gap-2">
+                <button type="button" disabled={saving} onClick={() => void handleDelete()} className="min-h-11 rounded-lg bg-[var(--danger)] px-3 font-bold text-[var(--bg)] disabled:opacity-50">تأیید حذف</button>
+                <button type="button" disabled={saving} onClick={() => setConfirmDelete(false)} className="min-h-11 rounded-lg bg-[var(--surface-2)] px-3">انصراف از حذف</button>
+              </div>
+            </div>
           )}
-          <button
-            type="button"
-            onClick={handleSave}
-            className="btn-royal flex-1 rounded-xl py-2.5 text-sm font-semibold"
-          >
-            {editing ? 'ذخیره تغییرات' : 'ثبت وظیفه'}
-          </button>
+          <div className="flex items-center gap-2">
+            {editing && (
+              <>
+                <button
+                  type="button"
+                  disabled={saving}
+                  onClick={() => setConfirmDelete(true)}
+                  aria-label="حذف وظیفه"
+                  className="flex h-11 w-11 items-center justify-center rounded-xl border border-[var(--danger)]/25 bg-[var(--danger)]/10 text-[var(--danger-fg)] transition hover:bg-[var(--danger)]/20 disabled:opacity-50"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  disabled={saving}
+                  onClick={handleArchiveToggle}
+                  className="btn-ghost-luxury rounded-xl px-3 py-2.5 text-xs font-medium text-[var(--text-2)] disabled:opacity-50"
+                >
+                  {editing.archived ? 'بازیابی' : 'آرشیو'}
+                </button>
+              </>
+            )}
+            <button
+              type="button"
+              disabled={saving}
+              onClick={handleSave}
+              className="btn-royal flex-1 rounded-xl py-2.5 text-sm font-semibold disabled:opacity-50"
+            >
+              {saving ? 'در حال ذخیره…' : editing ? 'ذخیره تغییرات' : 'ثبت وظیفه'}
+            </button>
+          </div>
         </div>
       }
     >

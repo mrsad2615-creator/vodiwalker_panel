@@ -60,6 +60,8 @@ export interface Task {
   status: TaskStatus;
   subtasks: Subtask[];
   recurrence: RecurrenceRule;
+  /** Stable identity for occurrences created by newer builds; legacy rows may lack it. */
+  recurrenceSeriesId?: string;
   /**
    * Optional link to a goal. When set, the goal's progress is measured from the
    * tasks that point at it instead of a number typed in by hand — that is the
@@ -237,7 +239,7 @@ export interface UserSettings {
   sampleVisible?: boolean;
   /** Show task titles on the Android home screen; default on. */
   widgetShowTitles?: boolean;
-  /** Four customizable shortcuts; home and the directory are fixed. */
+  /** Four retained shortcut preferences; the first two are shown in the five-button dock. */
   navShortcuts?: NavTab[];
   motivationFavorites?: string[];
   /* ── The optional cloud manager (3.7) ──────────────────────────────────────

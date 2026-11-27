@@ -134,7 +134,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   const shortcuts = normalizeShortcuts(settings.navShortcuts);
   const primaryTabs = DESTINATIONS.filter((item) => item.id === 'dashboard');
-  for (const id of shortcuts.slice(0, 3)) {
+  for (const id of shortcuts.slice(0, 2)) {
     const item = DESTINATIONS.find((destination) => destination.id === id);
     if (item) primaryTabs.push(item);
   }
@@ -277,7 +277,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           aria-label="ناوبری اصلی"
           className="app-safe-tabbar app-safe-x pointer-events-none fixed inset-x-0 bottom-0 z-40 mx-auto w-full max-w-[480px] px-2"
         >
-          <div className="kairos-nav-dock pointer-events-auto grid grid-cols-6 items-stretch">
+          <div className="kairos-nav-dock pointer-events-auto grid grid-cols-5 items-stretch">
             {primaryTabs.map((item) => {
               const Icon = item.icon;
               const isActive = activeTab === item.id;
@@ -340,8 +340,8 @@ export function AppShell({ children }: { children: ReactNode }) {
                 </div>
                 {editingNav && (
                   <div className="space-y-2 rounded-xl border border-[var(--border)] bg-[var(--surface-1)] p-3">
-                    <p className="text-[10px] leading-5 text-[var(--text-2)]">خانه، دستیار و فهرست ثابت‌اند؛ سه میان‌بر نمایان را انتخاب کن. میان‌بر چهارم قبلی محفوظ است و از فهرست قابل دسترسی است. انتخاب تکراری جای دو مورد را عوض می‌کند.</p>
-                    {draftShortcuts.slice(0, 3).map((id, index) => (
+                    <p className="text-[10px] leading-5 text-[var(--text-2)]">خانه، دستیار و فهرست ثابت‌اند؛ دو میان‌بر نمایان را انتخاب کن. میان‌برهای قبلی حفظ شده‌اند و همهٔ بخش‌ها در فهرست در دسترس‌اند. انتخاب تکراری جای دو مورد را عوض می‌کند.</p>
+                    {draftShortcuts.slice(0, 2).map((id, index) => (
                       <label key={index} className="flex items-center justify-between gap-3 text-[11px] text-[var(--text-2)]">
                         <span>میان‌بر {index + 1}</span>
                         <select aria-label={`میان‌بر ${index + 1}`} value={id} onChange={(event) => setDraftShortcuts((current) => changeShortcut(current, index, event.target.value as ShortcutTab))} className="luxury-input max-w-[65%] py-1 text-xs">

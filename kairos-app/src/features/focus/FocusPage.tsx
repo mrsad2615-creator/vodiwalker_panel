@@ -30,6 +30,7 @@ import { CHRONO_MODES } from '@/lib/chrono/plan';
 import { isNativeAndroid } from '@/lib/native';
 import { chronoConfigFromSettings, modeHint, modeLabel } from '@/lib/chrono/config';
 import { phaseDurationSeconds, segmentProgress } from '@/lib/focusTimer';
+import { hasProgress } from '@/lib/chrono/persistence';
 
 const PRESET_DURATIONS = [15, 25, 45, 60, 90] as const;
 
@@ -54,6 +55,12 @@ export function FocusPage() {
 
   const [showCustomConfig, setShowCustomConfig] = useState(false);
   const [cinemaMode, setCinemaMode] = useState(false);
+  const [confirmation, setConfirmation] = useState<{ text: string; run: () => void | Promise<void> } | null>(null);
+  const [confirmBusy, setConfirmBusy] = useState(false);
+  const requestSessionChange = (text: string, run: () => void) => {
+    if (hasProgress(focus)) setConfirmation({ text, run });
+    else run();
+  };
 
   const todayKey = getTodayKey();
   const tasks = useTasks();
@@ -116,6 +123,22 @@ export function FocusPage() {
 
   return (
     <div className="space-y-4">
+      {confirmation && (
+        <div role="dialog" aria-modal="true" aria-label="تأیید تغییر جلسه" className="fixed inset-0 z-[100] flex items-center justify-center bg-black/75 p-4">
+          <div className="w-full max-w-sm space-y-4 rounded-2xl border border-[var(--border)] bg-[var(--surface-1)] p-5 text-sm leading-7 text-[var(--text)]">
+            <p>{confirmation.text}</p>
+            <div className="flex gap-2">
+              <button type="button" disabled={confirmBusy} onClick={async () => {
+                setConfirmBusy(true);
+                try { await confirmation.run(); setConfirmation(null); }
+                catch { pushToast({ title: 'عملیات انجام نشد', tone: 'warning' }); }
+                finally { setConfirmBusy(false); }
+              }} className="btn-royal min-h-11 rounded-xl px-4 disabled:opacity-50">تأیید</button>
+              <button type="button" disabled={confirmBusy} onClick={() => setConfirmation(null)} className="btn-ghost-luxury min-h-11 rounded-xl px-4">انصراف</button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* FULL-SCREEN CINEMA FOCUS SANCTUARY OVERLAY */}
       {cinemaMode && (
         <div
@@ -198,7 +221,7 @@ export function FocusPage() {
             <div className="flex w-full items-center justify-center gap-3.5">
               <button
                 type="button"
-                onClick={resetFocus}
+                onClick={() => requestSessionChange('زمان ثبت‌نشدهٔ جلسه از دست می‌رود. تایمر بازنشانی شود؟', resetFocus)}
                 aria-label="بازنشانی تایمر"
                 className="flex h-13 w-13 items-center justify-center rounded-2xl border border-[var(--accent-fg)]/16 bg-[var(--surface-2)]/85 text-[var(--text-2)] transition hover:text-[var(--text)]"
               >
@@ -226,7 +249,7 @@ export function FocusPage() {
               {focus.mode === 'pomodoro' ? (
                 <button
                   type="button"
-                  onClick={skipPomodoroPhase}
+                  onClick={() => requestSessionChange('با رفتن به مرحلهٔ بعد، زمان ثبت‌نشدهٔ مرحلهٔ جاری از بین می‌رود. ادامه می‌دهید؟', skipPomodoroPhase)}
                   aria-label="مرحله بعد"
                   className="flex h-13 w-13 items-center justify-center rounded-2xl border border-[var(--accent-fg)]/16 bg-[var(--surface-2)]/85 text-[var(--text-2)] transition hover:text-[var(--text)]"
                 >
@@ -336,7 +359,7 @@ export function FocusPage() {
             <button
               key={mode.id}
               type="button"
-              onClick={() => setFocusMode(mode.id)}
+              onClick={() => { if (!active) requestSessionChange('تغییر حالت، زمان ثبت‌نشدهٔ جلسه را از بین می‌برد. ادامه می‌دهید؟', () => setFocusMode(mode.id)); }}
               aria-pressed={active}
               title={mode.hint}
               className="relative flex shrink-0 items-baseline gap-1.5 pb-2 pt-0.5"
@@ -367,7 +390,8 @@ export function FocusPage() {
           The fields follow the mode: a pomodoro has breaks, a deep-work plan has
           blocks, a countdown has one number. Showing all of them at once is how
           a config panel becomes a form. */}
-      {showCustomConfig && focus.mode !== 'free' && (
+      {showCustomConfig && hasProgress(focus) && <p role="status" className="text-xs text-[var(--text-2)]">برای تغییر زمان‌ها ابتدا جلسه را ثبت یا با تأیید بازنشانی کنید.</p>}
+      {showCustomConfig && !hasProgress(focus) && focus.mode !== 'free' && (
         <div className="grid grid-cols-3 gap-2 border-b border-[var(--border)] pb-3">
           {(focus.mode === 'pomodoro'
             ? [
@@ -442,7 +466,7 @@ export function FocusPage() {
         </div>
 
         {/* Fine-tune: presets as text on the rule, invisible while running */}
-        {focus.mode === 'pomodoro' && !focus.isRunning && focus.phase === 'focus' && (
+        {focus.mode === 'pomodoro' && !hasProgress(focus) && focus.phase === 'focus' && (
           <div className="relative mt-4 flex items-center justify-center gap-1">
             <button
               type="button"
@@ -488,7 +512,7 @@ export function FocusPage() {
         <div className="relative mt-4 flex items-center justify-center gap-4">
           <button
             type="button"
-            onClick={resetFocus}
+            onClick={() => requestSessionChange('زمان ثبت‌نشدهٔ جلسه از دست می‌رود. تایمر بازنشانی شود؟', resetFocus)}
             aria-label="بازنشانی تایمر"
             className="grid h-11 w-11 place-items-center rounded-full border border-[var(--border)] text-[var(--text-2)] transition hover:border-[var(--border-strong)] hover:text-[var(--text)]"
           >
@@ -516,7 +540,7 @@ export function FocusPage() {
           {focus.mode !== 'free' ? (
             <button
               type="button"
-              onClick={skipPomodoroPhase}
+              onClick={() => requestSessionChange('با رفتن به مرحلهٔ بعد، زمان ثبت‌نشدهٔ مرحلهٔ جاری از بین می‌رود. ادامه می‌دهید؟', skipPomodoroPhase)}
               aria-label="مرحله بعد"
               title="انتقال به مرحله بعد"
               className="grid h-11 w-11 place-items-center rounded-full border border-[var(--border)] text-[var(--text-2)] transition hover:border-[var(--border-strong)] hover:text-[var(--text)]"
@@ -600,7 +624,7 @@ export function FocusPage() {
         segmentIndex={focus.segmentIndex ?? 0}
         remainingSeconds={focus.remainingSeconds}
         running={focus.isRunning}
-        onSeek={seekFocusSegment}
+        onSeek={(index) => { if (index !== (focus.segmentIndex ?? 0)) requestSessionChange('با جابه‌جایی مرحله، زمان ثبت‌نشدهٔ مرحلهٔ جاری از بین می‌رود. ادامه می‌دهید؟', () => seekFocusSegment(index)); }}
       />
 
       {/* ── CONTINUITY ──────────────────────────────────────────────────────
@@ -726,9 +750,9 @@ export function FocusPage() {
                 />
                 <button
                   type="button"
-                  onClick={() => deleteFocusSession(s.id)}
+                  onClick={() => setConfirmation({ text: 'این جلسه از گزارش تمرکز حذف می‌شود و بازگردانی ندارد. فایل‌های پشتیبان قبلی تغییر نمی‌کنند. حذف شود؟', run: async () => { await deleteFocusSession(s.id, s); pushToast({ title: 'جلسه حذف شد', tone: 'default' }); } })}
                   aria-label="حذف جلسه"
-                  className="shrink-0 rounded-md p-1 text-[var(--text-3)] transition hover:text-[var(--danger-fg)]"
+                  className="grid h-11 w-11 shrink-0 place-items-center rounded-md text-[var(--text-3)] transition hover:text-[var(--danger-fg)]"
                 >
                   <Trash2 className="h-3 w-3" />
                 </button>

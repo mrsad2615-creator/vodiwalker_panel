@@ -4,6 +4,7 @@
 Runs only on the CI CPU, with no user data. Results require human review and
 must not be extrapolated to the POCO X3 Pro or to Android lifecycle safety.
 """
+import base64
 import json
 import pathlib
 import subprocess
@@ -46,7 +47,10 @@ def main():
     output.write_text(json.dumps({'device': 'GitHub-hosted Linux CPU, not Android or POCO', 'cases': results},
                                  ensure_ascii=False, indent=2), encoding='utf-8')
     for result in results:
-        print(f"{result['case']}: {result['seconds']} s; exit {result['exit_code']}\n{result['response']}\n")
+        print(f"{result['case']}: {result['seconds']} s; exit {result['exit_code']}\n{result['response']}\n{result.get('stderr_tail', '')}\n")
+        # Annotations also make diagnostics available when artifact storage is unreachable.
+        encoded = base64.b64encode(json.dumps(result, ensure_ascii=False).encode('utf-8')).decode('ascii')
+        print(f"::notice title=Model evaluation {result['case']}::{encoded}")
     if any(result['exit_code'] != 0 or not result['response'] for result in results):
         raise SystemExit('Inference failed or produced empty output. Manual quality review is still mandatory even on success.')
 

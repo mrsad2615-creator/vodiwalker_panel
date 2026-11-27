@@ -188,10 +188,6 @@ export function AnalyticsPage() {
         meta={<span>آمار واقعی از داده‌های ثبت‌شدهٔ شما · مرور ماهانه و سالانه</span>}
       />
 
-      {/* The weekly report sits above the switcher: it is a summary of *all*
-          views, so hiding it behind one of the three tabs made no sense. */}
-      <ShareReportCard tasks={tasks} habitLogs={habitLogs} focusSessions={focusSessions} />
-
       {/* Sub-Navigation Switcher */}
       <div className="grid grid-cols-3 gap-1 rounded-2xl border border-[var(--accent-fg)]/12 bg-[var(--surface-2)] p-1">
         {(
@@ -205,7 +201,8 @@ export function AnalyticsPage() {
             key={tab.id}
             type="button"
             onClick={() => setSubTab(tab.id)}
-            className={`rounded-xl py-2 text-xs font-medium transition ${
+            aria-pressed={subTab === tab.id}
+            className={`min-h-12 rounded-xl py-2 text-xs font-medium transition ${
               subTab === tab.id
                 ? 'bg-[var(--surface-3)] text-[var(--text)] shadow-[inset_0_1px_0_color-mix(in_srgb,var(--accent-fg)_20%,transparent)]'
                 : 'text-[var(--text-2)] hover:text-[var(--text)]'
@@ -756,6 +753,8 @@ export function AnalyticsPage() {
           )}
         </div>
       )}
+
+      <ShareReportCard tasks={tasks} habitLogs={habitLogs} focusSessions={focusSessions} />
     </div>
   );
 }

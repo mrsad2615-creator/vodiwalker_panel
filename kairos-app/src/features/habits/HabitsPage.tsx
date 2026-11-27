@@ -388,24 +388,15 @@ export function HabitsPage() {
         }
       />
 
-      <ComparisonChart title="وضعیت عادت‌ها در روز انتخاب‌شده" subtitle="فقط عادت‌های برنامه‌ریزی‌شده برای این روز شمرده می‌شوند." unit="عادت" data={(() => {
-        const scheduled = activeHabits.filter((habit) => isHabitScheduledOnDate(habit, selectedDateKey));
-        const count = (status: HabitLog['status'] | undefined) => scheduled.filter((habit) => logLookup.get(`${habit.id}::${selectedDateKey}`)?.status === status).length;
-        return [
-          { label: 'انجام‌شده', value: count('completed') }, { label: 'ناقص', value: count('partial') },
-          { label: 'انجام‌نشده', value: count('missed') }, { label: 'ثبت‌نشده', value: count(undefined) },
-        ];
-      })()} />
-
       {/* EXECUTIVE DAILY COMMAND BAR (Date Stepper + Live Daily Mastery) */}
       <LuxuryCard variant="hero" className="space-y-3.5 p-4">
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-1.5">
             <button
               type="button"
               onClick={() => shiftSelectedDate(-1)}
               aria-label="روز قبل"
-              className="flex h-8 w-8 items-center justify-center rounded-xl border border-[var(--accent-fg)]/14 bg-[var(--bg)]/70 text-[var(--text-2)] transition hover:border-[var(--accent-fg)]/35 hover:text-[var(--text)]"
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[var(--accent-fg)]/14 bg-[var(--bg)]/70 text-[var(--text-2)] transition hover:border-[var(--accent-fg)]/35 hover:text-[var(--text)]"
             >
               <ChevronRight className="h-4 w-4" />
             </button>
@@ -435,7 +426,7 @@ export function HabitsPage() {
               disabled={isViewingToday}
               onClick={() => shiftSelectedDate(1)}
               aria-label="روز بعد"
-              className="flex h-8 w-8 items-center justify-center rounded-xl border border-[var(--accent-fg)]/14 bg-[var(--bg)]/70 text-[var(--text-2)] transition hover:border-[var(--accent-fg)]/35 hover:text-[var(--text)] disabled:opacity-35"
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[var(--accent-fg)]/14 bg-[var(--bg)]/70 text-[var(--text-2)] transition hover:border-[var(--accent-fg)]/35 hover:text-[var(--text)] disabled:opacity-35"
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
@@ -1265,6 +1256,15 @@ export function HabitsPage() {
           </>
         )}
       </LuxuryCard>
+
+      <ComparisonChart title="وضعیت عادت‌ها در روز انتخاب‌شده" subtitle="فقط عادت‌های برنامه‌ریزی‌شده برای این روز شمرده می‌شوند." unit="عادت" data={(() => {
+        const scheduled = activeHabits.filter((habit) => isHabitScheduledOnDate(habit, selectedDateKey));
+        const count = (status: HabitLog['status'] | undefined) => scheduled.filter((habit) => logLookup.get(`${habit.id}::${selectedDateKey}`)?.status === status).length;
+        return [
+          { label: 'انجام‌شده', value: count('completed') }, { label: 'ناقص', value: count('partial') },
+          { label: 'انجام‌نشده', value: count('missed') }, { label: 'ثبت‌نشده', value: count(undefined) },
+        ];
+      })()} />
 
       <HabitModal
         open={modalState.open}

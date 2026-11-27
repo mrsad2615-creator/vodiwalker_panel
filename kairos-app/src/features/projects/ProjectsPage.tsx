@@ -98,13 +98,6 @@ export function ProjectsPage() {
       />
 
 
-      <ComparisonChart title="وضعیت پروژه‌ها" subtitle="تعداد پروژه‌ها بر اساس وضعیت؛ پروژه‌های بایگانی جداگانه شمرده می‌شوند." unit="پروژه" data={[
-        { label: 'فعال', value: projects.filter((project) => project.status === 'active').length },
-        { label: 'متوقف', value: projects.filter((project) => project.status === 'paused').length },
-        { label: 'تمام‌شده', value: projects.filter((project) => project.status === 'done').length },
-        { label: 'بایگانی', value: archived.length },
-      ]} />
-
       {!hasSampleProject && settings.sampleVisible !== false && (confirmSample ? (
         <div role="region" aria-label="تأیید پروژهٔ نمونه" className="space-y-2 rounded-xl border border-[var(--border)] bg-[var(--surface-1)] p-3 text-[11px] leading-6">
           <p>یک پروژهٔ ساختگی با سه مرحله و دو کار نمونه اضافه می‌شود. داده‌های فعلی تغییر نمی‌کنند؛ آمار می‌تواند ترکیبی شود.</p>
@@ -144,6 +137,13 @@ export function ProjectsPage() {
           ))}
         </div>
       )}
+
+      <ComparisonChart title="وضعیت پروژه‌ها" subtitle="تعداد پروژه‌ها بر اساس وضعیت؛ پروژه‌های بایگانی جداگانه شمرده می‌شوند." unit="پروژه" data={[
+        { label: 'فعال', value: projects.filter((project) => project.status === 'active').length },
+        { label: 'متوقف', value: projects.filter((project) => project.status === 'paused').length },
+        { label: 'تمام‌شده', value: projects.filter((project) => project.status === 'done').length },
+        { label: 'بایگانی', value: archived.length },
+      ]} />
 
       {archived.length > 0 && (
         <section className="space-y-2">
@@ -210,8 +210,8 @@ function ProjectCard({
     >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="truncate text-[12.5px] font-semibold text-[var(--text)]">{project.title}</p>
-          <p className="mt-0.5 text-[9.5px] text-[var(--text-3)]">
+          <p className="break-words text-sm font-semibold leading-6 text-[var(--text)]">{project.title}</p>
+          <p className="mt-1 text-xs leading-6 text-[var(--text-2)]">
             {CATEGORY_META[project.category]?.label}
             {stageCount > 0 ? ` · ${stageCount} مرحله` : ' · بدون مرحله'}
             {project.dueDate ? ` · موعد ${formatJalaaliFull(project.dueDate).compact}` : ''}
@@ -222,14 +222,14 @@ function ProjectCard({
         </span>
       </div>
 
-      <span className="mt-2 block h-[2px] w-full overflow-hidden rounded-full bg-white/8">
+      <span aria-hidden="true" className="mt-3 block h-1 w-full overflow-hidden rounded-full bg-white/8">
         <span
           className="block h-full rounded-full transition-[width] duration-500"
-          style={{ width: `${Math.max(progress.percent, 2)}%`, background: 'var(--accent-fg)' }}
+          style={{ width: `${progress.percent}%`, background: 'var(--accent-fg)' }}
         />
       </span>
 
-      <p className="mt-1.5 text-[9.5px] text-[var(--text-3)]">{describeBasis(progress)}</p>
+      <p className="mt-2 text-xs leading-6 text-[var(--text-2)]">{describeBasis(progress)}</p>
 
       {risk && (
         <p

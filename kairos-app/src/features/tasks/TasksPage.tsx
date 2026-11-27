@@ -392,12 +392,6 @@ export function TasksPage() {
         }
       />
 
-      <ComparisonChart title="نمای وضعیت وظایف" subtitle="وظایف فعال؛ بایگانی در این نمودار شمرده نمی‌شود." unit="کار" data={[
-        { label: 'انجام‌نشده', value: counts.total - counts.done - counts.inProgress },
-        { label: 'در جریان', value: counts.inProgress },
-        { label: 'تکمیل‌شده', value: counts.done },
-      ]} />
-
       {/* View modes — editorial tabs on a rule, not a segmented pill */}
       <div className="grid grid-cols-4 border-b border-[var(--border)]">
         {(
@@ -416,7 +410,7 @@ export function TasksPage() {
               type="button"
               onClick={() => setViewMode(tab.id)}
               aria-pressed={active}
-              className={`relative flex items-center justify-center gap-1 pb-2.5 pt-1 text-[11px] font-medium transition-colors ${
+              className={`relative flex min-h-12 items-center justify-center gap-1 pb-2.5 pt-1 text-xs font-medium transition-colors ${
                 active
                   ? 'text-[var(--text)]'
                   : 'text-[var(--text-3)] hover:text-[var(--text-2)]'
@@ -453,7 +447,7 @@ export function TasksPage() {
           type="button"
           onClick={() => setShowFilters((p) => !p)}
           aria-label="فیلتر وظایف"
-          className={`flex h-10 w-10 items-center justify-center rounded-xl border transition ${
+          className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border transition ${
             showFilters || filterCategory !== 'all' || filterPriority !== 'all' || onlyRecurring
               ? 'border-[var(--accent)] bg-[var(--surface-3)] text-[var(--accent-fg)]'
               : 'border-[var(--accent-fg)]/12 bg-[var(--surface-2)] text-[var(--text-2)]'
@@ -776,6 +770,12 @@ export function TasksPage() {
           )}
         </div>
       )}
+
+      <ComparisonChart title="نمای وضعیت وظایف" subtitle="وظایف فعال؛ بایگانی در این نمودار شمرده نمی‌شود." unit="کار" data={[
+        { label: 'انجام‌نشده', value: counts.total - counts.done - counts.inProgress },
+        { label: 'در جریان', value: counts.inProgress },
+        { label: 'تکمیل‌شده', value: counts.done },
+      ]} />
     </div>
   );
 }

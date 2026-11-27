@@ -96,7 +96,7 @@ export function JournalCard() {
                   type="button"
                   onClick={() => void quickMood(mood.value)}
                   aria-label={`حال ${mood.label}`}
-                  className="flex-1 rounded-[var(--r-field)] border border-[var(--border)] bg-[var(--surface-1)] px-1 py-2 text-[10px] text-[var(--text-2)] transition-colors active:border-[var(--accent-fg)]/40 active:text-[var(--accent-fg)]"
+                  className="min-h-11 min-w-0 flex-1 rounded-[var(--r-field)] border border-[var(--border)] bg-[var(--surface-2)] px-1 py-2 text-[11px] text-[var(--text-2)] transition-colors active:border-[var(--accent-fg)]/40 active:text-[var(--accent-fg)]"
                 >
                   {mood.label}
                 </button>
@@ -120,7 +120,7 @@ export function JournalCard() {
           <button
             type="button"
             onClick={() => setSheetOpen(true)}
-            className="text-[11px] font-semibold text-[var(--accent-fg)]"
+            className="min-h-11 px-2 text-xs font-semibold text-[var(--accent-fg)]"
           >
             {todayEntry ? 'ویرایش' : 'نوشتن'}
           </button>

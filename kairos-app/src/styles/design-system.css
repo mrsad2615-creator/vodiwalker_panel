@@ -951,3 +951,46 @@ button.rail-row:active {
 .motivation-letter__action { padding: 1rem; border-inline-start: 3px solid var(--accent-fg); border-radius: .75rem; background: var(--surface-2); }
 .chrono-progress-moving { transition: stroke-dashoffset 1s linear; }
 @media (prefers-reduced-motion: reduce) { .chrono-progress-moving { transition: none; } }
+
+/* Refinement of the existing visual system: more legible hierarchy, clearer
+   chart grouping and tangible interactive surfaces without changing navigation
+   or replacing the user's palette. */
+.section-header { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: .75rem; }
+.section-header__copy { flex: 1 1 160px; }
+.section-header__action { flex: 0 1 auto; }
+.section-header--page .section-header__action button { min-height: 44px; }
+.section-header__title { font-size: clamp(1.25rem, 5.2vw, 1.5rem); line-height: 1.45; letter-spacing: -.025em; overflow-wrap: anywhere; }
+.section-header__meta { font-size: .75rem; line-height: 1.7; }
+.eyebrow { font-size: 10px; letter-spacing: .2em; }
+
+.comparison-card {
+  position: relative; padding: 1rem; border: 1px solid var(--border-strong);
+  border-radius: var(--r-card); background: var(--surface-1);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.035);
+}
+.comparison-card__heading { display: flex; align-items: flex-start; gap: .625rem; }
+.comparison-card__marker { flex: none; width: 3px; height: 1.2rem; margin-top: .15rem; border-radius: 4px; background: var(--accent-fg); }
+.comparison-card__rows { display: grid; gap: .75rem; margin-top: 1rem; }
+.comparison-card__row { display: grid; grid-template-columns: minmax(5.25rem, auto) minmax(1rem, 1fr) auto; align-items: center; gap: .625rem; }
+.comparison-card__label { font-size: .75rem; line-height: 1.5; color: var(--text-2); }
+.comparison-card__track { display: block; height: 6px; overflow: hidden; border-radius: 999px; background: var(--surface-3); }
+.comparison-card__fill { display: block; height: 100%; border-radius: inherit; background: var(--accent-fg); }
+.comparison-card__value { min-width: 2ch; font-size: .8125rem; font-weight: 700; color: var(--text); text-align: end; white-space: nowrap; }
+.comparison-card__note, .comparison-card__empty { margin-top: .75rem; font-size: .6875rem; line-height: 1.7; color: var(--text-2); }
+.dashboard-progress, .luxury-card-hero {
+  background: linear-gradient(145deg, color-mix(in srgb, var(--surface-1) 94%, var(--accent) 6%), var(--surface-1) 60%);
+  border-color: var(--border-strong);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.04);
+}
+.app-safe-content button:focus-visible, .app-safe-content summary:focus-visible {
+  outline: 2px solid var(--accent-fg); outline-offset: 2px;
+}
+.kairos-nav-label { font-size: 11px; }
+@media (max-width: 340px) {
+  .comparison-card__row { grid-template-columns: minmax(4.4rem, auto) minmax(1rem, 1fr) auto; gap: .4rem; }
+}
+.assistant-intro {
+  border-color: var(--border-strong);
+  background: linear-gradient(145deg, color-mix(in srgb, var(--surface-1) 93%, var(--accent) 7%), var(--surface-1) 70%);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.04);
+}

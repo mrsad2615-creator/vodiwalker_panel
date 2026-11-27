@@ -298,7 +298,7 @@ export function CalendarPage() {
               type="button"
               onClick={() => setViewMode(m.id)}
               aria-pressed={active}
-              className="relative pb-2.5 pt-1"
+              className="relative min-h-12 pb-2.5 pt-1"
             >
               <span
                 className={`text-[11.5px] font-semibold transition-colors ${
@@ -408,7 +408,9 @@ export function CalendarPage() {
                     key={dk}
                     type="button"
                     onClick={() => setSelectedDateKey(dk)}
-                    className={`flex h-11 flex-col items-center justify-center rounded-xl border transition ${
+                    aria-label={`${day} ${getJalaaliMonthName(viewMonth)} ${viewYear}${isToday ? '، امروز' : ''}`}
+                    aria-pressed={isSelected}
+                    className={`flex h-12 flex-col items-center justify-center rounded-xl border transition ${
                       isSelected
                         ? 'border-[var(--accent-fg)]/60 bg-[var(--accent)] text-[var(--accent-on)] shadow-[0_0_14px_color-mix(in_srgb,var(--accent)_48%,transparent)]'
                         : isToday

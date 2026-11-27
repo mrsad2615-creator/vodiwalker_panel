@@ -291,10 +291,10 @@ export function FocusPage() {
             <span className="font-display-caps text-[8.5px] font-semibold text-[var(--accent-fg)]">
               FOCUS
             </span>
-            <h1 className="mt-1 text-[19px] font-bold tracking-tight text-[var(--text)]">
+            <h1 className="section-header__title mt-1.5 font-bold text-[var(--text)]">
               محیط تمرکز
             </h1>
-            <p className="mt-1 flex flex-wrap items-center gap-1 text-[10.5px] text-[var(--text-3)]">
+            <p className="mt-1.5 flex flex-wrap items-center gap-1 text-xs text-[var(--text-2)]">
               <Numeric
                 value={formatDurationShort(todayTotalMin)}
                 className="font-semibold text-[var(--text)]"
@@ -313,7 +313,7 @@ export function FocusPage() {
               onClick={() => setCinemaMode(true)}
               aria-label="ورود به حالت سینمایی تمام‌صفحه"
               title="حالت سینمایی تمام‌صفحه"
-              className="grid h-8 w-8 place-items-center rounded-full border border-[var(--accent-fg)]/35 text-[var(--accent-fg)] transition hover:bg-[color-mix(in_srgb,var(--accent)_22%,transparent)]"
+              className="grid h-11 w-11 place-items-center rounded-full border border-[var(--accent-fg)]/35 text-[var(--accent-fg)] transition hover:bg-[color-mix(in_srgb,var(--accent)_22%,transparent)]"
             >
               <Maximize2 className="h-3.5 w-3.5" />
             </button>
@@ -322,7 +322,7 @@ export function FocusPage() {
               onClick={() => setShowCustomConfig((v) => !v)}
               aria-label="تنظیم زمان‌های تمرکز"
               aria-pressed={showCustomConfig}
-              className={`grid h-8 w-8 place-items-center rounded-full border transition ${
+              className={`grid h-11 w-11 place-items-center rounded-full border transition ${
                 showCustomConfig
                   ? 'border-[var(--accent)] text-[var(--accent-fg)]'
                   : 'border-[var(--border)] text-[var(--text-2)] hover:border-[var(--border-strong)]'
@@ -338,7 +338,7 @@ export function FocusPage() {
           <span className="h-[2px] flex-1 overflow-hidden rounded-full bg-white/8">
             <span
               className="block h-full rounded-full transition-[width] duration-500"
-              style={{ width: `${Math.max(dailyGoalPercent, 1.5)}%`, background: 'var(--accent)' }}
+              style={{ width: `${dailyGoalPercent}%`, background: 'var(--accent)' }}
             />
           </span>
           <Numeric
@@ -362,7 +362,7 @@ export function FocusPage() {
               onClick={() => { if (!active) requestSessionChange('تغییر حالت، زمان ثبت‌نشدهٔ جلسه را از بین می‌برد. ادامه می‌دهید؟', () => setFocusMode(mode.id)); }}
               aria-pressed={active}
               title={mode.hint}
-              className="relative flex shrink-0 items-baseline gap-1.5 pb-2 pt-0.5"
+              className="relative flex min-h-12 shrink-0 items-center gap-1.5 pb-2 pt-1"
             >
               <span
                 className={`text-[12px] font-semibold transition-colors ${
@@ -371,7 +371,7 @@ export function FocusPage() {
               >
                 {mode.label}
               </span>
-              <span className="num-geo text-[8.5px] text-[var(--text-3)]">
+              <span className="num-geo text-[10px] text-[var(--text-2)]">
                 {modeHint(mode.id, chronoConfig)}
               </span>
               {active && (
@@ -467,12 +467,12 @@ export function FocusPage() {
 
         {/* Fine-tune: presets as text on the rule, invisible while running */}
         {focus.mode === 'pomodoro' && !hasProgress(focus) && focus.phase === 'focus' && (
-          <div className="relative mt-4 flex items-center justify-center gap-1">
+          <div className="relative mt-4 flex items-center justify-center gap-0">
             <button
               type="button"
               onClick={() => adjustFocusMinutes(-5)}
               aria-label="کاهش ۵ دقیقه"
-              className="grid h-7 w-7 place-items-center rounded-full text-[var(--text-3)] transition hover:text-[var(--text)]"
+              className="grid h-11 w-9 shrink-0 place-items-center rounded-full text-[var(--text-2)] transition hover:text-[var(--text)]"
             >
               <Minus className="h-3 w-3" />
             </button>
@@ -487,7 +487,7 @@ export function FocusPage() {
                     void updateSettings({ pomodoroFocusMin: mins });
                   }}
                   aria-pressed={active}
-                  className={`num-geo rounded-full px-2.5 py-1 text-[11px] font-semibold transition ${
+                  className={`num-geo min-h-11 min-w-9 rounded-full px-1.5 py-1 text-xs font-semibold transition ${
                     active
                       ? 'bg-[color-mix(in_srgb,var(--accent)_26%,transparent)] text-[var(--text)]'
                       : 'text-[var(--text-3)] hover:text-[var(--text-2)]'
@@ -501,7 +501,7 @@ export function FocusPage() {
               type="button"
               onClick={() => adjustFocusMinutes(5)}
               aria-label="افزایش ۵ دقیقه"
-              className="grid h-7 w-7 place-items-center rounded-full text-[var(--text-3)] transition hover:text-[var(--text)]"
+              className="grid h-11 w-9 shrink-0 place-items-center rounded-full text-[var(--text-2)] transition hover:text-[var(--text)]"
             >
               <Plus className="h-3 w-3" />
             </button>

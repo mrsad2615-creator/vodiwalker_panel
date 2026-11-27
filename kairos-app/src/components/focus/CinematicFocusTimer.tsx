@@ -90,7 +90,7 @@ export function CinematicFocusTimer({
   const clamped = Math.max(0, Math.min(100, progressPercent));
   const dashOffset = ARC_CIRCUMFERENCE * (1 - clamped / 100);
   const activeTicks = Math.round((clamped / 100) * TICK_COUNT);
-  const size = cinemaMode ? 318 : 276;
+  const size = cinemaMode ? 318 : 292;
 
   const shown = mode === 'free' ? elapsedSeconds : remainingSeconds;
   const parts = splitParts(shown);
@@ -220,7 +220,7 @@ export function CinematicFocusTimer({
 
       {/* Read-out */}
       <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
-        <span className="text-[9.5px] font-semibold leading-none text-[var(--text-3)]">
+        <span className="text-xs font-semibold leading-none text-[var(--text-2)]">
           {isRunning ? kicker : `متوقف · ${kicker}`}
         </span>
 
@@ -250,7 +250,7 @@ export function CinematicFocusTimer({
           <Digits value={parts.seconds} className={cinemaMode ? 'text-[4.4rem]' : 'text-[3.9rem]'} />
         </div>
 
-        <span className="mt-1.5 flex items-center justify-center gap-1 text-[10px] text-[var(--text-2)]">
+        <span className="mt-1.5 flex items-center justify-center gap-1 text-xs text-[var(--text-2)]">
           <span>{metaLabel}</span>
           {metaValue && (
             <>

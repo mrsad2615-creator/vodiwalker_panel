@@ -336,7 +336,7 @@ export function DashboardPage() {
               type="button"
               onClick={() => chooseMode(mode.id)}
               aria-pressed={active}
-              className={`min-h-[30px] rounded-full border px-3 py-1.5 text-[11px] font-medium transition-all active:scale-95 ${
+              className={`min-h-11 rounded-full border px-3 py-1.5 text-xs font-medium transition-all active:scale-95 ${
                 active
                   ? 'border-[var(--accent-fg)]/60 bg-[color-mix(in_srgb,var(--accent)_18%,transparent)] text-[var(--text)]'
                   : 'border-[var(--border)] text-[var(--text-3)] hover:text-[var(--text-2)]'
@@ -350,7 +350,7 @@ export function DashboardPage() {
       </div>
 
       {/* ── TODAY ─────────────────────────────────────────────────────────── */}
-      <Rail className="p-4">
+      <Rail className="dashboard-progress p-4">
         <div className="flex items-end justify-between gap-4">
           <div>
             <span className="eyebrow block">PROGRESS</span>
@@ -362,16 +362,16 @@ export function DashboardPage() {
               />
               <span className="num-display text-base font-medium text-[var(--text-3)]">%</span>
             </div>
-            <p className="mt-1 text-[10px] text-[var(--text-3)]">پیشرفت امروز</p>
+            <p className="mt-1 text-xs text-[var(--text-2)]">پیشرفت امروز</p>
           </div>
 
           <button type="button" onClick={() => setActiveTab('focus')} className="text-end">
-            <span className="block text-[9.5px] text-[var(--text-3)]">تمرکز امروز</span>
+            <span className="block text-xs text-[var(--text-2)]">تمرکز امروز</span>
             <Numeric
               value={formatDurationShort(summary.todayFocusMinutes)}
               className="mt-0.5 block text-[15px] font-semibold text-[var(--accent-fg)]"
             />
-            <span className="num-geo mt-0.5 block text-[9px] text-[var(--text-3)]">
+            <span className="num-geo mt-1 block text-[11px] text-[var(--text-2)]">
               هدف <Numeric value={summary.focusGoalMinutes} variant="geo" /> دقیقه
             </span>
           </button>
@@ -387,7 +387,7 @@ export function DashboardPage() {
               key={row.label}
               type="button"
               onClick={() => setActiveTab(row.tab)}
-              className="group text-start"
+              className="group min-h-12 text-start"
             >
               <span className="flex items-baseline gap-1">
                 <Numeric
@@ -400,10 +400,10 @@ export function DashboardPage() {
               <span className="mt-1.5 block h-[2px] w-full overflow-hidden rounded-full bg-white/8">
                 <span
                   className="block h-full rounded-full transition-[width] duration-500"
-                  style={{ width: `${Math.max(row.pct, 2)}%`, background: 'var(--accent-fg)' }}
+                  style={{ width: `${row.pct}%`, background: 'var(--accent-fg)' }}
                 />
               </span>
-              <span className="mt-1.5 block text-[9.5px] text-[var(--text-3)] group-hover:text-[var(--text-2)]">
+              <span className="mt-1.5 block text-xs text-[var(--text-2)] group-hover:text-[var(--text)]">
                 {row.label}
               </span>
             </button>

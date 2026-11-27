@@ -220,7 +220,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             onClick={() => setSearchOpen(true)}
             aria-label="جست‌وجوی سراسری"
             title="جست‌وجو (Ctrl+K)"
-            className="grid h-8 w-8 place-items-center rounded-full border border-[var(--border)] text-[var(--text-2)] transition-colors hover:border-[var(--border-strong)] hover:text-[var(--text)]"
+            className="grid h-11 w-11 place-items-center rounded-full border border-[var(--border)] text-[var(--text-2)] transition-colors hover:border-[var(--border-strong)] hover:text-[var(--text)]"
           >
             <Search className="h-3.5 w-3.5" />
           </button>
@@ -264,7 +264,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         )}
 
         {settings.hasSampleData && settings.sampleVisible !== false && (
-          <div role="status" className="mx-4 mt-3 rounded-xl border border-[var(--accent-fg)]/25 bg-[var(--surface-1)] px-3 py-2 text-[10px] leading-5 text-[var(--text-2)]">
+          <div role="status" className="mx-4 mt-3 rounded-xl border border-[var(--accent-fg)]/25 bg-[var(--surface-1)] px-3 py-2 text-xs leading-6 text-[var(--text-2)]">
             داده‌های نمونه فعال‌اند؛ آمار و تحلیل‌ها می‌توانند ترکیبی از اطلاعات واقعی و ساختگی باشند.
           </div>
         )}

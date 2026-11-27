@@ -231,9 +231,9 @@ export function CommandCenter() {
 
   return (
     <section role="region" aria-label="مرکز فرمان" data-testid="assistant-page" className="pb-5">
-      <div className="mb-4 flex items-start gap-3 rounded-[var(--r-rail)] border border-[var(--border)] bg-[var(--surface-1)] p-4">
+      <div className="assistant-intro mb-4 flex items-start gap-3 rounded-[var(--r-rail)] border border-[var(--border)] bg-[var(--surface-1)] p-4">
         <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[color-mix(in_srgb,var(--accent)_18%,transparent)] text-[var(--accent-fg)]"><Sparkles size={22} aria-hidden="true" /></span>
-        <div><p className="eyebrow">KAIROS ASSISTANT</p><h1 className="mt-1 text-lg font-bold text-[var(--text)]">دستیار کایروس</h1>
+        <div className="min-w-0"><p className="eyebrow">KAIROS ASSISTANT</p><h1 className="section-header__title mt-1 font-bold text-[var(--text)]">دستیار کایروس</h1>
           <p className="mt-1 text-xs leading-6 text-[var(--text-2)]">آفلاین و مبتنی بر فرمان‌های مشخص؛ مدل زبانی هنوز نصب یا فعال نشده است. تغییرات پشتیبانی‌شده پیش از اجرا تأیید می‌خواهند.</p>
           <p className="mt-1 text-xs leading-6 text-[var(--text-2)]">پرسش‌ها و پاسخ‌های ثبت‌شده روی دستگاه و در پشتیبان ذخیره می‌شوند. پاسخ‌های گذشته تصویر همان زمان‌اند، نه وضعیت فعلی داده‌ها.</p></div>
       </div>
@@ -299,25 +299,25 @@ export function CommandCenter() {
           {/* The manager gives a decision and its evidence. */}
           <div
             data-testid="manager-brief"
-            className="rounded-[var(--r-rail)] border border-[var(--accent-fg)]/25 bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] p-3"
+            className="rounded-[var(--r-rail)] border border-[var(--accent-fg)]/25 bg-[color-mix(in_srgb,var(--accent)_10%,var(--surface-1))] p-4"
           >
-            <p className="mb-1 text-[10px] font-bold text-[var(--accent-fg)]">پیشنهاد مربی · بر اساس داده‌های ثبت‌شده</p>
-            <p className="text-[11.5px] font-semibold leading-5 text-[var(--text)]">
+            <p className="mb-2 text-xs font-bold text-[var(--accent-fg)]">پیشنهاد مربی · بر اساس داده‌های ثبت‌شده</p>
+            <p className="text-sm font-semibold leading-7 text-[var(--text)]">
               {brief.headline}
             </p>
             <ul className="mt-1 space-y-1">
               {brief.lines.slice(0, 3).map((line) => (
-                <li key={line} className="text-[10px] leading-4 text-[var(--text-2)]">
+                <li key={line} className="text-xs leading-6 text-[var(--text-2)]">
                   {line}
                 </li>
               ))}
             </ul>
             {brief.recommendation && (
               <div className="mt-2 border-t border-[var(--accent-fg)]/20 pt-2">
-                <p className="text-[11px] font-medium text-[var(--accent-fg)]">
+                <p className="text-sm font-medium leading-7 text-[var(--accent-fg)]">
                   {brief.recommendation.text}
                 </p>
-                <p className="mt-0.5 text-[9.5px] leading-4 text-[var(--text-3)]">
+                <p className="mt-1 text-xs leading-6 text-[var(--text-2)]">
                   {brief.recommendation.reason} · پیشنهاد بر پایهٔ قواعد محلی است، نه پیش‌بینی قطعی.
                 </p>
                 <button
@@ -325,7 +325,7 @@ export function CommandCenter() {
                   onClick={() => {
                     setActiveTab(brief.recommendation!.tab);
                   }}
-                  className="mt-1 text-[10px] font-medium text-[var(--accent-fg)]"
+                  className="mt-1 min-h-11 text-xs font-medium text-[var(--accent-fg)]"
                 >
                   انجامش بده ←
                 </button>

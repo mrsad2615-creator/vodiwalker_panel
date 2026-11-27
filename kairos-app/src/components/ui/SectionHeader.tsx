@@ -31,28 +31,29 @@ export function SectionHeader({
   id,
 }: SectionHeaderProps) {
   const isPage = size === 'page';
+  const Heading = isPage ? 'h1' : 'h2';
 
   return (
-    <header className={`flex items-start justify-between gap-3 ${className}`}>
-      <div className="min-w-0">
+    <header className={`section-header ${isPage ? 'section-header--page' : 'section-header--section'} ${className}`}>
+      <div className="section-header__copy min-w-0">
         {eyebrow && <span className="eyebrow block leading-none">{eyebrow}</span>}
-        <h1
+        <Heading
           id={id}
           className={
             isPage
-              ? `mt-1.5 text-[19px] font-bold leading-tight tracking-tight text-[var(--text)]`
-              : `mt-1 text-[13px] font-bold leading-tight text-[var(--text)]`
+              ? `section-header__title mt-1.5 font-bold text-[var(--text)]`
+              : `mt-1 text-sm font-bold leading-tight text-[var(--text)]`
           }
         >
           {title}
-        </h1>
+        </Heading>
         {meta && (
-          <p className="mt-1 flex flex-wrap items-center gap-1 text-[10.5px] leading-4 text-[var(--text-3)]">
+          <p className="section-header__meta mt-1.5 flex flex-wrap items-center gap-1 text-[var(--text-2)]">
             {meta}
           </p>
         )}
       </div>
-      {action && <div className="flex shrink-0 items-center gap-1.5">{action}</div>}
+      {action && <div className="section-header__action flex items-center gap-1.5">{action}</div>}
     </header>
   );
 }

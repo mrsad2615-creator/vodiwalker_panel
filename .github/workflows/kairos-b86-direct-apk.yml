@@ -1,0 +1,52 @@
+name: Publish b86 preview APK
+
+# Publish the already-tested branch artifact without rebuilding it. This is not
+# a main release, and the build does not contain the experimental language model.
+on:
+  push:
+    branches:
+      - arena/33c8480b-vodiwalker-panel
+    paths:
+      - .github/workflows/kairos-b86-direct-apk.yml
+
+permissions:
+  actions: read
+  contents: write
+
+jobs:
+  publish-preview:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_REPO: ${{ github.repository }}
+      SOURCE_RUN: '46076212352'
+      SOURCE_SHA: '31c8b2a2c6bfce7abf453c263d03fe8505e4bfbe'
+      RELEASE_TAG: 'kairos-v3.18.0-b86-preview'
+      APK: 'KAIROS-3.18.0-b86-31c8b2a.apk'
+    steps:
+      - name: Verify and download successful branch build
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(gh run view "$SOURCE_RUN" --json headSha --jq .headSha)" = "$SOURCE_SHA"
+          test "$(gh run view "$SOURCE_RUN" --json status --jq .status)" = completed
+          test "$(gh run view "$SOURCE_RUN" --json conclusion --jq .conclusion)" = success
+          gh run download "$SOURCE_RUN" --name KAIROS-3.18.0-b86 --dir apk
+          test -s "apk/$APK"
+          test "$(stat -c%s "apk/$APK")" -le 300000000
+          sha256sum "apk/$APK"
+
+      - name: Publish immutable prerelease
+        shell: bash
+        run: |
+          set -euo pipefail
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            echo "Preview release already exists; refusing to replace it." >&2
+            exit 1
+          fi
+          HASH="$(sha256sum "apk/$APK" | cut -d' ' -f1)"
+          gh release create "$RELEASE_TAG" "apk/$APK" \
+            --target "$SOURCE_SHA" --prerelease --latest=false \
+            --title 'KAIROS 3.18.0 · b86 preview' \
+            --notes "Experimental build from commit $SOURCE_SHA (CI run $SOURCE_RUN). This APK does not include a local language model. Not a final release; on-device testing remains outstanding. SHA-256: $HASH"
+          echo "Direct APK: https://github.com/$GH_REPO/releases/download/$RELEASE_TAG/$APK" >> "$GITHUB_STEP_SUMMARY"
